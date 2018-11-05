@@ -21,4 +21,7 @@
     <PackageReference Include="Avalonia.Desktop" Version="0.7.0" />
     <PackageReference Include="Avalonia.ReactiveUI" Version="0.7.0" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\presentation\Xenko.Core.Quantum\Xenko.Core.Quantum.csproj" />
+  </ItemGroup>
 </Project>
