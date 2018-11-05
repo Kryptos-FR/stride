@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Avalonia;
 using Avalonia.Logging.Serilog;
 using Xenko.GameStudio2.ViewModels;
@@ -14,9 +14,11 @@ namespace Xenko.GameStudio2
         }
 
         public static AppBuilder BuildAvaloniaApp()
-            => AppBuilder.Configure<App>()
-                .UsePlatformDetect()
-                .UseReactiveUI()
-                .LogToDebug();
+        {
+            return AppBuilder.Configure<App>()
+                           .UseWin32().UseDirect2D1()
+                           .UseReactiveUI()
+                           .LogToDebug();
+        }
     }
 }
