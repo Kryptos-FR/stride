@@ -1,28 +1,33 @@
-// Copyright (c) Xenko contributors (https://xenko.com)
+// Copyright (c) Xenko contributors (https://xenko.com) and Silicon Studio Corp. (https://www.siliconstudio.co.jp)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 using System;
 using System.Reflection;
+using GNU.Gettext;
 using Xenko.Core.Annotations;
-using Xenko.Core.Translation.Resources;
 
 namespace Xenko.Core.Translation.Providers
 {
-    public sealed class GettextTranslationProvider : ITranslationProvider
+    /// <summary>
+    /// Translation provider using the Gettext library.
+    /// </summary>
+    public sealed class GettextTranslationProviderOld : ITranslationProvider
     {
         private readonly GettextResourceManager resourceManager;
-        
-        public GettextTranslationProvider()
+
+        /// <seealso cref="GettextResourceManager()"/>
+        public GettextTranslationProviderOld()
             : this(Assembly.GetCallingAssembly())
         {
         }
-        
-        public GettextTranslationProvider(Assembly assembly)
+
+        /// <seealso cref="GettextResourceManager(Assembly)"/>
+        public GettextTranslationProviderOld([NotNull] Assembly assembly)
             : this(assembly.GetName().Name, assembly)
         {
         }
-        
+
         /// <seealso cref="GettextResourceManager(string, Assembly)"/>
-        private GettextTranslationProvider([NotNull] string baseName, [NotNull] Assembly assembly)
+        private GettextTranslationProviderOld([NotNull] string baseName, [NotNull] Assembly assembly)
         {
             if (baseName == null) throw new ArgumentNullException(nameof(baseName));
             if (assembly == null) throw new ArgumentNullException(nameof(assembly));
@@ -30,8 +35,7 @@ namespace Xenko.Core.Translation.Providers
             BaseName = baseName;
         }
 
-        /// <inheritdoc />
-        public string BaseName { get; }        
+        public string BaseName { get; }
 
         /// <inheritdoc />
         /// <seealso cref="GettextResourceManager.GetString(string)"/>
