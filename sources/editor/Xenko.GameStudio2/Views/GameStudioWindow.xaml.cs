@@ -1,12 +1,12 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
 namespace Xenko.GameStudio2.Views
 {
-    public class MainWindow : Window
+    public class GameStudioWindow : Window
     {
-        public MainWindow()
+        public GameStudioWindow()
         {
             InitializeComponent();
 #if DEBUG

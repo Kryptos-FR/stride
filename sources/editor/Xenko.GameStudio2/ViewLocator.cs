@@ -1,7 +1,7 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
-using Xenko.GameStudio2.ViewModels;
+using Xenko.Core.Presentation.ViewModel;
 
 namespace Xenko.GameStudio2
 {

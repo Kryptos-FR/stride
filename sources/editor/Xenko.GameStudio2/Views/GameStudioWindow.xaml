@@ -1,13 +1,11 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Xenko.GameStudio2.ViewModels;assembly=Xenko.GameStudio2"
         Icon="resm:Xenko.GameStudio2.Assets.avalonia-logo.ico"
         Title="Xenko.GameStudio2">
-
   <Design.DataContext>
-    <vm:MainWindowViewModel/>
+    <vm:GameStudioViewModel/>
   </Design.DataContext>
   
-  <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-  
+    Hello World!
 </Window>

@@ -414,7 +414,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xenko.Samples.Templates", "
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "62-Editor2", "62-Editor2", "{251EA4EF-7132-4A1D-ADF7-64605DDF5B5C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xenko.GameStudio2", "..\sources\editor\Xenko.GameStudio2\Xenko.GameStudio2.csproj", "{A2A0A591-5FE7-48B5-8BAB-FC0D36054437}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xenko.GameStudio2", "..\sources\editor\Xenko.GameStudio2\Xenko.GameStudio2.csproj", "{A2A0A591-5FE7-48B5-8BAB-FC0D36054437}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
