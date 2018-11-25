@@ -1,6 +1,7 @@
 // Copyright (c) Xenko contributors (https://xenko.com)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
@@ -10,6 +11,8 @@ namespace Xenko.Core.Translation.Resources
 {
     public class GettextResourceManager : ResourceManager
     {
+        private readonly ConcurrentDictionary<CultureInfo, GettextResourceSet> _cache = new ConcurrentDictionary<CultureInfo, GettextResourceSet>();
+
         public GettextResourceManager(string baseName, Assembly assembly)
             : base(baseName, assembly, typeof(GettextResourceSet))
         {
@@ -22,9 +25,9 @@ namespace Xenko.Core.Translation.Resources
         
         public override string GetString(string text, CultureInfo culture)
         {
-            foreach (var set in GetResourceSets(culture))
+            foreach (var resourceSet in GetResourceSets(culture))
             {
-                var translation = set.GetString(text);
+                var translation = resourceSet.GetString(text);
                 if (!string.IsNullOrEmpty(translation))
                     return translation;
             }
@@ -35,9 +38,9 @@ namespace Xenko.Core.Translation.Resources
 
         public string GetPluralString(string text, string textPlural, long count)
         {
-            foreach (var set in GetResourceSets(CultureInfo.CurrentUICulture))
+            foreach (var resourceSet in GetResourceSets(CultureInfo.CurrentUICulture))
             {
-                var translation = set.GetPluralString(text, textPlural, count);
+                var translation = resourceSet.GetPluralString(text, textPlural, count);
                 if (!string.IsNullOrEmpty(translation))
                     return translation;
             }
@@ -48,9 +51,14 @@ namespace Xenko.Core.Translation.Resources
 
         public string GetParticularString(string context, string text)
         {
-            foreach (var set in GetResourceSets(CultureInfo.CurrentUICulture))
+            foreach (var resourceSet in GetResourceSets(CultureInfo.CurrentUICulture))
             {
-                var translation = set.GetParticularString(context, text);
+                var translation = resourceSet.GetParticularString(context, text);
+                if (!string.IsNullOrEmpty(translation))
+                    return translation;
+
+                // try without context
+                translation = resourceSet.GetString(text);
                 if (!string.IsNullOrEmpty(translation))
                     return translation;
             }
@@ -61,13 +69,26 @@ namespace Xenko.Core.Translation.Resources
 
         public string GetParticularPluralString(string context, string text, string textPlural, long count)
         {
-            throw new NotImplementedException();
+            foreach (var resourceSet in GetResourceSets(CultureInfo.CurrentUICulture))
+            {
+                var translation = resourceSet.GetParticularPluralString(context, text, textPlural, count);
+                if (!string.IsNullOrEmpty(translation))
+                    return translation;
 
-            return text;
+                // try without context
+                translation = resourceSet.GetPluralString(text, textPlural, count);
+                if (!string.IsNullOrEmpty(translation))
+                    return translation;
+            }
+            
+            // fallback
+            return count > 1 ? textPlural : text;
         }
 
         private IEnumerable<GettextResourceSet> GetResourceSets(CultureInfo culture)
         {
+
+            // TODO
             yield break;
         }
     }

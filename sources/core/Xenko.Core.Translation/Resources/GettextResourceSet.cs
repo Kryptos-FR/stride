@@ -1,12 +1,28 @@
 // Copyright (c) Xenko contributors (https://xenko.com)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 using System;
+using System.IO;
 using System.Resources;
 
 namespace Xenko.Core.Translation.Resources
 {
     public class GettextResourceSet : ResourceSet
     {
+        public GettextResourceSet(string fileName)
+            : base(fileName)
+        {
+        }
+
+        public GettextResourceSet(Stream stream)
+            : base(stream)
+        {
+        }
+
+        public GettextResourceSet(IResourceReader reader)
+            : base(reader)
+        {
+        }
+
         public override string GetString(string text)
         {
             throw new NotImplementedException();
