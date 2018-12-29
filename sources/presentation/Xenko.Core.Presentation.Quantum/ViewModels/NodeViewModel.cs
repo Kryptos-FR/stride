@@ -435,7 +435,7 @@ namespace Xenko.Core.Presentation.Quantum.ViewModels
 
         protected override void OnPropertyChanging(params string[] propertyNames)
         {
-            if (DebugQuantumPropertyChanges && HasPropertyChangingSubscriber)
+            if (DebugQuantumPropertyChanges) // FIXME && HasPropertyChangingSubscriber)
             {
                 foreach (var property in propertyNames)
                 {
@@ -447,7 +447,7 @@ namespace Xenko.Core.Presentation.Quantum.ViewModels
 
         protected override void OnPropertyChanged(params string[] propertyNames)
         {
-            if (DebugQuantumPropertyChanges && HasPropertyChangedSubscriber)
+            if (DebugQuantumPropertyChanges) // FIXME && HasPropertyChangedSubscriber)
             {
                 foreach (var property in propertyNames)
                 {

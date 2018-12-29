@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using Xenko.Core;
+using ReactiveUI;
 using Xenko.Core.Annotations;
 
 namespace Xenko.Core.Presentation.ViewModel
@@ -14,7 +14,7 @@ namespace Xenko.Core.Presentation.ViewModel
     /// This abstract class represents a basic view model, implementing <see cref="INotifyPropertyChanging"/> and <see cref="INotifyPropertyChanged"/> and providing
     /// a set of <b>SetValue</b> helper methods to easly update a property and trigger the change notifications.
     /// </summary>
-    public abstract class ViewModelBase : INotifyPropertyChanging, INotifyPropertyChanged, IDestroyable
+    public abstract class ViewModelBase : ReactiveObject
     {
 #if DEBUG
         private readonly List<string> changingProperties = new List<string>();
@@ -244,8 +244,6 @@ namespace Xenko.Core.Presentation.ViewModel
         /// <param name="propertyNames">The names of the properties that is changing.</param>
         protected virtual void OnPropertyChanging([ItemNotNull, NotNull] params string[] propertyNames)
         {
-            var propertyChanging = PropertyChanging;
-
             foreach (var propertyName in propertyNames)
             {
 #if DEBUG
@@ -255,10 +253,9 @@ namespace Xenko.Core.Presentation.ViewModel
                 changingProperties.Add(propertyName);
 #endif
 
-                propertyChanging?.Invoke(this, new PropertyChangingEventArgs(propertyName));
+                this.RaisePropertyChanging(propertyName);
 
-                string[] dependentProperties;
-                if (DependentProperties.TryGetValue(propertyName, out dependentProperties))
+                if (DependentProperties.TryGetValue(propertyName, out string[] dependentProperties))
                 {
                     OnPropertyChanging(dependentProperties);
                 }
@@ -271,20 +268,17 @@ namespace Xenko.Core.Presentation.ViewModel
         /// <param name="propertyNames">The names of the properties that has changed.</param>
         protected virtual void OnPropertyChanged([ItemNotNull, NotNull] params string[] propertyNames)
         {
-            var propertyChanged = PropertyChanged;
-
             for (var i = 0 ; i < propertyNames.Length; ++i)
             {
                 var propertyName = propertyNames[propertyNames.Length - 1 - i];
-                string[] dependentProperties;
-                if (DependentProperties.TryGetValue(propertyName, out dependentProperties))
+                if (DependentProperties.TryGetValue(propertyName, out string[] dependentProperties))
                 {
                     var reverseList = new string[dependentProperties.Length];
                     for (var j = 0; j < dependentProperties.Length; ++j)
                         reverseList[j] = dependentProperties[dependentProperties.Length - 1 - j];
                     OnPropertyChanged(reverseList);
                 }
-                propertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+                this.RaisePropertyChanged(propertyName);
 
 #if DEBUG
                 if (!changingProperties.Contains(propertyName))
@@ -294,15 +288,5 @@ namespace Xenko.Core.Presentation.ViewModel
 #endif
             }
         }
-
-        protected bool HasPropertyChangingSubscriber => PropertyChanging != null;
-
-        protected bool HasPropertyChangedSubscriber => PropertyChanged != null;
-
-        /// <inheritdoc/>
-        public event PropertyChangingEventHandler PropertyChanging;
-
-        /// <inheritdoc/>
-        public event PropertyChangedEventHandler PropertyChanged;
     }
 }

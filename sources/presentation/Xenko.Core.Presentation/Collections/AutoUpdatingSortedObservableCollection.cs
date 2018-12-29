@@ -11,12 +11,12 @@ namespace Xenko.Core.Presentation.Collections
     /// <summary>
     /// An observable collection that automatically sorts inserted items using either the default comparer for their type, or a custom provider comparer.
     /// Insertion and search are both O(log(n)). The method <see cref="SortedObservableCollection{T}.BinarySearch"/> must be used for O(log(n)).
-    /// The items must implement <see cref="INotifyPropertyChanging"/> and <see cref="INotifyPropertyChanged"/>.
+    /// The items must implement <see cref="ReactiveUI.INotifyPropertyChanging"/> and <see cref="INotifyPropertyChanged"/>.
     /// The collection watches for property changes in its items and reorders them accordingly if the changes affect the order.
     /// </summary>
-    /// <typeparam name="T">The type of item this collection contains. Must be a class that implements <see cref="INotifyPropertyChanging"/> and <see cref="INotifyPropertyChanged"/>.</typeparam>
+    /// <typeparam name="T">The type of item this collection contains. Must be a class that implements <see cref="ReactiveUI.INotifyPropertyChanging"/> and <see cref="INotifyPropertyChanged"/>.</typeparam>
     /// <seealso cref="SortedObservableCollection{T}"/>
-    public class AutoUpdatingSortedObservableCollection<T> : SortedObservableCollection<T> where T : class, INotifyPropertyChanging, INotifyPropertyChanged
+    public class AutoUpdatingSortedObservableCollection<T> : SortedObservableCollection<T> where T : class, ReactiveUI.INotifyPropertyChanging, INotifyPropertyChanged
     {
         protected T ChangingItem;
         protected int ChangingIndex;
@@ -104,7 +104,7 @@ namespace Xenko.Core.Presentation.Collections
             return $"{{AutoUpdatingSortedObservableCollection}} Count = {Count}";
         }
         
-        protected virtual void ItemPropertyChanging(object sender, [NotNull] PropertyChangingEventArgs e)
+        protected virtual void ItemPropertyChanging(object sender, [NotNull] ReactiveUI.PropertyChangingEventArgs e)
         {
             if (propertyNames != null && !propertyNames.Contains(e.PropertyName))
                 return;

@@ -35,19 +35,19 @@ namespace Xenko.Core.Presentation.ViewModel
         /// <inheritdoc/>
         protected override void OnPropertyChanging(params string[] propertyNames)
         {
-            if (HasPropertyChangingSubscriber)
+            // FIXME if (HasPropertyChangingSubscriber)
                 Dispatcher.Invoke(() => base.OnPropertyChanging(propertyNames));
-            else
-                base.OnPropertyChanging(propertyNames);
+            //else
+            //    base.OnPropertyChanging(propertyNames);
         }
 
         /// <inheritdoc/>
         protected override void OnPropertyChanged(params string[] propertyNames)
         {
-            if (HasPropertyChangedSubscriber)
+            // FIXME if (HasPropertyChangedSubscriber)
                 Dispatcher.Invoke(() => base.OnPropertyChanged(propertyNames));
-            else
-                base.OnPropertyChanged(propertyNames);
+            //else
+            //    base.OnPropertyChanged(propertyNames);
         }
     }
 }
