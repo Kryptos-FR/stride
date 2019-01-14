@@ -215,7 +215,7 @@
                   </DataTemplate>
                 </xcdg:Column.CellContentTemplate>
               </xcdg:Column>
-              <xcdg:Column FieldName="IsDirty" Title="Modified" AllowSort="True" ReadOnly="True" />
+              <xcdg:Column FieldName="IsDirty" Title="{xk:Localize Modified}" AllowSort="True" ReadOnly="True" />
             </xcdg:DataGridControl.Columns>
             <xcdg:DataGridControl.ItemContainerStyle>
               <Style TargetType="xcdg:DataRow" BasedOn="{StaticResource {x:Type xcdg:DataRow}}" d:DataContext="{d:DesignInstance viewModel:AssetViewModel}">
@@ -365,7 +365,7 @@
                         Command="{Binding ChangeDisplayAssetModeCommand}" CommandParameter="{x:Static viewModel:DisplayAssetMode.AssetInSelectedFolderAndSubFolder}"
                         IsChecked="{Binding DisplayAssetMode, Mode=OneWay, Converter={xk:IsEqualToParam}, ConverterParameter={x:Static viewModel:DisplayAssetMode.AssetInSelectedFolderAndSubFolder}}" />
             </MenuItem>
-            <MenuItem Header="Sort by" Style="{StaticResource MenuGroupSeparatorStyle}" />
+            <MenuItem Header="{xk:Localize Sort by, Context=Menu}" Style="{StaticResource MenuGroupSeparatorStyle}" />
             <MenuItem Header="{xk:Localize Name, Context=Menu}" IsCheckable="False"
                       Command="{Binding SortAssetsCommand}" CommandParameter="{x:Static viewModel:SortRule.Name}"
                       IsChecked="{Binding SortRule, Mode=OneWay, Converter={xk:IsEqualToParam}, ConverterParameter={x:Static viewModel:SortRule.Name}}"/>
@@ -381,7 +381,7 @@
             <MenuItem Style="{StaticResource MenuGroupWithItemsStyle}">
               <MenuItem.Header>
                 <DockPanel LastChildFill="False">
-                  <TextBlock DockPanel.Dock="Left" Text="View" FontWeight="Bold" />
+                  <TextBlock DockPanel.Dock="Left" Text="{xk:Localize View}" FontWeight="Bold" />
                   <Button DockPanel.Dock="Right" Margin="4 0 0 0" Background="Transparent"
                           Command="view:AssetViewUserControl.ZoomInCommand"
                           ToolTip="{xk:Localize Zoom in, Context=ToolTip}" status:ToolTipHelper.Status="{Binding Session.Editor.Status}" ToolTipService.ShowOnDisabled="True">

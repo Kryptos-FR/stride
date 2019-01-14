@@ -279,11 +279,11 @@
         <MenuItem Header="{xk:Localize About..., Context=Menu}" Command="{Binding OpenAboutPageCommand}"/>
       </MenuItem>
       <!-- Debug Menu -->
-      <MenuItem Header="Debug" Visibility="{Binding IsTestMenuVisible, ElementName=EditorWindow, Converter={xk:VisibleOrCollapsed}}">
-        <MenuItem Header="Create test asset" Command="{Binding CreateTestAssetCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-        <MenuItem Header="Create unit test asset" Command="{Binding CreateUnitTestAssetCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+      <MenuItem Header="{xk:Localize Debug, Context=Menu}" Visibility="{Binding IsTestMenuVisible, ElementName=EditorWindow, Converter={xk:VisibleOrCollapsed}}">
+        <MenuItem Header="{xk:Localize Create test asset, Context=Menu}" Command="{Binding CreateTestAssetCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <MenuItem Header="{xk:Localize Create unit test asset, Context=Menu}" Command="{Binding CreateUnitTestAssetCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
         <Separator/>
-        <MenuItem Header="Break with debugger" Command="{Binding BreakDebuggerCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <MenuItem Header="{xk:Localize Break with debugger, Context=Menu}" Command="{Binding BreakDebuggerCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
       </MenuItem>
     </Menu>
 
