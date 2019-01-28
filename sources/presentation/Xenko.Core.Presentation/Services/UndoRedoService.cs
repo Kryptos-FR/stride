@@ -55,6 +55,7 @@ namespace Xenko.Core.Presentation.Services
                 return new DummyTransaction();
             }
 
+             // FIXME: potential bug here (transactionCompletion should not be recreated if a transaction is already in progress (nested transactions)
             transactionCompletion = new TaskCompletionSource<int>();
             return stack.CreateTransaction(flags);
         }
