@@ -227,8 +227,10 @@ namespace Xenko.Assets.Presentation.AssetEditors.VisualScriptEditor
         {
             var property = new Property("bool", $"Member{Properties.Children.Count}");
 
-            Asset.AddProperty(property);
-
+            using (var transaction = UndoRedoService.CreateTransaction())
+            {
+                Asset.AddProperty(property);
+            }
             //SelectedProperties.Clear();
             //SelectedProperties.Add(Session.AssetNodeContainer.GetNode(property));
         }
@@ -325,7 +327,10 @@ namespace Xenko.Assets.Presentation.AssetEditors.VisualScriptEditor
                 method.ReturnType = methodSymbol.ReturnType.ToDisplayString();
             }
 
-            Asset.AddMethod(method);
+            using (var transaction = UndoRedoService.CreateTransaction())
+            {
+                Asset.AddMethod(method);
+            }
         }
 
         private void RemoveSelectedFunction()

@@ -16,6 +16,7 @@ TemplateFolders:
       Files:
         - !file Templates/Assets/Animations/DefaultAnimation.xktpl
         - !file Templates/Assets/Animations/DefaultSkeleton.xktpl
+        - !file Templates/Assets/Scripts/DefaultVisualScript.xktpl		
         - !file Templates/Assets/Fonts/OfflineRasterizedSpriteFont.xktpl
         - !file Templates/Assets/Fonts/RuntimeRasterizedSpriteFont.xktpl
         - !file Templates/Assets/Fonts/SignedDistanceFieldSpriteFont.xktpl

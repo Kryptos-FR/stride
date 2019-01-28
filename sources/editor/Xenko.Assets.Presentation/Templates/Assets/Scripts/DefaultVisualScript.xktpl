@@ -1,0 +1,10 @@
+!TemplateAssetFactory
+Id: ee75abcf-3161-4f71-9ab1-9f1aa09422b3
+AssetTypeName: VisualScriptAsset
+Name: Visual Script
+Scope: Asset
+Description: Visual Script Asset
+Group: Script
+Order: -99
+Icon: ..\.xktpl\VisualScript.png
+DefaultOutputName: VisualScript
