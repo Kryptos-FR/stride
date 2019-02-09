@@ -144,6 +144,9 @@
     <Compile Update="View\WorkProgressWindow.xaml.cs">
       <DependentUpon>WorkProgressWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Update="View\PackageManager.xaml.cs">
+      <DependentUpon>PackageManager.xaml</DependentUpon>
+    </Compile>
     <Page Include="Components\AddAssets\View\ItemTemplatesWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -256,6 +259,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="View\PackageManager.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>	
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Update="Resources\Images.resx">

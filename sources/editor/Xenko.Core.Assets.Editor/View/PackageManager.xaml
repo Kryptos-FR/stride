@@ -1,0 +1,28 @@
+<Window x:Class="Xenko.Core.Assets.Editor.View.PackageManager"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:xk="http://schemas.xenko.com/xaml/presentation"
+        mc:Ignorable="d"  Style="{DynamicResource WindowChromeStyle}"
+        Title="{xk:Localize Package Manager}"
+        d:DesignHeight="450" d:DesignWidth="800">
+  <DockPanel LastChildFill="True">
+    <TextBlock DockPanel.Dock="Top">Header placeholder</TextBlock>
+    <TextBlock DockPanel.Dock="Bottom">Footer placeholder</TextBlock>
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition />
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition />
+      </Grid.ColumnDefinitions>
+
+      <TextBlock Grid.Column="0">First column placeholder</TextBlock>
+
+      <GridSplitter Grid.Column="1" ResizeBehavior="PreviousAndNext" Width="8" VerticalAlignment="Stretch" Background="#FF1D1D1D" />
+      
+      <TextBlock Grid.Column="2">Second column placeholder</TextBlock>
+
+    </Grid>
+  </DockPanel>
+</Window>
