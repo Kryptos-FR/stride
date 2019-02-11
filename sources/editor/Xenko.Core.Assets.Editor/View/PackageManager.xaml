@@ -4,12 +4,16 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:xk="http://schemas.xenko.com/xaml/presentation"
+        xmlns:local="clr-namespace:Xenko.Core.Assets.Editor.ViewModel"
         mc:Ignorable="d"  Style="{DynamicResource WindowChromeStyle}"
         Title="{xk:Localize Package Manager}"
-        d:DesignHeight="450" d:DesignWidth="800">
+        d:DesignHeight="450" d:DesignWidth="800"  d:DataContext="{d:DesignInstance local:PackageManagerViewModel}">
   <DockPanel LastChildFill="True">
-    <TextBlock DockPanel.Dock="Top">Header placeholder</TextBlock>
-    <TextBlock DockPanel.Dock="Bottom">Footer placeholder</TextBlock>
+    <!-- Header, navigation, search, etc. -->
+    <TextBlock DockPanel.Dock="Top" Text="Header placeholder" />
+    <!-- Footer, status, etc. -->
+    <TextBlock DockPanel.Dock="Bottom" Text="Footer placeholder" />
+    <!-- Main UI -->
     <Grid>
       <Grid.ColumnDefinitions>
         <ColumnDefinition />
@@ -17,10 +21,22 @@
         <ColumnDefinition />
       </Grid.ColumnDefinitions>
 
-      <TextBlock Grid.Column="0">First column placeholder</TextBlock>
+      <!-- Package list -->
+      <ListBox ItemsSource="{Binding Path=Packages}" SelectedItem="{Binding Path=CurrentPackage}">
+        <ListBox.ItemTemplate>
+          <DataTemplate DataType="{x:Type local:PackageDescriptionViewModel}">
+            <DockPanel LastChildFill="True">
+              <Image DockPanel.Dock="Left" Source="{Binding Path=Icon}" />
+              <TextBlock DockPanel.Dock="Right" Text="{Binding Path=Version}" />
+              <TextBlock Text="{Binding Path=Description}" />
+            </DockPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
 
       <GridSplitter Grid.Column="1" ResizeBehavior="PreviousAndNext" Width="8" VerticalAlignment="Stretch" Background="#FF1D1D1D" />
       
+      <!-- Package details -->
       <TextBlock Grid.Column="2">Second column placeholder</TextBlock>
 
     </Grid>
