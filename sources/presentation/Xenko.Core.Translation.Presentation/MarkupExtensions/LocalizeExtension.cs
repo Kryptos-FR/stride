@@ -29,9 +29,9 @@ namespace Xenko.Core.Translation.Presentation.MarkupExtensions
         /// Creates a new instance of the <see cref="LocalizeExtension"/> class.
         /// </summary>
         /// <param name="text">The text to localize.</param>
-        public LocalizeExtension(object text)
+        public LocalizeExtension(string text)
         {
-            Text = text?.ToString();
+            Text = text;
         }
 
         /// <summary>
