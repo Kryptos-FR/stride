@@ -24,6 +24,7 @@ using Xenko.Core.Presentation.Extensions;
 using Xenko.Core.Presentation.Interop;
 using Xenko.Core.Presentation.Windows;
 using Xenko.Core.Translation;
+using Xenko.Core.Assets.Editor.View;
 #if DEBUG
 using Xenko.Assets.Presentation.Test;
 #endif
@@ -35,7 +36,8 @@ namespace Xenko.GameStudio
     /// </summary>
     public partial class GameStudioWindow : IAsyncClosableWindow
     {
-        private DebugWindow debugWindow;
+        private Window debugWindow;
+        private Window packageManager; // FIXME move somewhere else
         private bool forceClose;
         private readonly DockingLayoutManager dockingLayout;
         private readonly AssetEditorsManager assetEditorsManager;
@@ -58,6 +60,7 @@ namespace Xenko.GameStudio
             editor.ServiceProvider.Get<IEditorDialogService>().AssetEditorsManager = assetEditorsManager;
 
             OpenDebugWindowCommand = new AnonymousCommand(editor.ServiceProvider, OpenDebugWindow);
+            OpenPackageManagerWindowCommand = new AnonymousCommand(editor.ServiceProvider, OpenPackageManagerWindow);
             CreateTestAssetCommand = new AnonymousCommand(editor.ServiceProvider, CreateTestAsset);
             CreateUnitTestAssetCommand = new AnonymousCommand(editor.ServiceProvider, CreateUnitTestAsset);
             BreakDebuggerCommand = new AnonymousCommand(editor.ServiceProvider, BreakDebugger);
@@ -143,6 +146,8 @@ namespace Xenko.GameStudio
         public string EditorTitle => Editor.Session.SolutionPath != null ? $"{Editor.Session.SolutionPath.GetFileName()} - {XenkoGameStudio.EditorName}" : XenkoGameStudio.EditorName;
 
         public ICommandBase OpenDebugWindowCommand { get; }
+
+        public ICommandBase OpenPackageManagerWindowCommand { get; } // FIXME move somewhere else
 
         public ICommandBase CreateTestAssetCommand { get; }
 
@@ -373,6 +378,16 @@ namespace Xenko.GameStudio
                 debugWindow = new DebugWindow();
                 debugWindow.Show();
                 debugWindow.Closed += (s, e) => debugWindow = null;
+            }
+        }
+
+        private void OpenPackageManagerWindow()
+        {
+            if (packageManager == null)
+            {
+                packageManager = new PackageManager();
+                packageManager.Show();
+                packageManager.Closed += (s, e) => packageManager = null;
             }
         }
 

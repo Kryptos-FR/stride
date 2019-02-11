@@ -248,6 +248,8 @@
         <MenuItem Header="{xk:Localize Update all assets with modified source, Context=Menu}" Command="{Binding Session.SourceTracker.UpdateAllAssetsWithModifiedSourceCommand}" InputGestureText="{x:Static stringsEd:KeyGestures.UpdateAllAssetsWithModifiedSource}" Icon="{xk:Image {StaticResource UpdateAllAssetsWithModifiedSource}}" Visibility="{Binding Session.NewDirectoryCommand.IsEnabled, Converter={xk:VisibleOrCollapsed}}"/>
         <MenuItem Header="{xk:Localize Explore, Context=Menu}" Style="{StaticResource MenuGroupSeparatorStyle}" Visibility="{Binding Session.ExploreCommand.IsEnabled, Converter={xk:VisibleOrCollapsed}}"/>
         <MenuItem Header="{xk:Localize Show in Explorer, Context=Menu}" Command="{Binding Session.ExploreCommand}" CommandParameter="{Binding Session.ActiveAssetView.SelectedLocations}" Icon="{xk:Image {StaticResource ImageExplore}}" Visibility="{Binding Session.ExploreCommand.IsEnabled, Converter={xk:VisibleOrCollapsed}}"/>
+        <Separator/>
+        <MenuItem Header="{xk:Localize Open Package Maneger..., Context=Menu}" Command="{Binding OpenPackageManagerWindowCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
       </MenuItem>
       <!-- View Menu -->
       <MenuItem Header="{xk:Localize View, Context=Menu}" IsEnabled="{Binding Session, Converter={xk:ObjectToBool}}">
