@@ -155,7 +155,7 @@ namespace Stride.Assets.Presentation.AssetEditors.ScriptEditor
                     continue;
                 }
 
-                if (diagnosticData.GetTextSpan() is Microsoft.CodeAnalysis.Text.TextSpan diag == false)
+                if (diagnosticData.GetTextSpan(sourceTextContainer.CurrentText) is Microsoft.CodeAnalysis.Text.TextSpan diag == false)
                 {
                     continue;
                 }
