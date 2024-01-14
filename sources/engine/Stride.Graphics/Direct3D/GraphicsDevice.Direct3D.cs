@@ -307,8 +307,8 @@ namespace Stride.Graphics
                 resource.DiscardNextMap = true;
         }
 
-        [DllImport("kernel32.dll", EntryPoint = "GetModuleHandle", CharSet = CharSet.Unicode)]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
+        [LibraryImport("kernel32.dll", EntryPoint = "GetModuleHandle", StringMarshalling = StringMarshalling.Utf16)]
+        private static partial IntPtr GetModuleHandle(string lpModuleName);
     }
 }
 #endif

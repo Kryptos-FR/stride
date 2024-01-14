@@ -17,7 +17,7 @@ namespace Stride.Core.Diagnostics
     /// <summary>
     /// A <see cref="LogListener"/> implementation redirecting its output to the default OS console. If console is not supported message are output to <see cref="Debug"/>
     /// </summary>
-    public class ConsoleLogListener : LogListener
+    public partial class ConsoleLogListener : LogListener
     {
         /// <summary>
         /// Gets or sets the minimum log level handled by this listener.
@@ -247,32 +247,37 @@ namespace Stride.Core.Diagnostics
 
         private const int StdOutConsoleHandle = -11;
 
-        [DllImport("kernel32", SetLastError = true)]
-        private static extern bool AttachConsole(int dwProcessId);
+        [LibraryImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool AttachConsole(int dwProcessId);
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool FreeConsole();
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool FreeConsole();
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool AllocConsole();
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool AllocConsole();
 
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr GetConsoleWindow();
+        [LibraryImport("kernel32.dll")]
+        private static partial IntPtr GetConsoleWindow();
 
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr GetStdHandle(uint nStdHandle);
+        [LibraryImport("kernel32.dll")]
+        private static partial IntPtr GetStdHandle(uint nStdHandle);
 
-        [DllImport("kernel32.dll")]
-        private static extern void SetStdHandle(uint nStdHandle, IntPtr handle);
+        [LibraryImport("kernel32.dll")]
+        private static partial void SetStdHandle(uint nStdHandle, IntPtr handle);
 
-        [DllImport("kernel32.dll")]
-        private static extern int GetFileType(SafeFileHandle handle);
+        [LibraryImport("kernel32.dll")]
+        private static partial int GetFileType(SafeFileHandle handle);
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool GetConsoleMode(IntPtr hConsoleHandle, out int mode);
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool GetConsoleMode(IntPtr hConsoleHandle, out int mode);
 
         private static bool IsHandleRedirected(IntPtr ioHandle)
         {

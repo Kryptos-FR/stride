@@ -10,7 +10,7 @@ namespace Stride.Audio
     /// <summary>
     /// Wrapper around OpenAL
     /// </summary>
-    public class AudioLayer
+    public partial class AudioLayer
     {
         public struct Device
         {
@@ -38,8 +38,10 @@ namespace Stride.Audio
         }
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioInit", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool Init();
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioInit")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool Init();
 
         public enum DeviceFlags
         {
@@ -48,72 +50,90 @@ namespace Stride.Audio
         }
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioCreate", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-        public static extern Device Create(string deviceName, DeviceFlags flags);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioCreate", StringMarshalling = StringMarshalling.Utf16)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial Device Create(string deviceName, DeviceFlags flags);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioDestroy", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void Destroy(Device device);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioDestroy")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void Destroy(Device device);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioUpdate", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void Update(Device device);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioUpdate")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void Update(Device device);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSetMasterVolume", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SetMasterVolume(Device device, float volume);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSetMasterVolume")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SetMasterVolume(Device device, float volume);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioListenerCreate", CallingConvention = CallingConvention.Cdecl)]
-        public static extern Listener ListenerCreate(Device device);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioListenerCreate")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial Listener ListenerCreate(Device device);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioListenerDestroy", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void ListenerDestroy(Listener listener);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioListenerDestroy")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void ListenerDestroy(Listener listener);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioListenerEnable", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool ListenerEnable(Listener listener);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioListenerEnable")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool ListenerEnable(Listener listener);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioListenerDisable", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void ListenerDisable(Listener listener);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioListenerDisable")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void ListenerDisable(Listener listener);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceCreate", CallingConvention = CallingConvention.Cdecl)]
-        public static extern Source SourceCreate(Listener listener, int sampleRate, int maxNumberOfBuffers, bool mono, bool spatialized, bool streamed, bool hrtf, float hrtfDirectionFactor, HrtfEnvironment environment);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceCreate")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial Source SourceCreate(Listener listener, int sampleRate, int maxNumberOfBuffers, [MarshalAs(UnmanagedType.Bool)] bool mono, [MarshalAs(UnmanagedType.Bool)] bool spatialized, [MarshalAs(UnmanagedType.Bool)] bool streamed, [MarshalAs(UnmanagedType.Bool)] bool hrtf, float hrtfDirectionFactor, HrtfEnvironment environment);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceDestroy", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourceDestroy(Source source);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceDestroy")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourceDestroy(Source source);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceGetPosition", CallingConvention = CallingConvention.Cdecl)]
-        public static extern double SourceGetPosition(Source source);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceGetPosition")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial double SourceGetPosition(Source source);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetPan", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourceSetPan(Source source, float pan);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetPan")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourceSetPan(Source source, float pan);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioBufferCreate", CallingConvention = CallingConvention.Cdecl)]
-        public static extern Buffer BufferCreate(int maxBufferSizeBytes);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioBufferCreate")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial Buffer BufferCreate(int maxBufferSizeBytes);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioBufferDestroy", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void BufferDestroy(Buffer buffer);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioBufferDestroy")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void BufferDestroy(Buffer buffer);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioBufferFill", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void BufferFill(Buffer buffer, IntPtr pcm, int bufferSize, int sampleRate, bool mono);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioBufferFill")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void BufferFill(Buffer buffer, IntPtr pcm, int bufferSize, int sampleRate, [MarshalAs(UnmanagedType.Bool)] bool mono);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetBuffer", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourceSetBuffer(Source source, Buffer buffer);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetBuffer")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourceSetBuffer(Source source, Buffer buffer);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceFlushBuffers", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourceFlushBuffers(Source source);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceFlushBuffers")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourceFlushBuffers(Source source);
 
         public enum BufferType
         {
@@ -124,51 +144,64 @@ namespace Stride.Audio
         }
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceQueueBuffer", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourceQueueBuffer(Source source, Buffer buffer, IntPtr pcm, int bufferSize, BufferType streamType);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceQueueBuffer")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourceQueueBuffer(Source source, Buffer buffer, IntPtr pcm, int bufferSize, BufferType streamType);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceGetFreeBuffer", CallingConvention = CallingConvention.Cdecl)]
-        public static extern Buffer SourceGetFreeBuffer(Source source);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceGetFreeBuffer")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial Buffer SourceGetFreeBuffer(Source source);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourcePlay", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourcePlay(Source source);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourcePlay")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourcePlay(Source source);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourcePause", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourcePause(Source source);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourcePause")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourcePause(Source source);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceStop", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourceStop(Source source);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceStop")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourceStop(Source source);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetLooping", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourceSetLooping(Source source, bool looped);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetLooping")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourceSetLooping(Source source, [MarshalAs(UnmanagedType.Bool)] bool looped);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetRange", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourceSetRange(Source source, double startTime, double stopTime);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetRange")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourceSetRange(Source source, double startTime, double stopTime);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetGain", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourceSetGain(Source source, float gain);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetGain")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourceSetGain(Source source, float gain);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetPitch", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourceSetPitch(Source source, float pitch);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceSetPitch")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourceSetPitch(Source source, float pitch);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioListenerPush3D", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void ListenerPush3D(Listener listener, ref Vector3 pos, ref Vector3 forward, ref Vector3 up, ref Vector3 vel, ref Matrix worldTransform);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioListenerPush3D")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void ListenerPush3D(Listener listener, ref Vector3 pos, ref Vector3 forward, ref Vector3 up, ref Vector3 vel, ref Matrix worldTransform);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourcePush3D", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SourcePush3D(Source source, ref Vector3 pos, ref Vector3 forward, ref Vector3 up, ref Vector3 vel, ref Matrix worldTransform);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourcePush3D")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SourcePush3D(Source source, ref Vector3 pos, ref Vector3 forward, ref Vector3 up, ref Vector3 vel, ref Matrix worldTransform);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceIsPlaying", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool SourceIsPlaying(Source source);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnAudioSourceIsPlaying")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SourceIsPlaying(Source source);
     }
 }

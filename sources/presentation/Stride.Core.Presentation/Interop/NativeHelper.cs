@@ -13,87 +13,94 @@ namespace Stride.Core.Presentation.Interop
         public const string User32 = "user32.dll";
     }
 
-    public static class NativeHelper
+    public static partial class NativeHelper
     {
         #region Methods
 
-        [DllImport(ExternDll.User32)]
-        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
+        [LibraryImport(ExternDll.User32)]
+        public static partial uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
 
         [DllImport(ExternDll.User32, SetLastError = true, CharSet = CharSet.Auto)]
         public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
-        [DllImport(ExternDll.User32)]
+        [LibraryImport(ExternDll.User32)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool SetCursorPos(int x, int y);
+        public static partial bool SetCursorPos(int x, int y);
 
-        [DllImport(ExternDll.User32)]
+        [LibraryImport(ExternDll.User32)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetCursorPos(out POINT lpPoint);
+        public static partial bool GetCursorPos(out POINT lpPoint);
 
-        [DllImport(ExternDll.User32)]
-        public static extern bool ScreenToClient(IntPtr hwnd, ref POINT pt);
-
-        [DllImport(ExternDll.User32)]
-        public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport(ExternDll.User32, SetLastError = true)]
-        public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport(ExternDll.User32, EntryPoint = "SendMessage", CharSet = CharSet.Unicode)]
-        public static extern int SendMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
-
-        [DllImport(ExternDll.User32, EntryPoint = "PostMessage", CharSet = CharSet.Unicode)]
-        public static extern int PostMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
-
-        [DllImport(ExternDll.User32, SetLastError = true)]
+        [LibraryImport(ExternDll.User32)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool PostThreadMessage(uint threadId, int msg, IntPtr wParam, IntPtr lParam);
+        public static partial bool ScreenToClient(IntPtr hwnd, ref POINT pt);
 
-        [DllImport(ExternDll.User32)]
-        public static extern IntPtr SetParent(IntPtr hWnd, IntPtr hWndParent);
+        [LibraryImport(ExternDll.User32)]
+        public static partial int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
-        [DllImport(ExternDll.User32)]
-        public static extern IntPtr GetParent(IntPtr hWnd);
+        [LibraryImport(ExternDll.User32, SetLastError = true)]
+        public static partial int GetWindowLong(IntPtr hWnd, int nIndex);
 
-        [DllImport(ExternDll.User32, SetLastError = true)]
-        public static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
+        [LibraryImport(ExternDll.User32, EntryPoint = "SendMessage")]
+        public static partial int SendMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
 
-        [DllImport(ExternDll.User32, SetLastError = true)]
-        public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+        [LibraryImport(ExternDll.User32, EntryPoint = "PostMessage")]
+        public static partial int PostMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
 
-        [DllImport(ExternDll.User32)]
-        public static extern bool SetForegroundWindow(IntPtr hWnd);
+        [LibraryImport(ExternDll.User32, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool PostThreadMessage(uint threadId, int msg, IntPtr wParam, IntPtr lParam);
 
-        [DllImport(ExternDll.User32)]
-        public static extern bool ShowWindow(IntPtr hWnd, int mCmdShow);
+        [LibraryImport(ExternDll.User32)]
+        public static partial IntPtr SetParent(IntPtr hWnd, IntPtr hWndParent);
 
-        [DllImport(ExternDll.User32, SetLastError = true)]
-        public static extern IntPtr GetWindow(IntPtr hWnd, GetWindowCmd uCmd);
+        [LibraryImport(ExternDll.User32)]
+        public static partial IntPtr GetParent(IntPtr hWnd);
 
-        [DllImport(ExternDll.User32)]
-        public static extern IntPtr MonitorFromPoint(POINT lpPoint, int dwFlags);
+        [LibraryImport(ExternDll.User32, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
 
-        [DllImport(ExternDll.User32)]
-        public static extern IntPtr MonitorFromWindow(IntPtr hwnd, int dwFlags);
+        [LibraryImport(ExternDll.User32, SetLastError = true)]
+        public static partial IntPtr FindWindow([MarshalAs(UnmanagedType.LPStr)] string lpClassName, [MarshalAs(UnmanagedType.LPStr)] string lpWindowName);
 
-        [DllImport(ExternDll.User32)]
-        public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumDelegate lpfnEnum, IntPtr dwData);
+        [LibraryImport(ExternDll.User32)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetForegroundWindow(IntPtr hWnd);
+
+        [LibraryImport(ExternDll.User32)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool ShowWindow(IntPtr hWnd, int mCmdShow);
+
+        [LibraryImport(ExternDll.User32, SetLastError = true)]
+        public static partial IntPtr GetWindow(IntPtr hWnd, GetWindowCmd uCmd);
+
+        [LibraryImport(ExternDll.User32)]
+        public static partial IntPtr MonitorFromPoint(POINT lpPoint, int dwFlags);
+
+        [LibraryImport(ExternDll.User32)]
+        public static partial IntPtr MonitorFromWindow(IntPtr hwnd, int dwFlags);
+
+        [LibraryImport(ExternDll.User32)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumDelegate lpfnEnum, IntPtr dwData);
 
         [DllImport(ExternDll.User32)]
         public static extern bool GetMonitorInfo(IntPtr hmonitor, [In, Out] MONITORINFO monitorInfo);
 
-        [DllImport(ExternDll.User32, EntryPoint = "DestroyWindow", CharSet = CharSet.Unicode)]
-        public static extern bool DestroyWindow(IntPtr hwnd);
+        [LibraryImport(ExternDll.User32, EntryPoint = "DestroyWindow")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool DestroyWindow(IntPtr hwnd);
 
-        [DllImport(ExternDll.User32)]
-        public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+        [LibraryImport(ExternDll.User32)]
+        public static partial IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
 
-        [DllImport(ExternDll.User32)]
-        public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+        [LibraryImport(ExternDll.User32)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool UnhookWinEvent(IntPtr hWinEventHook);
 
-        [DllImport(ExternDll.User32, ExactSpelling = true)]
-        public static extern IntPtr GetAncestor(IntPtr hwnd, GetAncestorFlags flags);
+        [LibraryImport(ExternDll.User32)]
+        public static partial IntPtr GetAncestor(IntPtr hwnd, GetAncestorFlags flags);
 
         public static IntPtr SetWindowLong(HandleRef hwnd, WindowLongType index, IntPtr wndProcPtr)
         {
@@ -113,29 +120,32 @@ namespace Stride.Core.Presentation.Interop
         [DllImport(ExternDll.User32, EntryPoint = "SetParent", CharSet = CharSet.Unicode)]
         public static extern IntPtr SetParent(HandleRef hWnd, IntPtr hWndParent);
 
-        [DllImport(ExternDll.User32, EntryPoint = "SetWindowPos", SetLastError = true)]
-        public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+        [LibraryImport(ExternDll.User32, EntryPoint = "SetWindowPos", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
 
-        [DllImport(ExternDll.User32, SetLastError = true)]
-        public static extern IntPtr SetActiveWindow(IntPtr hWnd);
+        [LibraryImport(ExternDll.User32, SetLastError = true)]
+        public static partial IntPtr SetActiveWindow(IntPtr hWnd);
 
-        [DllImport(ExternDll.User32)]
-        public static extern IntPtr GetActiveWindow();
+        [LibraryImport(ExternDll.User32)]
+        public static partial IntPtr GetActiveWindow();
 
-        [DllImport(ExternDll.User32)]
-        public static extern IntPtr GetProcessHandleFromHwnd(IntPtr hWnd);
+        [LibraryImport(ExternDll.User32)]
+        public static partial IntPtr GetProcessHandleFromHwnd(IntPtr hWnd);
 
-        [DllImport(ExternDll.User32)]
-        public static extern IntPtr GetFocus();
+        [LibraryImport(ExternDll.User32)]
+        public static partial IntPtr GetFocus();
 
-        [DllImport(ExternDll.User32)]
-        public static extern bool IsChild(IntPtr hWndParent, IntPtr hWnd);
+        [LibraryImport(ExternDll.User32)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool IsChild(IntPtr hWndParent, IntPtr hWnd);
 
-        [DllImport(ExternDll.User32, CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern IntPtr SetClipboardViewer(IntPtr hWndNewViewer);
+        [LibraryImport(ExternDll.User32, SetLastError = true)]
+        public static partial IntPtr SetClipboardViewer(IntPtr hWndNewViewer);
 
-        [DllImport(ExternDll.User32, CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool ChangeClipboardChain(IntPtr hWndRemove, IntPtr hWndNewNext);
+        [LibraryImport(ExternDll.User32, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool ChangeClipboardChain(IntPtr hWndRemove, IntPtr hWndNewNext);
 
         #endregion // Methods
 

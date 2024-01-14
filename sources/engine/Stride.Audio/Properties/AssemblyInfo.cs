@@ -10,3 +10,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Stride.Audio.Tests" + Stride.PublicKeys.Default)]
 [assembly: InternalsVisibleTo("StrideAudioTests" + Stride.PublicKeys.Default)]
 [assembly: InternalsVisibleTo("Stride.Assets" + Stride.PublicKeys.Default)]
+[assembly: DisableRuntimeMarshalling]

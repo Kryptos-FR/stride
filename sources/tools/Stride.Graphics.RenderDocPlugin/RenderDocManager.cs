@@ -10,7 +10,7 @@ using Microsoft.Win32;
 
 namespace Stride.Graphics
 {
-    public class RenderDocManager
+    public partial class RenderDocManager
     {
         private const string RenderdocClsid = "{5D6BF029-A6BA-417A-8523-120492B1DCE3}";
         private const string LibraryName = "renderdoc.dll";
@@ -320,10 +320,10 @@ namespace Stride.Graphics
         [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
         private delegate bool RENDERDOC_DiscardFrameCapture(IntPtr devicePointer, IntPtr wndHandle);
 
-        [DllImport("kernel32", EntryPoint = "LoadLibrary", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern IntPtr LoadLibrary(string lpFileName);
+        [LibraryImport("kernel32", EntryPoint = "LoadLibrary", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        private static partial IntPtr LoadLibrary(string lpFileName);
 
-        [DllImport("kernel32", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
-        private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+        [LibraryImport("kernel32", SetLastError = true, StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(System.Runtime.InteropServices.Marshalling.AnsiStringMarshaller))]
+        private static partial IntPtr GetProcAddress(IntPtr hModule, string procName);
     }
 }

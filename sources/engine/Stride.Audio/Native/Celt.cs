@@ -11,7 +11,7 @@ namespace Stride.Audio
     /// <summary>
     /// Wrapper around Celt
     /// </summary>
-    internal class Celt : IDisposable
+    internal partial class Celt : IDisposable
     {
         public int SampleRate { get; set; }
 
@@ -158,35 +158,43 @@ namespace Stride.Audio
         }
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr xnCeltCreate(int sampleRate, int bufferSize, int channels, bool decoderOnly);
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial IntPtr xnCeltCreate(int sampleRate, int bufferSize, int channels, [MarshalAs(UnmanagedType.Bool)] bool decoderOnly);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void xnCeltDestroy(IntPtr celt);
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial void xnCeltDestroy(IntPtr celt);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        private static extern int xnCeltResetDecoder(IntPtr celt);
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial int xnCeltResetDecoder(IntPtr celt);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        private static extern int xnCeltGetDecoderSampleDelay(IntPtr celt, ref int delay);
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial int xnCeltGetDecoderSampleDelay(IntPtr celt, ref int delay);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        private static extern unsafe int xnCeltEncodeFloat(IntPtr celt, float* inputSamples, int numberOfInputSamples, byte* outputBuffer, int maxOutputSize);
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static unsafe partial int xnCeltEncodeFloat(IntPtr celt, float* inputSamples, int numberOfInputSamples, byte* outputBuffer, int maxOutputSize);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        private static extern unsafe int xnCeltDecodeFloat(IntPtr celt, byte* inputBuffer, int inputBufferSize, float* outputBuffer, int numberOfOutputSamples);
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static unsafe partial int xnCeltDecodeFloat(IntPtr celt, byte* inputBuffer, int inputBufferSize, float* outputBuffer, int numberOfOutputSamples);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        private static extern unsafe int xnCeltEncodeShort(IntPtr celt, short* inputSamples, int numberOfInputSamples, byte* outputBuffer, int maxOutputSize);
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static unsafe partial int xnCeltEncodeShort(IntPtr celt, short* inputSamples, int numberOfInputSamples, byte* outputBuffer, int maxOutputSize);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        private static extern unsafe int xnCeltDecodeShort(IntPtr celt, byte* inputBuffer, int inputBufferSize, short* outputBuffer, int numberOfOutputSamples);
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static unsafe partial int xnCeltDecodeShort(IntPtr celt, byte* inputBuffer, int inputBufferSize, short* outputBuffer, int numberOfOutputSamples);
     }
 }

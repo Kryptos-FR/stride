@@ -16,21 +16,24 @@ namespace Stride.Rendering.LightProbes
     /// <summary>
     /// Bowyer-Watson tetrahedralization algorithm. More details at http://en.wikipedia.org/wiki/Bowyer%E2%80%93Watson_algorithm.
     /// </summary>
-    public class BowyerWatsonTetrahedralization
+    public partial class BowyerWatsonTetrahedralization
     {
         // Add 100 meters for extrapolation
         // TODO: Make this customizable
         public const float ExtrapolationDistance = 100.0f;
 
 #pragma warning disable SA1300 // Element should begin with upper-case letter
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void exactinit();
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void exactinit();
 
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        public static extern float orient3d(ref Vector3 pa, ref Vector3 pb, ref Vector3 pc, ref Vector3 pd);
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial float orient3d(ref Vector3 pa, ref Vector3 pb, ref Vector3 pc, ref Vector3 pd);
 
-        [DllImport(NativeInvoke.Library, CallingConvention = CallingConvention.Cdecl)]
-        public static extern float insphere(ref Vector3 pa, ref Vector3 pb, ref Vector3 pc, ref Vector3 pd, ref Vector3 pe);
+        [LibraryImport(NativeInvoke.Library)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial float insphere(ref Vector3 pa, ref Vector3 pb, ref Vector3 pc, ref Vector3 pd, ref Vector3 pe);
 #pragma warning restore SA1300 // Element should begin with upper-case letter
 
         private readonly List<int> badTetrahedra = new List<int>();

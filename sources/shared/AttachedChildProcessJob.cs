@@ -10,7 +10,7 @@ namespace Stride
     /// <summary>
     /// Track child process, and destroy them either on <see cref="Dispose"/>, or when parent process is destroyed.
     /// </summary>
-    public class AttachedChildProcessJob : IDisposable
+    public partial class AttachedChildProcessJob : IDisposable
     {
         private IntPtr jobHandle;
 
@@ -98,17 +98,19 @@ namespace Stride
             public UIntPtr PeakJobMemoryUsed;
         }
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-        private static extern IntPtr CreateJobObject(IntPtr lpJobAttributes, string lpName);
+        [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)]
+        private static partial IntPtr CreateJobObject(IntPtr lpJobAttributes, string lpName);
 
-        [DllImport("kernel32.dll")]
-        private static extern bool SetInformationJobObject(IntPtr hJob, JOBOBJECTINFOCLASS JobObjectInfoClass, IntPtr lpJobObjectInfo, uint cbJobObjectInfoLength);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool AssignProcessToJobObject(IntPtr hJob, IntPtr hProcess);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
+        [LibraryImport("kernel32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool CloseHandle(IntPtr hObject);
+        private static partial bool SetInformationJobObject(IntPtr hJob, JOBOBJECTINFOCLASS JobObjectInfoClass, IntPtr lpJobObjectInfo, uint cbJobObjectInfoLength);
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool AssignProcessToJobObject(IntPtr hJob, IntPtr hProcess);
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool CloseHandle(IntPtr hObject);
     }
 }

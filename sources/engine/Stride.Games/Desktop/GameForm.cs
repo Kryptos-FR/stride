@@ -58,7 +58,7 @@ namespace Stride.Games
     /// Default Rendering Form on windows desktop.
     /// </summary>
     [DesignerCategory("Code")]
-    public class GameForm : Form
+    public partial class GameForm : Form
     {
 #pragma warning disable SA1310 // Field names should not contain underscore
         private const int SIZE_RESTORED = 0;
@@ -448,8 +448,9 @@ namespace Stride.Games
             return ((e.KeyValue == 0x12 || e.KeyValue == 0x79 || e.Alt) && !(e.Alt && e.KeyValue == 0x73));
         }
 
-        [DllImport("user32.dll", EntryPoint = "GetClientRect")]
-        private static extern bool GetClientRect(IntPtr hWnd, out Rectangle lpRect);
+        [LibraryImport("user32.dll", EntryPoint = "GetClientRect")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool GetClientRect(IntPtr hWnd, out Rectangle lpRect);
     }
 }
 #endif

@@ -50,7 +50,7 @@ namespace Stride
     /// </list>
     /// <para>This single file is intended to be directly included in the project that needs to handle command line without requiring any SharpDX assembly dependencies.</para>
     /// </remarks>
-    class ConsoleProgram
+    partial class ConsoleProgram
     {
         private const int STD_OUTPUT_HANDLE = -11;
         private static int hConsoleHandle;
@@ -360,21 +360,18 @@ namespace Stride
 
         // Used on optionsObject fields to indicate which options are required.
 
-        [DllImport("kernel32.dll", EntryPoint = "GetStdHandle", SetLastError = true,
-            CharSet = CharSet.Auto,
-            CallingConvention = CallingConvention.StdCall)]
-        private static extern int GetStdHandle(int nStdHandle);
+        [LibraryImport("kernel32.dll", EntryPoint = "GetStdHandle", SetLastError = true)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvStdcall) })]
+        private static partial int GetStdHandle(int nStdHandle);
 
-        [DllImport("kernel32.dll", EntryPoint = "GetConsoleScreenBufferInfo",
-            SetLastError = true, CharSet = CharSet.Auto,
-            CallingConvention = CallingConvention.StdCall)]
-        private static extern int GetConsoleScreenBufferInfo(int hConsoleOutput,
+        [LibraryImport("kernel32.dll", EntryPoint = "GetConsoleScreenBufferInfo", SetLastError = true)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvStdcall) })]
+        private static partial int GetConsoleScreenBufferInfo(int hConsoleOutput,
                                                              ref CONSOLE_SCREEN_BUFFER_INFO lpConsoleScreenBufferInfo);
 
-        [DllImport("kernel32.dll", EntryPoint = "SetConsoleTextAttribute",
-            SetLastError = true, CharSet = CharSet.Auto,
-            CallingConvention = CallingConvention.StdCall)]
-        private static extern int SetConsoleTextAttribute(int hConsoleOutput,
+        [LibraryImport("kernel32.dll", EntryPoint = "SetConsoleTextAttribute", SetLastError = true)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvStdcall) })]
+        private static partial int SetConsoleTextAttribute(int hConsoleOutput,
                                                           int wAttributes);
 
         public static void ErrorColor()

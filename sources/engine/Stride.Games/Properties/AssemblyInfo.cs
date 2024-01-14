@@ -12,3 +12,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Stride.Debugger" + Stride.PublicKeys.Default)]
 [assembly: InternalsVisibleTo("Stride.Graphics.Regression" + Stride.PublicKeys.Default)]
 [assembly: InternalsVisibleTo("Stride.VirtualReality" + Stride.PublicKeys.Default)]
+[assembly: DisableRuntimeMarshalling]

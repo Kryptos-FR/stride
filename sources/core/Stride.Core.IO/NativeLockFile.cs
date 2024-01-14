@@ -8,13 +8,15 @@ using System.Threading;
 
 namespace Stride.Core.IO
 {
-    public static class NativeLockFile
+    public static partial class NativeLockFile
     {
-        [DllImport("Kernel32.dll", SetLastError = true)]
-        internal static extern bool LockFileEx(Microsoft.Win32.SafeHandles.SafeFileHandle handle, uint flags, uint reserved, uint countLow, uint countHigh, ref System.Threading.NativeOverlapped overlapped);
+        [LibraryImport("Kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool LockFileEx(Microsoft.Win32.SafeHandles.SafeFileHandle handle, uint flags, uint reserved, uint countLow, uint countHigh, ref NativeOverlapped overlapped);
 
-        [DllImport("Kernel32.dll", SetLastError = true)]
-        internal static extern bool UnlockFileEx(Microsoft.Win32.SafeHandles.SafeFileHandle handle, uint reserved, uint countLow, uint countHigh, ref System.Threading.NativeOverlapped overlapped);
+        [LibraryImport("Kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static partial bool UnlockFileEx(Microsoft.Win32.SafeHandles.SafeFileHandle handle, uint reserved, uint countLow, uint countHigh, ref NativeOverlapped overlapped);
 
         internal const uint LOCKFILE_FAIL_IMMEDIATELY = 0x00000001;
         internal const uint LOCKFILE_EXCLUSIVE_LOCK = 0x00000002;

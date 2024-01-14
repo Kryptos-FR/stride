@@ -12,7 +12,7 @@ namespace Stride.Core.Diagnostics
     /// <summary>
     /// This static class gives access to the Pause/Resume API of VTune Amplifier. It is available on Windows Desktop platform only.
     /// </summary>
-    public static class VTuneProfiler
+    public static partial class VTuneProfiler
     {
         private const string VTune2015DllName = "ittnotify_collector.dll";
         private static readonly Dictionary<string, StringHandle> StringHandles = new Dictionary<string, StringHandle>();
@@ -142,38 +142,49 @@ namespace Stride.Core.Diagnostics
         }
 
 #pragma warning disable SA1300 // Element must begin with upper-case letter
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void __itt_resume();
+        [LibraryImport(VTune2015DllName)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial void __itt_resume();
 
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void __itt_pause();
+        [LibraryImport(VTune2015DllName)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial void __itt_pause();
 
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)] // not working
-        private static extern void __itt_frame_begin_v3(Domain domain, IntPtr id);
+        [LibraryImport(VTune2015DllName)] // not working
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial void __itt_frame_begin_v3(Domain domain, IntPtr id);
 
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)] // not working
-        private static extern void __itt_frame_end_v3(Domain domain, IntPtr id);
+        [LibraryImport(VTune2015DllName)] // not working
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial void __itt_frame_end_v3(Domain domain, IntPtr id);
 
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)]
-        private static extern Domain __itt_domain_createW([MarshalAs(UnmanagedType.LPWStr)] string domainName);
+        [LibraryImport(VTune2015DllName)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial Domain __itt_domain_createW([MarshalAs(UnmanagedType.LPWStr)] string domainName);
 
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)]
-        private static extern Event __itt_event_createW([MarshalAs(UnmanagedType.LPWStr)] string eventName, int eventNameLength);
+        [LibraryImport(VTune2015DllName)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial Event __itt_event_createW([MarshalAs(UnmanagedType.LPWStr)] string eventName, int eventNameLength);
 
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)]
-        private static extern int __itt_event_start(Event eventHandler);
+        [LibraryImport(VTune2015DllName)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial int __itt_event_start(Event eventHandler);
 
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)]
-        private static extern int __itt_event_end(Event eventHandler);
+        [LibraryImport(VTune2015DllName)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial int __itt_event_end(Event eventHandler);
 
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)]
-        private static extern StringHandle __itt_string_handle_createW([MarshalAs(UnmanagedType.LPWStr)] string text);
+        [LibraryImport(VTune2015DllName)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial StringHandle __itt_string_handle_createW([MarshalAs(UnmanagedType.LPWStr)] string text);
 
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void __itt_task_begin(Domain domain, IttId taskid, IttId parentid, StringHandle name);
+        [LibraryImport(VTune2015DllName)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial void __itt_task_begin(Domain domain, IttId taskid, IttId parentid, StringHandle name);
 
-        [DllImport(VTune2015DllName, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void __itt_task_end(Domain domain);
+        [LibraryImport(VTune2015DllName)]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial void __itt_task_end(Domain domain);
 #pragma warning restore SA1300 // Element must begin with upper-case letter
     }
 }

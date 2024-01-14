@@ -6,16 +6,17 @@ using System.Runtime.InteropServices;
 
 namespace Stride.Input.RawInput
 {
-    internal static class Win32
+    internal static partial class Win32
     {
-        [DllImport("user32.dll")]
-        public unsafe static extern bool RegisterRawInputDevices(void* pRawInputDevices, uint uiNumDevices, uint cbSize);
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static unsafe partial bool RegisterRawInputDevices(void* pRawInputDevices, uint uiNumDevices, uint cbSize);
 
-        [DllImport("user32.dll")]
-        public unsafe static extern uint GetRawInputData(IntPtr hRawInput, uint uiCommand, IntPtr pData, ref uint pcbSize, uint cbSizeHeader);
+        [LibraryImport("user32.dll")]
+        public static unsafe partial uint GetRawInputData(IntPtr hRawInput, uint uiCommand, IntPtr pData, ref uint pcbSize, uint cbSizeHeader);
 
-        [DllImport("user32.dll")]
-        public static extern void ClipCursor(IntPtr rect);
+        [LibraryImport("user32.dll")]
+        public static partial void ClipCursor(IntPtr rect);
     }
 }
 #endif

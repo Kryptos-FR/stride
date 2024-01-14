@@ -8,7 +8,7 @@ using Stride.Core.Mathematics;
 
 namespace Stride.Navigation
 {
-    internal class Navigation
+    internal partial class Navigation
     {
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
         public unsafe struct TileHeader
@@ -148,22 +148,26 @@ namespace Stride.Navigation
 
         // Navmesh generation API
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnNavigationCreateBuilder", CallingConvention = CallingConvention.Cdecl)]
-        public static extern NavBuilderHandle CreateBuilder();
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnNavigationCreateBuilder")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial NavBuilderHandle CreateBuilder();
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnNavigationDestroyBuilder", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void DestroyBuilder(NavBuilderHandle builder);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnNavigationDestroyBuilder")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void DestroyBuilder(NavBuilderHandle builder);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnNavigationBuildNavmesh", CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe GeneratedData* Build(NavBuilderHandle builder,
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnNavigationBuildNavmesh")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static unsafe partial GeneratedData* Build(NavBuilderHandle builder,
             Vector3* vertices, int numVertices,
             int* indices, int numIndices);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnNavigationSetSettings", CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe void SetSettings(NavBuilderHandle builder, BuildSettings* settings);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnNavigationSetSettings")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static unsafe partial void SetSettings(NavBuilderHandle builder, BuildSettings* settings);
 
         /// <summary>
         /// Creates a new navigation mesh object.
@@ -171,12 +175,14 @@ namespace Stride.Navigation
         /// </summary>
         /// <returns></returns>
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnNavigationCreateNavmesh", CallingConvention = CallingConvention.Cdecl)]
-        public static extern NavMeshHandle CreateNavmesh(float cellTileSize);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnNavigationCreateNavmesh")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial NavMeshHandle CreateNavmesh(float cellTileSize);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnNavigationDestroyNavmesh", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void DestroyNavmesh(NavMeshHandle query);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnNavigationDestroyNavmesh")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void DestroyNavmesh(NavMeshHandle query);
 
         /// <summary>
         /// Adds a new tile to the navigation mesh object
@@ -185,8 +191,10 @@ namespace Stride.Navigation
         /// <param name="data">Navigation mesh binary data in the detour format to load</param>
         /// <param name="dataLength">Length of the binary mesh data</param>
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnNavigationAddTile", CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe bool AddTile(NavMeshHandle navmesh, byte* data, int dataLength);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnNavigationAddTile")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static unsafe partial bool AddTile(NavMeshHandle navmesh, byte* data, int dataLength);
 
         /// <summary>
         /// Removes a tile from the navigation mesh object
@@ -194,8 +202,10 @@ namespace Stride.Navigation
         /// <param name="navmesh"></param>
         /// <param name="tileCoordinate">Coordinate of the tile to remove</param>
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnNavigationRemoveTile", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool RemoveTile(NavMeshHandle navmesh, Point tileCoordinate);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnNavigationRemoveTile")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool RemoveTile(NavMeshHandle navmesh, Point tileCoordinate);
 
         /// <summary>
         /// Perform a pathfinding query on the navigation mesh
@@ -205,8 +215,9 @@ namespace Stride.Navigation
         /// <param name="resultStructure">A structure of type PathFindResult, should have the PathPoints field initialized to point to an array of Vector3's with the appropriate size</param>
         /// <returns>A PathFindQueryResult</returns>
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnNavigationPathFindQuery", CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe void DoPathFindQuery(NavMeshHandle query, PathFindQuery pathFindQuery, ref PathFindResult resultStructure);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnNavigationPathFindQuery")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static unsafe partial void DoPathFindQuery(NavMeshHandle query, PathFindQuery pathFindQuery, ref PathFindResult resultStructure);
 
         /// <summary>
         /// Perform a raycast on the navigation mesh
@@ -216,8 +227,9 @@ namespace Stride.Navigation
         /// <param name="resultStructure">A structure of type PathFindResult</param>
         /// <returns>A RaycastQueryResult</returns>
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnNavigationRaycastQuery", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void DoRaycastQuery(NavMeshHandle query, RaycastQuery pathFindQuery, out RaycastResult resultStructure);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnNavigationRaycastQuery")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void DoRaycastQuery(NavMeshHandle query, RaycastQuery pathFindQuery, out RaycastResult resultStructure);
 
         public static int DtAlign4(int size)
         {

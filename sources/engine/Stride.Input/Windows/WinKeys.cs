@@ -12,10 +12,10 @@ namespace Stride.Input
     /// Mapping between <see cref="WinFormsKeys"/> and <see cref="Stride.Input.Keys"/> needed for
     /// translating Winform key events into Stride ones.
     /// </summary>
-    internal static class WinKeys
+    internal static partial class WinKeys
     {
-        [DllImport("user32.dll")]
-        internal static extern int MapVirtualKey(int uCode, uint uMapType);
+        [LibraryImport("user32.dll")]
+        internal static partial int MapVirtualKey(int uCode, uint uMapType);
 
         /// <summary>
         /// Map between Winform keys and Stride keys.

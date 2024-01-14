@@ -10,7 +10,7 @@ using Stride.Core.Mathematics;
 
 namespace Stride.VirtualReality
 {
-    internal static class OculusOvr
+    internal static partial class OculusOvr
     {
         static OculusOvr()
         {
@@ -18,56 +18,72 @@ namespace Stride.VirtualReality
         }
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrStartup", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool Startup();
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrStartup")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool Startup();
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrShutdown", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void Shutdown();
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrShutdown")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void Shutdown();
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrCreateSessionDx", CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr CreateSessionDx(out long adapterLuidStr);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrCreateSessionDx")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial IntPtr CreateSessionDx(out long adapterLuidStr);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrDestroySession", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void DestroySession(IntPtr outSessionPtr);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrDestroySession")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void DestroySession(IntPtr outSessionPtr);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrCreateTexturesDx", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool CreateTexturesDx(IntPtr session, IntPtr dxDevice, out int outTextureCount, float pixelPerScreenPixel, int mirrorBufferWidth = 0, int mirrorBufferHeight = 0);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrCreateTexturesDx")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool CreateTexturesDx(IntPtr session, IntPtr dxDevice, out int outTextureCount, float pixelPerScreenPixel, int mirrorBufferWidth = 0, int mirrorBufferHeight = 0);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrCreateQuadLayerTexturesDx", CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr CreateQuadLayerTexturesDx(IntPtr session, IntPtr dxDevice, out int outTextureCount, int width, int height, int mipLevels, int sampleCount);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrCreateQuadLayerTexturesDx")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial IntPtr CreateQuadLayerTexturesDx(IntPtr session, IntPtr dxDevice, out int outTextureCount, int width, int height, int mipLevels, int sampleCount);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrSetQuadLayerParams", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void SetQuadLayerParams(IntPtr layer, ref Vector3 position, ref Quaternion rotation, ref Vector2 size, bool headLocked);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrSetQuadLayerParams")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void SetQuadLayerParams(IntPtr layer, ref Vector3 position, ref Quaternion rotation, ref Vector2 size, [MarshalAs(UnmanagedType.Bool)] bool headLocked);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetTextureAtIndexDx", CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr GetTextureDx(IntPtr session, Guid textureGuid, int index);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrGetTextureAtIndexDx")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial IntPtr GetTextureDx(IntPtr session, Guid textureGuid, int index);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetQuadLayerTextureAtIndexDx", CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr GetQuadLayerTextureDx(IntPtr session, IntPtr layer, Guid textureGuid, int index);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrGetQuadLayerTextureAtIndexDx")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial IntPtr GetQuadLayerTextureDx(IntPtr session, IntPtr layer, Guid textureGuid, int index);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetMirrorTextureDx", CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr GetMirrorTexture(IntPtr session, Guid textureGuid);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrGetMirrorTextureDx")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial IntPtr GetMirrorTexture(IntPtr session, Guid textureGuid);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetCurrentTargetIndex", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int GetCurrentTargetIndex(IntPtr session);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrGetCurrentTargetIndex")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial int GetCurrentTargetIndex(IntPtr session);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetCurrentQuadLayerTargetIndex", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int GetCurrentQuadLayerTargetIndex(IntPtr session, IntPtr layer);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrGetCurrentQuadLayerTargetIndex")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial int GetCurrentQuadLayerTargetIndex(IntPtr session, IntPtr layer);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrCommitFrame", CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool CommitFrame(IntPtr session, int numberOfExtraLayers, [MarshalAs(UnmanagedType.LPArray)] IntPtr[] extraLayer);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrCommitFrame")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool CommitFrame(IntPtr session, int numberOfExtraLayers, [MarshalAs(UnmanagedType.LPArray)] IntPtr[] extraLayer);
 
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
         public struct FrameProperties
@@ -124,24 +140,29 @@ namespace Stride.VirtualReality
         }
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrUpdate", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void Update(IntPtr session);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrUpdate")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void Update(IntPtr session);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetFrameProperties", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void GetFrameProperties(IntPtr session, ref FrameProperties properties);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrGetFrameProperties")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void GetFrameProperties(IntPtr session, ref FrameProperties properties);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetPosesProperties", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void GetPosesProperties(IntPtr session, out PosesProperties properties);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrGetPosesProperties")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void GetPosesProperties(IntPtr session, out PosesProperties properties);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetInputProperties", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void GetInputProperties(IntPtr session, out InputProperties properties);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrGetInputProperties")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void GetInputProperties(IntPtr session, out InputProperties properties);
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetError", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int GetError(IntPtr errorString);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrGetError")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial int GetError(IntPtr errorString);
 
         public static unsafe string GetError()
         {
@@ -192,8 +213,9 @@ namespace Stride.VirtualReality
         }
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetStatus", CallingConvention = CallingConvention.Cdecl)]
-        private static extern void GetStatus(IntPtr session, ref SessionStatusInternal status);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrGetStatus")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        private static partial void GetStatus(IntPtr session, ref SessionStatusInternal status);
 
         public static SessionStatus GetStatus(IntPtr session)
         {
@@ -211,8 +233,9 @@ namespace Stride.VirtualReality
         }
 
         [SuppressUnmanagedCodeSecurity]
-        [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrRecenter", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void Recenter(IntPtr session);
+        [LibraryImport(NativeInvoke.Library, EntryPoint = "xnOvrRecenter")]
+        [UnmanagedCallConv(CallConvs = new Type[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        public static partial void Recenter(IntPtr session);
 
         [SuppressUnmanagedCodeSecurity]
         [DllImport(NativeInvoke.Library, EntryPoint = "xnOvrGetAudioDeviceID", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
