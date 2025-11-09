@@ -211,4 +211,297 @@ public class TestMathUtil
         byte result = MathUtil.Lerp((byte)0, (byte)255, 0.5f);
         Assert.InRange(result, (byte)126, (byte)128);
     }
+
+    [Theory]
+    [InlineData(0.125f, MathUtil.PiOverFour)]
+    [InlineData(0.25f, MathUtil.PiOverTwo)]
+    [InlineData(0.5f, MathUtil.Pi)]
+    [InlineData(1.0f, MathUtil.TwoPi)]
+    public void TestRevolutionsToRadians(float revolutions, float expectedRadians)
+    {
+        Assert.Equal(expectedRadians, MathUtil.RevolutionsToRadians(revolutions), 5);
+    }
+
+    [Theory]
+    [InlineData(0.125f, 50)]
+    [InlineData(0.25f, 100)]
+    [InlineData(0.5f, 200)]
+    [InlineData(1.0f, 400)]
+    public void TestRevolutionsToGradians(float revolutions, float expectedGradians)
+    {
+        Assert.Equal(expectedGradians, MathUtil.RevolutionsToGradians(revolutions), 5);
+    }
+
+    [Theory]
+    [InlineData(MathUtil.PiOverFour, 0.125f)]
+    [InlineData(MathUtil.PiOverTwo, 0.25f)]
+    [InlineData(MathUtil.Pi, 0.5f)]
+    [InlineData(MathUtil.TwoPi, 1.0f)]
+    public void TestRadiansToRevolutions(float radians, float expectedRevolutions)
+    {
+        Assert.Equal(expectedRevolutions, MathUtil.RadiansToRevolutions(radians), 5);
+    }
+
+    [Theory]
+    [InlineData(50, 0.125f)]
+    [InlineData(100, 0.25f)]
+    [InlineData(200, 0.5f)]
+    [InlineData(400, 1.0f)]
+    public void TestGradiansToRevolutions(float gradians, float expectedRevolutions)
+    {
+        Assert.Equal(expectedRevolutions, MathUtil.GradiansToRevolutions(gradians), 5);
+    }
+
+    [Theory]
+    [InlineData(50, 45)]
+    [InlineData(100, 90)]
+    [InlineData(200, 180)]
+    [InlineData(400, 360)]
+    public void TestGradiansToDegrees(float gradians, float expectedDegrees)
+    {
+        Assert.Equal(expectedDegrees, MathUtil.GradiansToDegrees(gradians), 5);
+    }
+
+    [Theory]
+    [InlineData(5, 0, 10, true)]
+    [InlineData(0, 0, 10, true)]
+    [InlineData(10, 0, 10, true)]
+    [InlineData(-1, 0, 10, false)]
+    [InlineData(11, 0, 10, false)]
+    public void TestIsInRangeFloat(float value, float min, float max, bool expected)
+    {
+        Assert.Equal(expected, MathUtil.IsInRange(value, min, max));
+    }
+
+    [Theory]
+    [InlineData(5, 0, 10, true)]
+    [InlineData(0, 0, 10, true)]
+    [InlineData(10, 0, 10, true)]
+    [InlineData(-1, 0, 10, false)]
+    [InlineData(11, 0, 10, false)]
+    public void TestIsInRangeInt(int value, int min, int max, bool expected)
+    {
+        Assert.Equal(expected, MathUtil.IsInRange(value, min, max));
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    [InlineData(4, true)]
+    [InlineData(8, true)]
+    [InlineData(16, true)]
+    [InlineData(1024, true)]
+    [InlineData(0, false)]
+    [InlineData(3, false)]
+    [InlineData(5, false)]
+    [InlineData(15, false)]
+    public void TestIsPow2(int value, bool expected)
+    {
+        Assert.Equal(expected, MathUtil.IsPow2(value));
+    }
+
+    [Theory]
+    [InlineData(0.0f, 0.0f)]
+    [InlineData(1.0f, 1.0f)]
+    [InlineData(0.5f, 0.21404f)] // Approximate conversion
+    public void TestSRgbToLinear(float sRgbValue, float expectedLinear)
+    {
+        Assert.Equal(expectedLinear, MathUtil.SRgbToLinear(sRgbValue), 3);
+    }
+
+    [Theory]
+    [InlineData(0.0f, 0.0f)]
+    [InlineData(1.0f, 1.0f)]
+    [InlineData(0.21404f, 0.5f)] // Approximate conversion
+    public void TestLinearToSRgb(float linearValue, float expectedSRgb)
+    {
+        Assert.Equal(expectedSRgb, MathUtil.LinearToSRgb(linearValue), 3);
+    }
+
+    [Theory]
+    [InlineData(1.0f, 0.0f)]
+    [InlineData(2.0f, 1.0f)]
+    [InlineData(4.0f, 2.0f)]
+    [InlineData(8.0f, 3.0f)]
+    [InlineData(16.0f, 4.0f)]
+    public void TestLog2Float(float value, float expected)
+    {
+        Assert.Equal(expected, MathUtil.Log2(value), 5);
+    }
+
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(2, 1)]
+    [InlineData(4, 2)]
+    [InlineData(8, 3)]
+    [InlineData(16, 4)]
+    [InlineData(5, 2)] // Floor of log2
+    public void TestLog2Int(int value, int expected)
+    {
+        Assert.Equal(expected, MathUtil.Log2(value));
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(2, 2)]
+    [InlineData(3, 4)]
+    [InlineData(5, 8)]
+    [InlineData(9, 16)]
+    [InlineData(17, 32)]
+    public void TestNextPowerOfTwoInt(int value, int expected)
+    {
+        Assert.Equal(expected, MathUtil.NextPowerOfTwo(value));
+    }
+
+    [Theory]
+    [InlineData(1.0f, 1.0f)]
+    [InlineData(2.0f, 2.0f)]
+    [InlineData(3.0f, 4.0f)]
+    [InlineData(5.0f, 8.0f)]
+    [InlineData(9.0f, 16.0f)]
+    public void TestNextPowerOfTwoFloat(float value, float expected)
+    {
+        Assert.Equal(expected, MathUtil.NextPowerOfTwo(value), 5);
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(2, 2)]
+    [InlineData(3, 2)]
+    [InlineData(5, 4)]
+    [InlineData(9, 8)]
+    [InlineData(17, 16)]
+    public void TestPreviousPowerOfTwoInt(int value, int expected)
+    {
+        Assert.Equal(expected, MathUtil.PreviousPowerOfTwo(value));
+    }
+
+    [Theory]
+    [InlineData(1.0f, 1.0f)]
+    [InlineData(2.0f, 2.0f)]
+    [InlineData(3.0f, 2.0f)]
+    [InlineData(5.0f, 4.0f)]
+    [InlineData(9.0f, 8.0f)]
+    public void TestPreviousPowerOfTwoFloat(float value, float expected)
+    {
+        Assert.Equal(expected, MathUtil.PreviousPowerOfTwo(value), 5);
+    }
+
+    [Theory]
+    [InlineData(5, 4, 8)]
+    [InlineData(8, 4, 8)]
+    [InlineData(9, 4, 12)]
+    [InlineData(0, 4, 0)]
+    [InlineData(1, 4, 4)]
+    public void TestAlignUp(int value, int alignment, int expected)
+    {
+        Assert.Equal(expected, MathUtil.AlignUp(value, alignment));
+    }
+
+    [Theory]
+    [InlineData(5, 4, 4)]
+    [InlineData(8, 4, 8)]
+    [InlineData(9, 4, 8)]
+    [InlineData(0, 4, 0)]
+    [InlineData(1, 4, 0)]
+    public void TestAlignDown(int value, int alignment, int expected)
+    {
+        Assert.Equal(expected, MathUtil.AlignDown(value, alignment));
+    }
+
+    [Theory]
+    [InlineData(0, 4, true)]
+    [InlineData(4, 4, true)]
+    [InlineData(8, 4, true)]
+    [InlineData(1, 4, false)]
+    [InlineData(5, 4, false)]
+    public void TestIsAligned(int value, int alignment, bool expected)
+    {
+        Assert.Equal(expected, MathUtil.IsAligned(value, alignment));
+    }
+
+    [Theory]
+    [InlineData(5.3f, 1.0f, 5.0f)]
+    [InlineData(5.7f, 1.0f, 6.0f)]
+    [InlineData(5.5f, 1.0f, 6.0f)]
+    [InlineData(13.2f, 5.0f, 15.0f)]
+    public void TestSnapFloat(float value, float gap, float expected)
+    {
+        Assert.Equal(expected, MathUtil.Snap(value, gap), 5);
+    }
+
+    [Theory]
+    [InlineData(5.3, 1.0, 5.0)]
+    [InlineData(5.7, 1.0, 6.0)]
+    [InlineData(13.2, 5.0, 15.0)]
+    public void TestSnapDouble(double value, double gap, double expected)
+    {
+        Assert.Equal(expected, MathUtil.Snap(value, gap), 5);
+    }
+
+    [Fact]
+    public void TestSnapVector2()
+    {
+        var value = new Vector2(5.3f, 7.6f);
+        var result = MathUtil.Snap(value, 1.0f);
+        Assert.Equal(5.0f, result.X, 5);
+        Assert.Equal(8.0f, result.Y, 5);
+    }
+
+    [Fact]
+    public void TestSnapVector3()
+    {
+        var value = new Vector3(5.3f, 7.6f, 2.4f);
+        var result = MathUtil.Snap(value, 1.0f);
+        Assert.Equal(5.0f, result.X, 5);
+        Assert.Equal(8.0f, result.Y, 5);
+        Assert.Equal(2.0f, result.Z, 5);
+    }
+
+    [Fact]
+    public void TestSnapVector4()
+    {
+        var value = new Vector4(5.3f, 7.6f, 2.4f, 9.8f);
+        var result = MathUtil.Snap(value, 1.0f);
+        Assert.Equal(5.0f, result.X, 5);
+        Assert.Equal(8.0f, result.Y, 5);
+        Assert.Equal(2.0f, result.Z, 5);
+        Assert.Equal(10.0f, result.W, 5);
+    }
+
+    [Theory]
+    [InlineData(5.0f, 3.0f, 2.0f)]
+    [InlineData(7.0f, 3.0f, 1.0f)]
+    [InlineData(-1.0f, 3.0f, 2.0f)]
+    [InlineData(3.5f, 2.0f, 1.5f)]
+    public void TestMod(float value, float divisor, float expected)
+    {
+        Assert.Equal(expected, MathUtil.Mod(value, divisor), 5);
+    }
+
+    [Fact]
+    public void TestExpDecayFloat()
+    {
+        float result = MathUtil.ExpDecay(0.0f, 10.0f, 2.0f, 0.5f);
+        // Expected: 10 * (1 - exp(-2 * 0.5)) = 10 * (1 - exp(-1)) ≈ 6.32
+        Assert.InRange(result, 6.0f, 7.0f);
+    }
+
+    [Fact]
+    public void TestExpDecayDouble()
+    {
+        double result = MathUtil.ExpDecay(0.0, 10.0, 2.0, 0.5);
+        // Expected: 10 * (1 - exp(-2 * 0.5)) = 10 * (1 - exp(-1)) ≈ 6.32
+        Assert.InRange(result, 6.0, 7.0);
+    }
+
+    [Theory]
+    [InlineData(0.0, true)]
+    [InlineData(MathUtil.ZeroToleranceDouble * 0.5, true)]
+    [InlineData(MathUtil.ZeroToleranceDouble * 2, false)]
+    [InlineData(-MathUtil.ZeroToleranceDouble * 0.5, true)]
+    public void TestIsZeroDouble(double value, bool expected)
+    {
+        Assert.Equal(expected, MathUtil.IsZero(value));
+    }
 }
