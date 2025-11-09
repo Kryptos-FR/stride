@@ -379,4 +379,174 @@ public class TestDouble3
         Assert.Equal(2.0f, v.Y);
         Assert.Equal(3.0f, v.Z);
     }
+
+    [Fact]
+    public void TestDouble3Indexer()
+    {
+        var v = new Double3(3.0, 4.0, 5.0);
+        Assert.Equal(3.0, v[0]);
+        Assert.Equal(4.0, v[1]);
+        Assert.Equal(5.0, v[2]);
+        
+        v[0] = 6.0;
+        v[1] = 7.0;
+        v[2] = 8.0;
+        Assert.Equal(6.0, v.X);
+        Assert.Equal(7.0, v.Y);
+        Assert.Equal(8.0, v.Z);
+    }
+
+    [Fact]
+    public void TestDouble3IndexerOutOfRange()
+    {
+        var v = new Double3(1.0, 2.0, 3.0);
+        Assert.Throws<ArgumentOutOfRangeException>(() => v[-1]);
+        Assert.Throws<ArgumentOutOfRangeException>(() => v[3]);
+        Assert.Throws<ArgumentOutOfRangeException>(() => v[-1] = 0.0);
+        Assert.Throws<ArgumentOutOfRangeException>(() => v[3] = 0.0);
+    }
+
+    [Fact]
+    public void TestDouble3IsNormalized()
+    {
+        var normalized = new Double3(1.0, 0.0, 0.0);
+        Assert.True(normalized.IsNormalized);
+        
+        var notNormalized = new Double3(3.0, 4.0, 5.0);
+        Assert.False(notNormalized.IsNormalized);
+        
+        var zero = Double3.Zero;
+        Assert.False(zero.IsNormalized);
+    }
+
+    [Fact]
+    public void TestDouble3ToArray()
+    {
+        var v = new Double3(1.5, 2.5, 3.5);
+        var array = v.ToArray();
+        Assert.Equal(3, array.Length);
+        Assert.Equal(1.5, array[0]);
+        Assert.Equal(2.5, array[1]);
+        Assert.Equal(3.5, array[2]);
+    }
+
+    [Fact]
+    public void TestDouble3NormalizeInstance()
+    {
+        var v = new Double3(3.0, 4.0, 0.0);
+        v.Normalize();
+        Assert.Equal(0.6, v.X, 5);
+        Assert.Equal(0.8, v.Y, 5);
+        Assert.Equal(0.0, v.Z, 5);
+        Assert.Equal(1.0, v.Length(), 5);
+    }
+
+    [Fact]
+    public void TestDouble3CrossWithOutParameter()
+    {
+        var v1 = new Double3(1.0, 0.0, 0.0);
+        var v2 = new Double3(0.0, 1.0, 0.0);
+        Double3.Cross(ref v1, ref v2, out var result);
+        Assert.Equal(0.0, result.X, 5);
+        Assert.Equal(0.0, result.Y, 5);
+        Assert.Equal(1.0, result.Z, 5);
+    }
+
+    [Fact]
+    public void TestDouble3NormalizeWithOutParameter()
+    {
+        var v = new Double3(3.0, 4.0, 0.0);
+        Double3.Normalize(ref v, out var result);
+        Assert.Equal(0.6, result.X, 5);
+        Assert.Equal(0.8, result.Y, 5);
+    }
+
+    [Fact]
+    public void TestDouble3TransformByQuaternionWithOutParameter()
+    {
+        var vector = new Double3(1.0, 0.0, 0.0);
+        var rotation = Quaternion.RotationZ(MathUtil.PiOverTwo);
+        Double3.Transform(ref vector, ref rotation, out var result);
+        Assert.Equal(0.0, result.X, 5);
+        Assert.Equal(1.0, result.Y, 5);
+        Assert.Equal(0.0, result.Z, 5);
+    }
+
+    [Fact]
+    public void TestDouble3TransformCoordinateWithOutParameter()
+    {
+        var vector = new Double3(1.0, 0.0, 0.0);
+        var matrix = Matrix.Translation(1.0f, 2.0f, 3.0f);
+        Double3.TransformCoordinate(ref vector, ref matrix, out var result);
+        Assert.Equal(2.0, result.X, 5);
+        Assert.Equal(2.0, result.Y, 5);
+        Assert.Equal(3.0, result.Z, 5);
+    }
+
+    [Fact]
+    public void TestDouble3TransformNormalWithOutParameter()
+    {
+        var normal = new Double3(1.0, 0.0, 0.0);
+        var matrix = Matrix.RotationZ(MathUtil.PiOverTwo);
+        Double3.TransformNormal(ref normal, ref matrix, out var result);
+        Assert.Equal(0.0, result.X, 5);
+        Assert.Equal(1.0, result.Y, 5);
+        Assert.Equal(0.0, result.Z, 5);
+    }
+
+    [Fact]
+    public void TestDouble3TransformArrayByQuaternion()
+    {
+        var source = new[] { new Double3(1.0, 0.0, 0.0), new Double3(0.0, 1.0, 0.0) };
+        var destination = new Double3[2];
+        var rotation = Quaternion.RotationZ(MathUtil.PiOverTwo);
+        
+        Double3.Transform(source, ref rotation, destination);
+        
+        Assert.Equal(0.0, destination[0].X, 5);
+        Assert.Equal(1.0, destination[0].Y, 5);
+        Assert.Equal(-1.0, destination[1].X, 5);
+        Assert.Equal(0.0, destination[1].Y, 5);
+    }
+
+    [Fact]
+    public void TestDouble3TransformCoordinateArray()
+    {
+        var source = new[] { new Double3(1.0, 0.0, 0.0), new Double3(0.0, 1.0, 0.0) };
+        var destination = new Double3[2];
+        var matrix = Matrix.Translation(1.0f, 2.0f, 3.0f);
+        
+        Double3.TransformCoordinate(source, ref matrix, destination);
+        
+        Assert.Equal(2.0, destination[0].X, 5);
+        Assert.Equal(2.0, destination[0].Y, 5);
+        Assert.Equal(1.0, destination[1].X, 5);
+        Assert.Equal(3.0, destination[1].Y, 5);
+    }
+
+    [Fact]
+    public void TestDouble3TransformNormalArray()
+    {
+        var source = new[] { new Double3(1.0, 0.0, 0.0), new Double3(0.0, 1.0, 0.0) };
+        var destination = new Double3[2];
+        var matrix = Matrix.RotationZ(MathUtil.PiOverTwo);
+        
+        Double3.TransformNormal(source, ref matrix, destination);
+        
+        Assert.Equal(0.0, destination[0].X, 5);
+        Assert.Equal(1.0, destination[0].Y, 5);
+        Assert.Equal(-1.0, destination[1].X, 5);
+        Assert.Equal(0.0, destination[1].Y, 5);
+    }
+
+    [Fact]
+    public void TestDouble3Deconstruct()
+    {
+        var v = new Double3(1.5, 2.5, 3.5);
+        var (x, y, z) = v;
+        Assert.Equal(1.5, x);
+        Assert.Equal(2.5, y);
+        Assert.Equal(3.5, z);
+    }
 }
+
