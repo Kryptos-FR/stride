@@ -14,7 +14,7 @@ public class TestSphericalHarmonics
         
         Assert.Equal(1, sh.Order);
         Assert.NotNull(sh.Coefficients);
-        Assert.Equal(1, sh.Coefficients.Length); // order^2 = 1
+        Assert.Single(sh.Coefficients); // order^2 = 1
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public class TestSphericalHarmonics
     public void TestSphericalHarmonicsCoefficientsLength()
     {
         var sh1 = new SphericalHarmonics(1);
-        Assert.Equal(1, sh1.Coefficients.Length); // 1*1
+        Assert.Single(sh1.Coefficients); // 1*1
 
         var sh2 = new SphericalHarmonics(2);
         Assert.Equal(4, sh2.Coefficients.Length); // 2*2
