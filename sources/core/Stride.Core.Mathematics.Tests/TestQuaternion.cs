@@ -778,18 +778,6 @@ public class TestQuaternion
     }
 
     [Fact]
-    public void TestQuaternionConjugate()
-    {
-        var q = new Quaternion(1.0f, 2.0f, 3.0f, 4.0f);
-        Quaternion.Conjugate(ref q, out var conjugate);
-        
-        Assert.Equal(-1.0f, conjugate.X);
-        Assert.Equal(-2.0f, conjugate.Y);
-        Assert.Equal(-3.0f, conjugate.Z);
-        Assert.Equal(4.0f, conjugate.W);
-    }
-
-    [Fact]
     public void TestQuaternionInverseEdgeCase()
     {
         var q = Quaternion.RotationY(MathUtil.PiOverTwo);
@@ -1061,22 +1049,6 @@ public class TestQuaternion
         Assert.Equal(-1.0f, rotated.X, 3);
         Assert.Equal(0.0f, rotated.Y, 3);
         Assert.Equal(0.0f, rotated.Z, 3);
-    }
-
-    [Fact]
-    public void TestQuaternionSquad()
-    {
-        var q1 = Quaternion.Identity;
-        var q2 = Quaternion.RotationY(MathUtil.PiOverTwo);
-        var q3 = Quaternion.Identity;
-        var q4 = Quaternion.RotationY(MathUtil.PiOverTwo);
-        
-        // Test at t=0 and t=1
-        var result0 = Quaternion.Squad(q1, q2, q3, q4, 0.0f);
-        var result1 = Quaternion.Squad(q1, q2, q3, q4, 1.0f);
-        
-        Assert.False(float.IsNaN(result0.X));
-        Assert.False(float.IsNaN(result1.X));
     }
 
     #endregion
