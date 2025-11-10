@@ -961,6 +961,293 @@ public class TestVector
         Assert.Equal(2.0f, v2.Y);
     }
 
+    [Fact]
+    public void TestVector3Modulate()
+    {
+        var v1 = new Vector3(2.0f, 4.0f, 6.0f);
+        var v2 = new Vector3(3.0f, 5.0f, 7.0f);
+        var result = Vector3.Modulate(v1, v2);
+        
+        Assert.Equal(6.0f, result.X);
+        Assert.Equal(20.0f, result.Y);
+        Assert.Equal(42.0f, result.Z);
+    }
+
+    [Fact]
+    public void TestVector3Demodulate()
+    {
+        var v1 = new Vector3(6.0f, 20.0f, 42.0f);
+        var v2 = new Vector3(3.0f, 5.0f, 7.0f);
+        var result = Vector3.Demodulate(v1, v2);
+        
+        Assert.Equal(2.0f, result.X);
+        Assert.Equal(4.0f, result.Y);
+        Assert.Equal(6.0f, result.Z);
+    }
+
+    [Fact]
+    public void TestVector3Mod()
+    {
+        var v1 = new Vector3(7.0f, 15.0f, 23.0f);
+        var v2 = new Vector3(3.0f, 4.0f, 5.0f);
+        var result = Vector3.Mod(v1, v2);
+        
+        Assert.Equal(1.0f, result.X);
+        Assert.Equal(3.0f, result.Y);
+        Assert.Equal(3.0f, result.Z);
+    }
+
+    [Fact]
+    public void TestVector3MoveTo()
+    {
+        var from = new Vector3(0.0f, 0.0f, 0.0f);
+        var to = new Vector3(10.0f, 0.0f, 0.0f);
+        var result = Vector3.MoveTo(from, to, 5.0f);
+        
+        Assert.Equal(5.0f, result.X);
+        Assert.Equal(0.0f, result.Y);
+        Assert.Equal(0.0f, result.Z);
+    }
+
+    [Fact]
+    public void TestVector3MoveToExceedsDistance()
+    {
+        var from = new Vector3(0.0f, 0.0f, 0.0f);
+        var to = new Vector3(10.0f, 0.0f, 0.0f);
+        var result = Vector3.MoveTo(from, to, 20.0f);
+        
+        Assert.Equal(10.0f, result.X);
+        Assert.Equal(0.0f, result.Y);
+        Assert.Equal(0.0f, result.Z);
+    }
+
+    [Fact]
+    public void TestVector3ProjectUnproject()
+    {
+        var vector = new Vector3(100.0f, 50.0f, 0.5f);
+        var worldViewProj = Matrix.Identity;
+        
+        var projected = Vector3.Project(vector, 0, 0, 800, 600, 0, 1, worldViewProj);
+        var unprojected = Vector3.Unproject(projected, 0, 0, 800, 600, 0, 1, worldViewProj);
+        
+        Assert.True(MathUtil.NearEqual(vector.X, unprojected.X));
+        Assert.True(MathUtil.NearEqual(vector.Y, unprojected.Y));
+        Assert.True(MathUtil.NearEqual(vector.Z, unprojected.Z));
+    }
+
+    [Fact]
+    public void TestVector3Orthogonalize()
+    {
+        var source = new[]
+        {
+            new Vector3(1, 1, 0),
+            new Vector3(1, 0, 1),
+            new Vector3(0, 1, 1)
+        };
+        var dest = new Vector3[3];
+        
+        Vector3.Orthogonalize(dest, source);
+        
+        // Check orthogonality
+        Assert.True(MathUtil.NearEqual(Vector3.Dot(dest[0], dest[1]), 0.0f));
+        Assert.True(MathUtil.NearEqual(Vector3.Dot(dest[1], dest[2]), 0.0f));
+        Assert.True(MathUtil.NearEqual(Vector3.Dot(dest[0], dest[2]), 0.0f));
+    }
+
+    [Fact]
+    public void TestVector3Orthonormalize()
+    {
+        var source = new[]
+        {
+            new Vector3(2, 0, 0),
+            new Vector3(2, 2, 0),
+            new Vector3(2, 2, 2)
+        };
+        var dest = new Vector3[3];
+        
+        Vector3.Orthonormalize(dest, source);
+        
+        // Check orthogonality and normalization
+        Assert.True(MathUtil.NearEqual(dest[0].Length(), 1.0f));
+        Assert.True(MathUtil.NearEqual(dest[1].Length(), 1.0f));
+        Assert.True(MathUtil.NearEqual(dest[2].Length(), 1.0f));
+        Assert.True(MathUtil.NearEqual(Vector3.Dot(dest[0], dest[1]), 0.0f));
+    }
+
+    [Fact]
+    public void TestVector3RotateAround()
+    {
+        var source = new Vector3(1, 0, 0);
+        var target = Vector3.Zero;
+        var axis = Vector3.UnitZ;
+        var result = Vector3.RotateAround(source, target, axis, MathUtil.PiOverTwo);
+        
+        Assert.True(MathUtil.NearEqual(result.X, 0.0f));
+        Assert.True(MathUtil.NearEqual(result.Y, 1.0f));
+        Assert.True(MathUtil.NearEqual(result.Z, 0.0f));
+    }
+
+    [Fact]
+    public void TestVector3RotationYawPitchRoll()
+    {
+        var q = Quaternion.RotationYawPitchRoll(0.5f, 0.3f, 0.2f);
+        var ypr = Vector3.RotationYawPitchRoll(q);
+        
+        Assert.True(MathUtil.NearEqual(ypr.X, 0.5f) || Math.Abs(ypr.X - 0.5f) < 0.01f);
+        Assert.True(MathUtil.NearEqual(ypr.Y, 0.3f) || Math.Abs(ypr.Y - 0.3f) < 0.01f);
+        Assert.True(MathUtil.NearEqual(ypr.Z, 0.2f) || Math.Abs(ypr.Z - 0.2f) < 0.01f);
+    }
+
+    [Fact]
+    public void TestVector3TransformArray()
+    {
+        var source = new[] { new Vector3(1, 2, 3), new Vector3(4, 5, 6) };
+        var dest = new Vector4[2];
+        var transform = Matrix.Translation(10, 20, 30);
+        
+        Vector3.Transform(source, ref transform, dest);
+        
+        Assert.Equal(11.0f, dest[0].X);
+        Assert.Equal(22.0f, dest[0].Y);
+        Assert.Equal(33.0f, dest[0].Z);
+    }
+
+    [Fact]
+    public void TestVector3TransformCoordinateArray()
+    {
+        var source = new[] { new Vector3(1, 2, 3), new Vector3(4, 5, 6) };
+        var dest = new Vector3[2];
+        var transform = Matrix.Translation(10, 20, 30);
+        
+        Vector3.TransformCoordinate(source, ref transform, dest);
+        
+        Assert.Equal(11.0f, dest[0].X);
+        Assert.Equal(22.0f, dest[0].Y);
+        Assert.Equal(33.0f, dest[0].Z);
+    }
+
+    [Fact]
+    public void TestVector3TransformNormalArray()
+    {
+        var source = new[] { new Vector3(1, 0, 0), new Vector3(0, 1, 0) };
+        var dest = new Vector3[2];
+        var transform = Matrix.RotationZ(MathUtil.PiOverTwo);
+        
+        Vector3.TransformNormal(source, ref transform, dest);
+        
+        Assert.True(MathUtil.NearEqual(dest[0].X, 0.0f));
+        Assert.True(MathUtil.NearEqual(dest[0].Y, 1.0f));
+    }
+
+    [Fact]
+    public void TestVector3TransformQuaternionArray()
+    {
+        var source = new[] { new Vector3(1, 0, 0), new Vector3(0, 1, 0) };
+        var dest = new Vector3[2];
+        var rotation = Quaternion.RotationAxis(Vector3.UnitZ, MathUtil.PiOverTwo);
+        
+        Vector3.Transform(source, ref rotation, dest);
+        
+        Assert.True(MathUtil.NearEqual(dest[0].X, 0.0f));
+        Assert.True(MathUtil.NearEqual(dest[0].Y, 1.0f));
+    }
+
+    [Fact]
+    public void TestVector3AddScalar()
+    {
+        var v = new Vector3(1, 2, 3);
+        var result = v + 5.0f;
+        
+        Assert.Equal(6.0f, result.X);
+        Assert.Equal(7.0f, result.Y);
+        Assert.Equal(8.0f, result.Z);
+    }
+
+    [Fact]
+    public void TestVector3SubtractScalar()
+    {
+        var v = new Vector3(10, 20, 30);
+        var result = v - 5.0f;
+        
+        Assert.Equal(5.0f, result.X);
+        Assert.Equal(15.0f, result.Y);
+        Assert.Equal(25.0f, result.Z);
+    }
+
+    [Fact]
+    public void TestVector3ScalarDivideVector()
+    {
+        var v = new Vector3(2, 4, 5);
+        var result = 20.0f / v;
+        
+        Assert.Equal(10.0f, result.X);
+        Assert.Equal(5.0f, result.Y);
+        Assert.Equal(4.0f, result.Z);
+    }
+
+    [Fact]
+    public void TestVector3VectorDivideVector()
+    {
+        var v1 = new Vector3(10, 20, 30);
+        var v2 = new Vector3(2, 4, 5);
+        var result = v1 / v2;
+        
+        Assert.Equal(5.0f, result.X);
+        Assert.Equal(5.0f, result.Y);
+        Assert.Equal(6.0f, result.Z);
+    }
+
+    [Fact]
+    public void TestVector3IsNormalized()
+    {
+        var normalized = new Vector3(1, 0, 0);
+        var notNormalized = new Vector3(2, 0, 0);
+        
+        Assert.True(normalized.IsNormalized);
+        Assert.False(notNormalized.IsNormalized);
+    }
+
+    [Fact]
+    public void TestVector3NearEqual()
+    {
+        var v1 = new Vector3(1.0f, 2.0f, 3.0f);
+        var v2 = new Vector3(1.001f, 2.001f, 3.001f);
+        var epsilon = new Vector3(0.01f, 0.01f, 0.01f);
+        
+        Assert.True(Vector3.NearEqual(ref v1, ref v2, ref epsilon));
+    }
+
+    [Fact]
+    public void TestVector3Deconstruct()
+    {
+        var v = new Vector3(1, 2, 3);
+        v.Deconstruct(out float x, out float y, out float z);
+        
+        Assert.Equal(1.0f, x);
+        Assert.Equal(2.0f, y);
+        Assert.Equal(3.0f, z);
+    }
+
+    [Fact]
+    public void TestVector3CastToInt3()
+    {
+        var v = new Vector3(1.7f, 2.3f, 3.9f);
+        var i3 = (Int3)v;
+        
+        Assert.Equal(1, i3.X);
+        Assert.Equal(2, i3.Y);
+        Assert.Equal(3, i3.Z);
+    }
+
+    [Fact]
+    public void TestVector3UnaryPlus()
+    {
+        var v = new Vector3(1, 2, 3);
+        var result = +v;
+        
+        Assert.Equal(v, result);
+    }
+
     #endregion
 
     #region Vector4 Tests
@@ -1346,6 +1633,101 @@ public class TestVector
         Assert.Equal(2.0f, v4.Y);
         Assert.Equal(3.0f, v4.Z);
         Assert.Equal(0.0f, v4.W);
+    }
+
+    [Fact]
+    public void TestVector4Modulate()
+    {
+        var v1 = new Vector4(2, 3, 4, 5);
+        var v2 = new Vector4(3, 4, 5, 6);
+        var result = Vector4.Modulate(v1, v2);
+        
+        Assert.Equal(6.0f, result.X);
+        Assert.Equal(12.0f, result.Y);
+        Assert.Equal(20.0f, result.Z);
+        Assert.Equal(30.0f, result.W);
+    }
+
+    [Fact]
+    public void TestVector4Demodulate()
+    {
+        var v1 = new Vector4(12, 20, 30, 40);
+        var v2 = new Vector4(3, 4, 5, 8);
+        var result = Vector4.Demodulate(v1, v2);
+        
+        Assert.Equal(4.0f, result.X);
+        Assert.Equal(5.0f, result.Y);
+        Assert.Equal(6.0f, result.Z);
+        Assert.Equal(5.0f, result.W);
+    }
+
+    [Fact]
+    public void TestVector4Moveto()
+    {
+        var from = new Vector4(0, 0, 0, 0);
+        var to = new Vector4(10, 10, 10, 10);
+        var result = Vector4.Moveto(from, to, 5.0f);
+        
+        // Distance from origin to (10,10,10,10) is 20, moving 5 units
+        Assert.True(MathUtil.NearEqual(result.X, 2.5f) || Math.Abs(result.X - 2.5f) < 0.01f);
+        Assert.True(MathUtil.NearEqual(result.Y, 2.5f) || Math.Abs(result.Y - 2.5f) < 0.01f);
+        Assert.True(MathUtil.NearEqual(result.Z, 2.5f) || Math.Abs(result.Z - 2.5f) < 0.01f);
+        Assert.True(MathUtil.NearEqual(result.W, 2.5f) || Math.Abs(result.W - 2.5f) < 0.01f);
+    }
+
+    [Fact]
+    public void TestVector4MovetoExceedsDistance()
+    {
+        var from = new Vector4(0, 0, 0, 0);
+        var to = new Vector4(1, 0, 0, 0);
+        var result = Vector4.Moveto(from, to, 10.0f);
+        
+        // Moving further than target should arrive at target
+        Assert.Equal(1.0f, result.X);
+        Assert.Equal(0.0f, result.Y);
+        Assert.Equal(0.0f, result.Z);
+        Assert.Equal(0.0f, result.W);
+    }
+
+    [Fact]
+    public void TestVector4TransformArray()
+    {
+        var source = new[] { new Vector4(1, 2, 3, 1), new Vector4(5, 6, 7, 1) };
+        var dest = new Vector4[2];
+        var matrix = Matrix.Translation(10, 20, 30);
+        
+        Vector4.Transform(source, ref matrix, dest);
+        
+        Assert.Equal(11.0f, dest[0].X);
+        Assert.Equal(22.0f, dest[0].Y);
+        Assert.Equal(33.0f, dest[0].Z);
+        Assert.Equal(1.0f, dest[0].W);
+    }
+
+    [Fact]
+    public void TestVector4TransformQuaternionArray()
+    {
+        var source = new[] { new Vector4(1, 0, 0, 1), new Vector4(0, 1, 0, 1) };
+        var dest = new Vector4[2];
+        var rotation = Quaternion.RotationY(MathUtil.PiOverTwo);
+        
+        Vector4.Transform(source, ref rotation, dest);
+        
+        Assert.True(MathUtil.NearEqual(dest[0].Z, -1.0f));
+        Assert.True(MathUtil.NearEqual(dest[0].X, 0.0f));
+        Assert.Equal(1.0f, dest[0].W);
+    }
+
+    [Fact]
+    public void TestVector4Deconstruct()
+    {
+        var v = new Vector4(1, 2, 3, 4);
+        v.Deconstruct(out float x, out float y, out float z, out float w);
+        
+        Assert.Equal(1.0f, x);
+        Assert.Equal(2.0f, y);
+        Assert.Equal(3.0f, z);
+        Assert.Equal(4.0f, w);
     }
 
     #endregion
