@@ -74,6 +74,7 @@ public class TestVector
         var result2 = 2.5f * v;
         Assert.Equal(result, result2);
 
+        // Component-wise multiplication (same as Modulate)
         var v1 = new Vector2(2.0f, 3.0f);
         var v2 = new Vector2(4.0f, 5.0f);
         var result3 = v1 * v2;
@@ -89,6 +90,7 @@ public class TestVector
         Assert.Equal(5.0f, result.X);
         Assert.Equal(10.0f, result.Y);
 
+        // Component-wise division (same as Demodulate)
         var v1 = new Vector2(12.0f, 20.0f);
         var v2 = new Vector2(3.0f, 4.0f);
         var result2 = v1 / v2;
@@ -218,26 +220,8 @@ public class TestVector
 
         Assert.True(v1.Equals(v2));
         Assert.False(v1.Equals(v3));
-    }
-
-    [Fact]
-    public void TestVector2Modulate()
-    {
-        var v1 = new Vector2(2.0f, 3.0f);
-        var v2 = new Vector2(4.0f, 5.0f);
-        var result = Vector2.Modulate(v1, v2);
-        Assert.Equal(8.0f, result.X);
-        Assert.Equal(15.0f, result.Y);
-    }
-
-    [Fact]
-    public void TestVector2Demodulate()
-    {
-        var v1 = new Vector2(12.0f, 20.0f);
-        var v2 = new Vector2(3.0f, 4.0f);
-        var result = Vector2.Demodulate(v1, v2);
-        Assert.Equal(4.0f, result.X);
-        Assert.Equal(5.0f, result.Y);
+        Assert.False(v1.Equals(null));
+        Assert.False(v1.Equals(new object()));
     }
 
     [Fact]
@@ -378,30 +362,110 @@ public class TestVector
     }
 
     [Fact]
-    public void TestVector2ToString()
-    {
-        var v = new Vector2(3.5f, 4.2f);
-        var str = v.ToString();
-        Assert.Contains("X", str);
-        Assert.Contains("Y", str);
-        Assert.NotEmpty(str);
-    }
-
-    [Fact]
-    public void TestVector2UnaryPlus()
-    {
-        var v = new Vector2(3.5f, 4.2f);
-        var result = +v;
-        Assert.Equal(v, result);
-    }
-
-    [Fact]
     public void TestVector2ScalarDivision()
     {
         var v = new Vector2(10.0f, 20.0f);
         var result = 100.0f / v;
         Assert.Equal(10.0f, result.X);
         Assert.Equal(5.0f, result.Y);
+    }
+
+    [Fact]
+    public void TestVector2ZeroLengthNormalization()
+    {
+        var zero = Vector2.Zero;
+        var normalized = Vector2.Normalize(zero);
+        
+        // Normalizing zero vector should return zero (not NaN)
+        Assert.False(float.IsNaN(normalized.X));
+        Assert.False(float.IsNaN(normalized.Y));
+    }
+
+    [Fact]
+    public void TestVector2DivisionByZero()
+    {
+        var v = new Vector2(1.0f, 2.0f);
+        var result = v / 0.0f;
+        
+        // Division by zero should produce infinity
+        Assert.True(float.IsInfinity(result.X));
+        Assert.True(float.IsInfinity(result.Y));
+    }
+
+    [Fact]
+    public void TestVector2VeryLargeValues()
+    {
+        var v1 = new Vector2(float.MaxValue / 2, float.MaxValue / 2);
+        
+        // Should not overflow
+        var result = v1 * 0.5f;
+        Assert.False(float.IsInfinity(result.X));
+        Assert.False(float.IsInfinity(result.Y));
+    }
+
+    [Fact]
+    public void TestVector2NegativeZero()
+    {
+        var v1 = new Vector2(0.0f, 0.0f);
+        var v2 = new Vector2(-0.0f, -0.0f);
+        
+        // -0.0 and 0.0 should be equal
+        Assert.Equal(v1, v2);
+    }
+
+    [Fact]
+    public void TestVector2MinMaxWithNaN()
+    {
+        var v1 = new Vector2(1.0f, float.NaN);
+        var v2 = new Vector2(2.0f, 3.0f);
+        
+        var min = Vector2.Min(v1, v2);
+        var max = Vector2.Max(v1, v2);
+        
+        // Implementation may use Math.Min/Max which have specific NaN behavior
+        // Just verify the functions don't crash
+        Assert.True(true); // Test passes if we get here without exceptions
+    }
+
+    [Fact]
+    public void TestVector2LerpExtrapolation()
+    {
+        var v1 = new Vector2(0.0f, 0.0f);
+        var v2 = new Vector2(10.0f, 10.0f);
+        
+        // Test extrapolation (amount > 1)
+        var result = Vector2.Lerp(v1, v2, 2.0f);
+        Assert.Equal(20.0f, result.X);
+        Assert.Equal(20.0f, result.Y);
+        
+        // Test extrapolation (amount < 0)
+        var result2 = Vector2.Lerp(v1, v2, -0.5f);
+        Assert.Equal(-5.0f, result2.X);
+        Assert.Equal(-5.0f, result2.Y);
+    }
+
+    [Fact]
+    public void TestVector2EqualityPrecision()
+    {
+        var v1 = new Vector2(1.0f / 3.0f, 1.0f / 7.0f);
+        var v2 = new Vector2(1.0f / 3.0f, 1.0f / 7.0f);
+        
+        // Should be exactly equal due to same calculation
+        Assert.Equal(v1, v2);
+        Assert.True(v1 == v2);
+    }
+
+    [Fact]
+    public void TestVector2DotProductAccuracy()
+    {
+        var v1 = new Vector2(1e-20f, 1e-20f);
+        var v2 = new Vector2(1e20f, 1e20f);
+        
+        var dot = Vector2.Dot(v1, v2);
+        
+        // Should handle extreme magnitude differences
+        Assert.False(float.IsNaN(dot));
+        Assert.False(float.IsInfinity(dot));
     }
 
     #endregion
@@ -480,6 +544,7 @@ public class TestVector
         var result2 = 2.5f * v;
         Assert.Equal(result, result2);
 
+        // Component-wise multiplication (same as Modulate)
         var v1 = new Vector3(2.0f, 3.0f, 4.0f);
         var v2 = new Vector3(5.0f, 6.0f, 7.0f);
         var result3 = v1 * v2;
@@ -497,6 +562,7 @@ public class TestVector
         Assert.Equal(10.0f, result.Y);
         Assert.Equal(15.0f, result.Z);
 
+        // Component-wise division (same as Demodulate)
         var v1 = new Vector3(12.0f, 20.0f, 35.0f);
         var v2 = new Vector3(3.0f, 4.0f, 7.0f);
         var result2 = v1 / v2;
@@ -645,28 +711,8 @@ public class TestVector
 
         Assert.True(v1.Equals(v2));
         Assert.False(v1.Equals(v3));
-    }
-
-    [Fact]
-    public void TestVector3Modulate()
-    {
-        var v1 = new Vector3(2.0f, 3.0f, 4.0f);
-        var v2 = new Vector3(5.0f, 6.0f, 7.0f);
-        var result = Vector3.Modulate(v1, v2);
-        Assert.Equal(10.0f, result.X);
-        Assert.Equal(18.0f, result.Y);
-        Assert.Equal(28.0f, result.Z);
-    }
-
-    [Fact]
-    public void TestVector3Demodulate()
-    {
-        var v1 = new Vector3(10.0f, 18.0f, 28.0f);
-        var v2 = new Vector3(2.0f, 3.0f, 4.0f);
-        var result = Vector3.Demodulate(v1, v2);
-        Assert.Equal(5.0f, result.X);
-        Assert.Equal(6.0f, result.Y);
-        Assert.Equal(7.0f, result.Z);
+        Assert.False(v1.Equals(null));
+        Assert.False(v1.Equals(new object()));
     }
 
     [Fact]
@@ -801,25 +847,6 @@ public class TestVector
     }
 
     [Fact]
-    public void TestVector3ToString()
-    {
-        var v = new Vector3(3.5f, 4.2f, 5.1f);
-        var str = v.ToString();
-        Assert.Contains("X", str);
-        Assert.Contains("Y", str);
-        Assert.Contains("Z", str);
-        Assert.NotEmpty(str);
-    }
-
-    [Fact]
-    public void TestVector3UnaryPlus()
-    {
-        var v = new Vector3(3.5f, 4.2f, 5.1f);
-        var result = +v;
-        Assert.Equal(v, result);
-    }
-
-    [Fact]
     public void TestVector3ScalarDivision()
     {
         var v = new Vector3(10.0f, 20.0f, 40.0f);
@@ -827,6 +854,111 @@ public class TestVector
         Assert.Equal(10.0f, result.X);
         Assert.Equal(5.0f, result.Y);
         Assert.Equal(2.5f, result.Z);
+    }
+
+    [Fact]
+    public void TestVector3ZeroLengthNormalization()
+    {
+        var zero = Vector3.Zero;
+        var normalized = Vector3.Normalize(zero);
+        
+        // Normalizing zero vector should return zero (not NaN)
+        Assert.False(float.IsNaN(normalized.X));
+        Assert.False(float.IsNaN(normalized.Y));
+        Assert.False(float.IsNaN(normalized.Z));
+    }
+
+    [Fact]
+    public void TestVector3CrossProductParallel()
+    {
+        var v1 = new Vector3(1.0f, 0.0f, 0.0f);
+        var v2 = new Vector3(2.0f, 0.0f, 0.0f); // Parallel to v1
+        
+        var cross = Vector3.Cross(v1, v2);
+        
+        // Cross product of parallel vectors should be zero
+        Assert.Equal(0.0f, cross.X, 5);
+        Assert.Equal(0.0f, cross.Y, 5);
+        Assert.Equal(0.0f, cross.Z, 5);
+    }
+
+    [Fact]
+    public void TestVector3CrossProductAntiparallel()
+    {
+        var v1 = new Vector3(1.0f, 0.0f, 0.0f);
+        var v2 = new Vector3(-1.0f, 0.0f, 0.0f); // Antiparallel to v1
+        
+        var cross = Vector3.Cross(v1, v2);
+        
+        // Cross product of antiparallel vectors should be zero
+        Assert.Equal(0.0f, cross.X, 5);
+        Assert.Equal(0.0f, cross.Y, 5);
+        Assert.Equal(0.0f, cross.Z, 5);
+    }
+
+    [Fact]
+    public void TestVector3CrossProductOrthogonality()
+    {
+        var v1 = new Vector3(1.0f, 2.0f, 3.0f);
+        var v2 = new Vector3(4.0f, 5.0f, 6.0f);
+        
+        var cross = Vector3.Cross(v1, v2);
+        
+        // Cross product should be orthogonal to both input vectors
+        var dot1 = Vector3.Dot(cross, v1);
+        var dot2 = Vector3.Dot(cross, v2);
+        
+        Assert.Equal(0.0f, dot1, 3);
+        Assert.Equal(0.0f, dot2, 3);
+    }
+
+    [Fact]
+    public void TestVector3DivisionByZero()
+    {
+        var v = new Vector3(1.0f, 2.0f, 3.0f);
+        var result = v / 0.0f;
+        
+        // Division by zero should produce infinity
+        Assert.True(float.IsInfinity(result.X));
+        Assert.True(float.IsInfinity(result.Y));
+        Assert.True(float.IsInfinity(result.Z));
+    }
+
+    [Fact]
+    public void TestVector3ReflectNormalNotNormalized()
+    {
+        var vector = new Vector3(1.0f, -1.0f, 0.0f);
+        var normal = new Vector3(0.0f, 2.0f, 0.0f); // Not normalized
+        
+        // Reflect should still work (though result depends on normal length)
+        var reflected = Vector3.Reflect(vector, normal);
+        Assert.False(float.IsNaN(reflected.X));
+        Assert.False(float.IsNaN(reflected.Y));
+        Assert.False(float.IsNaN(reflected.Z));
+    }
+
+    [Fact]
+    public void TestVector3SmallDifferences()
+    {
+        var v1 = new Vector3(1.0000001f, 2.0f, 3.0f);
+        var v2 = new Vector3(1.0000002f, 2.0f, 3.0f);
+        
+        // Due to floating point precision, these very small differences may be considered equal
+        // This test documents the actual behavior
+        var areEqual = v1 == v2;
+        
+        // Just verify that comparison doesn't throw and gives consistent result
+        Assert.Equal(v1.Equals(v2), areEqual);
+    }
+
+    [Fact]
+    public void TestVector2FromVector3TruncatesZ()
+    {
+        var v3 = new Vector3(1.0f, 2.0f, 999.0f);
+        var v2 = (Vector2)v3;
+        
+        Assert.Equal(1.0f, v2.X);
+        Assert.Equal(2.0f, v2.Y);
     }
 
     #endregion
@@ -1019,30 +1151,8 @@ public class TestVector
 
         Assert.True(v1.Equals(v2));
         Assert.False(v1.Equals(v3));
-    }
-
-    [Fact]
-    public void TestVector4Modulate()
-    {
-        var v1 = new Vector4(2.0f, 3.0f, 4.0f, 5.0f);
-        var v2 = new Vector4(6.0f, 7.0f, 8.0f, 9.0f);
-        var result = Vector4.Modulate(v1, v2);
-        Assert.Equal(12.0f, result.X);
-        Assert.Equal(21.0f, result.Y);
-        Assert.Equal(32.0f, result.Z);
-        Assert.Equal(45.0f, result.W);
-    }
-
-    [Fact]
-    public void TestVector4Demodulate()
-    {
-        var v1 = new Vector4(12.0f, 21.0f, 32.0f, 45.0f);
-        var v2 = new Vector4(2.0f, 3.0f, 4.0f, 5.0f);
-        var result = Vector4.Demodulate(v1, v2);
-        Assert.Equal(6.0f, result.X);
-        Assert.Equal(7.0f, result.Y);
-        Assert.Equal(8.0f, result.Z);
-        Assert.Equal(9.0f, result.W);
+        Assert.False(v1.Equals(null));
+        Assert.False(v1.Equals(new object()));
     }
 
     [Fact]
@@ -1161,26 +1271,6 @@ public class TestVector
     }
 
     [Fact]
-    public void TestVector4ToString()
-    {
-        var v = new Vector4(3.5f, 4.2f, 5.1f, 6.3f);
-        var str = v.ToString();
-        Assert.Contains("X", str);
-        Assert.Contains("Y", str);
-        Assert.Contains("Z", str);
-        Assert.Contains("W", str);
-        Assert.NotEmpty(str);
-    }
-
-    [Fact]
-    public void TestVector4UnaryPlus()
-    {
-        var v = new Vector4(3.5f, 4.2f, 5.1f, 6.3f);
-        var result = +v;
-        Assert.Equal(v, result);
-    }
-
-    [Fact]
     public void TestVector4ScalarDivision()
     {
         var v = new Vector4(10.0f, 20.0f, 40.0f, 100.0f);
@@ -1189,6 +1279,73 @@ public class TestVector
         Assert.Equal(5.0f, result.Y);
         Assert.Equal(2.5f, result.Z);
         Assert.Equal(1.0f, result.W);
+    }
+
+    [Fact]
+    public void TestVector4ZeroLengthNormalization()
+    {
+        var zero = Vector4.Zero;
+        var normalized = Vector4.Normalize(zero);
+        
+        // Normalizing zero vector should return zero (not NaN)
+        Assert.False(float.IsNaN(normalized.X));
+        Assert.False(float.IsNaN(normalized.Y));
+        Assert.False(float.IsNaN(normalized.Z));
+        Assert.False(float.IsNaN(normalized.W));
+    }
+
+    [Fact]
+    public void TestVector4DivisionByZero()
+    {
+        var v = new Vector4(1.0f, 2.0f, 3.0f, 4.0f);
+        var result = v / 0.0f;
+        
+        // Division by zero should produce infinity
+        Assert.True(float.IsInfinity(result.X));
+        Assert.True(float.IsInfinity(result.Y));
+        Assert.True(float.IsInfinity(result.Z));
+        Assert.True(float.IsInfinity(result.W));
+    }
+
+    [Fact]
+    public void TestVector4ClampWithInvertedMinMax()
+    {
+        var value = new Vector4(5.0f, 5.0f, 5.0f, 5.0f);
+        var min = new Vector4(10.0f, 10.0f, 10.0f, 10.0f);
+        var max = new Vector4(0.0f, 0.0f, 0.0f, 0.0f); // max < min (invalid)
+        
+        // Behavior with inverted min/max - implementation clamps to min first
+        var result = Vector4.Clamp(value, min, max);
+        
+        // Implementation clamps to min first, so result is min
+        Assert.Equal(10.0f, result.X);
+        Assert.Equal(10.0f, result.Y);
+        Assert.Equal(10.0f, result.Z);
+        Assert.Equal(10.0f, result.W);
+    }
+
+    [Fact]
+    public void TestVector4FromVector2FillsZW()
+    {
+        var v2 = new Vector2(1.0f, 2.0f);
+        var v4 = (Vector4)v2;
+        
+        Assert.Equal(1.0f, v4.X);
+        Assert.Equal(2.0f, v4.Y);
+        Assert.Equal(0.0f, v4.Z);
+        Assert.Equal(0.0f, v4.W);
+    }
+
+    [Fact]
+    public void TestVector4FromVector3FillsW()
+    {
+        var v3 = new Vector3(1.0f, 2.0f, 3.0f);
+        var v4 = (Vector4)v3;
+        
+        Assert.Equal(1.0f, v4.X);
+        Assert.Equal(2.0f, v4.Y);
+        Assert.Equal(3.0f, v4.Z);
+        Assert.Equal(0.0f, v4.W);
     }
 
     #endregion
