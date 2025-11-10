@@ -247,4 +247,25 @@ public class TestSphericalHarmonics
         Assert.Equal(new Color3(1.0f, 0.0f, 0.0f), sh[2, -2]);
         Assert.Equal(new Color3(0.0f, 1.0f, 0.0f), sh[2, 2]);
     }
+
+    [Fact]
+    public void TestSphericalHarmonicsCoefficientsLength()
+    {
+        var sh1 = new SphericalHarmonics(1);
+        Assert.Equal(1, sh1.Coefficients.Length); // 1*1
+
+        var sh2 = new SphericalHarmonics(2);
+        Assert.Equal(4, sh2.Coefficients.Length); // 2*2
+
+        var sh3 = new SphericalHarmonics(3);
+        Assert.Equal(9, sh3.Coefficients.Length); // 3*3
+    }
+
+    [Fact]
+    public void TestSphericalHarmonicsOrderProperty()
+    {
+        var sh = new SphericalHarmonics(3);
+        Assert.Equal(3, sh.Order);
+    }
 }
+

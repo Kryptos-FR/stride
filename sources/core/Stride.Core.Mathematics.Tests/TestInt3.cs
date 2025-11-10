@@ -257,4 +257,58 @@ public class TestInt3
         Assert.Equal(4.0f, vec3.Y);
         Assert.Equal(5.0f, vec3.Z);
     }
+
+    [Fact]
+    public void TestInt3Modulate()
+    {
+        var v1 = new Int3(12, 20, 30);
+        var v2 = new Int3(3, 4, 5);
+        var result = Int3.Modulate(v1, v2);
+        Assert.Equal(36, result.X);
+        Assert.Equal(80, result.Y);
+        Assert.Equal(150, result.Z);
+    }
+
+    [Fact]
+    public void TestInt3Pow()
+    {
+        var v = new Int3(2, 3, 4);
+        v.Pow(2);
+        Assert.Equal(4, v.X);
+        Assert.Equal(9, v.Y);
+        Assert.Equal(16, v.Z);
+    }
+
+    [Fact]
+    public void TestInt3Lerp()
+    {
+        var start = new Int3(0, 0, 0);
+        var end = new Int3(10, 20, 30);
+        var result = Int3.Lerp(start, end, 0.5f);
+        Assert.Equal(5, result.X);
+        Assert.Equal(10, result.Y);
+        Assert.Equal(15, result.Z);
+    }
+
+    [Fact]
+    public void TestInt3SmoothStep()
+    {
+        var start = new Int3(0, 0, 0);
+        var end = new Int3(10, 20, 30);
+        var result = Int3.SmoothStep(start, end, 0.5f);
+        // SmoothStep at 0.5 should equal Lerp at 0.5 for integers
+        Assert.Equal(5, result.X);
+        Assert.Equal(10, result.Y);
+        Assert.Equal(15, result.Z);
+    }
+
+    [Fact]
+    public void TestInt3Deconstruct()
+    {
+        var v = new Int3(7, 8, 9);
+        var (x, y, z) = v;
+        Assert.Equal(7, x);
+        Assert.Equal(8, y);
+        Assert.Equal(9, z);
+    }
 }

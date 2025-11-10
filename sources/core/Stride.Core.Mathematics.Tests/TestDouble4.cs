@@ -428,4 +428,57 @@ public class TestDouble4
         Assert.Equal(3.5f, vec4.Z, 5);
         Assert.Equal(4.5f, vec4.W, 5);
     }
+
+    [Fact]
+    public void TestDouble4Demodulate()
+    {
+        var v1 = new Double4(12, 20, 30, 40);
+        var v2 = new Double4(3, 4, 5, 8);
+        var result = Double4.Demodulate(v1, v2);
+        
+        Assert.Equal(4.0, result.X);
+        Assert.Equal(5.0, result.Y);
+        Assert.Equal(6.0, result.Z);
+        Assert.Equal(5.0, result.W);
+    }
+
+    [Fact]
+    public void TestDouble4TransformMatrixArray()
+    {
+        var source = new[] { new Double4(1, 2, 3, 1), new Double4(5, 6, 7, 1) };
+        var dest = new Double4[2];
+        var matrix = Matrix.Translation(10, 20, 30);
+        
+        Double4.Transform(source, ref matrix, dest);
+        
+        Assert.Equal(11.0, dest[0].X);
+        Assert.Equal(22.0, dest[0].Y);
+        Assert.Equal(33.0, dest[0].Z);
+        Assert.Equal(1.0, dest[0].W);
+    }
+
+    [Fact]
+    public void TestDouble4TransformQuaternionArray()
+    {
+        var source = new[] { new Double4(1, 0, 0, 1), new Double4(0, 1, 0, 1) };
+        var dest = new Double4[2];
+        var rotation = Quaternion.RotationY(MathUtil.PiOverTwo);
+        
+        Double4.Transform(source, ref rotation, dest);
+        
+        Assert.True(MathUtil.NearEqual((float)dest[0].Z, -1.0f));
+        Assert.True(MathUtil.NearEqual((float)dest[0].X, 0.0f));
+    }
+
+    [Fact]
+    public void TestDouble4Deconstruct()
+    {
+        var v = new Double4(1, 2, 3, 4);
+        v.Deconstruct(out double x, out double y, out double z, out double w);
+        
+        Assert.Equal(1.0, x);
+        Assert.Equal(2.0, y);
+        Assert.Equal(3.0, z);
+        Assert.Equal(4.0, w);
+    }
 }

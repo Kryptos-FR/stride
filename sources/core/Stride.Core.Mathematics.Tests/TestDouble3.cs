@@ -548,5 +548,49 @@ public class TestDouble3
         Assert.Equal(2.5, y);
         Assert.Equal(3.5, z);
     }
+
+    [Fact]
+    public void TestDouble3Demodulate()
+    {
+        var v1 = new Double3(12.0, 20.0, 30.0);
+        var v2 = new Double3(3.0, 4.0, 5.0);
+        var result = Double3.Demodulate(v1, v2);
+        Assert.Equal(4.0, result.X);
+        Assert.Equal(5.0, result.Y);
+        Assert.Equal(6.0, result.Z);
+    }
+
+    [Fact]
+    public void TestDouble3UnaryPlus()
+    {
+        var v = new Double3(1.0, 2.0, 3.0);
+        var result = +v;
+        Assert.Equal(1.0, result.X);
+        Assert.Equal(2.0, result.Y);
+        Assert.Equal(3.0, result.Z);
+    }
+
+    [Fact]
+    public void TestDouble3ScalarMultiplyLeft()
+    {
+        var v = new Double3(2.0, 3.0, 4.0);
+        var result = 3.0 * v;
+        Assert.Equal(6.0, result.X);
+        Assert.Equal(9.0, result.Y);
+        Assert.Equal(12.0, result.Z);
+    }
+
+    [Fact]
+    public void TestDouble3ScalarDivideRight()
+    {
+        var v = new Double3(12.0, 18.0, 24.0);
+        var result = v / 3.0;
+        Assert.Equal(4.0, result.X);
+        Assert.Equal(6.0, result.Y);
+        Assert.Equal(8.0, result.Z);
+    }
 }
+
+
+
 

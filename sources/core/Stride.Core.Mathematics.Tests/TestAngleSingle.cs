@@ -306,4 +306,40 @@ public class TestAngleSingle
         var str = angle.ToString();
         Assert.NotEmpty(str);
     }
+
+    [Fact]
+    public void TestAngleSingleStaticAdd()
+    {
+        var angle1 = new AngleSingle(30, AngleType.Degree);
+        var angle2 = new AngleSingle(45, AngleType.Degree);
+        var result = AngleSingle.Add(angle1, angle2);
+        Assert.Equal(75.0f, result.Degrees, 3);
+    }
+
+    [Fact]
+    public void TestAngleSingleStaticSubtract()
+    {
+        var angle1 = new AngleSingle(90, AngleType.Degree);
+        var angle2 = new AngleSingle(30, AngleType.Degree);
+        var result = AngleSingle.Subtract(angle1, angle2);
+        Assert.Equal(60.0f, result.Degrees, 3);
+    }
+
+    [Fact]
+    public void TestAngleSingleStaticMultiply()
+    {
+        var angle1 = new AngleSingle(30, AngleType.Degree);
+        var angle2 = new AngleSingle(2, AngleType.Radian);
+        var result = AngleSingle.Multiply(angle1, angle2);
+        Assert.NotEqual(0, result.Radians);
+    }
+
+    [Fact]
+    public void TestAngleSingleStaticDivide()
+    {
+        var angle1 = new AngleSingle(90, AngleType.Degree);
+        var angle2 = new AngleSingle(2, AngleType.Radian);
+        var result = AngleSingle.Divide(angle1, angle2);
+        Assert.NotEqual(0, result.Radians);
+    }
 }

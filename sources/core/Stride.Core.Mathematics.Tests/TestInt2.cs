@@ -228,4 +228,53 @@ public class TestInt2
         Assert.Equal(3.0f, vec2.X);
         Assert.Equal(4.0f, vec2.Y);
     }
+
+    [Fact]
+    public void TestInt2Modulate()
+    {
+        var v1 = new Int2(12, 20);
+        var v2 = new Int2(3, 4);
+        var result = Int2.Modulate(v1, v2);
+        Assert.Equal(36, result.X);
+        Assert.Equal(80, result.Y);
+    }
+
+    [Fact]
+    public void TestInt2Pow()
+    {
+        var v = new Int2(2, 3);
+        v.Pow(2);
+        Assert.Equal(4, v.X);
+        Assert.Equal(9, v.Y);
+    }
+
+    [Fact]
+    public void TestInt2Lerp()
+    {
+        var start = new Int2(0, 0);
+        var end = new Int2(10, 20);
+        var result = Int2.Lerp(start, end, 0.5f);
+        Assert.Equal(5, result.X);
+        Assert.Equal(10, result.Y);
+    }
+
+    [Fact]
+    public void TestInt2SmoothStep()
+    {
+        var start = new Int2(0, 0);
+        var end = new Int2(10, 20);
+        var result = Int2.SmoothStep(start, end, 0.5f);
+        Assert.Equal(5, result.X);
+        Assert.Equal(10, result.Y);
+    }
+
+    [Fact]
+    public void TestInt2Deconstruct()
+    {
+        var v = new Int2(7, 8);
+        var (x, y) = v;
+        Assert.Equal(7, x);
+        Assert.Equal(8, y);
+    }
 }
+
