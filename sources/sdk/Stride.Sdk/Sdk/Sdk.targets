@@ -2,45 +2,31 @@
   Stride.Sdk - Main SDK Targets File
   
   This file is imported at the end of project evaluation. It:
-  1. Imports Microsoft.NET.Sdk.targets (base SDK)
-  2. Imports supporting targets files for Stride features
-  3. Defines custom build targets for assembly processing, packaging, etc.
+  1. Defines empty fallback targets (Build, Clean, etc.)
+  2. Configures Stride-specific properties (platform detection, compiler control, etc.)
+  3. Imports Microsoft.NET.Sdk.targets (defines CoreCompile, CopyFilesToOutputDirectory, etc.)
+  4. Imports Stride-specific targets files that hook into SDK targets
   
-  Import Order:
-  1. Microsoft.NET.Sdk.targets (base SDK targets)
-  2. Supporting targets files (AssemblyProcessor, Graphics, Packaging)
-  3. Custom Stride targets
+  Import Order (critical for proper evaluation):
+  1. Empty fallback targets (overridden by Microsoft.NET.Sdk later)
+  2. Stride property configuration (OutputType, StrideCompilerTargetsEnable, etc.)
+  3. Microsoft.NET.Sdk.targets (MUST come before our targets that reference SDK targets)
+  4. Stride.Runtime.targets, AssemblyProcessor, Graphics, Packaging (can now use BeforeTargets/AfterTargets)
 -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <!-- ================================================================ -->
-  <!-- Import Base Microsoft.NET.Sdk Targets -->
+  <!-- Default Empty Targets (Fallbacks) -->
   <!-- ================================================================ -->
-  <!-- This provides all standard .NET build targets -->
-  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-
-  <!-- ================================================================ -->
-  <!-- Import Supporting Targets Files -->
-  <!-- ================================================================ -->
-  
-  <!-- Runtime project triggers (only when StrideRuntime=true) -->
-  <Import Project="Stride.Runtime.targets" Condition="'$(StrideRuntime)' == 'true'" />
-  
-  <!-- Assembly processor integration -->
-  <Import Project="Stride.AssemblyProcessor.targets" />
-  
-  <!-- Graphics API multi-targeting support -->
-  <Import Project="Stride.GraphicsApi.targets" />
-  
-  <!-- Package generation and deployment -->
-  <Import Project="Stride.Packaging.targets" />
-
-  <!-- ================================================================ -->
-  <!-- Default Empty Targets -->
-  <!-- ================================================================ -->
-  <!-- NOTE: Empty targets removed - they were incorrectly overriding SDK targets.
-       When StrideCompilerTargetsEnable='false', the LanguageTargets property
-       points to Stride.Core.DisableBuild.targets which properly disables compilation. -->
+  <!-- These provide fallbacks that are overridden by Microsoft.NET.Sdk.targets later.
+       Required for projects that may skip compilation (StrideCompilerTargetsEnable=false) -->
+  <Target Name="Build"/>
+  <Target Name="Clean"/>
+  <Target Name="ReBuild"/>
+  <Target Name="Publish"/>
+  <Target Name="GetTargetPath"/>
+  <Target Name="GetNativeManifest"/>
+  <Target Name="GetPackagingOutputs"/>
 
   <!-- ================================================================ -->
   <!-- Platform-Specific Build Configuration -->
@@ -118,7 +104,33 @@
   <Target Name="_GenerateCompileInputsProjectAssets" AfterTargets="_GenerateCompileInputs">
     <ItemGroup>
       <CustomAdditionalCompileInputs Include="$(ProjectAssetsFile)" />
-    </ItemGroup>
+    </IImport Base Microsoft.NET.Sdk Targets -->
+  <!-- ================================================================ -->
+  <!-- CRITICAL: Must be imported AFTER property configuration but BEFORE Stride target files.
+       This ensures:
+       1. Framework references are properly configured (needs properties set first)
+       2. SDK targets (CoreCompile, CopyFilesToOutputDirectory) exist before our targets reference them -->
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" Condition="'$(StrideProjectType)' != 'Cpp'" />
+
+  <!-- ================================================================ -->
+  <!-- Import Stride-Specific Targets Files -->
+  <!-- ================================================================ -->
+  <!-- These must come AFTER Microsoft.NET.Sdk.targets so they can use BeforeTargets/AfterTargets -->
+  
+  <!-- Runtime project triggers (only when StrideRuntime=true) -->
+  <Import Project="Stride.Runtime.targets" Condition="'$(StrideRuntime)' == 'true'" />
+  
+  <!-- Assembly processor integration -->
+  <Import Project="Stride.AssemblyProcessor.targets" />
+  
+  <!-- Graphics API multi-targeting support -->
+  <Import Project="Stride.GraphicsApi.targets" />
+  
+  <!-- Package generation and deployment -->
+  <Import Project="Stride.Packaging.targets" />
+
+  <!-- ================================================================ -->
+  <!-- temGroup>
   </Target>
 
   <!-- ================================================================ -->
@@ -140,3 +152,4 @@
           Condition="'$(CustomAfterStrideSdkTargets)' != '' and Exists('$(CustomAfterStrideSdkTargets)')" />
 
 </Project>
+
