@@ -104,7 +104,11 @@
   <Target Name="_GenerateCompileInputsProjectAssets" AfterTargets="_GenerateCompileInputs">
     <ItemGroup>
       <CustomAdditionalCompileInputs Include="$(ProjectAssetsFile)" />
-    </IImport Base Microsoft.NET.Sdk Targets -->
+    </ItemGroup>
+  </Target>
+
+  <!-- ================================================================ -->
+  <!-- Import Base Microsoft.NET.Sdk Targets -->
   <!-- ================================================================ -->
   <!-- CRITICAL: Must be imported AFTER property configuration but BEFORE Stride target files.
        This ensures:
@@ -126,12 +130,11 @@
   <!-- Graphics API multi-targeting support -->
   <Import Project="Stride.GraphicsApi.targets" />
   
+  <!-- Graphics API defines (must be after .NET SDK to modify DefineConstants) -->
+  <Import Project="Stride.Graphics.targets" />
+  
   <!-- Package generation and deployment -->
   <Import Project="Stride.Packaging.targets" />
-
-  <!-- ================================================================ -->
-  <!-- temGroup>
-  </Target>
 
   <!-- ================================================================ -->
   <!-- Shader File Configuration -->

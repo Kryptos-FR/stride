@@ -8,15 +8,11 @@
   - Resolving graphics API dependencies in project references
   - Packaging graphics API-specific outputs
   
-  Note: This is a simplified version for Phase 2. Full implementation
-  will be added in Phase 4 when we handle graphics API dependent projects.
+  Imports the full Graphics API logic from Stride.GraphicsApi.Dev.targets.
 -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <!-- Placeholder for graphics API multi-targeting targets -->
-  <!-- Will be populated in Phase 4 from sources/targets/Stride.GraphicsApi.Dev.targets -->
-  
-  <!-- For now, we just ensure the property is available -->
+  <!-- Set default property -->
   <PropertyGroup>
     <StrideGraphicsApiDependent Condition="'$(StrideGraphicsApiDependent)' == ''">false</StrideGraphicsApiDependent>
   </PropertyGroup>

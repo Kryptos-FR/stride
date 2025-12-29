@@ -30,71 +30,9 @@
     <StrideDefaultGraphicsApi Condition="'$(TargetFramework)' == '$(StrideFrameworkUWP)'">Direct3D11</StrideDefaultGraphicsApi>
     <StrideDefaultGraphicsApi Condition="'$(TargetFramework)' == '$(StrideFrameworkAndroid)'">OpenGLES</StrideDefaultGraphicsApi>
     <StrideDefaultGraphicsApi Condition="'$(TargetFramework)' == '$(StrideFrameworkiOS)'">OpenGLES</StrideDefaultGraphicsApi>
-  </PropertyGroup>
-
-  <!-- ================================================================ -->
-  <!-- Disable Graphics API Multi-Targeting for Single-API Platforms -->
-  <!-- ================================================================ -->
-  <!--
-    Some platforms only support a single graphics API.
-    If we're in an InnerBuild for such a platform, disable StrideGraphicsApiDependent.
-  -->
-  <PropertyGroup Condition="'$(StrideGraphicsApiDependent)' == 'true' And !('$(TargetFrameworks)' != '' and '$(TargetFramework)' == '')">
-    <StrideGraphicsApiDependent Condition="'$(TargetFramework)' == '$(StrideFrameworkUWP)'">false</StrideGraphicsApiDependent>
-    <StrideGraphicsApiDependent Condition="'$(TargetFramework)' == '$(StrideFrameworkiOS)'">false</StrideGraphicsApiDependent>
-    <StrideGraphicsApiDependent Condition="'$(TargetFramework)' == '$(StrideFrameworkAndroid)'">false</StrideGraphicsApiDependent>
     
-    <!-- Set to default API if multi-targeting is disabled -->
-    <StrideGraphicsApi Condition="'$(StrideGraphicsApiDependent)' == 'false'">$(StrideDefaultGraphicsApi)</StrideGraphicsApi>
-  </PropertyGroup>
-
-  <!-- ================================================================ -->
-  <!-- Design-Time Build API Selection -->
-  <!-- ================================================================ -->
-  <!--
-    For IntelliSense and design-time builds, select a single API.
-    Can be overridden via StrideDefaultGraphicsApiDesignTime in Stride.props.
-  -->
-  <PropertyGroup Condition="'$(DesignTimeBuild)' == 'true' And 
-                             '$(StrideGraphicsApiDependent)' == 'true' And 
-                             '$(StrideGraphicsApi)' == ''">
-    <StrideGraphicsApi Condition="'$(StrideDefaultGraphicsApiDesignTime)' != ''">$(StrideDefaultGraphicsApiDesignTime)</StrideGraphicsApi>
-    <StrideGraphicsApi Condition="'$(StrideGraphicsApi)' == ''">$(StrideDefaultGraphicsApi)</StrideGraphicsApi>
-  </PropertyGroup>
-
-  <!-- ================================================================ -->
-  <!-- Graphics API Preprocessor Defines -->
-  <!-- ================================================================ -->
-  
-  <PropertyGroup Condition="'$(StrideGraphicsApi)' == 'Direct3D11'">
-    <StrideGraphicsApiDefines>STRIDE_GRAPHICS_API_DIRECT3D;STRIDE_GRAPHICS_API_DIRECT3D11</StrideGraphicsApiDefines>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(StrideGraphicsApi)' == 'Direct3D12'">
-    <StrideGraphicsApiDefines>STRIDE_GRAPHICS_API_DIRECT3D;STRIDE_GRAPHICS_API_DIRECT3D12</StrideGraphicsApiDefines>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(StrideGraphicsApi)' == 'Null'">
-    <StrideGraphicsApiDefines>STRIDE_GRAPHICS_API_NULL</StrideGraphicsApiDefines>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(StrideGraphicsApi)' == 'OpenGL'">
-    <StrideGraphicsApiDefines>STRIDE_GRAPHICS_API_OPENGL;STRIDE_GRAPHICS_API_OPENGLCORE</StrideGraphicsApiDefines>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(StrideGraphicsApi)' == 'OpenGLES'">
-    <StrideGraphicsApiDefines>STRIDE_GRAPHICS_API_OPENGL;STRIDE_GRAPHICS_API_OPENGLES</StrideGraphicsApiDefines>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(StrideGraphicsApi)' == 'Vulkan'">
-    <StrideGraphicsApiDefines>STRIDE_GRAPHICS_API_VULKAN</StrideGraphicsApiDefines>
-  </PropertyGroup>
-
-  <!-- ================================================================ -->
-  <!-- Apply Defines to Global DefineConstants -->
-  <!-- ================================================================ -->
-  <PropertyGroup>
-    <DefineConstants>$(DefineConstants);$(StrideGraphicsApiDefines)</DefineConstants>
+    <!-- Fallback if no default set -->
+    <StrideDefaultGraphicsApi Condition="'$(StrideDefaultGraphicsApi)' == ''">Direct3D11</StrideDefaultGraphicsApi>
   </PropertyGroup>
 
   <!-- ================================================================ -->
@@ -114,10 +52,7 @@
       $(StrideUI);WINFORMS;WPF
     </StrideUI>
     
-    <!-- Add UI framework defines -->
-    <DefineConstants Condition="$(StrideUI.Contains('SDL'))">$(DefineConstants);STRIDE_UI_SDL</DefineConstants>
-    <DefineConstants Condition="$(StrideUI.Contains('WINFORMS'))">$(DefineConstants);STRIDE_UI_WINFORMS</DefineConstants>
-    <DefineConstants Condition="$(StrideUI.Contains('WPF'))">$(DefineConstants);STRIDE_UI_WPF</DefineConstants>
+    <!-- UI framework defines moved to Stride.Graphics.targets -->
   </PropertyGroup>
 
   <!-- Build UI framework list as ItemGroup for advanced scenarios -->
@@ -126,19 +61,6 @@
     <StrideUIList Condition="'$(StrideUI)' == ''" Include="None" />
   </ItemGroup>
 
-  <!-- ================================================================ -->
-  <!-- Output Path for Graphics API Dependent Builds -->
-  <!-- ================================================================ -->
-  <!--
-    Projects with StrideGraphicsApiDependent=true build multiple times
-    (once per API). Separate output paths prevent conflicts.
-  -->
-  <PropertyGroup Condition="'$(StrideGraphicsApiDependent)' == 'true'">
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    
-    <IntermediateOutputPath>obj\$(Configuration)\$(TargetFramework)\$(StrideGraphicsApi)\</IntermediateOutputPath>
-    <OutputPath>bin\$(Configuration)\$(TargetFramework)\$(StrideGraphicsApi)\</OutputPath>
-  </PropertyGroup>
+
 
 </Project>
