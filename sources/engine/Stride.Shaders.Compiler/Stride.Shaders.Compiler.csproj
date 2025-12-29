@@ -1,8 +1,4 @@
-<Project>
-  <PropertyGroup>
-    <StrideRuntime>true</StrideRuntime>
-  </PropertyGroup>
-  <Import Project="..\..\targets\Stride.props" />
+<Project Sdk="Stride.Sdk.Runtime">
   <PropertyGroup>
     <StrideBuildTags>*</StrideBuildTags>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
@@ -34,5 +30,4 @@
     </StrideContent>
   </ItemGroup>
   <Import Project="..\..\shared\Stride.Core.ShellHelper\Stride.Core.ShellHelper.projitems" Label="Shared" />
-  <Import Project="$(StrideSdkTargets)" />
 </Project>

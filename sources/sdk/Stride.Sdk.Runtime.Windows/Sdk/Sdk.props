@@ -1,0 +1,19 @@
+<!--
+  Stride.Sdk.Runtime.Windows - SDK for Windows-specific Stride runtime projects
+  
+  This SDK extends Stride.Sdk.Runtime to include net10.0-windows targeting.
+  Use this SDK for projects that need Windows-specific APIs (WinForms, WPF, etc.).
+  
+  Usage: <Project Sdk="Stride.Sdk.Runtime.Windows">
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Set StrideExplicitWindowsRuntime before importing Stride.Sdk.Runtime -->
+  <PropertyGroup>
+    <StrideExplicitWindowsRuntime>true</StrideExplicitWindowsRuntime>
+  </PropertyGroup>
+
+  <!-- Import Stride.Sdk.Runtime which will now see StrideExplicitWindowsRuntime=true -->
+  <Import Project="Sdk.props" Sdk="Stride.Sdk.Runtime" />
+
+</Project>

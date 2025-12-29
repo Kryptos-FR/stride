@@ -1,8 +1,4 @@
-﻿<Project>
-  <PropertyGroup>
-    <StrideRuntime>true</StrideRuntime>
-  </PropertyGroup>
-  <Import Project="..\..\targets\Stride.props" />
+﻿<Project Sdk="Stride.Sdk.Runtime">
   <PropertyGroup>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
     <StrideBuildTags>*</StrideBuildTags>
@@ -23,5 +19,4 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
-  <Import Project="$(StrideSdkTargets)" />
 </Project>

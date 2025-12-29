@@ -212,7 +212,16 @@ See [stride-build-properties-inventory.md](./stride-build-properties-inventory.m
    - **Fix**: Put all property definitions on single lines
    - **Commit**: 154984965
 
-3. **PackageOutputPath Calculation**:
+3. **Multi-Line Property Definitions in SDK Files** (2024-12-29):
+   - **Problem**: MSBuild preserves ALL whitespace in property element content, including newlines and indentation
+   - **Impact**: Property values contained literal newlines, causing "Illegal characters in path" and other subtle bugs
+   - **Files Fixed**: Stride.Runtime.props, Stride.AssemblyProcessor.targets, Stride.Packaging.targets, Sdk.targets
+   - **Properties Fixed**: 13 property definitions (StrideRuntimeTargetFrameworks, StrideAssemblyProcessorOptions, AllowedOutputExtensionsInPackageBuildOutputFolder, etc.)
+   - **Fix**: All property values must be on single line with opening/closing tags
+   - **Commit**: ccfdeae07
+   - **Documentation**: Added to .github/copilot-instructions.md as critical pattern
+
+4. **PackageOutputPath Calculation**:
    - **Problem**: Path relative to SDK location (NuGet cache) instead of project
    - **Impact**: Packages created in wrong location
    - **Fix**: Use MSBuildProjectDirectory instead of MSBuildThisFileDirectory
@@ -329,7 +338,9 @@ See [stride-build-properties-inventory.md](./stride-build-properties-inventory.m
 
 **Duration:** 2-3 weeks  
 **Status:** Complete (2024-12-29)  
-**Goal:** Test SDK with real project, iterate and fix issues
+**Goal:** Test SDK with real projects, iterate and fix issues
+
+**Summary:** Successfully migrated 15+ core and assets projects. Fixed critical SDK bugs (multi-line properties, path resolution, target overrides). SDK now stable for broader migration.
 
 ### Tasks
 
@@ -396,76 +407,32 @@ See [stride-build-properties-inventory.md](./stride-build-properties-inventory.m
    - **Solution**: Used MSBuildProjectDirectory and Path.Combine for absolute paths
 3. **Assembly Processor Paths**: Relative paths failed when SDK was in NuGet cache
    - **Solution**: Computed absolute paths using Path.Combine from MSBuildProjectDirectory
+4. **Empty Build Target Override** (commit dd092925c):
+   - **Problem**: Empty Build targets with conditions were overriding Microsoft.NET.Sdk targets
+   - **Solution**: Removed target redefinitions; use LanguageTargets property for disabling compilation
+5. **Multi-Line Property Definitions** (commit ccfdeae07):
+   - **Problem**: MSBuild preserves ALL whitespace in property values, causing "Illegal characters in path" errors
+   - **Solution**: Fixed 13 properties across 4 SDK files (Stride.Runtime.props, Stride.AssemblyProcessor.targets, Stride.Packaging.targets, Sdk.targets)
+   - **Documentation**: Added critical pattern to .github/copilot-instructions.md
+6. **PackageOutputPath Calculation** (commit 5960627ed):
+   - **Problem**: Path relative to SDK location instead of project
+   - **Solution**: Use MSBuildProjectDirectory instead of MSBuildThisFileDirectory
 
-## Phase 4: Cleanup & Optimization 🔄 IN PROGRESS
+## Phase 4: Cleanup & Optimization ⏭️ POSTPONED
 
 **Duration:** 3-4 weeks  
-**Status:** In Progress (2024-12-29)  
+**Status:** Postponed (will begin after Phase 5 migration complete)  
 **Goal:** Consolidate, optimize, and improve the SDK
 
-###  Critical Issue: Framework References Missing (2024-12-29 16:00)
+**Decision:** Phase 4 optimization work has been postponed until after completing the migration of all core/ and engine/ projects. This allows us to:
+1. Get all projects migrated to the new SDK first
+2. Identify optimization opportunities based on real migration experience
+3. Avoid optimizing patterns that may change during migration
+4. Focus on completing the migration without interruption
 
-**Latest Update**: CoreCompile now executes after fixing `BeforeTargets="CoreCompile"` → `BeforeTargets="Build"`, but compilation fails with **"Predefined type 'System.Object' is not defined"** errors.
+**Phase 4 will include:**
 
-**Problem**: After fixing the empty Build target override and BeforeTargets reference issues, **6 out of 11 migrated core projects fail to compile due to missing framework reference assemblies**.
-
-**Working Projects (5/11):**
-- ✅ Stride.Core (Runtime) - Uses Stride.Sdk.Runtime
-- ✅ Stride.Core.Mathematics (Runtime) - Uses Stride.Sdk.Runtime
-- ✅ Stride.Core.IO (Runtime) - Uses Stride.Sdk.Runtime
-- ✅ Stride.Core.MicroThreading (Runtime) - Uses Stride.Sdk.Runtime
-- ✅ Stride.Core.Translation - Uses Stride.Sdk
-
-**Failing Projects (6/11) - CoreCompile Runs But Fails:**
-- ❌ Stride.Core.Serialization (Runtime) - 3962 errors: System.Object not defined
-- ❌ Stride.Core.Reflection (Runtime) - Missing Stride.Core.Serialization types
-- ❌ Stride.Core.Design - 3962 errors: System.Object not defined
-- ❌ Stride.Core.Yaml - Depends on failing Stride.Core.Reflection
-- ❌ Stride.Core.CompilerServices - Builds netstandard2.0 but may have net10.0 issues
-- ❌ Stride.Core.Tasks - Not yet tested post-fix
-
-**Root Cause Analysis (from comparing with old build system .backup files):**
-
-1. **Issue #1 - FIXED (commit dd092925c)**: Empty Build target override
-   - Old system defined empty fallback targets, then overrode them
-   - New SDK incorrectly had empty targets replacing real ones
-
-2. **Issue #2 - FIXED (commit f6bf59ac1)**: CoreCompile referenced before definition
-   - Stride.Runtime.targets used `BeforeTargets="CoreCompile"` 
-   - CoreCompile didn't exist during early evaluation
-   - Fixed by changing to `BeforeTargets="Build"`
-
-3. **Issue #3 - CURRENT**: Microsoft.NET.Sdk import order breaking framework references
-   - **Old System**: `Stride.Core.props` → (project) → `Stride.Core.targets` → **Microsoft.NET.Sdk.targets** (line 219, imported LAST)
-   - **New SDK**: `Sdk.props` → **Microsoft.NET.Sdk.targets** (imported EARLY) → Stride-specific imports
-   - Framework reference setup requires Microsoft.NET.Sdk evaluation AFTER project configuration
-   - Current error: "Predefined type 'System.Object' is not defined" = missing framework references
-
-**Next Steps:**
-1. Restructure SDK import order to match old system (Microsoft.NET.Sdk imported last)
-2. Consider moving Stride-specific logic to run BEFORE Microsoft.NET.Sdk evaluation
-3. Test if `DisableImplicitFrameworkReferences=false` helps
-4. Verify all 11 core projects after fixing import order
-
-### Completed Tasks
-- ✅ Fixed critical Build target override issue
-- ✅ Fixed AssemblyProcessor path resolution
-- ✅ Fixed PackageOutputPath calculation
-- ✅ Verified package generation works for Stride.Sdk.Runtime projects
-
-### Current Status
-**Working Projects (Verified):**
-- ✅ Stride.Core (Runtime) - Compiles + Creates Package
-- ✅ Stride.Core.IO (Runtime) - Compiles + Creates Package  
-- ✅ Stride.Core.MicroThreading (Runtime) - Compiles + Creates Package
-- ✅ Stride.Core.CompilerServices - Compiles + Creates Package
-
-**Known Issues:**
-- ⚠️ Some non-runtime projects (Stride.Sdk base) not compiling despite "Build succeeded"
-- ⚠️ Need systematic testing of all 14 migrated projects
-- ⚠️ Package versioning showing 4.3.0.1 instead of 4.3.0-dev
-
-### Tasks
+### Planned Tasks (To Begin After Phase 5)
 
 #### 4.1 Consolidate Property Files
 - [ ] Analyze all *.Build.props files
@@ -526,9 +493,16 @@ See [stride-build-properties-inventory.md](./stride-build-properties-inventory.m
 **Status:** In Progress (2024-12-29)  
 **Goal:** Migrate core engine projects
 
+### Migration Overview
+
+**Total Projects Identified**: 43 non-test projects across core/, assets/, and engine/
+- Core projects: 16
+- Assets projects: 4
+- Engine projects: 23 (including Shaders, Runtime, Editor/Compiler categories)
+
 ### Migration Progress
 
-#### 5.1 Core Projects (11/20 Migrated)
+#### 5.1 Core Projects (11/16 Migrated)
 - ✅ Stride.Core (Runtime)
 - ✅ Stride.Core.Mathematics (Runtime)
 - ✅ Stride.Core.Serialization (Runtime)
@@ -542,50 +516,68 @@ See [stride-build-properties-inventory.md](./stride-build-properties-inventory.m
 - ✅ Stride.Core.Tasks
 - [ ] Stride.Core.AssemblyProcessor
 - [ ] Stride.Core.BuildEngine.Common
-- [ ] Additional core projects...
+- [ ] 3 additional core projects...
 
-#### 5.2 Assets Projects (3/? Migrated)  
+#### 5.2 Assets Projects (3/4 Migrated)  
 - ✅ Stride.Core.Assets
 - ✅ Stride.Core.Assets.Quantum
 - ✅ Stride.Core.Packages
 - [ ] Stride.Core.Assets.CompilerApp
-- [ ] Additional assets projects...
 
-#### 5.3 Engine Projects (0/? Migrated)
+#### 5.3 Engine Projects (1/23 Migrated)
+- ✅ Stride.Graphics (Graphics API dependent, preprocessor defines working)
+- [ ] Stride.Shaders.Parser
+- [ ] Stride.Shaders.Compiler
+- [ ] Stride.Games
 - [ ] Stride.Engine
 - [ ] Stride.Rendering
-- [ ] Stride.Graphics
 - [ ] Stride.Physics
 - [ ] Stride.Audio
-- [ ] Additional engine projects...
+- [ ] 15 additional engine runtime projects...
+- [ ] 5 engine editor/compiler projects...
 
 ### Next Steps
 1. ✅ Fix critical SDK build issues (DONE)
-2. 🔄 Systematically test all 14 migrated projects
-3. 🔄 Fix remaining compilation issues
-4. 📋 Migrate remaining core projects
-5. 📋 Start engine project migrations
+2. ✅ Fix multi-line property definitions in SDK (DONE)
+3. 🔄 Migrate remaining core/ projects (5 remaining)
+4. 🔄 Migrate engine/ Shaders projects (2 remaining: Parser, Compiler)
+5. 🔄 Migrate engine/ runtime projects (16 total)
+6. 📋 Migrate engine/ editor/compiler projects (5 total)
+
+### Migration Strategy
+
+**Graphics API Dependent Projects** (like Stride.Graphics):
+- Set `<StrideGraphicsApiDependent>true</StrideGraphicsApiDependent>`
+- Move DefineConstants to .csproj PropertyGroup if needed
+- Pattern: STRIDE_GRAPHICS_API_* defines now working correctly
+- Will revisit this approach in Phase 4 consolidation
+
+**Test Projects**: Explicitly excluded from current migration phase per project scope
 
 ### Tasks
+
+#### 5.4 Continue Engine Migration
+- [ ] Stride.Shaders.Parser (Graphics/Shaders category)
+- [ ] Stride.Shaders.Compiler (Graphics/Shaders category)
+- [ ] Stride.Games
 - [ ] Stride.Engine
 - [ ] Stride.Rendering
-- [ ] Stride.Graphics
 - [ ] Stride.Physics
 - [ ] Stride.Audio
-- [ ] Stride.VirtualReality
+- [ ] Additional runtime projects
 
-#### 5.3 Migrate Editor Projects
+#### 5.5 Migrate Editor Projects
 - [ ] Stride.Assets.Presentation
 - [ ] Stride.GameStudio
 - [ ] Editor-related projects
 
-#### 5.4 Update Build Scripts
+#### 5.6 Update Build Scripts
 - [ ] Update CI/CD pipelines
 - [ ] Update build documentation
 - [ ] Update developer setup guides
 - [ ] Create troubleshooting guide
 
-#### 5.5 Testing
+#### 5.7 Testing
 - [ ] Full engine build
 - [ ] Run all unit tests
 - [ ] Test sample projects

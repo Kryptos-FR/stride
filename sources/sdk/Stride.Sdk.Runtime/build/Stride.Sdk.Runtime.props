@@ -5,5 +5,5 @@
   imports the actual SDK props from the Sdk folder.
 -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="../Sdk/Sdk.props" />
+  <Import Project="$(MSBuildThisFileDirectory)..\Sdk\Sdk.props" />
 </Project>

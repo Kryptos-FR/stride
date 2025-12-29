@@ -1,9 +1,7 @@
-<Project>
+<Project Sdk="Stride.Sdk.Runtime">
   <PropertyGroup>
-    <StrideRuntime>true</StrideRuntime>
     <StrideGraphicsApiDependent>true</StrideGraphicsApiDependent>
   </PropertyGroup>
-  <Import Project="..\..\targets\Stride.props" />
   <PropertyGroup>
     <StridePlatformFilter>Windows;Android;iOS;Linux;macOS;UWP</StridePlatformFilter>
     <DefineConstants>$(DefineConstants);XAMCORE_2_0</DefineConstants>

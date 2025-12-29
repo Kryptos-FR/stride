@@ -5,5 +5,5 @@
   imports the actual SDK targets from the Sdk folder.
 -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="../Sdk/Sdk.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)..\Sdk\Sdk.targets" />
 </Project>

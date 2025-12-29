@@ -1,0 +1,10 @@
+<!--
+  Legacy NuGet PackageReference support for Stride.Sdk.Runtime.Windows
+  This file is included when the package is referenced via PackageReference.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Import our own Sdk folder which will chain to Stride.Sdk.Runtime -->
+  <Import Project="$(MSBuildThisFileDirectory)..\Sdk\Sdk.targets" />
+
+</Project>

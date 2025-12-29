@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Stride.Sdk.Runtime.Windows</PackageId>
+    <PackageType>MSBuildSdk</PackageType>
+    <Version>4.3.0-dev</Version>
+    <Description>MSBuild SDK for Stride Windows runtime projects with Windows-specific APIs</Description>
+    <Authors>Stride contributors</Authors>
+    <PackageProjectUrl>https://stride3d.net</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="Sdk\**\*" Pack="true" PackagePath="Sdk\" />
+    
+    <!-- Include legacy build folder for NuGet PackageReference compatibility -->
+    <None Include="build\**\*" Pack="true" PackagePath="build\" />
+  </ItemGroup>
+</Project>

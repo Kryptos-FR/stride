@@ -1,11 +1,6 @@
-<Project>
+<Project Sdk="Stride.Sdk.Runtime.Windows">
   <PropertyGroup>
-    <StrideRuntime>true</StrideRuntime>
-    <StrideExplicitWindowsRuntime>true</StrideExplicitWindowsRuntime>
     <StrideGraphicsApiDependent>true</StrideGraphicsApiDependent>
-  </PropertyGroup>
-  <Import Project="..\..\targets\Stride.props" />
-  <PropertyGroup>
     <UseWPF Condition="$(TargetFramework.Contains('-windows'))">true</UseWPF>
     <UseWindowsForms Condition="$(TargetFramework.Contains('-windows'))">true</UseWindowsForms>
     <StridePlatformDependent>true</StridePlatformDependent>
@@ -26,5 +21,4 @@
     <PackageReference Include="SharpDX.XInput" Condition="$(TargetFramework.Contains('-windows'))" />
     <PackageReference Include="Microsoft.Management.Infrastructure" Condition="$(TargetFramework.Contains('-windows'))" />
   </ItemGroup>
-  <Import Project="$(StrideSdkTargets)" />
 </Project>

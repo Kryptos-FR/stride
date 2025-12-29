@@ -1,14 +1,8 @@
-<Project>
+<Project Sdk="Stride.Sdk.Runtime">
   <PropertyGroup>
-    <StrideRuntime>true</StrideRuntime>
     <StrideGraphicsApiDependent>true</StrideGraphicsApiDependent>
     <StrideNativeOutputName>libstridevr</StrideNativeOutputName>
     <StrideNativeWindowsArm64Enabled>false</StrideNativeWindowsArm64Enabled>
-  </PropertyGroup>
-  <Import Project="..\..\targets\Stride.props" />
-  <PropertyGroup>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
     <StrideAssemblyProcessorOptions>--serialization --parameter-key</StrideAssemblyProcessorOptions>
@@ -56,5 +50,4 @@
     <PackageReference Include="Silk.NET.OpenXR" />
     <PackageReference Include="Silk.NET.OpenXR.Extensions.FB" />
   </ItemGroup>
-  <Import Project="$(StrideSdkTargets)" />
 </Project>

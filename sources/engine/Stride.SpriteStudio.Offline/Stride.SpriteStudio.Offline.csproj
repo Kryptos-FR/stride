@@ -1,5 +1,4 @@
-<Project>
-  <Import Project="..\..\targets\Stride.props" />
+<Project Sdk="Stride.Sdk">
   <PropertyGroup>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>

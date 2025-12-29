@@ -1,9 +1,7 @@
-<Project>
+<Project Sdk="Stride.Sdk.Runtime">
   <PropertyGroup>
-    <StrideRuntime>true</StrideRuntime>
     <RootNamespace>Stride.BepuPhysics.Debug</RootNamespace>
   </PropertyGroup>
-  <Import Project="..\..\..\targets\Stride.props" />
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
