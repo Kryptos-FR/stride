@@ -1,18 +1,8 @@
-<Project>
-
+<Project Sdk="Stride.Sdk.Runtime">
   <PropertyGroup>
-    <StrideRuntime>true</StrideRuntime>
     <StrideRuntimeNetStandardNoRuntimeIdentifiers>true</StrideRuntimeNetStandardNoRuntimeIdentifiers>
-  </PropertyGroup>
-
-  <Import Project="..\..\targets\Stride.props" />
-
-  <PropertyGroup>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
     <StrideAssemblyProcessorOptions>--auto-module-initializer --serialization</StrideAssemblyProcessorOptions>
     <StridePlatformDependent>true</StridePlatformDependent>
@@ -38,7 +28,5 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
-
-  <Import Project="$(StrideSdkTargets)" />
 
 </Project>
