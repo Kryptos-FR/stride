@@ -403,33 +403,49 @@ See [stride-build-properties-inventory.md](./stride-build-properties-inventory.m
 **Status:** In Progress (2024-12-29)  
 **Goal:** Consolidate, optimize, and improve the SDK
 
-### Critical Issue Discovered (2024-12-29 15:00)
+###  Critical Issue: Framework References Missing (2024-12-29 16:00)
 
-**Problem**: After fixing the empty Build target override issue, **6 out of 11 migrated core projects still fail to compile** despite `dotnet build` reporting "Build succeeded". These projects produce no DLL output.
+**Latest Update**: CoreCompile now executes after fixing `BeforeTargets="CoreCompile"` → `BeforeTargets="Build"`, but compilation fails with **"Predefined type 'System.Object' is not defined"** errors.
+
+**Problem**: After fixing the empty Build target override and BeforeTargets reference issues, **6 out of 11 migrated core projects fail to compile due to missing framework reference assemblies**.
 
 **Working Projects (5/11):**
-- ✅ Stride.Core (Runtime)
-- ✅ Stride.Core.Mathematics (Runtime)
-- ✅ Stride.Core.IO (Runtime)  
-- ✅ Stride.Core.MicroThreading (Runtime)
-- ✅ Stride.Core.Translation
+- ✅ Stride.Core (Runtime) - Uses Stride.Sdk.Runtime
+- ✅ Stride.Core.Mathematics (Runtime) - Uses Stride.Sdk.Runtime
+- ✅ Stride.Core.IO (Runtime) - Uses Stride.Sdk.Runtime
+- ✅ Stride.Core.MicroThreading (Runtime) - Uses Stride.Sdk.Runtime
+- ✅ Stride.Core.Translation - Uses Stride.Sdk
 
-**Failing Projects (6/11) - Build Succeeds But No DLL:**
-- ❌ Stride.Core.Serialization (Runtime)
-- ❌ Stride.Core.Reflection (Runtime)
-- ❌ Stride.Core.Design
-- ❌ Stride.Core.Yaml
-- ❌ Stride.Core.CompilerServices
-- ❌ Stride.Core.Tasks
+**Failing Projects (6/11) - CoreCompile Runs But Fails:**
+- ❌ Stride.Core.Serialization (Runtime) - 3962 errors: System.Object not defined
+- ❌ Stride.Core.Reflection (Runtime) - Missing Stride.Core.Serialization types
+- ❌ Stride.Core.Design - 3962 errors: System.Object not defined
+- ❌ Stride.Core.Yaml - Depends on failing Stride.Core.Reflection
+- ❌ Stride.Core.CompilerServices - Builds netstandard2.0 but may have net10.0 issues
+- ❌ Stride.Core.Tasks - Not yet tested post-fix
 
-**Observations:**
-- No errors reported during build
-- `Build succeeded` message appears
-- CoreCompile target not executing
-- Affects both Stride.Sdk and Stride.Sdk.Runtime projects
-- No obvious correlation with project type or SDK variant
+**Root Cause Analysis (from comparing with old build system .backup files):**
 
-**Hypothesis**: CoreCompile target dependency chain still broken for specific project configurations.
+1. **Issue #1 - FIXED (commit dd092925c)**: Empty Build target override
+   - Old system defined empty fallback targets, then overrode them
+   - New SDK incorrectly had empty targets replacing real ones
+
+2. **Issue #2 - FIXED (commit f6bf59ac1)**: CoreCompile referenced before definition
+   - Stride.Runtime.targets used `BeforeTargets="CoreCompile"` 
+   - CoreCompile didn't exist during early evaluation
+   - Fixed by changing to `BeforeTargets="Build"`
+
+3. **Issue #3 - CURRENT**: Microsoft.NET.Sdk import order breaking framework references
+   - **Old System**: `Stride.Core.props` → (project) → `Stride.Core.targets` → **Microsoft.NET.Sdk.targets** (line 219, imported LAST)
+   - **New SDK**: `Sdk.props` → **Microsoft.NET.Sdk.targets** (imported EARLY) → Stride-specific imports
+   - Framework reference setup requires Microsoft.NET.Sdk evaluation AFTER project configuration
+   - Current error: "Predefined type 'System.Object' is not defined" = missing framework references
+
+**Next Steps:**
+1. Restructure SDK import order to match old system (Microsoft.NET.Sdk imported last)
+2. Consider moving Stride-specific logic to run BEFORE Microsoft.NET.Sdk evaluation
+3. Test if `DisableImplicitFrameworkReferences=false` helps
+4. Verify all 11 core projects after fixing import order
 
 ### Completed Tasks
 - ✅ Fixed critical Build target override issue
