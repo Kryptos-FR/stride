@@ -55,9 +55,7 @@
 
     <!-- Add Stride.Core path to assembly search directory if available -->
     <PropertyGroup>
-      <StrideAssemblyProcessorOptions Condition="'$(StrideCoreAssemblyPath)' != ''">
-        $(StrideAssemblyProcessorOptions) --assembly="$(StrideCoreAssemblyPath)"
-      </StrideAssemblyProcessorOptions>
+      <StrideAssemblyProcessorOptions Condition="'$(StrideCoreAssemblyPath)' != ''">$(StrideAssemblyProcessorOptions) --assembly="$(StrideCoreAssemblyPath)"</StrideAssemblyProcessorOptions>
     </PropertyGroup>
 
     <!-- Write references to cache file -->
@@ -113,12 +111,8 @@
   <!-- Generate documentation file for public APIs -->
   <PropertyGroup Condition="'$(StridePublicApi)' == 'true'">
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>
-      $(AllowedOutputExtensionsInPackageBuildOutputFolder);.usrdoc
-    </AllowedOutputExtensionsInPackageBuildOutputFolder>
-    <TargetsForTfmSpecificBuildOutput>
-      $(TargetsForTfmSpecificBuildOutput);_StrideRegisterUserDocOutputs
-    </TargetsForTfmSpecificBuildOutput>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.usrdoc</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);_StrideRegisterUserDocOutputs</TargetsForTfmSpecificBuildOutput>
   </PropertyGroup>
 
   <!-- Register .usrdoc files for packaging -->
@@ -133,9 +127,7 @@
           Condition="'$(StridePublicApi)' == 'true'" 
           BeforeTargets="ResolveAssemblyReferences">
     <PropertyGroup>
-      <AllowedReferenceRelatedFileExtensions>
-        $(AllowedReferenceRelatedFileExtensions);.usrdoc
-      </AllowedReferenceRelatedFileExtensions>
+      <AllowedReferenceRelatedFileExtensions>$(AllowedReferenceRelatedFileExtensions);.usrdoc</AllowedReferenceRelatedFileExtensions>
     </PropertyGroup>
   </Target>
 

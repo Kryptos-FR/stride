@@ -13,9 +13,7 @@
   <!-- ================================================================ -->
   <!-- Auto-Pack Configuration -->
   <!-- ================================================================ -->
-  <PropertyGroup Condition="$(DesignTimeBuild) != 'true' And 
-                             '$(StrideSkipAutoPack)' != 'true' And 
-                             '$(StrideCompilerTargetsEnable)' != 'false'">
+  <PropertyGroup Condition="$(DesignTimeBuild) != 'true' And '$(StrideSkipAutoPack)' != 'true' And '$(StrideCompilerTargetsEnable)' != 'false'">
     <!-- Output packages to central location (relative to repository root) -->
     <PackageOutputPath Condition="'$(PackageOutputPath)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '..', '..', '..', 'bin', 'packages'))</PackageOutputPath>
     
@@ -23,12 +21,8 @@
     <GeneratePackageOnBuild Condition="'$(NoBuild)' != 'true' And '$(BuildingInsideVisualStudio)' != 'true'">true</GeneratePackageOnBuild>
     
     <!-- Include PDBs and native files in packages -->
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>
-      $(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb
-    </AllowedOutputExtensionsInPackageBuildOutputFolder>
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>
-      .so;.a;.bin;.dylib;$(AllowedOutputExtensionsInPackageBuildOutputFolder)
-    </AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>.so;.a;.bin;.dylib;$(AllowedOutputExtensionsInPackageBuildOutputFolder)</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
 
   <!-- ================================================================ -->

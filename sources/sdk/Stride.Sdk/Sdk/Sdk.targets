@@ -55,13 +55,10 @@
   <!-- ================================================================ -->
   <PropertyGroup>
     <!-- Disable compilation for Windows-only projects on non-Windows TFMs -->
-    <StrideCompilerTargetsEnable Condition="'$(TargetFramework)' != '$(StrideFramework)' and 
-                                             '$(TargetFramework)' == '$(StrideFrameworkWindows)' and 
-                                             '$(StrideWindowsOnly)' == 'true'">false</StrideCompilerTargetsEnable>
+    <StrideCompilerTargetsEnable Condition="'$(TargetFramework)' != '$(StrideFramework)' and '$(TargetFramework)' == '$(StrideFrameworkWindows)' and '$(StrideWindowsOnly)' == 'true'">false</StrideCompilerTargetsEnable>
     
     <!-- Skip unit tests if requested -->
-    <StrideCompilerTargetsEnable Condition="'$(StrideSkipUnitTests)' == 'true' And 
-                                             $(StrideOutputFolder.StartsWith('Tests'))">false</StrideCompilerTargetsEnable>
+    <StrideCompilerTargetsEnable Condition="'$(StrideSkipUnitTests)' == 'true' And $(StrideOutputFolder.StartsWith('Tests'))">false</StrideCompilerTargetsEnable>
     
     <!-- Override language targets to disable build -->
     <LanguageTargets Condition="'$(StrideCompilerTargetsEnable)' == 'false'">$(MSBuildThisFileDirectory)..\..\..\targets\Stride.Core.DisableBuild.targets</LanguageTargets>

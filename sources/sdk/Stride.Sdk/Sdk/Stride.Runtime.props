@@ -19,24 +19,16 @@
     <StrideRuntimeTargetFrameworks>net10.0</StrideRuntimeTargetFrameworks>
     
     <!-- Add Windows if explicitly requested -->
-    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';Windows;')) And '$(StrideExplicitWindowsRuntime)' == 'true'">
-      $(StrideRuntimeTargetFrameworks);net10.0-windows
-    </StrideRuntimeTargetFrameworks>
+    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';Windows;')) And '$(StrideExplicitWindowsRuntime)' == 'true'">$(StrideRuntimeTargetFrameworks);net10.0-windows</StrideRuntimeTargetFrameworks>
     
     <!-- Add UWP if in platform list -->
-    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';UWP;'))">
-      $(StrideRuntimeTargetFrameworks);uap10.0.16299
-    </StrideRuntimeTargetFrameworks>
+    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';UWP;'))">$(StrideRuntimeTargetFrameworks);uap10.0.16299</StrideRuntimeTargetFrameworks>
     
     <!-- Add Android if in platform list -->
-    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';Android;'))">
-      $(StrideRuntimeTargetFrameworks);net10.0-android
-    </StrideRuntimeTargetFrameworks>
+    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';Android;'))">$(StrideRuntimeTargetFrameworks);net10.0-android</StrideRuntimeTargetFrameworks>
     
     <!-- Add iOS if in platform list -->
-    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';iOS;'))">
-      $(StrideRuntimeTargetFrameworks);net10.0-ios
-    </StrideRuntimeTargetFrameworks>
+    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';iOS;'))">$(StrideRuntimeTargetFrameworks);net10.0-ios</StrideRuntimeTargetFrameworks>
     
     <!-- Unescape and trim -->
     <StrideRuntimeTargetFrameworks>$([MSBuild]::Unescape($(StrideRuntimeTargetFrameworks.Trim(';'))))</StrideRuntimeTargetFrameworks>
