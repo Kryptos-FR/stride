@@ -197,6 +197,28 @@ See [stride-build-properties-inventory.md](./stride-build-properties-inventory.m
 **Status:** Complete (2024-12-29)  
 **Goal:** Create minimal working SDK that wraps existing build logic
 
+### Critical Fixes Applied
+
+#### Build System Issues (2024-12-29)
+1. **Empty Build Target Override**:
+   - **Problem**: Empty `Build` targets with conditions were overriding Microsoft.NET.Sdk targets
+   - **Impact**: Projects built but didn't compile (CoreCompile never executed)
+   - **Fix**: Removed target redefinitions; use LanguageTargets property for disabling compilation
+   - **Commit**: dd092925c
+
+2. **AssemblyProcessor Path Whitespace**:
+   - **Problem**: Multi-line property definitions included newlines/whitespace in values
+   - **Impact**: File paths broken, AssemblyProcessor couldn't find files
+   - **Fix**: Put all property definitions on single lines
+   - **Commit**: 154984965
+
+3. **PackageOutputPath Calculation**:
+   - **Problem**: Path relative to SDK location (NuGet cache) instead of project
+   - **Impact**: Packages created in wrong location
+   - **Fix**: Use MSBuildProjectDirectory instead of MSBuildThisFileDirectory
+   - **Commit**: 5960627ed
+   - **Note**: Current behavior places packages in project-local bin/Debug/ (standard .NET SDK)
+
 ### Tasks
 
 #### 2.1 Create SDK Project
@@ -375,10 +397,57 @@ See [stride-build-properties-inventory.md](./stride-build-properties-inventory.m
 3. **Assembly Processor Paths**: Relative paths failed when SDK was in NuGet cache
    - **Solution**: Computed absolute paths using Path.Combine from MSBuildProjectDirectory
 
-## Phase 4: Cleanup & Optimization
+## Phase 4: Cleanup & Optimization 🔄 IN PROGRESS
 
 **Duration:** 3-4 weeks  
+**Status:** In Progress (2024-12-29)  
 **Goal:** Consolidate, optimize, and improve the SDK
+
+### Critical Issue Discovered (2024-12-29 15:00)
+
+**Problem**: After fixing the empty Build target override issue, **6 out of 11 migrated core projects still fail to compile** despite `dotnet build` reporting "Build succeeded". These projects produce no DLL output.
+
+**Working Projects (5/11):**
+- ✅ Stride.Core (Runtime)
+- ✅ Stride.Core.Mathematics (Runtime)
+- ✅ Stride.Core.IO (Runtime)  
+- ✅ Stride.Core.MicroThreading (Runtime)
+- ✅ Stride.Core.Translation
+
+**Failing Projects (6/11) - Build Succeeds But No DLL:**
+- ❌ Stride.Core.Serialization (Runtime)
+- ❌ Stride.Core.Reflection (Runtime)
+- ❌ Stride.Core.Design
+- ❌ Stride.Core.Yaml
+- ❌ Stride.Core.CompilerServices
+- ❌ Stride.Core.Tasks
+
+**Observations:**
+- No errors reported during build
+- `Build succeeded` message appears
+- CoreCompile target not executing
+- Affects both Stride.Sdk and Stride.Sdk.Runtime projects
+- No obvious correlation with project type or SDK variant
+
+**Hypothesis**: CoreCompile target dependency chain still broken for specific project configurations.
+
+### Completed Tasks
+- ✅ Fixed critical Build target override issue
+- ✅ Fixed AssemblyProcessor path resolution
+- ✅ Fixed PackageOutputPath calculation
+- ✅ Verified package generation works for Stride.Sdk.Runtime projects
+
+### Current Status
+**Working Projects (Verified):**
+- ✅ Stride.Core (Runtime) - Compiles + Creates Package
+- ✅ Stride.Core.IO (Runtime) - Compiles + Creates Package  
+- ✅ Stride.Core.MicroThreading (Runtime) - Compiles + Creates Package
+- ✅ Stride.Core.CompilerServices - Compiles + Creates Package
+
+**Known Issues:**
+- ⚠️ Some non-runtime projects (Stride.Sdk base) not compiling despite "Build succeeded"
+- ⚠️ Need systematic testing of all 14 migrated projects
+- ⚠️ Package versioning showing 4.3.0.1 instead of 4.3.0-dev
 
 ### Tasks
 
@@ -435,23 +504,53 @@ See [stride-build-properties-inventory.md](./stride-build-properties-inventory.m
 - Project files are cleaner
 - No regressions
 
-## Phase 5: Broader Migration
+## Phase 5: Broader Migration 🔄 IN PROGRESS
 
 **Duration:** 4-6 weeks  
+**Status:** In Progress (2024-12-29)  
 **Goal:** Migrate core engine projects
 
+### Migration Progress
+
+#### 5.1 Core Projects (11/20 Migrated)
+- ✅ Stride.Core (Runtime)
+- ✅ Stride.Core.Mathematics (Runtime)
+- ✅ Stride.Core.Serialization (Runtime)
+- ✅ Stride.Core.Reflection (Runtime)
+- ✅ Stride.Core.IO (Runtime)
+- ✅ Stride.Core.MicroThreading (Runtime)
+- ✅ Stride.Core.Design
+- ✅ Stride.Core.Yaml
+- ✅ Stride.Core.CompilerServices
+- ✅ Stride.Core.Translation
+- ✅ Stride.Core.Tasks
+- [ ] Stride.Core.AssemblyProcessor
+- [ ] Stride.Core.BuildEngine.Common
+- [ ] Additional core projects...
+
+#### 5.2 Assets Projects (3/? Migrated)  
+- ✅ Stride.Core.Assets
+- ✅ Stride.Core.Assets.Quantum
+- ✅ Stride.Core.Packages
+- [ ] Stride.Core.Assets.CompilerApp
+- [ ] Additional assets projects...
+
+#### 5.3 Engine Projects (0/? Migrated)
+- [ ] Stride.Engine
+- [ ] Stride.Rendering
+- [ ] Stride.Graphics
+- [ ] Stride.Physics
+- [ ] Stride.Audio
+- [ ] Additional engine projects...
+
+### Next Steps
+1. ✅ Fix critical SDK build issues (DONE)
+2. 🔄 Systematically test all 14 migrated projects
+3. 🔄 Fix remaining compilation issues
+4. 📋 Migrate remaining core projects
+5. 📋 Start engine project migrations
+
 ### Tasks
-
-#### 5.1 Migrate Core Projects
-Priority order:
-- [ ] Stride.Core
-- [ ] Stride.Core.Serialization
-- [ ] Stride.Core.Assets
-- [ ] Stride.Core.Design
-- [ ] Stride.Core.MicroThreading
-- [ ] Stride.Core.Reflection
-
-#### 5.2 Migrate Engine Projects
 - [ ] Stride.Engine
 - [ ] Stride.Rendering
 - [ ] Stride.Graphics
