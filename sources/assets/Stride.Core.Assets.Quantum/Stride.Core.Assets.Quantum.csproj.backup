@@ -1,5 +1,10 @@
-<Project Sdk="Stride.Sdk">
+<Project>
+  <Import Project="..\..\targets\Stride.props" />
+
   <PropertyGroup>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetFramework>$(StrideXplatEditorTargetFramework)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
@@ -30,4 +35,6 @@
     <ProjectReference Include="..\..\presentation\Stride.Core.Quantum\Stride.Core.Quantum.csproj" />
     <ProjectReference Include="..\Stride.Core.Assets\Stride.Core.Assets.csproj" />
   </ItemGroup>
+
+  <Import Project="$(StrideSdkTargets)" />
 </Project>

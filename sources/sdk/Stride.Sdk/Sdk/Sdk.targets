@@ -38,14 +38,9 @@
   <!-- ================================================================ -->
   <!-- Default Empty Targets -->
   <!-- ================================================================ -->
-  <!-- Provide no-op targets for projects that might be skipped -->
-  <Target Name="Build" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
-  <Target Name="Clean" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
-  <Target Name="Rebuild" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
-  <Target Name="Publish" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
-  <Target Name="GetTargetPath" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
-  <Target Name="GetNativeManifest" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
-  <Target Name="GetPackagingOutputs" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
+  <!-- NOTE: Empty targets removed - they were incorrectly overriding SDK targets.
+       When StrideCompilerTargetsEnable='false', the LanguageTargets property
+       points to Stride.Core.DisableBuild.targets which properly disables compilation. -->
 
   <!-- ================================================================ -->
   <!-- Platform-Specific Build Configuration -->
