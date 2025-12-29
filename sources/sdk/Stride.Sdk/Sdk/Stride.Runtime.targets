@@ -1,0 +1,31 @@
+<!--
+  Stride.Runtime.targets
+  
+  Build targets for multi-platform runtime projects (StrideRuntime=true).
+  
+  This file contains targets that need to run during the build process and
+  therefore must be in a .targets file (not .props).
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- ================================================================ -->
+  <!-- Trigger Full Build for InnerBuilds -->
+  <!-- ================================================================ -->
+  <!--
+    Force a full Build & Pack if dependency was only built with a single TargetFramework
+    (which would set IsInnerBuild and skip any Pack logic).
+    This is only needed when building from command line; Visual Studio builds each project completely.
+    Recursion is automatically avoided by MSBuild not rebuilding same target.
+  -->
+  <Target Name="_StrideTriggerPackOnInnerBuild"
+          BeforeTargets="CoreCompile"
+          Condition="'$(BuildingInsideVisualStudio)' != 'true' And '$(GeneratePackageOnBuild)' == 'true'">
+    <MSBuild Projects="@(_MSBuildProjectReferenceExistent)"
+             Condition="'%(_MSBuildProjectReferenceExistent.SetTargetFramework)' != ''"
+             BuildInParallel="$(BuildInParallel)"
+             Targets="Build;Pack"
+             RemoveProperties="%(_MSBuildProjectReferenceExistent.GlobalPropertiesToRemove);TargetFramework;StrideGraphicsApi">
+    </MSBuild>
+  </Target>
+
+</Project>

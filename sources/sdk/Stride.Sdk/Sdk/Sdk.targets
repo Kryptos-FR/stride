@@ -23,6 +23,9 @@
   <!-- Import Supporting Targets Files -->
   <!-- ================================================================ -->
   
+  <!-- Runtime project triggers (only when StrideRuntime=true) -->
+  <Import Project="Stride.Runtime.targets" Condition="'$(StrideRuntime)' == 'true'" />
+  
   <!-- Assembly processor integration -->
   <Import Project="Stride.AssemblyProcessor.targets" />
   
