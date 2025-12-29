@@ -36,6 +36,13 @@
     
     <IntermediateOutputPath>obj\$(Configuration)\$(TargetFramework)\$(StrideGraphicsApi)\</IntermediateOutputPath>
     <OutputPath>bin\$(Configuration)\$(TargetFramework)\$(StrideGraphicsApi)\</OutputPath>
+    <CompilerGeneratedFilesOutputPath>obj\$(Configuration)\$(TargetFramework)\$(StrideGraphicsApi)</CompilerGeneratedFilesOutputPath>
+    
+    <!-- Disable ProduceReferenceAssembly to avoid path issues with custom IntermediateOutputPath -->
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    
+    <!-- Disable StridePackAssets - Graphics API-dependent builds don't have assets to package -->
+    <StridePackAssets>false</StridePackAssets>
   </PropertyGroup>
 
   <!-- ================================================================ -->
@@ -83,22 +90,26 @@
   </PropertyGroup>
 
   <!-- ================================================================ -->
-  <!-- Append Graphics API Defines to DefineConstants (Step 3) -->
+  <!-- Build Combined Defines String -->
   <!-- ================================================================ -->
   <!--
-    This PropertyGroup executes AFTER StrideGraphicsApiDefines is set above.
+    Build UI defines first in a separate variable, then append both Graphics API
+    and UI defines to DefineConstants in a single PropertyGroup.
+    This prevents $(DefineConstants) from being evaluated multiple times with
+    different values in multi-framework or multi-project contexts.
+    
+    CRITICAL: Only execute when StrideGraphicsApiDependent is true to avoid
+    overwriting DefineConstants in non-Graphics projects during multi-project builds.
   -->
-  <PropertyGroup Condition="'$(StrideGraphicsApiDefines)' != ''">
-    <DefineConstants>$(DefineConstants);$(StrideGraphicsApiDefines)</DefineConstants>
-  </PropertyGroup>
-
-  <!-- ================================================================ -->
-  <!-- UI Framework Defines -->
-  <!-- ================================================================ -->
-  <PropertyGroup>
-    <DefineConstants Condition="$(StrideUI.Contains('SDL'))">$(DefineConstants);STRIDE_UI_SDL</DefineConstants>
-    <DefineConstants Condition="$(StrideUI.Contains('WINFORMS'))">$(DefineConstants);STRIDE_UI_WINFORMS</DefineConstants>
-    <DefineConstants Condition="$(StrideUI.Contains('WPF'))">$(DefineConstants);STRIDE_UI_WPF</DefineConstants>
+  <PropertyGroup Condition="'$(StrideGraphicsApiDependent)' == 'true'">
+    <!-- Build the UI defines string -->
+    <StrideUIDefines Condition="$(StrideUI.Contains('SDL'))">$(StrideUIDefines);STRIDE_UI_SDL</StrideUIDefines>
+    <StrideUIDefines Condition="$(StrideUI.Contains('WINFORMS'))">$(StrideUIDefines);STRIDE_UI_WINFORMS</StrideUIDefines>
+    <StrideUIDefines Condition="$(StrideUI.Contains('WPF'))">$(StrideUIDefines);STRIDE_UI_WPF</StrideUIDefines>
+    
+    <!-- Apply both Graphics API and UI defines in a single assignment -->
+    <DefineConstants Condition="'$(StrideGraphicsApiDefines)' != ''">$(DefineConstants);$(StrideGraphicsApiDefines)</DefineConstants>
+    <DefineConstants Condition="'$(StrideUIDefines)' != ''">$(DefineConstants);$(StrideUIDefines)</DefineConstants>
   </PropertyGroup>
 
 </Project>

@@ -1,23 +1,15 @@
-<Project Sdk="Stride.Sdk.Runtime">
+<Project>
   <PropertyGroup>
+    <StrideRuntime>true</StrideRuntime>
     <StrideGraphicsApiDependent>true</StrideGraphicsApiDependent>
+  </PropertyGroup>
+  <Import Project="..\..\targets\Stride.props" />
+  <PropertyGroup>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
     <StridePlatformDependent>true</StridePlatformDependent>
     <StrideBuildTags>*</StrideBuildTags>
     <StridePackAssets>true</StridePackAssets>
     <DefineConstants>$(DefineConstants);STRIDE_GRAPHICS_NO_DESCRIPTOR_COPIES</DefineConstants>
-    <!-- Graphics API defines - must be set here in .csproj to survive multi-targeting inner builds -->
-    <DefineConstants Condition="$(StrideGraphicsApi.Contains('Direct3D'))">$(DefineConstants);STRIDE_GRAPHICS_API_DIRECT3D</DefineConstants>
-    <DefineConstants Condition="$(StrideGraphicsApi.Contains('Direct3D11'))">$(DefineConstants);STRIDE_GRAPHICS_API_DIRECT3D11</DefineConstants>
-    <DefineConstants Condition="$(StrideGraphicsApi.Contains('Direct3D12'))">$(DefineConstants);STRIDE_GRAPHICS_API_DIRECT3D12</DefineConstants>
-    <DefineConstants Condition="$(StrideGraphicsApi.Contains('OpenGL'))">$(DefineConstants);STRIDE_GRAPHICS_API_OPENGL</DefineConstants>
-    <DefineConstants Condition="$(StrideGraphicsApi.Contains('OpenGLES'))">$(DefineConstants);STRIDE_GRAPHICS_API_OPENGLES</DefineConstants>
-    <DefineConstants Condition="$(StrideGraphicsApi.Contains('Vulkan'))">$(DefineConstants);STRIDE_GRAPHICS_API_VULKAN</DefineConstants>
-    <DefineConstants Condition="$(StrideGraphicsApi.Contains('Null'))">$(DefineConstants);STRIDE_GRAPHICS_API_NULL</DefineConstants>
-    <!-- UI Framework defines -->
-    <DefineConstants Condition="$(StrideUI.Contains('SDL'))">$(DefineConstants);STRIDE_UI_SDL</DefineConstants>
-    <DefineConstants Condition="$(StrideUI.Contains('WINFORMS'))">$(DefineConstants);STRIDE_UI_WINFORMS</DefineConstants>
-    <DefineConstants Condition="$(StrideUI.Contains('WPF'))">$(DefineConstants);STRIDE_UI_WPF</DefineConstants>
   </PropertyGroup>
   <ItemGroup Condition=" '$(StrideGraphicsApi)' == 'Vulkan' ">
     <StrideNativeLib Include="..\..\..\deps\MoltenVK\$(StridePlatformDeps)\**\*.*">
@@ -70,4 +62,5 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
+  <Import Project="$(StrideSdkTargets)" />
 </Project>

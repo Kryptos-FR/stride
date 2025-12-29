@@ -56,13 +56,16 @@
           BeforeTargets="_GetPackageFiles" 
           Condition="'$(StridePackAssets)' == 'true'">
     
-    <!-- Determine executable extension -->
+    <!-- Determine paths inside the target where all properties are available -->
     <PropertyGroup>
       <ExecutableExtension Condition="$([MSBuild]::IsOSPlatform('Windows'))">.exe</ExecutableExtension>
+      <!-- For Graphics API-dependent builds, use base intermediate path without Graphics API subdirectory -->
+      <StridePackAssetsPath Condition="'$(StrideGraphicsApiDependent)' == 'true'">obj\$(Configuration)\$(TargetFramework)\stride</StridePackAssetsPath>
+      <StridePackAssetsPath Condition="'$(StridePackAssetsPath)' == ''">$(IntermediateOutputPath)stride</StridePackAssetsPath>
     </PropertyGroup>
     
     <!-- Run pack-assets tool -->
-    <Exec Command="&quot;$(MSBuildThisFileDirectory)..\..\..\..\core\Stride.Core.Tasks\bin\$(Configuration)\$(StrideXplatEditorTargetFramework)\Stride.Core.Tasks$(ExecutableExtension)&quot; pack-assets &quot;$(MSBuildProjectFile)&quot; &quot;$(IntermediateOutputPath)\stride&quot;" 
+    <Exec Command="&quot;$(MSBuildThisFileDirectory)..\..\..\..\core\Stride.Core.Tasks\bin\$(Configuration)\$(StrideXplatEditorTargetFramework)\Stride.Core.Tasks$(ExecutableExtension)&quot; pack-assets &quot;$(MSBuildProjectFile)&quot; &quot;$(StridePackAssetsPath)&quot;" 
           ConsoleToMsBuild="true">
       <Output TaskParameter="ConsoleOutput" ItemName="PackAssetsLine" />
     </Exec>

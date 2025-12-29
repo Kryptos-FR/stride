@@ -14,17 +14,38 @@ When modifying SDK files (`.props`, `.targets`, or SDK project files), you **MUS
    # CRITICAL: Must specify PackageOutputPath to build/packages directory
    # The build system expects SDK packages in build/packages, NOT in bin/Debug
    
+   # MSBuild path for Visual Studio 2026 (version 18):
+   $msbuild = "C:\Program Files\Microsoft Visual Studio\18\Community\Msbuild\Current\Bin\MSBuild.exe"
+   
    # For Stride.Sdk
-   msbuild sources\sdk\Stride.Sdk\Stride.Sdk.csproj /t:Clean,Pack /p:Configuration=Debug /p:PackageOutputPath="$PWD\build\packages"
+   & $msbuild sources\sdk\Stride.Sdk\Stride.Sdk.csproj /t:Clean,Pack /p:Configuration=Debug /p:PackageOutputPath="$PWD\build\packages"
    
    # For Stride.Sdk.Runtime (if modified)
-   msbuild sources\sdk\Stride.Sdk.Runtime\Stride.Sdk.Runtime.csproj /t:Clean,Pack /p:Configuration=Debug /p:PackageOutputPath="$PWD\build\packages"
+   & $msbuild sources\sdk\Stride.Sdk.Runtime\Stride.Sdk.Runtime.csproj /t:Clean,Pack /p:Configuration=Debug /p:PackageOutputPath="$PWD\build\packages"
    ```
 3. **Clear NuGet package cache** (CRITICAL - changes won't be visible without this):
    ```powershell
    Remove-Item $env:USERPROFILE\.nuget\packages\stride.sdk -Recurse -Force
    Remove-Item $env:USERPROFILE\.nuget\packages\stride.sdk.runtime -Recurse -Force
    ```
+
+### ⚠️ CRITICAL: MSBuild Property Definitions in .props and .targets Files
+
+**Property values MUST be on a single line.** MSBuild preserves whitespace, including newlines and indentation, as part of the property value.
+
+**WRONG** (causes "Illegal characters in path" errors and other subtle bugs):
+```xml
+<PropertyName Condition="...">
+  $(SomeExpression.Method())
+</PropertyName>
+```
+
+**CORRECT**:
+```xml
+<PropertyName Condition="...">$(SomeExpression.Method())</PropertyName>
+```
+
+This applies to ALL property definitions in `.props` and `.targets` files, especially those used in paths like `IntermediateOutputPath`, `OutputPath`, or compiler defines like `DefineConstants`.
 
 ### Why This Matters:
 

@@ -16,15 +16,10 @@
   <!-- ================================================================ -->
   <PropertyGroup>
     <!-- Windows: All APIs available -->
-    <StrideGraphicsApis Condition="('$(StrideGraphicsApis)' == '' Or '$(StrideGraphicsApiDependentBuildAll)' == 'true') And 
-                                    ('$(TargetFramework)' == '$(StrideFramework)' Or '$(TargetFramework)' == '$(StrideFrameworkWindows)')">
-      Direct3D11;Direct3D12;OpenGL;OpenGLES;Vulkan
-    </StrideGraphicsApis>
+    <StrideGraphicsApis Condition="('$(StrideGraphicsApis)' == '' Or '$(StrideGraphicsApiDependentBuildAll)' == 'true') And ('$(TargetFramework)' == '$(StrideFramework)' Or '$(TargetFramework)' == '$(StrideFrameworkWindows)')">Direct3D11;Direct3D12;OpenGL;OpenGLES;Vulkan</StrideGraphicsApis>
     
     <!-- Default API is first in list (or platform-specific default) -->
-    <StrideDefaultGraphicsApi Condition="'$(StrideGraphicsApis)' != ''">
-      $(StrideGraphicsApis.Split(';', StringSplitOptions.RemoveEmptyEntries)[0])
-    </StrideDefaultGraphicsApi>
+    <StrideDefaultGraphicsApi Condition="'$(StrideGraphicsApis)' != ''">$(StrideGraphicsApis.Split(';', StringSplitOptions.RemoveEmptyEntries)[0])</StrideDefaultGraphicsApi>
     
     <!-- Platform-specific defaults -->
     <StrideDefaultGraphicsApi Condition="'$(TargetFramework)' == '$(StrideFrameworkUWP)'">Direct3D11</StrideDefaultGraphicsApi>
@@ -33,6 +28,10 @@
     
     <!-- Fallback if no default set -->
     <StrideDefaultGraphicsApi Condition="'$(StrideDefaultGraphicsApi)' == ''">Direct3D11</StrideDefaultGraphicsApi>
+    
+    <!-- Set StrideGraphicsApi HERE in .props so it's available during .csproj evaluation 
+         ONLY during inner builds (when TargetFramework is set) -->
+    <StrideGraphicsApi Condition="'$(StrideGraphicsApi)' == '' And '$(StrideDefaultGraphicsApi)' != '' And '$(TargetFramework)' != ''">$(StrideDefaultGraphicsApi)</StrideGraphicsApi>
   </PropertyGroup>
 
   <!-- ================================================================ -->
@@ -47,10 +46,7 @@
     <StrideUI Condition="'$(TargetFramework)' != '$(StrideFrameworkUWP)'">SDL</StrideUI>
     
     <!-- Windows with DirectX also supports WinForms and WPF -->
-    <StrideUI Condition="'$(TargetFramework)' == '$(StrideFrameworkWindows)' AND 
-                         ('$(StrideGraphicsApi)' == 'Direct3D11' Or '$(StrideGraphicsApi)' == 'Direct3D12')">
-      $(StrideUI);WINFORMS;WPF
-    </StrideUI>
+    <StrideUI Condition="'$(TargetFramework)' == '$(StrideFrameworkWindows)' AND ('$(StrideGraphicsApi)' == 'Direct3D11' Or '$(StrideGraphicsApi)' == 'Direct3D12')">$(StrideUI);WINFORMS;WPF</StrideUI>
     
     <!-- UI framework defines moved to Stride.Graphics.targets -->
   </PropertyGroup>
