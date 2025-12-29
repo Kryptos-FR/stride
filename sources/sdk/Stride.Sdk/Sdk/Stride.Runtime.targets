@@ -18,7 +18,7 @@
     Recursion is automatically avoided by MSBuild not rebuilding same target.
   -->
   <Target Name="_StrideTriggerPackOnInnerBuild"
-          BeforeTargets="CoreCompile"
+          BeforeTargets="Build"
           Condition="'$(BuildingInsideVisualStudio)' != 'true' And '$(GeneratePackageOnBuild)' == 'true'">
     <MSBuild Projects="@(_MSBuildProjectReferenceExistent)"
              Condition="'%(_MSBuildProjectReferenceExistent.SetTargetFramework)' != ''"
