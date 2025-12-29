@@ -1,0 +1,156 @@
+<!--
+  Stride.AssemblyProcessor.targets
+  
+  Stride Assembly Processor integration.
+  
+  The assembly processor adds:
+  - Automatic module initializers
+  - Serialization support
+  - Parameter key system
+  
+  It runs after compilation but before CopyFilesToOutputDirectory.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- ================================================================ -->
+  <!-- Assembly Processor Path Configuration -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <StrideAssemblyProcessorFramework>netstandard2.0</StrideAssemblyProcessorFramework>
+    <StrideAssemblyProcessorExt>.dll</StrideAssemblyProcessorExt>
+    
+    <!-- Base path depends on whether we're in a package or dev build -->
+    <StrideAssemblyProcessorBasePath Condition="'$(StrideAssemblyProcessorBasePath)' == '' And '$(StridePackageStride)' != ''">
+      $(StridePackageStride)\deps\AssemblyProcessor\
+    </StrideAssemblyProcessorBasePath>
+    <StrideAssemblyProcessorBasePath Condition="'$(StrideAssemblyProcessorBasePath)' == ''">
+      $([System.IO.Path]::Combine('$(MSBuildProjectDirectory)', '..\..\..', 'deps', 'AssemblyProcessor'))
+    </StrideAssemblyProcessorBasePath>
+    
+    <!-- Compute hash file path and read it -->
+    <_StrideAssemblyProcessorHashFile Condition="'$(StrideAssemblyProcessorBasePath)' != ''">
+      $([System.IO.Path]::Combine('$(StrideAssemblyProcessorBasePath)', '$(StrideAssemblyProcessorFramework)', 'Stride.Core.AssemblyProcessor$(StrideAssemblyProcessorExt).hash'))
+    </_StrideAssemblyProcessorHashFile>
+    <StrideAssemblyProcessorHash Condition="'$(_StrideAssemblyProcessorHashFile)' != '' And Exists('$(_StrideAssemblyProcessorHashFile)')">
+      $([System.IO.File]::ReadAllText('$(_StrideAssemblyProcessorHashFile)'))
+    </StrideAssemblyProcessorHash>
+    
+    <!-- Temp directory (avoids file locking) -->
+    <TEMP>$([System.IO.Path]::GetTempPath())</TEMP>
+    <StrideAssemblyProcessorTempBasePath Condition="'$(StrideAssemblyProcessorBasePath)' != ''">
+      $(TEMP)Stride\AssemblyProcessor\$(StrideAssemblyProcessorHash)\$(StrideAssemblyProcessorFramework)\
+    </StrideAssemblyProcessorTempBasePath>
+    <StrideAssemblyProcessorTempPath Condition="'$(StrideAssemblyProcessorBasePath)' != ''">
+      $(StrideAssemblyProcessorTempBasePath)Stride.Core.AssemblyProcessor$(StrideAssemblyProcessorExt)
+    </StrideAssemblyProcessorTempPath>
+    
+    <!-- Stride.Core assembly path for processor -->
+    <StrideCoreAssemblyPath Condition="'$(StrideCoreAssemblyPath)' == '' And '$(StridePackageStride)' != ''">
+      $(StridePackageStride)\Bin\$(StrideBuildDirectory)\Stride.Core.dll
+    </StrideCoreAssemblyPath>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Assembly Processor Task Definition -->
+  <!-- ================================================================ -->
+  <UsingTask TaskName="AssemblyProcessorTask" 
+             AssemblyFile="$(StrideAssemblyProcessorTempPath)" 
+             Condition="'$(StrideAssemblyProcessorTempPath)' != '' And '$(StrideAssemblyProcessorDev)' != 'true'" />
+
+  <!-- ================================================================ -->
+  <!-- Run Assembly Processor Target -->
+  <!-- ================================================================ -->
+  <Target Name="RunStrideAssemblyProcessor"
+          BeforeTargets="CopyFilesToOutputDirectory"
+          Condition="'$(StrideAssemblyProcessor)' == 'true' And 
+                     '$(StrideAssemblyProcessorTempPath)' != '' And 
+                     '$(StrideAssemblyProcessorGlobal)' == 'true' And 
+                     '$(StrideAssemblyProcessorOptions)' != ''">
+
+    <!-- Add Stride.Core path to assembly search directory if available -->
+    <PropertyGroup>
+      <StrideAssemblyProcessorOptions Condition="'$(StrideCoreAssemblyPath)' != ''">
+        $(StrideAssemblyProcessorOptions) --assembly="$(StrideCoreAssemblyPath)"
+      </StrideAssemblyProcessorOptions>
+    </PropertyGroup>
+
+    <!-- Write references to cache file -->
+    <WriteLinesToFile File="$(IntermediateOutputPath)StrideReferences.cache" 
+                      Lines="@(ReferencePath)" 
+                      Overwrite="true" />
+
+    <!-- Build command line options -->
+    <PropertyGroup>
+      <StrideAssemblyProcessorOptions>--platform=$(StridePlatform) $(StrideAssemblyProcessorOptions)</StrideAssemblyProcessorOptions>
+      <StrideAssemblyProcessorOptions>$(StrideAssemblyProcessorOptions) --references-file="$(IntermediateOutputPath)StrideReferences.cache"</StrideAssemblyProcessorOptions>
+      <StrideAssemblyProcessorOptions Condition="'$(DocumentationFile)' != ''">$(StrideAssemblyProcessorOptions) --docfile="$(DocumentationFile)"</StrideAssemblyProcessorOptions>
+      <StrideAssemblyProcessorOptions>$(StrideAssemblyProcessorOptions) "$(IntermediateOutputPath)$(TargetName)$(TargetExt)"</StrideAssemblyProcessorOptions>
+    </PropertyGroup>
+
+    <!-- Copy processor to temp directory (avoids file locking) -->
+    <ItemGroup>
+      <StrideAssemblyProcessorFilesToCopy Include="$(StrideAssemblyProcessorBasePath)$(StrideAssemblyProcessorFramework)\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(StrideAssemblyProcessorFilesToCopy)" 
+          DestinationFolder="$(StrideAssemblyProcessorTempBasePath)" 
+          Condition="!Exists('$(StrideAssemblyProcessorTempPath)')" />
+
+    <!-- Run assembly processor -->
+    <Message Importance="High" Text="&quot;$(StrideAssemblyProcessorTempPath)&quot; $(StrideAssemblyProcessorOptions)"/>
+    
+    <!-- Use task (normal mode) -->
+    <AssemblyProcessorTask Condition="'$(StrideAssemblyProcessorDev)' != 'true'" 
+                           Arguments="$(StrideAssemblyProcessorOptions)"/>
+    
+    <!-- Use Exec (dev mode - avoids locking) -->
+    <Exec Condition="'$(StrideAssemblyProcessorDev)' == 'true'" 
+          Command="&quot;$(StrideAssemblyProcessorTempPath)&quot; $(StrideAssemblyProcessorOptions)"/>
+
+    <!-- Copy User Documentation (.usrdoc) file to output if public API -->
+    <Copy Condition="'$(StridePublicApi)' == 'true' And Exists('%(RelativeDir)%(Filename).usrdoc')"
+          SourceFiles="@(DocFileItem->'%(RelativeDir)%(Filename).usrdoc')"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="$(SkipCopyUnchangedFiles)"
+          OverwriteReadOnlyFiles="$(OverwriteReadOnlyFiles)"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"
+          UseHardlinksIfPossible="$(CreateHardLinksForCopyFilesToOutputDirectoryIfPossible)"
+          UseSymboliclinksIfPossible="$(CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible)">
+      <Output TaskParameter="DestinationFiles" ItemName="FileWrites"/>
+    </Copy>
+  </Target>
+
+  <!-- ================================================================ -->
+  <!-- User Documentation (.usrdoc) Support -->
+  <!-- ================================================================ -->
+  
+  <!-- Generate documentation file for public APIs -->
+  <PropertyGroup Condition="'$(StridePublicApi)' == 'true'">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>
+      $(AllowedOutputExtensionsInPackageBuildOutputFolder);.usrdoc
+    </AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <TargetsForTfmSpecificBuildOutput>
+      $(TargetsForTfmSpecificBuildOutput);_StrideRegisterUserDocOutputs
+    </TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+
+  <!-- Register .usrdoc files for packaging -->
+  <Target Name="_StrideRegisterUserDocOutputs">
+    <ItemGroup Condition="Exists('$(OutputPath)$(AssemblyName).usrdoc')">
+      <BuildOutputInPackage Include="$(OutputPath)$(AssemblyName).usrdoc"/>
+    </ItemGroup>
+  </Target>
+
+  <!-- Allow .usrdoc files to be copied with assembly references -->
+  <Target Name="_StrideRegisterUserDocReferenceRelatedFileExtensions" 
+          Condition="'$(StridePublicApi)' == 'true'" 
+          BeforeTargets="ResolveAssemblyReferences">
+    <PropertyGroup>
+      <AllowedReferenceRelatedFileExtensions>
+        $(AllowedReferenceRelatedFileExtensions);.usrdoc
+      </AllowedReferenceRelatedFileExtensions>
+    </PropertyGroup>
+  </Target>
+
+</Project>

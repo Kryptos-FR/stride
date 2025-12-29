@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    
+    <!-- Package as MSBuild SDK -->
+    <PackageType>MSBuildSdk</PackageType>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    
+    <!-- Package Identity -->
+    <PackageId>Stride.Sdk</PackageId>
+    <Title>Stride Game Engine SDK</Title>
+    <Description>MSBuild SDK for Stride game engine projects. Simplifies project files and centralizes build configuration.</Description>
+    
+    <!-- Version will be set by build system -->
+    <PackageVersion Condition="'$(PackageVersion)' == ''">4.3.0-dev</PackageVersion>
+    
+    <!-- Package Metadata -->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://stride3d.net</PackageProjectUrl>
+    <PackageIcon>nuget-icon.png</PackageIcon>
+    <RepositoryUrl>https://github.com/stride3d/stride</RepositoryUrl>
+    <Copyright>Copyright © Stride contributors and Silicon Studio Corp.</Copyright>
+    <Authors>Stride contributors;Silicon Studio Corp.</Authors>
+    <PackageTags>Stride;MSBuild;SDK;Game Engine;3D;gamedev</PackageTags>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <!-- Include SDK files in Sdk/ folder (required for MSBuild SDK resolution) -->
+    <None Include="Sdk\**\*.props" Pack="true" PackagePath="Sdk\" />
+    <None Include="Sdk\**\*.targets" Pack="true" PackagePath="Sdk\" />
+    
+    <!-- Include build/ files for legacy NuGet PackageReference support -->
+    <None Include="build\**\*.props" Pack="true" PackagePath="build\" />
+    <None Include="build\**\*.targets" Pack="true" PackagePath="build\" />
+    
+    <!-- Include icon -->
+    <None Include="..\..\..\sources\targets\nuget-icon.png" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+  
+</Project>

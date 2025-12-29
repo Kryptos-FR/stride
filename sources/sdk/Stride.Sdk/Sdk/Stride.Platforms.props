@@ -1,0 +1,162 @@
+<!--
+  Stride.Platforms.props
+  
+  Platform detection and configuration.
+  
+  This file:
+  - Detects the current build platform (Windows, Linux, macOS, Android, iOS, UWP)
+  - Sets up platform-specific preprocessor defines
+  - Configures platform-specific properties
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- ================================================================ -->
+  <!-- Platform Detection -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- Save original platform if set -->
+    <StridePlatformOriginal>$(StridePlatform)</StridePlatformOriginal>
+    
+    <!-- Auto-detect platform based on OS and TargetFramework -->
+    <StridePlatform>Windows</StridePlatform>
+    <StridePlatform Condition="'$([MSBuild]::IsOSPlatform(Linux))' Or '$(RuntimeIdentifier.StartsWith(linux))'">Linux</StridePlatform>
+    <StridePlatform Condition="'$(RuntimeIdentifier.StartsWith(osx))'">macOS</StridePlatform>
+    <StridePlatform Condition="'$(TargetFramework)' == '$(StrideFrameworkUWP)'">UWP</StridePlatform>
+    <StridePlatform Condition="'$(TargetFramework)' == '$(StrideFrameworkAndroid)'">Android</StridePlatform>
+    <StridePlatform Condition="'$(TargetFramework)' == '$(StrideFrameworkiOS)'">iOS</StridePlatform>
+    
+    <!-- Full platform name (can include extensions) -->
+    <StridePlatformFullName Condition="'$(StridePlatformFullName)' == ''">$(StridePlatform)</StridePlatformFullName>
+    <StridePlatformFullName Condition="'$(StrideBuildDirExtension)' != ''">$(StridePlatformFullName)-$(StrideBuildDirExtension)</StridePlatformFullName>
+    
+    <!-- Platform for dependencies (maps TFM to dependency folder) -->
+    <StridePlatformDeps Condition="'$(TargetFramework)' == '$(StrideFramework)' Or '$(TargetFramework)' == '$(StrideFrameworkWindows)'">dotnet</StridePlatformDeps>
+    <StridePlatformDeps Condition="'$(TargetFramework)' == '$(StrideFrameworkUWP)'">UWP</StridePlatformDeps>
+    <StridePlatformDeps Condition="'$(TargetFramework)' == '$(StrideFrameworkAndroid)'">Android</StridePlatformDeps>
+    <StridePlatformDeps Condition="'$(TargetFramework)' == '$(StrideFrameworkiOS)'">iOS</StridePlatformDeps>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Platform List Configuration -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- List of platforms to build (semicolon-separated) -->
+    <StridePlatforms Condition="'$(StridePlatforms)' == ''">Windows</StridePlatforms>
+    
+    <!-- Unescape in case it was escaped (from build scripts) -->
+    <StridePlatforms>$([MSBuild]::Unescape('$(StridePlatforms)'))</StridePlatforms>
+    
+    <!-- Wrapped version for .Contains() checks -->
+    <_StridePlatforms>;$(StridePlatforms);</_StridePlatforms>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Platform-Specific Preprocessor Defines -->
+  <!-- ================================================================ -->
+  
+  <!-- Desktop Platforms (Windows/Linux/macOS) -->
+  <PropertyGroup Condition="'$(TargetFramework)' == '$(StrideFramework)' Or '$(TargetFramework)' == '$(StrideFrameworkWindows)'">
+    <StridePlatformDefines>STRIDE_PLATFORM_DESKTOP</StridePlatformDefines>
+  </PropertyGroup>
+  
+  <!-- UWP -->
+  <PropertyGroup Condition="'$(TargetFramework)' == '$(StrideFrameworkUWP)'">
+    <StridePlatformDefines>STRIDE_PLATFORM_UWP</StridePlatformDefines>
+    
+    <!-- UWP-specific configuration -->
+    <Platform Condition="'$(Platform)' == ''">x86</Platform>
+    <WindowsAppContainer>false</WindowsAppContainer>
+    <AppxPackage>false</AppxPackage>
+    <ExtrasUwpMetaPackageVersion>6.2.12</ExtrasUwpMetaPackageVersion>
+    <TargetPlatformVersion>$([Microsoft.Build.Utilities.ToolLocationHelper]::GetLatestSDKTargetPlatformVersion('Windows', '10.0'))</TargetPlatformVersion>
+    <TargetPlatformMinVersion>10.0.16299.0</TargetPlatformMinVersion>
+    <GenerateLibraryLayout>false</GenerateLibraryLayout>
+  </PropertyGroup>
+  
+  <!-- Android -->
+  <PropertyGroup Condition="'$(TargetFramework)' == '$(StrideFrameworkAndroid)'">
+    <StridePlatformDefines>STRIDE_PLATFORM_MONO_MOBILE;STRIDE_PLATFORM_ANDROID</StridePlatformDefines>
+    
+    <!-- Android-specific configuration -->
+    <AndroidStoreUncompressedFileExtensions />
+    <MandroidI18n />
+    <DesignTimeBuild Condition="'$(DesignTimeBuild)' == ''">False</DesignTimeBuild>
+    <AndroidResgenNamespace>$(AssemblyName)</AndroidResgenNamespace>
+    <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(TargetFramework)' == '$(StrideFrameworkAndroid)' And '$(OutputType)' == 'Exe'">
+    <AndroidApplication>true</AndroidApplication>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(TargetFramework)' == '$(StrideFrameworkAndroid)' And '$(Configuration)' == 'Debug'">
+    <AndroidUseSharedRuntime>True</AndroidUseSharedRuntime>
+    <AndroidLinkMode>None</AndroidLinkMode>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(TargetFramework)' == '$(StrideFrameworkAndroid)' And '$(Configuration)' == 'Release'">
+    <AndroidUseSharedRuntime>False</AndroidUseSharedRuntime>
+    <AndroidLinkMode>SdkOnly</AndroidLinkMode>
+  </PropertyGroup>
+  
+  <!-- iOS -->
+  <PropertyGroup Condition="'$(TargetFramework)' == '$(StrideFrameworkiOS)'">
+    <StridePlatformDefines>STRIDE_PLATFORM_MONO_MOBILE;STRIDE_PLATFORM_IOS</StridePlatformDefines>
+    
+    <!-- iOS-specific configuration -->
+    <Platform Condition="'$(Platform)' == ''">iPhone</Platform>
+    <IPhoneResourcePrefix>Resources</IPhoneResourcePrefix>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Apply Defines to Global DefineConstants -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);$(StridePlatformDefines)</DefineConstants>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Platform-Specific References (UWP) -->
+  <!-- ================================================================ -->
+  <Choose>
+    <When Condition="'$(TargetFramework)' == '$(StrideFrameworkUWP)'">
+      <ItemGroup>
+        <Reference Include="System" />
+        <Reference Include="System.Core" />
+        <Reference Include="System.Xml" />
+        <Reference Include="System.Xml.Linq" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
+  <!-- ================================================================ -->
+  <!-- Android Workaround: Fix Embedded Resources -->
+  <!-- ================================================================ -->
+  <!-- Workaround for https://github.com/xamarin/xamarin-android/issues/1235 -->
+  <Target Name="_FixupLibraryProjectsEmbeddedResource" 
+          AfterTargets="_AddLibraryProjectsEmbeddedResourceToProject"
+          Condition="'$(TargetFramework)' == '$(StrideFrameworkAndroid)'">
+    <ItemGroup>
+      <_LibraryProjectsEmbeddedResource Include="@(EmbeddedResource)" 
+                                         Condition="'%(Identity)' == '$(IntermediateOutputPath)__AndroidLibraryProjects__.zip'"/>
+      <EmbeddedResource Remove="@(_LibraryProjectsEmbeddedResource)"/>
+      <EmbeddedResource Include="@(_LibraryProjectsEmbeddedResource)">
+        <LogicalName>__AndroidLibraryProjects__.zip</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+
+  <!-- ================================================================ -->
+  <!-- Ensure Platform is Set for Solution Builds -->
+  <!-- ================================================================ -->
+  <Choose>
+    <When Condition="'$(StridePlatform)' == 'Android'">
+      <PropertyGroup Condition="'$(Platform)' == 'Android'" />
+    </When>
+    <When Condition="'$(TargetFramework)' == '$(StrideFrameworkiOS)'">
+      <PropertyGroup Condition="'$(Platform)' == 'iPhone'" />
+      <PropertyGroup Condition="'$(Platform)' == 'iPhoneSimulator'" />
+    </When>
+  </Choose>
+
+</Project>

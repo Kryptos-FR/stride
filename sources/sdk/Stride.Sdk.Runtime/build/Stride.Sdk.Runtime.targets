@@ -1,0 +1,9 @@
+<!--
+  Legacy NuGet PackageReference support for Stride.Sdk.Runtime
+  
+  When referenced as a PackageReference instead of an SDK, this file
+  imports the actual SDK targets from the Sdk folder.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="../Sdk/Sdk.targets" />
+</Project>

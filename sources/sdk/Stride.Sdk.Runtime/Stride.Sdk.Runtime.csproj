@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Stride.Sdk.Runtime</PackageId>
+    <PackageVersion>4.3.0-dev</PackageVersion>
+    <PackageType>MSBuildSdk</PackageType>
+    <Description>MSBuild SDK for multi-platform Stride runtime projects</Description>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Include Sdk folder contents -->
+    <None Include="Sdk\**\*" Pack="true" PackagePath="Sdk\" />
+    
+    <!-- Include legacy build folder for NuGet PackageReference compatibility -->
+    <None Include="build\**\*" Pack="true" PackagePath="build\" />
+  </ItemGroup>
+
+</Project>

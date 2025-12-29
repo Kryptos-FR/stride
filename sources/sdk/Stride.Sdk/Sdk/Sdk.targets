@@ -1,0 +1,144 @@
+<!--
+  Stride.Sdk - Main SDK Targets File
+  
+  This file is imported at the end of project evaluation. It:
+  1. Imports Microsoft.NET.Sdk.targets (base SDK)
+  2. Imports supporting targets files for Stride features
+  3. Defines custom build targets for assembly processing, packaging, etc.
+  
+  Import Order:
+  1. Microsoft.NET.Sdk.targets (base SDK targets)
+  2. Supporting targets files (AssemblyProcessor, Graphics, Packaging)
+  3. Custom Stride targets
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- ================================================================ -->
+  <!-- Import Base Microsoft.NET.Sdk Targets -->
+  <!-- ================================================================ -->
+  <!-- This provides all standard .NET build targets -->
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <!-- ================================================================ -->
+  <!-- Import Supporting Targets Files -->
+  <!-- ================================================================ -->
+  
+  <!-- Assembly processor integration -->
+  <Import Project="Stride.AssemblyProcessor.targets" />
+  
+  <!-- Graphics API multi-targeting support -->
+  <Import Project="Stride.GraphicsApi.targets" />
+  
+  <!-- Package generation and deployment -->
+  <Import Project="Stride.Packaging.targets" />
+
+  <!-- ================================================================ -->
+  <!-- Default Empty Targets -->
+  <!-- ================================================================ -->
+  <!-- Provide no-op targets for projects that might be skipped -->
+  <Target Name="Build" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
+  <Target Name="Clean" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
+  <Target Name="Rebuild" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
+  <Target Name="Publish" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
+  <Target Name="GetTargetPath" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
+  <Target Name="GetNativeManifest" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
+  <Target Name="GetPackagingOutputs" Condition="'$(StrideCompilerTargetsEnable)' == 'false'" />
+
+  <!-- ================================================================ -->
+  <!-- Platform-Specific Build Configuration -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- On Android, everything is library (even Exe) -->
+    <OutputType Condition="'$(TargetFramework)' == '$(StrideFrameworkAndroid)'">Library</OutputType>
+    
+    <!-- Detect if project is executable -->
+    <StrideIsExecutable Condition="'$(OutputType)' == 'Exe'">true</StrideIsExecutable>
+    <StrideIsExecutable Condition="'$(OutputType)' == 'WinExe'">true</StrideIsExecutable>
+    
+    <!-- Process scripts with AssemblyProcessor by default -->
+    <StrideAssemblyProcessor Condition="'$(StrideScript)' == 'true'">true</StrideAssemblyProcessor>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Code Analysis Configuration -->
+  <!-- ================================================================ -->
+  <PropertyGroup Condition="'$(StrideCodeAnalysis)' == 'true'">
+    <CodeAnalysisRuleSet>$(MSBuildThisFileDirectory)..\..\..\targets\Stride.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Compiler Target Control -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- Disable compilation for Windows-only projects on non-Windows TFMs -->
+    <StrideCompilerTargetsEnable Condition="'$(TargetFramework)' != '$(StrideFramework)' and 
+                                             '$(TargetFramework)' == '$(StrideFrameworkWindows)' and 
+                                             '$(StrideWindowsOnly)' == 'true'">false</StrideCompilerTargetsEnable>
+    
+    <!-- Skip unit tests if requested -->
+    <StrideCompilerTargetsEnable Condition="'$(StrideSkipUnitTests)' == 'true' And 
+                                             $(StrideOutputFolder.StartsWith('Tests'))">false</StrideCompilerTargetsEnable>
+    
+    <!-- Override language targets to disable build -->
+    <LanguageTargets Condition="'$(StrideCompilerTargetsEnable)' == 'false'">$(MSBuildThisFileDirectory)..\..\..\targets\Stride.Core.DisableBuild.targets</LanguageTargets>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Documentation (docfx) Configuration -->
+  <!-- ================================================================ -->
+  <PropertyGroup Condition="'$(StrideBuildDoc)' == 'true'">
+    <!-- docfx requires TargetFramework to be set -->
+    <TargetFramework Condition="'$(TargetFramework)' == ''">$(TargetFrameworks.Split(';', StringSplitOptions.RemoveEmptyEntries)[0])</TargetFramework>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- C++ Project Support -->
+  <!-- ================================================================ -->
+  <PropertyGroup Condition="'$(StrideProjectType)' == 'Cpp'">
+    <OutputPath>$(OutDir)</OutputPath>
+    <IntermediateOutputPath>$(IntDir)</IntermediateOutputPath>
+  </PropertyGroup>
+  
+  <!-- Import C++ targets if needed -->
+  <Import Condition="'$(StrideProjectType)' == 'Cpp' And '$(StrideCompilerTargetsEnable)' != 'false'" 
+          Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+
+  <!-- ================================================================ -->
+  <!-- Workaround Targets -->
+  <!-- ================================================================ -->
+  
+  <!-- Workaround: GetPackagingOutputs from UWP tries to build ProjectReference with current TFM -->
+  <Target Name="_StrideRemoveTargetFrameworkBeforeGetPackagingOutputs" BeforeTargets="GetPackagingOutputs">
+    <ItemGroup>
+      <ProjectReferenceWithConfiguration>
+        <UndefineProperties>%(ProjectReferenceWithConfiguration.UndefineProperties);TargetFramework</UndefineProperties>
+      </ProjectReferenceWithConfiguration>
+    </ItemGroup>
+  </Target>
+
+  <!-- Workaround: Fix UpToDateCheck with project.assets.json -->
+  <Target Name="_GenerateCompileInputsProjectAssets" AfterTargets="_GenerateCompileInputs">
+    <ItemGroup>
+      <CustomAdditionalCompileInputs Include="$(ProjectAssetsFile)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- ================================================================ -->
+  <!-- Shader File Configuration -->
+  <!-- ================================================================ -->
+  <!-- Mark shader files with code generators and make generated files dependent -->
+  <ItemGroup>
+    <Compile Update="**\*.sdsl.cs" DependentUpon="%(Filename)" />
+    <None Update="**\*.sdsl" Generator="StrideShaderKeyGenerator" />
+    <Compile Update="**\*.sdfx.cs" DependentUpon="%(Filename)" />
+    <None Update="**\*.sdfx" Generator="StrideEffectCodeGenerator" />
+  </ItemGroup>
+
+  <!-- ================================================================ -->
+  <!-- Extensibility Hook: After Stride SDK -->
+  <!-- ================================================================ -->
+  <!-- Projects can define CustomAfterStrideSdkTargets to inject custom logic -->
+  <Import Project="$(CustomAfterStrideSdkTargets)" 
+          Condition="'$(CustomAfterStrideSdkTargets)' != '' and Exists('$(CustomAfterStrideSdkTargets)')" />
+
+</Project>

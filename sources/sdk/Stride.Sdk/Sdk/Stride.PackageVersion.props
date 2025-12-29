@@ -1,0 +1,80 @@
+<!--
+  Stride.PackageVersion.props
+  
+  NuGet package version and metadata configuration.
+  
+  This file extracts version information from SharedAssemblyInfo.cs
+  and applies it to NuGet package properties.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- ================================================================ -->
+  <!-- Extract Version from SharedAssemblyInfo -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- Determine path to SharedAssemblyInfo based on project location -->
+    <!-- Assumes project is under sources/ and shared/ is at repository root -->
+    <_StrideSharedAssemblyInfoPath>$(MSBuildProjectDirectory)\..\..\shared\SharedAssemblyInfo.cs</_StrideSharedAssemblyInfoPath>
+    <_StrideSharedAssemblyInfoPath Condition="!Exists('$(_StrideSharedAssemblyInfoPath)')">$(MSBuildProjectDirectory)\..\shared\SharedAssemblyInfo.cs</_StrideSharedAssemblyInfoPath>
+    <_StrideSharedAssemblyInfoPath Condition="!Exists('$(_StrideSharedAssemblyInfoPath)')">$(MSBuildProjectDirectory)\shared\SharedAssemblyInfo.cs</_StrideSharedAssemblyInfoPath>
+    
+    <!-- Compute NuGet version path -->
+    <_StrideSharedAssemblyInfoPathNuGet>$(_StrideSharedAssemblyInfoPath.Replace('SharedAssemblyInfo.cs', 'SharedAssemblyInfo.NuGet.cs'))</_StrideSharedAssemblyInfoPathNuGet>
+    
+    <!-- Read SharedAssemblyInfo file (NuGet version if package build, otherwise regular) -->
+    <_StrideSharedAssemblyInfoLines Condition="'$(StridePackageBuild)' == 'true' And Exists('$(_StrideSharedAssemblyInfoPathNuGet)')">
+      $([System.IO.File]::ReadAllText('$(_StrideSharedAssemblyInfoPathNuGet)'))
+    </_StrideSharedAssemblyInfoLines>
+    <_StrideSharedAssemblyInfoLines Condition="'$(_StrideSharedAssemblyInfoLines)' == '' And Exists('$(_StrideSharedAssemblyInfoPath)')">
+      $([System.IO.File]::ReadAllText('$(_StrideSharedAssemblyInfoPath)'))
+    </_StrideSharedAssemblyInfoLines>
+    
+    <!-- Extract version components using regex -->
+    <StridePublicVersion>
+      $([System.Text.RegularExpressions.Regex]::Match($(_StrideSharedAssemblyInfoLines), `.*PublicVersion = \"(.*)\";.*`).Groups[1].Value)
+    </StridePublicVersion>
+    <StrideNuGetVersionSuffix>
+      $([System.Text.RegularExpressions.Regex]::Match($(_StrideSharedAssemblyInfoLines), `.*NuGetVersionSuffix = \"(.*)\";.*`).Groups[1].Value)
+    </StrideNuGetVersionSuffix>
+    <StrideBuildMetadata>
+      $([System.Text.RegularExpressions.Regex]::Match($(_StrideSharedAssemblyInfoLines), `.*BuildMetadata = \"(.*)\";.*`).Groups[1].Value)
+    </StrideBuildMetadata>
+    
+    <!-- Combine into full version string -->
+    <StrideNuGetVersion>$(StridePublicVersion)$(StrideNuGetVersionSuffix)$(StrideBuildMetadata)</StrideNuGetVersion>
+    
+    <!-- Set as package version if not already set -->
+    <PackageVersion Condition="'$(PackageVersion)' == ''">$(StrideNuGetVersion)</PackageVersion>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Package Metadata -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://stride3d.net</PackageProjectUrl>
+    <PackageIcon>nuget-icon.png</PackageIcon>
+    <RepositoryUrl>https://github.com/stride3d/stride</RepositoryUrl>
+    <Copyright>Copyright © Stride contributors and Silicon Studio Corp.</Copyright>
+    <Authors>Stride contributors;Silicon Studio Corp.</Authors>
+    <PackageTags>Stride;3D;gamedev;Game Engine;engine;games;D3D;OpenGL;Vulkan</PackageTags>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Include Package Icon -->
+  <!-- ================================================================ -->
+  <!-- Icon path is repository-relative, determined at project evaluation time -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\..\..\targets\nuget-icon.png')">
+    <None Include="$(MSBuildProjectDirectory)\..\..\targets\nuget-icon.png" 
+          Pack="true" 
+          PackagePath="" 
+          Visible="false"/>
+  </ItemGroup>
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\..\targets\nuget-icon.png')">
+    <None Include="$(MSBuildProjectDirectory)\..\targets\nuget-icon.png" 
+          Pack="true" 
+          PackagePath="" 
+          Visible="false"/>
+  </ItemGroup>
+
+</Project>

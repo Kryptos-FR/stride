@@ -1,0 +1,68 @@
+<!--
+  Stride.Runtime.props
+  
+  Multi-platform runtime support for projects with StrideRuntime=true.
+  
+  This file automatically configures TargetFrameworks based on StridePlatforms,
+  enabling projects to build for multiple platforms from a single project file.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- ================================================================ -->
+  <!-- Multi-Platform TargetFrameworks Generation -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- Enable Windows targeting for platform-specific APIs -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    
+    <!-- Start with base .NET framework -->
+    <StrideRuntimeTargetFrameworks>net10.0</StrideRuntimeTargetFrameworks>
+    
+    <!-- Add Windows if explicitly requested -->
+    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';Windows;')) And '$(StrideExplicitWindowsRuntime)' == 'true'">
+      $(StrideRuntimeTargetFrameworks);net10.0-windows
+    </StrideRuntimeTargetFrameworks>
+    
+    <!-- Add UWP if in platform list -->
+    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';UWP;'))">
+      $(StrideRuntimeTargetFrameworks);uap10.0.16299
+    </StrideRuntimeTargetFrameworks>
+    
+    <!-- Add Android if in platform list -->
+    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';Android;'))">
+      $(StrideRuntimeTargetFrameworks);net10.0-android
+    </StrideRuntimeTargetFrameworks>
+    
+    <!-- Add iOS if in platform list -->
+    <StrideRuntimeTargetFrameworks Condition="$(_StridePlatforms.Contains(';iOS;'))">
+      $(StrideRuntimeTargetFrameworks);net10.0-ios
+    </StrideRuntimeTargetFrameworks>
+    
+    <!-- Unescape and trim -->
+    <StrideRuntimeTargetFrameworks>$([MSBuild]::Unescape($(StrideRuntimeTargetFrameworks.Trim(';'))))</StrideRuntimeTargetFrameworks>
+    
+    <!-- Set as the project's TargetFrameworks -->
+    <TargetFrameworks>$(StrideRuntimeTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Trigger Full Build for InnerBuilds -->
+  <!-- ================================================================ -->
+  <!--
+    Force a full Build & Pack if dependency was only built with a single TargetFramework
+    (which would set IsInnerBuild and skip any Pack logic).
+    This is only needed when building from command line; Visual Studio builds each project completely.
+    Recursion is automatically avoided by MSBuild not rebuilding same target.
+  -->
+  <Target Name="_StrideTriggerPackOnInnerBuild"
+          BeforeTargets="CoreCompile"
+          Condition="'$(BuildingInsideVisualStudio)' != 'true' And '$(GeneratePackageOnBuild)' == 'true'">
+    <MSBuild Projects="@(_MSBuildProjectReferenceExistent)"
+             Condition="'%(_MSBuildProjectReferenceExistent.SetTargetFramework)' != ''"
+             BuildInParallel="$(BuildInParallel)"
+             Targets="Build;Pack"
+             RemoveProperties="%(_MSBuildProjectReferenceExistent.GlobalPropertiesToRemove);TargetFramework;StrideGraphicsApi">
+    </MSBuild>
+  </Target>
+
+</Project>

@@ -1,0 +1,105 @@
+<!--
+  Stride.Packaging.targets
+  
+  NuGet package generation and deployment.
+  
+  This file handles:
+  - Auto-pack on build (for development)
+  - Local NuGet feed deployment
+  - Package file inclusion configuration
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- ================================================================ -->
+  <!-- Auto-Pack Configuration -->
+  <!-- ================================================================ -->
+  <PropertyGroup Condition="$(DesignTimeBuild) != 'true' And 
+                             '$(StrideSkipAutoPack)' != 'true' And 
+                             '$(StrideCompilerTargetsEnable)' != 'false'">
+    <!-- Output packages to central location -->
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\..\..\..\bin\packages\</PackageOutputPath>
+    
+    <!-- Enable pack on build for development -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    
+    <!-- Include PDBs and native files in packages -->
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>
+      $(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb
+    </AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>
+      .so;.a;.bin;.dylib;$(AllowedOutputExtensionsInPackageBuildOutputFolder)
+    </AllowedOutputExtensionsInPackageBuildOutputFolder>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Auto-Deploy to Local NuGet Feed -->
+  <!-- ================================================================ -->
+  <Target Name="StrideAutoPackDeploy" AfterTargets="Pack">
+    <!-- Copy package to local dev feed -->
+    <Copy Condition="'%(Extension)' == '.nupkg'" 
+          SourceFiles="@(NuGetPackOutput)" 
+          DestinationFolder="$(LocalAppData)\Stride\NugetDev"/>
+    
+    <!-- Delete NuGet cache to force re-extraction -->
+    <Delete Files="$(NuGetPackageRoot)\$(PackageId.ToLowerInvariant())\$(PackageVersion)\$(PackageId).$(PackageVersion).nupkg.sha512"/>
+    <Delete Files="$(NuGetPackageRoot)\$(PackageId.ToLowerInvariant())\$(PackageVersion)\.nupkg.metadata"/>
+  </Target>
+
+  <!-- ================================================================ -->
+  <!-- Pack Stride Assets -->
+  <!-- ================================================================ -->
+  <!--
+    For projects with StridePackAssets=true, run pack-assets tool
+    to include asset files in the package.
+  -->
+  <Target Name="PrepareStrideAssetsForPack" 
+          BeforeTargets="_GetPackageFiles" 
+          Condition="'$(StridePackAssets)' == 'true'">
+    
+    <!-- Determine executable extension -->
+    <PropertyGroup>
+      <ExecutableExtension Condition="$([MSBuild]::IsOSPlatform('Windows'))">.exe</ExecutableExtension>
+    </PropertyGroup>
+    
+    <!-- Run pack-assets tool -->
+    <Exec Command="&quot;$(MSBuildThisFileDirectory)..\..\..\..\core\Stride.Core.Tasks\bin\$(Configuration)\$(StrideXplatEditorTargetFramework)\Stride.Core.Tasks$(ExecutableExtension)&quot; pack-assets &quot;$(MSBuildProjectFile)&quot; &quot;$(IntermediateOutputPath)\stride&quot;" 
+          ConsoleToMsBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="PackAssetsLine" />
+    </Exec>
+    
+    <!-- Parse output and add to package -->
+    <ItemGroup>
+      <PackAssetsLine Update="@(PackAssetsLine)">
+        <SourcePath>$([System.String]::new('%(Identity)').Split('|')[0])</SourcePath>
+        <PackagePath>$([System.String]::new('%(Identity)').Split('|')[1])</PackagePath>
+      </PackAssetsLine>
+      <None Include="%(PackAssetsLine.SourcePath)">
+        <Pack>true</Pack>
+        <PackagePath>%(PackAssetsLine.PackagePath)</PackagePath>
+      </None>
+    </ItemGroup>
+  </Target>
+
+  <!-- ================================================================ -->
+  <!-- Replace SharedAssemblyInfo for Package Builds -->
+  <!-- ================================================================ -->
+  <!--
+    When building packages, use SharedAssemblyInfo.NuGet.cs which contains
+    the proper version numbers from git.
+  -->
+  <Target Name="StrideReplaceVersionInfo" 
+          Condition="'$(StridePackageBuild)' == 'true'" 
+          BeforeTargets="PrepareResources">
+    
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)..\..\..\shared\SharedAssemblyInfo.NuGet.cs')" 
+           Text="File SharedAssemblyInfo.NuGet.cs doesn't seem to have been generated. Please make sure Stride.build PackageEnvironment target has been run successfully."/>
+    
+    <ItemGroup>
+      <StrideSharedAssemblyFile Include="@(Compile)" 
+                                 Condition="'%(Compile.FullPath)' == '$([System.IO.Path]::GetFullPath(`$(MSBuildThisFileDirectory)..\..\..\shared\SharedAssemblyInfo.cs`))'"/>
+      <Compile Remove="@(StrideSharedAssemblyFile)" />
+      <Compile Include="@(StrideSharedAssemblyFile->'$(MSBuildThisFileDirectory)..\..\..\shared\SharedAssemblyInfo.NuGet.cs')" />
+    </ItemGroup>
+  </Target>
+
+</Project>

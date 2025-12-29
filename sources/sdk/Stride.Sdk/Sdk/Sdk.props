@@ -1,0 +1,141 @@
+<!--
+  Stride.Sdk - Main SDK Properties File
+  
+  This file is the entry point for all Stride SDK projects. It:
+  1. Sets up Stride-specific properties and defaults
+  2. Imports supporting props files for different features
+  3. Chains to Microsoft.NET.Sdk for base .NET functionality
+  
+  Import Order:
+  1. SDK Detection properties
+  2. Solution and Framework properties
+  3. Supporting props files (Platforms, Runtime, Graphics)
+  4. Microsoft.NET.Sdk.props (base SDK)
+  5. Final property overrides
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- ================================================================ -->
+  <!-- SDK Detection -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <UsingStrideSdk>true</UsingStrideSdk>
+    <StrideSdkVersion Condition="'$(StrideSdkVersion)' == ''">4.3.0</StrideSdkVersion>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Solution Name (for conditional imports) -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <SolutionName Condition="'$(SolutionName)' == ''">Stride</SolutionName>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Core Framework Definitions -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- Target frameworks for each platform -->
+    <StrideFramework>net10.0</StrideFramework>
+    <StrideFrameworkWindows>net10.0-windows</StrideFrameworkWindows>
+    <StrideFrameworkAndroid>net10.0-android</StrideFrameworkAndroid>
+    <StrideFrameworkiOS>net10.0-ios</StrideFrameworkiOS>
+    <StrideFrameworkUWP>uap10.0.16299</StrideFrameworkUWP>
+    
+    <!-- Editor-specific frameworks -->
+    <StrideEditorTargetFramework>net10.0-windows</StrideEditorTargetFramework>
+    <StrideXplatEditorTargetFramework>net10.0</StrideXplatEditorTargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Import Supporting Props Files -->
+  <!-- ================================================================ -->
+  
+  <!-- Platform detection and configuration -->
+  <Import Project="Stride.Platforms.props" />
+  
+  <!-- Multi-platform runtime support (if StrideRuntime=true) -->
+  <Import Project="Stride.Runtime.props" Condition="'$(StrideRuntime)' == 'true'" />
+  
+  <!-- Graphics API configuration -->
+  <Import Project="Stride.Graphics.props" />
+  
+  <!-- Package versioning -->
+  <Import Project="Stride.PackageVersion.props" />
+
+  <!-- ================================================================ -->
+  <!-- Import Base Microsoft.NET.Sdk -->
+  <!-- ================================================================ -->
+  <!-- This gives us all standard .NET SDK functionality -->
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <!-- ================================================================ -->
+  <!-- SDK Defaults (applied after base SDK) -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- Build Settings -->
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ErrorReport>prompt</ErrorReport>
+    <FileAlignment>512</FileAlignment>
+    <WarningLevel>4</WarningLevel>
+    
+    <!-- Output Paths -->
+    <GenerateProjectSpecificOutputFolder>false</GenerateProjectSpecificOutputFolder>
+    <BaseOutputPath>bin\</BaseOutputPath>
+    <OutputPath>$(BaseOutputPath)$(Configuration)\</OutputPath>
+    <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Configuration)\</IntermediateOutputPath>
+    
+    <!-- Validation -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
+    
+    <!-- Assembly Versioning (disabled - controlled by SharedAssemblyInfo) -->
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Path Configuration -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- Common dependencies directory (native libs, tools, etc.) -->
+    <StrideCommonDependenciesDir Condition="'$(StrideCommonDependenciesDir)' == ''">$(MSBuildThisFileDirectory)..\..\..\..\deps\</StrideCommonDependenciesDir>
+    <StrideCommonDependenciesDir Condition="!HasTrailingSlash('$(StrideCommonDependenciesDir)')">$(StrideCommonDependenciesDir)\</StrideCommonDependenciesDir>
+    
+    <!-- SDK targets file reference -->
+    <StrideSdkTargets Condition="'$(StrideSdkTargets)' == ''">$(MSBuildThisFileDirectory)Sdk.targets</StrideSdkTargets>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Assembly Processor Configuration -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- Default to disabled (projects opt-in) -->
+    <StrideAssemblyProcessor Condition="'$(StrideAssemblyProcessor)' == ''">false</StrideAssemblyProcessor>
+    <StrideAssemblyProcessorOptions Condition="'$(StrideAssemblyProcessorOptions)' == ''">--auto-module-initializer --serialization</StrideAssemblyProcessorOptions>
+    <StrideAssemblyProcessorGlobal>true</StrideAssemblyProcessorGlobal>
+    <StrideAssemblyProcessorDefaultOptions>--parameter-key --auto-module-initializer --serialization</StrideAssemblyProcessorDefaultOptions>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Project Type Detection -->
+  <!-- ================================================================ -->
+  <PropertyGroup>
+    <!-- Detect language: CSharp or Cpp -->
+    <StrideProjectType Condition="'$(MSBuildProjectExtension)' == '.vcxproj'">Cpp</StrideProjectType>
+    <StrideProjectType Condition="'$(StrideProjectType)' == ''">CSharp</StrideProjectType>
+    
+    <!-- Platform restrictions -->
+    <StrideWindowsOnly Condition="'$(StrideWindowsOnly)' == ''">false</StrideWindowsOnly>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
+  <!-- Extensibility Hook: Before Stride SDK -->
+  <!-- ================================================================ -->
+  <!-- Projects can define CustomBeforeStrideSdkProps to inject custom logic -->
+  <Import Project="$(CustomBeforeStrideSdkProps)" 
+          Condition="'$(CustomBeforeStrideSdkProps)' != '' and Exists('$(CustomBeforeStrideSdkProps)')" />
+
+</Project>
