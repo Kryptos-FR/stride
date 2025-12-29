@@ -21,6 +21,15 @@
     <PackageReference Include="Microsoft.NETCore.Platforms" />
   </ItemGroup>
   
+  <!-- Build-only dependency: ensures analyzer is built before packaging -->
+  <ItemGroup>
+    <ProjectReference Include="..\Stride.Core.CompilerServices\Stride.Core.CompilerServices.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <OutputItemType>Analyzer</OutputItemType>
+      <SetTargetFramework>TargetFramework=netstandard2.0</SetTargetFramework>
+    </ProjectReference>
+  </ItemGroup>
+  
   <ItemGroup>
     <Compile Include="..\..\shared\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>

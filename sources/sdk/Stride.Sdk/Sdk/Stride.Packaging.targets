@@ -19,8 +19,8 @@
     <!-- Output packages to central location (relative to repository root) -->
     <PackageOutputPath Condition="'$(PackageOutputPath)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '..', '..', '..', 'bin', 'packages'))</PackageOutputPath>
     
-    <!-- Enable pack on build for development -->
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <!-- Enable pack on build for development (but not when Pack is explicitly invoked to avoid circular dependency) -->
+    <GeneratePackageOnBuild Condition="'$(NoBuild)' != 'true' And '$(BuildingInsideVisualStudio)' != 'true'">true</GeneratePackageOnBuild>
     
     <!-- Include PDBs and native files in packages -->
     <AllowedOutputExtensionsInPackageBuildOutputFolder>
