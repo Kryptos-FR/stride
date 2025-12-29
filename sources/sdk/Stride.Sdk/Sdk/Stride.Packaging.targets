@@ -16,8 +16,8 @@
   <PropertyGroup Condition="$(DesignTimeBuild) != 'true' And 
                              '$(StrideSkipAutoPack)' != 'true' And 
                              '$(StrideCompilerTargetsEnable)' != 'false'">
-    <!-- Output packages to central location -->
-    <PackageOutputPath>$(MSBuildThisFileDirectory)..\..\..\..\bin\packages\</PackageOutputPath>
+    <!-- Output packages to central location (relative to repository root) -->
+    <PackageOutputPath Condition="'$(PackageOutputPath)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '..', '..', '..', 'bin', 'packages'))</PackageOutputPath>
     
     <!-- Enable pack on build for development -->
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
