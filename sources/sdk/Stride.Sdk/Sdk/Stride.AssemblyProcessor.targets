@@ -20,34 +20,20 @@
     <StrideAssemblyProcessorExt>.dll</StrideAssemblyProcessorExt>
     
     <!-- Base path depends on whether we're in a package or dev build -->
-    <StrideAssemblyProcessorBasePath Condition="'$(StrideAssemblyProcessorBasePath)' == '' And '$(StridePackageStride)' != ''">
-      $(StridePackageStride)\deps\AssemblyProcessor\
-    </StrideAssemblyProcessorBasePath>
-    <StrideAssemblyProcessorBasePath Condition="'$(StrideAssemblyProcessorBasePath)' == ''">
-      $([System.IO.Path]::Combine('$(MSBuildProjectDirectory)', '..\..\..', 'deps', 'AssemblyProcessor'))
-    </StrideAssemblyProcessorBasePath>
+    <StrideAssemblyProcessorBasePath Condition="'$(StrideAssemblyProcessorBasePath)' == '' And '$(StridePackageStride)' != ''">$(StridePackageStride)\deps\AssemblyProcessor\</StrideAssemblyProcessorBasePath>
+    <StrideAssemblyProcessorBasePath Condition="'$(StrideAssemblyProcessorBasePath)' == ''">$([System.IO.Path]::Combine('$(MSBuildProjectDirectory)', '..\..\..', 'deps', 'AssemblyProcessor'))\</StrideAssemblyProcessorBasePath>
     
     <!-- Compute hash file path and read it -->
-    <_StrideAssemblyProcessorHashFile Condition="'$(StrideAssemblyProcessorBasePath)' != ''">
-      $([System.IO.Path]::Combine('$(StrideAssemblyProcessorBasePath)', '$(StrideAssemblyProcessorFramework)', 'Stride.Core.AssemblyProcessor$(StrideAssemblyProcessorExt).hash'))
-    </_StrideAssemblyProcessorHashFile>
-    <StrideAssemblyProcessorHash Condition="'$(_StrideAssemblyProcessorHashFile)' != '' And Exists('$(_StrideAssemblyProcessorHashFile)')">
-      $([System.IO.File]::ReadAllText('$(_StrideAssemblyProcessorHashFile)'))
-    </StrideAssemblyProcessorHash>
+    <_StrideAssemblyProcessorHashFile Condition="'$(StrideAssemblyProcessorBasePath)' != ''">$([System.IO.Path]::Combine('$(StrideAssemblyProcessorBasePath)', '$(StrideAssemblyProcessorFramework)', 'Stride.Core.AssemblyProcessor$(StrideAssemblyProcessorExt).hash'))</_StrideAssemblyProcessorHashFile>
+    <StrideAssemblyProcessorHash Condition="'$(_StrideAssemblyProcessorHashFile)' != '' And Exists('$(_StrideAssemblyProcessorHashFile)')">$([System.IO.File]::ReadAllText('$(_StrideAssemblyProcessorHashFile)'))</StrideAssemblyProcessorHash>
     
     <!-- Temp directory (avoids file locking) -->
     <TEMP>$([System.IO.Path]::GetTempPath())</TEMP>
-    <StrideAssemblyProcessorTempBasePath Condition="'$(StrideAssemblyProcessorBasePath)' != ''">
-      $(TEMP)Stride\AssemblyProcessor\$(StrideAssemblyProcessorHash)\$(StrideAssemblyProcessorFramework)\
-    </StrideAssemblyProcessorTempBasePath>
-    <StrideAssemblyProcessorTempPath Condition="'$(StrideAssemblyProcessorBasePath)' != ''">
-      $(StrideAssemblyProcessorTempBasePath)Stride.Core.AssemblyProcessor$(StrideAssemblyProcessorExt)
-    </StrideAssemblyProcessorTempPath>
+    <StrideAssemblyProcessorTempBasePath Condition="'$(StrideAssemblyProcessorBasePath)' != ''">$(TEMP)Stride\AssemblyProcessor\$(StrideAssemblyProcessorHash)\$(StrideAssemblyProcessorFramework)\</StrideAssemblyProcessorTempBasePath>
+    <StrideAssemblyProcessorTempPath Condition="'$(StrideAssemblyProcessorBasePath)' != ''">$(StrideAssemblyProcessorTempBasePath)Stride.Core.AssemblyProcessor$(StrideAssemblyProcessorExt)</StrideAssemblyProcessorTempPath>
     
     <!-- Stride.Core assembly path for processor -->
-    <StrideCoreAssemblyPath Condition="'$(StrideCoreAssemblyPath)' == '' And '$(StridePackageStride)' != ''">
-      $(StridePackageStride)\Bin\$(StrideBuildDirectory)\Stride.Core.dll
-    </StrideCoreAssemblyPath>
+    <StrideCoreAssemblyPath Condition="'$(StrideCoreAssemblyPath)' == '' And '$(StridePackageStride)' != ''">$(StridePackageStride)\Bin\$(StrideBuildDirectory)\Stride.Core.dll</StrideCoreAssemblyPath>
   </PropertyGroup>
 
   <!-- ================================================================ -->
