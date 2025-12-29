@@ -1,5 +1,8 @@
-<Project Sdk="Stride.Sdk">
+<Project>
+  <Import Project="..\..\targets\Stride.props" />
   <PropertyGroup>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
@@ -20,4 +23,5 @@
   <ItemGroup>
     <ProjectReference Include="..\Stride.Core\Stride.Core.csproj" />
   </ItemGroup>
+  <Import Project="$(StrideSdkTargets)" />
 </Project>

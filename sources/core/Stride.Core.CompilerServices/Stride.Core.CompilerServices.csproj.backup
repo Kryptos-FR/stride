@@ -1,4 +1,5 @@
-<Project Sdk="Stride.Sdk">
+<Project>
+  <Import Project="..\..\targets\Stride.Core.props" />
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Description>Code generators for Stride.Core and its dependents</Description>
@@ -39,4 +40,5 @@
     <Using Include="System.Collections.Generic" />
     <Using Include="System" />
   </ItemGroup>
+  <Import Project="$(StrideSdkTargets)" />
 </Project>

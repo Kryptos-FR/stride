@@ -1,11 +1,17 @@
-<Project Sdk="Stride.Sdk">
+<Project>
+  <Import Project="..\..\targets\Stride.Core.props" />
   <PropertyGroup>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
     <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <StrideAssemblyProcessor>false</StrideAssemblyProcessor>
     <TargetFramework>$(StrideXplatEditorTargetFramework)</TargetFramework>
     <StrideBuildTags>WindowsTools</StrideBuildTags>
     <StrideOutputPath>bin\$(Configuration)\</StrideOutputPath>
     <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup>
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
@@ -33,4 +39,5 @@
   <ItemGroup>
     <ProjectReference Include="..\..\assets\Stride.Core.Assets\Stride.Core.Assets.csproj" />
   </ItemGroup>
+  <Import Project="$(StrideSdkTargets)" />
 </Project>
