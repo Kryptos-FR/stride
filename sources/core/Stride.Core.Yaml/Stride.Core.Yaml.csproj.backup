@@ -1,5 +1,9 @@
-﻿<Project Sdk="Stride.Sdk">
+﻿<Project>
+  <Import Project="..\..\targets\Stride.Core.props" />
   <PropertyGroup>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <StrideAssemblyProcessor>false</StrideAssemblyProcessor>
     <TargetFramework>$(StrideXplatEditorTargetFramework)</TargetFramework>
     <StrideBuildTags>WindowsTools</StrideBuildTags>
@@ -12,4 +16,5 @@
   <ItemGroup>
     <ProjectReference Include="..\Stride.Core.Reflection\Stride.Core.Reflection.csproj" />
   </ItemGroup>
+  <Import Project="$(StrideSdkTargets)" />
 </Project>

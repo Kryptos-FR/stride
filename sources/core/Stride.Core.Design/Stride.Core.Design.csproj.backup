@@ -1,5 +1,9 @@
-<Project Sdk="Stride.Sdk">
+<Project>
+  <Import Project="..\..\targets\Stride.Core.props" />
   <PropertyGroup>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
@@ -28,5 +32,7 @@
     <PackageReference Include="SharpDX" />
     <PackageReference Include="System.Management" />
   </ItemGroup>
+  
+  <Import Project="$(StrideSdkTargets)" />
 
 </Project>
