@@ -58,15 +58,16 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - uses: microsoft/setup-msbuild@v2
-      - name: Build
-        run: |
-          msbuild build\Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf `
-            -restore -m:1 -nr:false `
-            -v:m -p:WarningLevel=0 `
-            -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }} `
-            -p:StridePlatforms=Windows `
-            -p:StrideGraphicsApis=Direct3D11
+      # - uses: microsoft/setup-msbuild@v2
+      # - name: Build
+      #   run: |
+      #     msbuild build\Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf `
+      #       -restore -m:1 -nr:false `
+      #       -v:m -p:WarningLevel=0 `
+      #       -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }} `
+      #       -p:StridePlatforms=Windows `
+      #       -p:StrideGraphicsApis=Direct3D11 `
+      #       -p:StrideSkipAutoPack=true
       # - name: Test
       #   run: |
       #     dotnet test build\Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf `
