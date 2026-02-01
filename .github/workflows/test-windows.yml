@@ -67,8 +67,19 @@ jobs:
             -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }} `
             -p:StridePlatforms=Windows `
             -p:StrideGraphicsApis=Direct3D11
-      - name: Test
+      # - name: Test
+      #   run: |
+      #     dotnet test build\Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf `
+      #       --no-build `
+      #       -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }}
+      - name: Install Stryker
         run: |
-          dotnet test build\Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf `
-            --no-build `
-            -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }}
+          dotnet tool restore
+      - name: Run Stryker
+        run: |
+          pushd sources/core/Stride.Core.Yaml.Tests
+          dotnet stryker --configuration ${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }}
+      - uses: actions/upload-artifact@v6
+        with:
+          name: stryker-html-report
+          path: ${{github.workspace}}/sources/core/Stride.Core.Yaml.Tests/StrykerOutput/**/**/*.html
