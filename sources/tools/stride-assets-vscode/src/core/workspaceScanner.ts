@@ -94,7 +94,7 @@ export class WorkspaceScanner implements vscode.Disposable {
         // Find all .sd* files in the folder recursively
         const entries = await this.walkDirectory(folderPath);
         for (const filePath of entries) {
-            if (/\.sd[a-z]+$/i.test(filePath)) {
+            if (/\.sd\w+$/i.test(filePath)) {
                 await this.indexFile(filePath);
             }
         }
