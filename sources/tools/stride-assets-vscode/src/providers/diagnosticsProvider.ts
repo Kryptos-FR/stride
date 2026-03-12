@@ -13,6 +13,13 @@ export class StrideDiagnosticsProvider implements vscode.Disposable {
     // the C# language server (OmniSharp or Roslyn) is still loading.
     private symbolProviderReady = false;
     private pendingRetry: NodeJS.Timeout | undefined;
+    // Tracks the document version at which diagnostics were last computed.
+    // Allows skipping redundant re-computation when the document hasn't changed.
+    private lastDiagnosticVersion = new Map<string, number>();
+    private resourceWatcherDebounce: NodeJS.Timeout | undefined;
+    // Tracks resolved paths of currently-broken source references per document.
+    // Used to filter resource watcher events and only react to relevant file changes.
+    private brokenSourcePaths = new Map<string, Set<string>>();
 
     constructor(private index: AssetIndex) {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('stride-assets');
@@ -22,13 +29,25 @@ export class StrideDiagnosticsProvider implements vscode.Disposable {
             vscode.workspace.onDidOpenTextDocument((doc) => this.scheduleUpdate(doc)),
             vscode.workspace.onDidChangeTextDocument((e) => this.scheduleUpdate(e.document)),
             vscode.workspace.onDidCloseTextDocument((doc) => {
+                const docKey = doc.uri.toString();
                 this.diagnosticCollection.delete(doc.uri);
-                this.clearTimer(doc.uri.toString());
+                this.clearTimer(docKey);
+                this.lastDiagnosticVersion.delete(docKey);
+                this.brokenSourcePaths.delete(docKey);
             }),
-            // Re-check open documents when the index updates
+            // Re-check open documents when the index updates (asset added/removed/renamed)
             index.onDidUpdate(() => {
+                this.lastDiagnosticVersion.clear();
                 for (const editor of vscode.window.visibleTextEditors) {
                     this.scheduleUpdate(editor.document);
+                }
+            }),
+            // Re-check when resource files appear/disappear (source path auto-resolution)
+            ...this.createResourceWatcher(),
+            // Re-check when C# files are saved (script reference auto-resolution)
+            vscode.workspace.onDidSaveTextDocument((doc) => {
+                if (doc.languageId === 'csharp') {
+                    this.scheduleVisibleEditorUpdate();
                 }
             })
         );
@@ -42,10 +61,49 @@ export class StrideDiagnosticsProvider implements vscode.Disposable {
         }
         this.pendingRetry = setTimeout(() => {
             this.pendingRetry = undefined;
+            this.lastDiagnosticVersion.clear();
             for (const editor of vscode.window.visibleTextEditors) {
                 this.scheduleUpdate(editor.document);
             }
         }, 5000);
+    }
+
+    private createResourceWatcher(): vscode.Disposable[] {
+        // Watch for file create/delete events (not changes) to detect resource files
+        // appearing or disappearing. Only triggers re-check if the file matches a
+        // currently-broken source path, avoiding unnecessary work from unrelated events.
+        const watcher = vscode.workspace.createFileSystemWatcher('**/*', false, true, false);
+        const handler = (uri: vscode.Uri) => {
+            const normalized = uri.fsPath.replace(/\\/g, '/').toLowerCase();
+            for (const paths of this.brokenSourcePaths.values()) {
+                for (const broken of paths) {
+                    if (normalized === broken.replace(/\\/g, '/').toLowerCase()) {
+                        this.scheduleVisibleEditorUpdate();
+                        return;
+                    }
+                }
+            }
+        };
+        return [
+            watcher,
+            watcher.onDidCreate(handler),
+            watcher.onDidDelete(handler),
+        ];
+    }
+
+    private scheduleVisibleEditorUpdate(): void {
+        // Debounce resource/save events to avoid burst re-checks (e.g., git checkout)
+        if (this.resourceWatcherDebounce) {
+            clearTimeout(this.resourceWatcherDebounce);
+        }
+        this.resourceWatcherDebounce = setTimeout(() => {
+            this.resourceWatcherDebounce = undefined;
+            // Clear cached versions to force re-check even if document text unchanged
+            this.lastDiagnosticVersion.clear();
+            for (const editor of vscode.window.visibleTextEditors) {
+                this.scheduleUpdate(editor.document);
+            }
+        }, 1500);
     }
 
     private clearTimer(key: string): void {
@@ -80,8 +138,16 @@ export class StrideDiagnosticsProvider implements vscode.Disposable {
     }
 
     private async updateDiagnostics(document: vscode.TextDocument): Promise<void> {
+        const key = document.uri.toString();
+        if (document.version === this.lastDiagnosticVersion.get(key)) {
+            return; // Already computed for this version
+        }
+
         const text = document.getText();
         const diagnostics: vscode.Diagnostic[] = [];
+
+        // Clear broken source paths for this document (will be repopulated below)
+        this.brokenSourcePaths.delete(key);
 
         // Check asset references
         const assetRefs = findAssetReferences(text);
@@ -125,7 +191,13 @@ export class StrideDiagnosticsProvider implements vscode.Disposable {
         for (const sp of sourcePaths) {
             const dir = path.dirname(document.uri.fsPath);
             const resolved = path.resolve(dir, sp.path);
-            if (!fs.existsSync(resolved)) {
+            let exists = true;
+            try { await fs.promises.access(resolved); } catch { exists = false; }
+            if (!exists) {
+                if (!this.brokenSourcePaths.has(key)) {
+                    this.brokenSourcePaths.set(key, new Set());
+                }
+                this.brokenSourcePaths.get(key)!.add(resolved);
                 const range = new vscode.Range(
                     new vscode.Position(sp.line, sp.startColumn),
                     new vscode.Position(sp.line, sp.endColumn)
@@ -147,11 +219,22 @@ export class StrideDiagnosticsProvider implements vscode.Disposable {
             const localRefs = scriptRefs.filter(r => this.index.hasProject(r.assemblyName));
 
             if (localRefs.length > 0) {
-                // Query workspace symbols for each local script reference
+                // Query workspace symbols for each local script reference,
+                // deduplicating by typeName to avoid redundant IPC calls
                 const lookupResults: { ref: typeof localRefs[0]; found: boolean }[] = [];
+                const scriptLookupCache = new Map<string, { found: boolean; hasResults: boolean }>();
                 let anySymbolsReturned = false;
 
                 for (const ref of localRefs) {
+                    const cached = scriptLookupCache.get(ref.typeName);
+                    if (cached) {
+                        if (cached.hasResults) {
+                            anySymbolsReturned = true;
+                        }
+                        lookupResults.push({ ref, found: cached.found });
+                        continue;
+                    }
+
                     const symbols = await vscode.commands.executeCommand<vscode.SymbolInformation[]>(
                         'vscode.executeWorkspaceSymbolProvider',
                         ref.typeName
@@ -164,6 +247,7 @@ export class StrideDiagnosticsProvider implements vscode.Disposable {
                     const found = symbols?.some(s =>
                         s.kind === vscode.SymbolKind.Class && s.name === className
                     ) ?? false;
+                    scriptLookupCache.set(ref.typeName, { found, hasResults });
                     lookupResults.push({ ref, found });
                 }
 
@@ -196,6 +280,7 @@ export class StrideDiagnosticsProvider implements vscode.Disposable {
         }
 
         this.diagnosticCollection.set(document.uri, diagnostics);
+        this.lastDiagnosticVersion.set(key, document.version);
     }
 
     // Scan all asset files in workspace for broken references (optional, triggered by setting)
@@ -222,6 +307,9 @@ export class StrideDiagnosticsProvider implements vscode.Disposable {
         this.debounceTimers.clear();
         if (this.pendingRetry) {
             clearTimeout(this.pendingRetry);
+        }
+        if (this.resourceWatcherDebounce) {
+            clearTimeout(this.resourceWatcherDebounce);
         }
     }
 }
