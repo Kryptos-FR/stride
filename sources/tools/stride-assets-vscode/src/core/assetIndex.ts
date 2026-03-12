@@ -16,11 +16,22 @@ export interface EntityEntry {
     line: number;        // Line number for navigation
 }
 
+export interface BackReference {
+    sourceFilePath: string;  // File containing the reference
+    line: number;            // Line number of the reference
+    column: number;          // Start column of the reference
+    context: string;         // The YAML key or surrounding text for display
+}
+
 export class AssetIndex {
     private assetsByGuid = new Map<string, AssetEntry>();
     private guidsByFile = new Map<string, string[]>();
     private entitiesByGuid = new Map<string, EntityEntry>();
     private entitiesByFile = new Map<string, string[]>();
+
+    // Back-reference index: target GUID -> list of locations referencing it
+    private backRefs = new Map<string, BackReference[]>();
+    private backRefsByFile = new Map<string, string[]>(); // source file -> target GUIDs it references
 
     private _onDidUpdate = new vscode.EventEmitter<void>();
     readonly onDidUpdate = this._onDidUpdate.event;
@@ -57,6 +68,8 @@ export class AssetIndex {
             }
             this.entitiesByFile.delete(filePath);
         }
+
+        this.clearBackRefsFromFile(filePath);
     }
 
     updateFile(filePath: string, entries: AssetEntry[]): void {
@@ -101,11 +114,59 @@ export class AssetIndex {
         return this.entitiesByGuid.get(guid.toLowerCase());
     }
 
+    // --- Back-references (opt-in) ---
+
+    addBackRef(targetGuid: string, ref: BackReference): void {
+        const id = targetGuid.toLowerCase();
+        const refs = this.backRefs.get(id) ?? [];
+        refs.push(ref);
+        this.backRefs.set(id, refs);
+
+        // Track which target GUIDs are referenced from this source file
+        const fileTargets = this.backRefsByFile.get(ref.sourceFilePath) ?? [];
+        if (!fileTargets.includes(id)) {
+            fileTargets.push(id);
+        }
+        this.backRefsByFile.set(ref.sourceFilePath, fileTargets);
+    }
+
+    clearBackRefsFromFile(filePath: string): void {
+        const targetGuids = this.backRefsByFile.get(filePath);
+        if (targetGuids) {
+            for (const guid of targetGuids) {
+                const refs = this.backRefs.get(guid);
+                if (refs) {
+                    const filtered = refs.filter(r => r.sourceFilePath !== filePath);
+                    if (filtered.length > 0) {
+                        this.backRefs.set(guid, filtered);
+                    } else {
+                        this.backRefs.delete(guid);
+                    }
+                }
+            }
+            this.backRefsByFile.delete(filePath);
+        }
+    }
+
+    getBackRefs(guid: string): BackReference[] {
+        return this.backRefs.get(guid.toLowerCase()) ?? [];
+    }
+
+    get backRefCount(): number {
+        let count = 0;
+        for (const refs of this.backRefs.values()) {
+            count += refs.length;
+        }
+        return count;
+    }
+
     clear(): void {
         this.assetsByGuid.clear();
         this.guidsByFile.clear();
         this.entitiesByGuid.clear();
         this.entitiesByFile.clear();
+        this.backRefs.clear();
+        this.backRefsByFile.clear();
         this._onDidUpdate.fire();
     }
 

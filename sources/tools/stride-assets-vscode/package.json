@@ -73,6 +73,11 @@
           "type": "boolean",
           "default": true,
           "description": "Enable broken reference diagnostics for open files"
+        },
+        "strideAssets.backLinksEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable back-links: scan all files to find references to each asset/entity. Shows reference counts as CodeLens and in hover tooltips. May be slow on large projects."
         }
       }
     },

@@ -30,6 +30,9 @@ const TYPE_DESCRIPTIONS: Record<string, string> = {
     'Package': 'Package',
 };
 
+// Matches an Id: GUID line (both asset-level and entity-level)
+const ID_LINE_REGEX = /^(\s*)Id:\s+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/i;
+
 export class StrideHoverProvider implements vscode.HoverProvider {
     constructor(private index: AssetIndex) {}
 
@@ -122,6 +125,37 @@ export class StrideHoverProvider implements vscode.HoverProvider {
                     new vscode.Position(line, sourcePath.endColumn)
                 )
             );
+        }
+
+        // Check for Id: GUID definition line — show back-references
+        const lineText = document.lineAt(line).text;
+        const idMatch = ID_LINE_REGEX.exec(lineText);
+        if (idMatch) {
+            const guid = idMatch[2].toLowerCase();
+            const backRefs = this.index.getBackRefs(guid);
+            if (backRefs.length > 0) {
+                const md = new vscode.MarkdownString();
+                md.appendMarkdown(`**${backRefs.length} reference${backRefs.length > 1 ? 's' : ''}** to \`${guid}\`\n\n`);
+                // Show up to 10 references
+                const shown = backRefs.slice(0, 10);
+                for (const ref of shown) {
+                    const relPath = vscode.workspace.asRelativePath(ref.sourceFilePath);
+                    const ctx = ref.context ? ` (${ref.context})` : '';
+                    md.appendMarkdown(`- ${relPath}:${ref.line + 1}${ctx}\n`);
+                }
+                if (backRefs.length > 10) {
+                    md.appendMarkdown(`\n... and ${backRefs.length - 10} more\n`);
+                }
+                // Range covers the GUID portion
+                const guidStart = lineText.indexOf(idMatch[2]);
+                return new vscode.Hover(
+                    md,
+                    new vscode.Range(
+                        new vscode.Position(line, guidStart),
+                        new vscode.Position(line, guidStart + idMatch[2].length)
+                    )
+                );
+            }
         }
 
         return undefined;

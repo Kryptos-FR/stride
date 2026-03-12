@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import { AssetIndex } from './core/assetIndex';
 import { WorkspaceScanner } from './core/workspaceScanner';
+import { BackLinkScanner } from './core/backLinkScanner';
 import { parseAssetFull } from './core/assetParser';
 import { StrideDefinitionProvider } from './providers/definitionProvider';
 import { StrideHoverProvider } from './providers/hoverProvider';
 import { StrideDocumentLinkProvider } from './providers/documentLinkProvider';
 import { StrideDiagnosticsProvider } from './providers/diagnosticsProvider';
+import { StrideReferencesCodeLensProvider } from './providers/referencesCodeLensProvider';
 
 const LANGUAGE_SELECTOR: vscode.DocumentSelector = { language: 'stride-asset' };
 
@@ -62,12 +64,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         })
     );
 
+    // Back-links (opt-in): scan all files for references, enable CodeLens
+    const backLinksEnabled = vscode.workspace.getConfiguration('strideAssets').get<boolean>('backLinksEnabled', false);
+    if (backLinksEnabled) {
+        await enableBackLinks(context, index);
+    }
+
     // Register commands
     context.subscriptions.push(
         vscode.commands.registerCommand('strideAssets.rebuildIndex', async () => {
             statusBarItem.text = '$(loading~spin) Stride: Rebuilding...';
             index.clear();
             await scanner.initialize();
+            const backLinks = vscode.workspace.getConfiguration('strideAssets').get<boolean>('backLinksEnabled', false);
+            if (backLinks) {
+                await enableBackLinks(context, index);
+            }
             updateStatusBar(index);
             vscode.window.showInformationMessage(`Stride: Rebuilt index with ${index.size} assets.`);
         }),
@@ -99,6 +111,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (scanOnStartup) {
         await diagnosticsProvider.scanWorkspace();
     }
+}
+
+async function enableBackLinks(context: vscode.ExtensionContext, index: AssetIndex): Promise<void> {
+    const backLinkScanner = new BackLinkScanner(index);
+
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Window,
+            title: 'Stride: Scanning back-links',
+        },
+        async (progress) => {
+            await backLinkScanner.scanWorkspace(progress);
+        }
+    );
+
+    // Set up file watcher for incremental back-link updates
+    backLinkScanner.setupFileWatcher();
+
+    // Register CodeLens provider
+    const codeLensProvider = new StrideReferencesCodeLensProvider(index);
+    context.subscriptions.push(
+        vscode.languages.registerCodeLensProvider(
+            { language: 'stride-asset' },
+            codeLensProvider
+        ),
+        backLinkScanner,
+    );
 }
 
 async function indexEntitiesIfNeeded(doc: vscode.TextDocument, index: AssetIndex): Promise<void> {
