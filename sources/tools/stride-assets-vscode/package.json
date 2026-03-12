@@ -1,0 +1,107 @@
+{
+  "name": "stride-assets",
+  "displayName": "Stride Asset Navigator",
+  "description": "Navigate between Stride game engine asset files (.sd*) with go-to-definition, hover info, and broken link detection.",
+  "version": "0.1.0",
+  "publisher": "stride3d",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.sdpkg"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "stride-asset",
+        "aliases": [
+          "Stride Asset"
+        ],
+        "extensions": [
+          ".sdmat",
+          ".sdtex",
+          ".sdm3d",
+          ".sdanim",
+          ".sdskel",
+          ".sdscene",
+          ".sdprefab",
+          ".sdgfxcomp",
+          ".sdgamesettings",
+          ".sdsheet",
+          ".sdfnt",
+          ".sdpkg",
+          ".sdsky",
+          ".sdsnd",
+          ".sdvid",
+          ".sdrendertex",
+          ".sduipage",
+          ".sduilib",
+          ".sdnavmesh",
+          ".sdhmap",
+          ".sdphy",
+          ".sdpcfnt",
+          ".sdvs",
+          ".sdeffectlog",
+          ".sdhull",
+          ".sdpromodel",
+          ".sdprefabmodel"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "stride-asset",
+        "scopeName": "source.stride-asset",
+        "path": "./syntaxes/stride-asset.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Stride Assets",
+      "properties": {
+        "strideAssets.scanWorkspaceForBrokenLinks": {
+          "type": "boolean",
+          "default": false,
+          "description": "Scan all asset files for broken references on startup"
+        },
+        "strideAssets.diagnosticsEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable broken reference diagnostics for open files"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "strideAssets.rebuildIndex",
+        "title": "Stride: Rebuild Asset Index"
+      },
+      {
+        "command": "strideAssets.findAsset",
+        "title": "Stride: Find Asset by Name"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTests.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.3.0",
+    "glob": "^13.0.6",
+    "mocha": "^10.2.0",
+    "typescript": "^5.3.0"
+  }
+}
