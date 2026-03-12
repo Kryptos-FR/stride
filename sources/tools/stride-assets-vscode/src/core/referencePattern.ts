@@ -27,6 +27,14 @@ const SOURCE_PATH_REGEX = /^(\s*Source:\s+)(.+)/gm;
 // FontSource path (for .sdfnt files): FontSource: !SystemFontProvider or !FileFontProvider with FontName/Source
 const FONT_SOURCE_REGEX = /^(\s*(?:Source|FontName):\s+)(.+)/gm;
 
+// Script/component type reference: !Namespace.TypeName,AssemblyName
+// Examples:
+//   !SpaceEscape.GameScript,SpaceEscape.Game
+//   !SpaceEscape.Background.BackgroundInfo,SpaceEscape.Game
+//   !Stride.Rendering.MeshRenderFeature,Stride.Rendering
+// The type name must have at least one dot (single-word !tags are YAML type markers, not scripts)
+const SCRIPT_REFERENCE_REGEX = /!([\w]+(?:\.[\w]+)+)\s*,\s*([\w]+(?:\.[\w]+)*)/;
+
 // Standalone GUID pattern for validation
 const GUID_REGEX = new RegExp(`^${GUID_PATTERN}$`, 'i');
 
@@ -53,6 +61,15 @@ export interface SourcePathMatch {
     path: string;
     fullMatch: string;
     index: number;
+    line: number;
+    startColumn: number;
+    endColumn: number;
+}
+
+export interface ScriptReferenceMatch {
+    typeName: string;       // e.g., "SpaceEscape.Background.BackgroundInfo"
+    assemblyName: string;   // e.g., "SpaceEscape.Game"
+    fullMatch: string;
     line: number;
     startColumn: number;
     endColumn: number;
@@ -133,6 +150,40 @@ export function findSourcePaths(text: string): SourcePathMatch[] {
     }
 
     return results;
+}
+
+export function findScriptReferences(text: string): ScriptReferenceMatch[] {
+    const results: ScriptReferenceMatch[] = [];
+    const lines = text.split('\n');
+
+    for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+        const line = lines[lineNum];
+        const match = SCRIPT_REFERENCE_REGEX.exec(line);
+        if (match) {
+            const typeName = match[1];
+            const assemblyName = match[2].trimEnd();
+            const startCol = match.index;
+            // Full match includes the ! prefix
+            const fullMatch = match[0].trimEnd();
+            results.push({
+                typeName,
+                assemblyName,
+                fullMatch,
+                line: lineNum,
+                startColumn: startCol,
+                endColumn: startCol + fullMatch.length,
+            });
+        }
+    }
+
+    return results;
+}
+
+export function getScriptReferenceAtPosition(text: string, line: number, column: number): ScriptReferenceMatch | undefined {
+    const refs = findScriptReferences(text);
+    return refs.find(r =>
+        r.line === line && column >= r.startColumn && column <= r.endColumn
+    );
 }
 
 export function isGuid(text: string): boolean {

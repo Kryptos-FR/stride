@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AssetIndex } from '../core/assetIndex';
-import { getAssetReferenceAtPosition, getEntityReferenceAtPosition, getSourcePathAtPosition } from '../core/referencePattern';
+import { getAssetReferenceAtPosition, getEntityReferenceAtPosition, getSourcePathAtPosition, getScriptReferenceAtPosition } from '../core/referencePattern';
 
 // Map type names to human-readable descriptions
 const TYPE_DESCRIPTIONS: Record<string, string> = {
@@ -125,6 +125,28 @@ export class StrideHoverProvider implements vscode.HoverProvider {
                     new vscode.Position(line, sourcePath.endColumn)
                 )
             );
+        }
+
+        // Check for script/component type reference
+        const scriptNavigationEnabled = vscode.workspace.getConfiguration('strideAssets').get<boolean>('scriptNavigationEnabled', false);
+        if (scriptNavigationEnabled) {
+            const scriptRef = getScriptReferenceAtPosition(text, line, col);
+            if (scriptRef) {
+                const isLocal = this.index.hasProject(scriptRef.assemblyName);
+                const className = scriptRef.typeName.split('.').pop() ?? scriptRef.typeName;
+                const md = new vscode.MarkdownString();
+                md.appendMarkdown(`**Script** \`${className}\`\n\n`);
+                md.appendMarkdown(`- Type: ${scriptRef.typeName}\n`);
+                md.appendMarkdown(`- Assembly: ${scriptRef.assemblyName}\n`);
+                md.appendMarkdown(`- Status: ${isLocal ? 'Local project (Ctrl+click to navigate)' : 'Framework/NuGet type'}\n`);
+                return new vscode.Hover(
+                    md,
+                    new vscode.Range(
+                        new vscode.Position(line, scriptRef.startColumn),
+                        new vscode.Position(line, scriptRef.endColumn)
+                    )
+                );
+            }
         }
 
         // Check for Id: GUID definition line — show back-references

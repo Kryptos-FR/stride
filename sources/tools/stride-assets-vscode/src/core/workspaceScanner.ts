@@ -21,6 +21,9 @@ export class WorkspaceScanner implements vscode.Disposable {
             await this.scanWorkspace(progress);
         }
 
+        // Discover .csproj project names for script reference validation
+        await this.discoverProjects();
+
         this.setupWatchers();
     }
 
@@ -184,6 +187,16 @@ export class WorkspaceScanner implements vscode.Disposable {
         });
 
         this.watchers.push(watcher);
+    }
+
+    private async discoverProjects(): Promise<void> {
+        const csprojFiles = await vscode.workspace.findFiles('**/*.csproj', '{**/bin/**,**/obj/**}');
+        const names = new Set<string>();
+        for (const uri of csprojFiles) {
+            const name = path.basename(uri.fsPath, '.csproj');
+            names.add(name);
+        }
+        this.index.setProjectNames(names);
     }
 
     getPackages(): PackageInfo[] {

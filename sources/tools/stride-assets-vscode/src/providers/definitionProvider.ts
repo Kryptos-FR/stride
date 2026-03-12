@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AssetIndex } from '../core/assetIndex';
-import { getAssetReferenceAtPosition, getEntityReferenceAtPosition, getSourcePathAtPosition } from '../core/referencePattern';
+import { getAssetReferenceAtPosition, getEntityReferenceAtPosition, getSourcePathAtPosition, getScriptReferenceAtPosition } from '../core/referencePattern';
 
 export class StrideDefinitionProvider implements vscode.DefinitionProvider {
     constructor(private index: AssetIndex) {}
@@ -60,6 +60,28 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
                 vscode.window.showErrorMessage(`Source file not found: ${sourcePath.path}`);
             }
             return undefined;
+        }
+
+        // Check for script/component type reference (!TypeName,Assembly)
+        const scriptNavigationEnabled = vscode.workspace.getConfiguration('strideAssets').get<boolean>('scriptNavigationEnabled', false);
+        if (scriptNavigationEnabled) {
+            const scriptRef = getScriptReferenceAtPosition(text, line, col);
+            if (scriptRef) {
+                const symbols = await vscode.commands.executeCommand<vscode.SymbolInformation[]>(
+                    'vscode.executeWorkspaceSymbolProvider',
+                    scriptRef.typeName
+                );
+                if (symbols && symbols.length > 0) {
+                    const className = scriptRef.typeName.split('.').pop();
+                    const match = symbols.find(s =>
+                        s.kind === vscode.SymbolKind.Class && s.name === className
+                    );
+                    if (match) {
+                        return match.location;
+                    }
+                }
+                return undefined;
+            }
         }
 
         return undefined;

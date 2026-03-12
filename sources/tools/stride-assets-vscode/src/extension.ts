@@ -64,6 +64,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         })
     );
 
+    // Script navigation (opt-in): check C# extension availability
+    const scriptNavigationEnabled = vscode.workspace.getConfiguration('strideAssets').get<boolean>('scriptNavigationEnabled', false);
+    if (scriptNavigationEnabled) {
+        const csharpExt = vscode.extensions.getExtension('ms-dotnettools.csharp');
+        if (!csharpExt) {
+            vscode.window.showWarningMessage(
+                'Stride: Script navigation requires the C# extension. Install "C#" (ms-dotnettools.csharp) for full functionality.'
+            );
+        }
+    }
+
     // Back-links (opt-in): scan all files for references, enable CodeLens
     const backLinksEnabled = vscode.workspace.getConfiguration('strideAssets').get<boolean>('backLinksEnabled', false);
     if (backLinksEnabled) {

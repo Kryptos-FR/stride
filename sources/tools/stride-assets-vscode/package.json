@@ -11,6 +11,9 @@
     "Programming Languages",
     "Other"
   ],
+  "extensionPack": [
+    "ms-dotnettools.csharp"
+  ],
   "activationEvents": [
     "workspaceContains:**/*.sdpkg"
   ],
@@ -78,6 +81,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable back-links: scan all files to find references to each asset/entity. Shows reference counts as CodeLens and in hover tooltips. May be slow on large projects."
+        },
+        "strideAssets.scriptNavigationEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable navigation from script/component type references (e.g. !MyNamespace.MyScript,MyProject) to C# source files. Requires the C# extension."
         }
       }
     },

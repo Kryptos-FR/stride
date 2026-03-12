@@ -33,6 +33,9 @@ export class AssetIndex {
     private backRefs = new Map<string, BackReference[]>();
     private backRefsByFile = new Map<string, string[]>(); // source file -> target GUIDs it references
 
+    // Project names from .csproj files (for script reference validation)
+    private projectNames = new Set<string>();
+
     private _onDidUpdate = new vscode.EventEmitter<void>();
     readonly onDidUpdate = this._onDidUpdate.event;
 
@@ -160,6 +163,16 @@ export class AssetIndex {
         return count;
     }
 
+    // --- Project names (for script navigation) ---
+
+    setProjectNames(names: Set<string>): void {
+        this.projectNames = names;
+    }
+
+    hasProject(name: string): boolean {
+        return this.projectNames.has(name);
+    }
+
     clear(): void {
         this.assetsByGuid.clear();
         this.guidsByFile.clear();
@@ -167,6 +180,7 @@ export class AssetIndex {
         this.entitiesByFile.clear();
         this.backRefs.clear();
         this.backRefsByFile.clear();
+        this.projectNames.clear();
         this._onDidUpdate.fire();
     }
 
