@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { AssetIndex } from '../core/assetIndex';
 import { parseAssetHeader } from '../core/assetParser';
 
-// Regex to find indented Id: GUID lines (entity definitions in scenes/prefabs)
-const ENTITY_ID_REGEX = /^(\s+)Id:\s+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/i;
+// Regex to find indented Id: GUID lines (part definitions in scenes/prefabs/UI pages)
+const PART_ID_REGEX = /^(\s+)Id:\s+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/i;
 // The asset's own Id on line 1 (no indentation)
 const ASSET_ID_REGEX = /^Id:\s+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/i;
 
@@ -35,11 +35,11 @@ export class StrideReferencesCodeLensProvider implements vscode.CodeLensProvider
                 }
             }
 
-            // Check for entity Id (indented)
+            // Check for part Id (indented)
             if (!guid) {
-                const entityMatch = ENTITY_ID_REGEX.exec(line);
-                if (entityMatch && entityMatch[1].length > 0) {
-                    guid = entityMatch[2].toLowerCase();
+                const partMatch = PART_ID_REGEX.exec(line);
+                if (partMatch && partMatch[1].length > 0) {
+                    guid = partMatch[2].toLowerCase();
                 }
             }
 

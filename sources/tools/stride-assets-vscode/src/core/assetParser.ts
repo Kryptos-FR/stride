@@ -21,10 +21,10 @@ export interface ParsedAsset {
     sourcePath?: string;
     references: AssetReferenceMatch[];
     sourcePaths: SourcePathMatch[];
-    entities: EntityDefinition[];
+    parts: AssetPartDefinition[];
 }
 
-export interface EntityDefinition {
+export interface AssetPartDefinition {
     id: string;
     name?: string;
     line: number;
@@ -75,7 +75,7 @@ export function parseAssetFull(content: string): ParsedAsset | null {
 
     const references = findAssetReferences(content);
     const sourcePaths = findSourcePaths(content);
-    const entities = parseEntityDefinitions(content);
+    const parts = parseAssetParts(content);
 
     // Filter out the asset's own Id from references (it appears on line 1 sometimes)
     const filteredRefs = references.filter(r => r.guid !== header.id);
@@ -84,38 +84,52 @@ export function parseAssetFull(content: string): ParsedAsset | null {
         ...header,
         references: filteredRefs,
         sourcePaths,
-        entities,
+        parts,
     };
 }
 
-// Parse entity definitions from scene/prefab files
-// Entities are defined as blocks with an Id: GUID field
-const ENTITY_ID_REGEX = /^(\s+)Id:\s+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/i;
-const ENTITY_NAME_REGEX = /^\s+Name:\s+(.+)/;
+// Parse asset part definitions (entities in scenes/prefabs, UI elements in pages/libraries)
+// Parts are defined as indented blocks with an Id: GUID field
+const PART_ID_REGEX = /^(\s+)Id:\s+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/i;
+const PART_NAME_REGEX = /^\s+Name\*?:\s+(.+)/;
 
-function parseEntityDefinitions(content: string): EntityDefinition[] {
-    const entities: EntityDefinition[] = [];
+function parseAssetParts(content: string): AssetPartDefinition[] {
+    const parts: AssetPartDefinition[] = [];
     const lines = content.split('\n');
     // The asset's own Id is on line 1 - skip it
-    // Entity Ids appear deeper in the hierarchy (indented)
+    // Part Ids appear deeper in the hierarchy (indented)
     for (let i = 2; i < lines.length; i++) {
-        const idMatch = ENTITY_ID_REGEX.exec(lines[i]);
+        const idMatch = PART_ID_REGEX.exec(lines[i]);
         if (idMatch && idMatch[1].length > 0) { // Must be indented (not the root Id)
-            const entity: EntityDefinition = {
+            const part: AssetPartDefinition = {
                 id: idMatch[2].toLowerCase(),
                 line: i,
             };
-            // Look ahead for a Name field at similar indentation
-            if (i + 1 < lines.length) {
-                const nameMatch = ENTITY_NAME_REGEX.exec(lines[i + 1]);
+            // Look ahead for a Name field among sibling properties.
+            // Id: and Name: are at the same indentation level (siblings).
+            // Stop when we hit a line at lesser indentation (left the parent block).
+            const idIndent = idMatch[1].length;
+            for (let j = i + 1; j < lines.length; j++) {
+                const lineJ = lines[j];
+                // Skip empty lines
+                if (lineJ.trim().length === 0) {
+                    continue;
+                }
+                // Measure indentation — if below the Id line's level, we've left the block
+                const lineIndent = lineJ.length - lineJ.trimStart().length;
+                if (lineIndent < idIndent) {
+                    break;
+                }
+                const nameMatch = PART_NAME_REGEX.exec(lineJ);
                 if (nameMatch) {
-                    entity.name = nameMatch[1].trim();
+                    part.name = nameMatch[1].trim();
+                    break;
                 }
             }
-            entities.push(entity);
+            parts.push(part);
         }
     }
-    return entities;
+    return parts;
 }
 
 // Build an AssetEntry from a parsed header and file path

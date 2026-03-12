@@ -9,10 +9,10 @@ export interface AssetEntry {
     sourcePath?: string; // Raw resource relative path, if present
 }
 
-export interface EntityEntry {
-    id: string;          // Entity/component GUID (lowercase)
-    filePath: string;    // Scene/prefab file containing this entity
-    name?: string;       // Entity Name if available
+export interface AssetPartEntry {
+    id: string;          // Part GUID (lowercase)
+    filePath: string;    // File containing this part (scene, prefab, UI page, etc.)
+    name?: string;       // Part name if available
     line: number;        // Line number for navigation
 }
 
@@ -26,8 +26,8 @@ export interface BackReference {
 export class AssetIndex {
     private assetsByGuid = new Map<string, AssetEntry>();
     private guidsByFile = new Map<string, string[]>();
-    private entitiesByGuid = new Map<string, EntityEntry>();
-    private entitiesByFile = new Map<string, string[]>();
+    private partsByGuid = new Map<string, AssetPartEntry>();
+    private partsByFile = new Map<string, string[]>();
 
     // Back-reference index: target GUID -> list of locations referencing it
     private backRefs = new Map<string, BackReference[]>();
@@ -64,12 +64,12 @@ export class AssetIndex {
             this.guidsByFile.delete(filePath);
         }
 
-        const entityIds = this.entitiesByFile.get(filePath);
-        if (entityIds) {
-            for (const id of entityIds) {
-                this.entitiesByGuid.delete(id);
+        const partIds = this.partsByFile.get(filePath);
+        if (partIds) {
+            for (const id of partIds) {
+                this.partsByGuid.delete(id);
             }
-            this.entitiesByFile.delete(filePath);
+            this.partsByFile.delete(filePath);
         }
 
         this.clearBackRefsFromFile(filePath);
@@ -91,30 +91,30 @@ export class AssetIndex {
         return Array.from(this.assetsByGuid.values());
     }
 
-    addEntity(entry: EntityEntry): void {
+    addPart(entry: AssetPartEntry): void {
         const id = entry.id.toLowerCase();
         entry.id = id;
-        this.entitiesByGuid.set(id, entry);
+        this.partsByGuid.set(id, entry);
 
-        const fileEntities = this.entitiesByFile.get(entry.filePath) ?? [];
-        if (!fileEntities.includes(id)) {
-            fileEntities.push(id);
+        const fileParts = this.partsByFile.get(entry.filePath) ?? [];
+        if (!fileParts.includes(id)) {
+            fileParts.push(id);
         }
-        this.entitiesByFile.set(entry.filePath, fileEntities);
+        this.partsByFile.set(entry.filePath, fileParts);
     }
 
-    clearEntitiesForFile(filePath: string): void {
-        const entityIds = this.entitiesByFile.get(filePath);
-        if (entityIds) {
-            for (const id of entityIds) {
-                this.entitiesByGuid.delete(id);
+    clearPartsForFile(filePath: string): void {
+        const partIds = this.partsByFile.get(filePath);
+        if (partIds) {
+            for (const id of partIds) {
+                this.partsByGuid.delete(id);
             }
-            this.entitiesByFile.delete(filePath);
+            this.partsByFile.delete(filePath);
         }
     }
 
-    lookupEntity(guid: string): EntityEntry | undefined {
-        return this.entitiesByGuid.get(guid.toLowerCase());
+    lookupPart(guid: string): AssetPartEntry | undefined {
+        return this.partsByGuid.get(guid.toLowerCase());
     }
 
     // --- Back-references (opt-in) ---
@@ -176,8 +176,8 @@ export class AssetIndex {
     clear(): void {
         this.assetsByGuid.clear();
         this.guidsByFile.clear();
-        this.entitiesByGuid.clear();
-        this.entitiesByFile.clear();
+        this.partsByGuid.clear();
+        this.partsByFile.clear();
         this.backRefs.clear();
         this.backRefsByFile.clear();
         this.projectNames.clear();

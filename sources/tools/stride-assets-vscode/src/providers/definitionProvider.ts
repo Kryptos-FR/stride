@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AssetIndex } from '../core/assetIndex';
-import { getAssetReferenceAtPosition, getEntityReferenceAtPosition, getSourcePathAtPosition, getScriptReferenceAtPosition } from '../core/referencePattern';
+import { getAssetReferenceAtPosition, getPartReferenceAtPosition, getSourcePathAtPosition, getScriptReferenceAtPosition } from '../core/referencePattern';
 
 export class StrideDefinitionProvider implements vscode.DefinitionProvider {
     constructor(private index: AssetIndex) {}
@@ -31,14 +31,14 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
             return undefined;
         }
 
-        // Check for entity reference (ref!! GUID)
-        const entityRef = getEntityReferenceAtPosition(text, line, col);
-        if (entityRef) {
-            const entity = this.index.lookupEntity(entityRef.guid);
-            if (entity) {
+        // Check for part reference (ref!! GUID)
+        const partRef = getPartReferenceAtPosition(text, line, col);
+        if (partRef) {
+            const part = this.index.lookupPart(partRef.guid);
+            if (part) {
                 return new vscode.Location(
-                    vscode.Uri.file(entity.filePath),
-                    new vscode.Position(entity.line, 0)
+                    vscode.Uri.file(part.filePath),
+                    new vscode.Position(part.line, 0)
                 );
             }
             return undefined;

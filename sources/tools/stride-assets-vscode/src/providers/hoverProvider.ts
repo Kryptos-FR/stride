@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AssetIndex } from '../core/assetIndex';
-import { getAssetReferenceAtPosition, getEntityReferenceAtPosition, getSourcePathAtPosition, getScriptReferenceAtPosition } from '../core/referencePattern';
+import { getAssetReferenceAtPosition, getPartReferenceAtPosition, getSourcePathAtPosition, getScriptReferenceAtPosition } from '../core/referencePattern';
 
 // Map type names to human-readable descriptions
 const TYPE_DESCRIPTIONS: Record<string, string> = {
@@ -30,7 +30,7 @@ const TYPE_DESCRIPTIONS: Record<string, string> = {
     'Package': 'Package',
 };
 
-// Matches an Id: GUID line (both asset-level and entity-level)
+// Matches an Id: GUID line (both asset-level and part-level)
 const ID_LINE_REGEX = /^(\s*)Id:\s+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/i;
 
 export class StrideHoverProvider implements vscode.HoverProvider {
@@ -81,20 +81,21 @@ export class StrideHoverProvider implements vscode.HoverProvider {
             }
         }
 
-        // Check for entity reference
-        const entityRef = getEntityReferenceAtPosition(text, line, col);
-        if (entityRef) {
-            const entity = this.index.lookupEntity(entityRef.guid);
-            if (entity) {
+        // Check for part reference
+        const partRef = getPartReferenceAtPosition(text, line, col);
+        if (partRef) {
+            const part = this.index.lookupPart(partRef.guid);
+            if (part) {
+                const partLabel = getPartLabel(part.filePath);
                 const md = new vscode.MarkdownString();
-                md.appendMarkdown(`**Entity** \`${entity.name ?? entityRef.guid}\`\n\n`);
-                md.appendMarkdown(`- File: ${vscode.workspace.asRelativePath(entity.filePath)}\n`);
-                md.appendMarkdown(`- Line: ${entity.line + 1}\n`);
+                md.appendMarkdown(`**${partLabel}** \`${part.name ?? partRef.guid}\`\n\n`);
+                md.appendMarkdown(`- File: ${vscode.workspace.asRelativePath(part.filePath)}\n`);
+                md.appendMarkdown(`- Line: ${part.line + 1}\n`);
                 return new vscode.Hover(
                     md,
                     new vscode.Range(
-                        new vscode.Position(line, entityRef.startColumn),
-                        new vscode.Position(line, entityRef.endColumn)
+                        new vscode.Position(line, partRef.startColumn),
+                        new vscode.Position(line, partRef.endColumn)
                     )
                 );
             }
@@ -182,4 +183,12 @@ export class StrideHoverProvider implements vscode.HoverProvider {
 
         return undefined;
     }
+}
+
+// Returns a user-friendly label for a part based on its containing file type
+function getPartLabel(filePath: string): string {
+    if (filePath.endsWith('.sduipage') || filePath.endsWith('.sduilib')) {
+        return 'UIElement';
+    }
+    return 'Entity';
 }

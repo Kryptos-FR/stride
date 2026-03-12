@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AssetIndex } from './assetIndex';
-import { findAssetReferences, findEntityReferences } from './referencePattern';
+import { findAssetReferences, findPartReferences } from './referencePattern';
 import { parseAssetHeader } from './assetParser';
 
 // Extracts the YAML key context for a reference on a given line
@@ -84,9 +84,9 @@ export class BackLinkScanner implements vscode.Disposable {
                 });
             }
 
-            // Scan for entity references (ref!! GUID)
-            const entityRefs = findEntityReferences(content);
-            for (const ref of entityRefs) {
+            // Scan for part references (ref!! GUID)
+            const partRefs = findPartReferences(content);
+            for (const ref of partRefs) {
                 const context = ref.line < lines.length ? getLineContext(lines[ref.line]) : 'ref!!';
                 this.index.addBackRef(ref.guid, {
                     sourceFilePath: filePath,

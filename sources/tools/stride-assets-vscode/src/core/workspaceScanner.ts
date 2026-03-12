@@ -150,17 +150,17 @@ export class WorkspaceScanner implements vscode.Disposable {
                 const entry = headerToAssetEntry(header, filePath);
                 this.index.updateFile(filePath, [entry]);
 
-                // If it's a scene/prefab, also index entities
-                if (filePath.endsWith('.sdscene') || filePath.endsWith('.sdprefab')) {
+                // If it's a composite asset, also index parts (entities, UI elements, etc.)
+                if (filePath.endsWith('.sdscene') || filePath.endsWith('.sdprefab') || filePath.endsWith('.sduipage') || filePath.endsWith('.sduilib')) {
                     const parsed = parseAssetFull(content);
                     if (parsed) {
-                        this.index.clearEntitiesForFile(filePath);
-                        for (const entity of parsed.entities) {
-                            this.index.addEntity({
-                                id: entity.id,
+                        this.index.clearPartsForFile(filePath);
+                        for (const part of parsed.parts) {
+                            this.index.addPart({
+                                id: part.id,
                                 filePath,
-                                name: entity.name,
-                                line: entity.line,
+                                name: part.name,
+                                line: part.line,
                             });
                         }
                     }

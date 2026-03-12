@@ -52,15 +52,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         index,
     );
 
-    // Index entities for already-open scene/prefab files
+    // Index parts for already-open composite asset files
     for (const editor of vscode.window.visibleTextEditors) {
-        await indexEntitiesIfNeeded(editor.document, index);
+        await indexPartsIfNeeded(editor.document, index);
     }
 
-    // Index entities when a scene/prefab is opened
+    // Index parts when a composite asset is opened
     context.subscriptions.push(
         vscode.workspace.onDidOpenTextDocument(async (doc) => {
-            await indexEntitiesIfNeeded(doc, index);
+            await indexPartsIfNeeded(doc, index);
         })
     );
 
@@ -151,18 +151,18 @@ async function enableBackLinks(context: vscode.ExtensionContext, index: AssetInd
     );
 }
 
-async function indexEntitiesIfNeeded(doc: vscode.TextDocument, index: AssetIndex): Promise<void> {
+async function indexPartsIfNeeded(doc: vscode.TextDocument, index: AssetIndex): Promise<void> {
     const fsPath = doc.uri.fsPath;
-    if (fsPath.endsWith('.sdscene') || fsPath.endsWith('.sdprefab')) {
+    if (fsPath.endsWith('.sdscene') || fsPath.endsWith('.sdprefab') || fsPath.endsWith('.sduipage') || fsPath.endsWith('.sduilib')) {
         const parsed = parseAssetFull(doc.getText());
         if (parsed) {
-            index.clearEntitiesForFile(fsPath);
-            for (const entity of parsed.entities) {
-                index.addEntity({
-                    id: entity.id,
+            index.clearPartsForFile(fsPath);
+            for (const part of parsed.parts) {
+                index.addPart({
+                    id: part.id,
                     filePath: fsPath,
-                    name: entity.name,
-                    line: entity.line,
+                    name: part.name,
+                    line: part.line,
                 });
             }
         }

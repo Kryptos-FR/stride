@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { findAssetReferences, findEntityReferences, findSourcePaths, isGuid, getAssetReferenceAtPosition } from '../../core/referencePattern';
+import { findAssetReferences, findPartReferences, findSourcePaths, isGuid, getAssetReferenceAtPosition } from '../../core/referencePattern';
 
 suite('Reference Pattern Tests', () => {
     test('findAssetReferences: simple GUID:Name', () => {
@@ -41,9 +41,9 @@ suite('Reference Pattern Tests', () => {
         assert.strictEqual(materialRef!.line, 3);
     });
 
-    test('findEntityReferences: ref!! GUID', () => {
+    test('findPartReferences: ref!! GUID', () => {
         const text = '    Children:\n        - ref!! 6ec17338-026d-4ad3-9615-4975281cf3ba';
-        const refs = findEntityReferences(text);
+        const refs = findPartReferences(text);
         assert.strictEqual(refs.length, 1);
         assert.strictEqual(refs[0].guid, '6ec17338-026d-4ad3-9615-4975281cf3ba');
         assert.strictEqual(refs[0].line, 1);

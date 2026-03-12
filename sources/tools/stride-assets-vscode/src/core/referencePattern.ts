@@ -13,9 +13,9 @@ const ASSET_REFERENCE_REGEX = new RegExp(
     'gi'
 );
 
-// Internal entity reference: ref!! GUID
-// Used within scenes/prefabs to reference entities in the same file
-const ENTITY_REFERENCE_REGEX = new RegExp(
+// Internal part reference: ref!! GUID
+// Used within scenes/prefabs/UI pages to reference parts in the same file
+const PART_REFERENCE_REGEX = new RegExp(
     `ref!!\\s+(${GUID_PATTERN})`,
     'gi'
 );
@@ -48,7 +48,7 @@ export interface AssetReferenceMatch {
     endColumn: number;
 }
 
-export interface EntityReferenceMatch {
+export interface PartReferenceMatch {
     guid: string;
     fullMatch: string;
     index: number;
@@ -100,13 +100,13 @@ export function findAssetReferences(text: string): AssetReferenceMatch[] {
     return results;
 }
 
-export function findEntityReferences(text: string): EntityReferenceMatch[] {
-    const results: EntityReferenceMatch[] = [];
+export function findPartReferences(text: string): PartReferenceMatch[] {
+    const results: PartReferenceMatch[] = [];
     const lines = text.split('\n');
 
     for (let lineNum = 0; lineNum < lines.length; lineNum++) {
         const line = lines[lineNum];
-        const regex = new RegExp(ENTITY_REFERENCE_REGEX.source, 'gi');
+        const regex = new RegExp(PART_REFERENCE_REGEX.source, 'gi');
         let match: RegExpExecArray | null;
         while ((match = regex.exec(line)) !== null) {
             results.push({
@@ -198,9 +198,9 @@ export function getAssetReferenceAtPosition(text: string, line: number, column: 
     );
 }
 
-// Given a position (line, column) in text, find the entity reference at that position
-export function getEntityReferenceAtPosition(text: string, line: number, column: number): EntityReferenceMatch | undefined {
-    const refs = findEntityReferences(text);
+// Given a position (line, column) in text, find the part reference at that position
+export function getPartReferenceAtPosition(text: string, line: number, column: number): PartReferenceMatch | undefined {
+    const refs = findPartReferences(text);
     return refs.find(r =>
         r.line === line && column >= r.startColumn && column <= r.endColumn
     );
