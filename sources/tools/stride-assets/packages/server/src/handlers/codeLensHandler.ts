@@ -50,7 +50,7 @@ export function createCodeLensHandler(index: AssetIndex) {
                             range,
                             command: Command.create(
                                 `${backRefs.length} reference${backRefs.length > 1 ? 's' : ''}`,
-                                'editor.action.showReferences',
+                                'strideAssets.showReferences',
                                 doc.uri,
                                 Position.create(i, 0),
                                 locations,

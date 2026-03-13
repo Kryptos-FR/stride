@@ -45,7 +45,11 @@ interface Settings {
     scriptNavigationEnabled: boolean;
 }
 
-export function createHoverHandler(index: AssetIndex, getSettings: () => Settings) {
+export function createHoverHandler(index: AssetIndex, getSettings: () => Settings, connection?: { console: { log(msg: string): void } }) {
+    function log(msg: string): void {
+        connection?.console.log(`[Stride:Hover] ${msg}`);
+    }
+
     return {
         handle(params: HoverParams, doc: TextDocument | undefined): Hover | null {
             if (!doc) { return null; }
@@ -182,5 +186,5 @@ function getPartLabel(filePath: string): string {
 
 function uriToPath(uri: string): string {
     const url = new URL(uri);
-    return decodeURIComponent(url.pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+    return decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, '$1');
 }

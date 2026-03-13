@@ -74,6 +74,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             // Use VS Code's built-in symbol picker, backed by the server's workspace/symbol
             await vscode.commands.executeCommand('workbench.action.showAllSymbols');
         }),
+
+        // Bridge command: convert plain JSON args from the LSP server into proper VS Code types
+        vscode.commands.registerCommand('strideAssets.showReferences', async (uriStr: string, pos: { line: number; character: number }, locations: Array<{ uri: string; range: { start: { line: number; character: number }; end: { line: number; character: number } } }>) => {
+            const uri = vscode.Uri.parse(uriStr);
+            const position = new vscode.Position(pos.line, pos.character);
+            const refs = locations.map(loc => new vscode.Location(
+                vscode.Uri.parse(loc.uri),
+                new vscode.Range(
+                    new vscode.Position(loc.range.start.line, loc.range.start.character),
+                    new vscode.Position(loc.range.end.line, loc.range.end.character),
+                ),
+            ));
+            await vscode.commands.executeCommand('editor.action.showReferences', uri, position, refs);
+        }),
     );
 }
 

@@ -12,15 +12,32 @@ export interface ScanProgress {
 export class WorkspaceScanner {
     private watcher: chokidar.FSWatcher | undefined;
     private packages: PackageInfo[] = [];
+    private logFn: ((msg: string) => void) | undefined;
 
     constructor(
         private index: AssetIndex,
         private workspaceFolders: string[],
     ) {}
 
+    setLogger(fn: (msg: string) => void): void {
+        this.logFn = fn;
+    }
+
+    private log(msg: string): void {
+        this.logFn?.(msg);
+    }
+
     async initialize(onProgress?: (progress: ScanProgress) => void): Promise<void> {
+        this.log(`Workspace folders: ${this.workspaceFolders.join(', ')}`);
         this.packages = await this.findPackages();
-        onProgress?.({ message: 'Found packages, scanning assets...' });
+        this.log(`Found ${this.packages.length} package file(s)`);
+        for (const pkg of this.packages) {
+            this.log(`  package "${pkg.name}": ${pkg.assetFolders.length} asset folder(s)`);
+            for (const folder of pkg.assetFolders) {
+                this.log(`    folder: ${folder}`);
+            }
+        }
+        onProgress?.({ message: `Found ${this.packages.length} packages, scanning assets...` });
 
         if (this.packages.length > 0) {
             await this.scanPackageFolders(onProgress);
@@ -38,14 +55,17 @@ export class WorkspaceScanner {
         const packages: PackageInfo[] = [];
 
         for (const folder of this.workspaceFolders) {
+            this.log(`Searching for .sdpkg files in: ${folder}`);
             const pkgFiles = await this.findFiles(folder, /\.sdpkg$/i);
+            this.log(`  found ${pkgFiles.length} .sdpkg file(s)`);
             for (const pkgPath of pkgFiles) {
                 try {
                     const content = await fs.promises.readFile(pkgPath, 'utf-8');
                     const pkg = parsePackageFile(content, pkgPath);
+                    this.log(`  parsed package: ${pkgPath} -> "${pkg.name}"`);
                     packages.push(pkg);
-                } catch {
-                    // Skip unreadable package files
+                } catch (err) {
+                    this.log(`  failed to parse: ${pkgPath}: ${err}`);
                 }
             }
         }
@@ -61,6 +81,7 @@ export class WorkspaceScanner {
             }
         }
 
+        this.log(`Scanning ${allFolders.size} asset folder(s)`);
         const total = allFolders.size;
         for (const folder of allFolders) {
             onProgress?.({ message: `Scanning ${path.basename(folder)}...`, increment: (1 / total) * 100 });
@@ -72,7 +93,9 @@ export class WorkspaceScanner {
         onProgress?.({ message: 'Scanning workspace for asset files...' });
 
         for (const folder of this.workspaceFolders) {
+            this.log(`Scanning workspace folder: ${folder}`);
             const files = await this.findFiles(folder, /\.sd\w+$/i);
+            this.log(`  found ${files.length} .sd* file(s)`);
             const total = files.length;
             let processed = 0;
 
@@ -90,18 +113,23 @@ export class WorkspaceScanner {
         try {
             const stat = await fs.promises.stat(folderPath);
             if (!stat.isDirectory()) {
+                this.log(`  not a directory: ${folderPath}`);
                 return;
             }
         } catch {
-            return; // Folder doesn't exist
+            this.log(`  folder does not exist: ${folderPath}`);
+            return;
         }
 
         const entries = await this.walkDirectory(folderPath);
+        let indexed = 0;
         for (const filePath of entries) {
             if (/\.sd\w+$/i.test(filePath)) {
                 await this.indexFile(filePath);
+                indexed++;
             }
         }
+        this.log(`  indexed ${indexed} assets from ${folderPath}`);
     }
 
     private async walkDirectory(dir: string): Promise<string[]> {
@@ -148,6 +176,7 @@ export class WorkspaceScanner {
 
     // Re-index a single file (full content, used on file change)
     async reindexFile(filePath: string): Promise<void> {
+        this.log(`Re-indexing: ${filePath}`);
         try {
             const content = await fs.promises.readFile(filePath, 'utf-8');
             const header = parseAssetHeader(content);
@@ -168,6 +197,7 @@ export class WorkspaceScanner {
                                 line: part.line,
                             });
                         }
+                        this.log(`  re-indexed ${parsed.parts.length} parts`);
                     }
                 }
             }
@@ -190,6 +220,7 @@ export class WorkspaceScanner {
                         line: part.line,
                     });
                 }
+                this.log(`Indexed ${parsed.parts.length} parts from open document: ${path.basename(filePath)}`);
             }
         }
     }
@@ -197,20 +228,24 @@ export class WorkspaceScanner {
     private setupWatcher(): void {
         // Watch all workspace folders for .sd* file changes
         const patterns = this.workspaceFolders.map(f => path.join(f, '**/*.sd*'));
+        this.log(`Setting up file watcher for: ${patterns.join(', ')}`);
         this.watcher = chokidar.watch(patterns, {
             ignoreInitial: true,
             ignored: ['**/bin/**', '**/obj/**', '**/.git/**'],
         });
 
         this.watcher.on('add', async (filePath) => {
+            this.log(`File added: ${filePath}`);
             await this.indexFile(filePath);
         });
 
         this.watcher.on('change', async (filePath) => {
+            this.log(`File changed: ${filePath}`);
             await this.reindexFile(filePath);
         });
 
         this.watcher.on('unlink', (filePath) => {
+            this.log(`File deleted: ${filePath}`);
             this.index.removeFile(filePath);
         });
     }
@@ -223,6 +258,7 @@ export class WorkspaceScanner {
                 names.add(path.basename(csproj, '.csproj'));
             }
         }
+        this.log(`Discovered ${names.size} .csproj project(s): ${Array.from(names).join(', ')}`);
         this.index.setProjectNames(names);
     }
 

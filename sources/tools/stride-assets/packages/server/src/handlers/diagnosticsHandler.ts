@@ -174,5 +174,5 @@ export function createDiagnosticsHandler(
 
 function uriToPath(uri: string): string {
     const url = new URL(uri);
-    return decodeURIComponent(url.pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+    return decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, '$1');
 }

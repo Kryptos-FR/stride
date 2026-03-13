@@ -43,14 +43,26 @@ let settings: StrideSettings = {
     scanWorkspaceForBrokenLinks: false,
 };
 
+function log(msg: string): void {
+    connection.console.log(`[Stride] ${msg}`);
+}
+
 connection.onInitialize((params: InitializeParams): InitializeResult => {
+    log(`onInitialize: ${(params.workspaceFolders ?? []).length} workspace folder(s)`);
+    for (const f of params.workspaceFolders ?? []) {
+        log(`  workspace folder URI: ${f.uri}`);
+    }
+
     const workspaceFolders = (params.workspaceFolders ?? []).map(f => {
         // Convert URI to file path
         const url = new URL(f.uri);
-        return decodeURIComponent(url.pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+        const fsPath = decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, '$1');
+        log(`  resolved path: ${fsPath}`);
+        return fsPath;
     });
 
     scanner = new WorkspaceScanner(index, workspaceFolders);
+    scanner.setLogger((msg) => log(msg));
     backLinkScanner = new BackLinkScanner(index, workspaceFolders);
 
     return {
@@ -70,19 +82,29 @@ connection.onInitialized(async () => {
     connection.client.register(DidChangeConfigurationNotification.type);
 
     // Scan workspace
-    connection.console.log('Stride: Indexing assets...');
+    log('Indexing assets...');
     await scanner.initialize((progress) => {
-        connection.console.log(progress.message);
+        log(progress.message);
     });
-    connection.console.log(`Stride: Indexed ${index.size} assets`);
+    log(`Indexed ${index.size} assets`);
+
+    // Log discovered projects
+    const packages = scanner.getPackages();
+    log(`Found ${packages.length} package(s)`);
+    for (const pkg of packages) {
+        log(`  package: ${pkg.name} (${pkg.assetFolders.length} asset folders)`);
+    }
 
     // Fetch initial settings
     await refreshSettings();
+    log(`Settings: diagnostics=${settings.diagnosticsEnabled}, scriptNav=${settings.scriptNavigationEnabled}, backLinks=${settings.backLinksEnabled}`);
 
     // Enable back-links if configured
     if (settings.backLinksEnabled) {
-        await backLinkScanner.scanWorkspace((msg) => connection.console.log(msg));
+        log('Scanning for back-links...');
+        await backLinkScanner.scanWorkspace((msg) => log(msg));
         backLinkScanner.setupFileWatcher();
+        log(`Back-links: ${index.backRefCount} references found`);
     }
 });
 
@@ -109,6 +131,9 @@ connection.onDidChangeConfiguration(async () => {
 // --- Document synchronization ---
 
 connection.onDidOpenTextDocument((params) => {
+    const filePath = uriToPath(params.textDocument.uri);
+    log(`Document opened: ${filePath}`);
+
     const doc = TextDocument.create(
         params.textDocument.uri,
         params.textDocument.languageId,
@@ -118,7 +143,6 @@ connection.onDidOpenTextDocument((params) => {
     documents.set(params.textDocument.uri, doc);
 
     // Index parts for composite assets
-    const filePath = uriToPath(params.textDocument.uri);
     scanner.indexPartsFromContent(filePath, params.textDocument.text);
 
     // Run diagnostics
@@ -159,7 +183,7 @@ const definitionHandler = createDefinitionHandler(index, connection, getSettings
 connection.onDefinition((params) => definitionHandler.handle(params, getDocument(params.textDocument.uri)));
 
 // Hover tooltips
-const hoverHandler = createHoverHandler(index, getSettings);
+const hoverHandler = createHoverHandler(index, getSettings, connection);
 connection.onHover((params) => hoverHandler.handle(params, getDocument(params.textDocument.uri)));
 
 // Diagnostics
@@ -178,11 +202,27 @@ connection.onCodeLens((params) => codeLensHandler.handle(params, getDocument(par
 const symbolHandler = createSymbolHandler(index);
 connection.onWorkspaceSymbol((params) => symbolHandler.handle(params));
 
+// --- Custom notifications ---
+
+connection.onNotification('stride/rebuildIndex', async () => {
+    log('Rebuild index requested');
+    index.clear();
+    await scanner.initialize((progress) => {
+        log(progress.message);
+    });
+    log(`Rebuild complete: ${index.size} assets`);
+
+    if (settings.backLinksEnabled) {
+        await backLinkScanner.scanWorkspace((msg) => log(msg));
+        log(`Back-links: ${index.backRefCount} references found`);
+    }
+});
+
 // --- Utility ---
 
 function uriToPath(uri: string): string {
     const url = new URL(uri);
-    return decodeURIComponent(url.pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+    return decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, '$1');
 }
 
 // Start listening
