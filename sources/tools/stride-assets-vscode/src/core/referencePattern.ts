@@ -213,3 +213,86 @@ export function getSourcePathAtPosition(text: string, line: number, column: numb
         r.line === line && column >= r.startColumn && column <= r.endColumn
     );
 }
+
+// --- Property key navigation (YAML key -> C# field/property) ---
+
+export interface PropertyKeyMatch {
+    key: string;          // e.g., "CharacterShadow"
+    line: number;
+    startColumn: number;
+    endColumn: number;
+}
+
+// YAML property key: indented word followed by optional * (archetype override) and colon
+const PROPERTY_KEY_REGEX = /^(\s+)(\w+)\*?:\s/;
+
+// Structural keys that are part of the Stride asset schema, not C# members
+const STRUCTURAL_KEYS = new Set([
+    'Id', 'Name', 'Components', 'Children', 'Entity', 'UIElement',
+    'Parts', 'RootParts', 'Hierarchy', 'BasePartAsset', 'BasePartId',
+    'Archetype', 'Base', 'Design', 'Tags', 'Group',
+]);
+
+// Given a position, check if the cursor is on a YAML property key
+export function getPropertyKeyAtPosition(text: string, line: number, column: number): PropertyKeyMatch | undefined {
+    const lines = text.split('\n');
+    if (line >= lines.length) { return undefined; }
+
+    const lineText = lines[line];
+    const match = PROPERTY_KEY_REGEX.exec(lineText);
+    if (!match) { return undefined; }
+
+    const indent = match[1].length;
+    const key = match[2];
+    const startColumn = indent;
+    const endColumn = indent + key.length;
+
+    // Cursor must be within the key span
+    if (column < startColumn || column > endColumn) { return undefined; }
+
+    // Skip structural keys
+    if (STRUCTURAL_KEYS.has(key)) { return undefined; }
+
+    return { key, line, startColumn, endColumn };
+}
+
+// Walk backwards from a property line to find the containing !Type,Assembly component block
+export function findContainingScriptType(text: string, lineNum: number): ScriptReferenceMatch | undefined {
+    const lines = text.split('\n');
+    if (lineNum >= lines.length) { return undefined; }
+
+    const propertyLine = lines[lineNum];
+    const propertyIndent = propertyLine.length - propertyLine.trimStart().length;
+
+    for (let i = lineNum - 1; i >= 0; i--) {
+        const line = lines[i];
+        if (line.trim().length === 0) { continue; }
+
+        const lineIndent = line.length - line.trimStart().length;
+        if (lineIndent < propertyIndent) {
+            // Check if this line contains any !TypeTag (component/type declaration)
+            if (/!\w+/.test(line)) {
+                // It's a type declaration — check if it's a user script (!Namespace.Type,Assembly)
+                const scriptMatch = SCRIPT_REFERENCE_REGEX.exec(line);
+                if (scriptMatch) {
+                    const typeName = scriptMatch[1];
+                    const assemblyName = scriptMatch[2].trimEnd();
+                    const fullMatch = scriptMatch[0].trimEnd();
+                    return {
+                        typeName,
+                        assemblyName,
+                        fullMatch,
+                        line: i,
+                        startColumn: scriptMatch.index,
+                        endColumn: scriptMatch.index + fullMatch.length,
+                    };
+                }
+                // Framework type (e.g., !TransformComponent) — stop searching
+                return undefined;
+            }
+            // Not a type line (e.g., "Components:", "Children:") — keep walking back
+        }
+    }
+
+    return undefined;
+}

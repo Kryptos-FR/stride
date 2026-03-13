@@ -16,6 +16,7 @@ Hover over a reference to see detailed information:
 - **Entity references** (`ref!!`) — entity name, file, and line number
 - **Source paths** — file type and existence status
 - **Script types** — fully qualified type name, assembly, and whether source is available
+- **Property keys** — containing script type and Ctrl+click hint (when script navigation is enabled)
 
 ### Broken Link Detection
 
@@ -52,9 +53,12 @@ These features are disabled by default and can be enabled in settings.
 
 Navigate from script/component type references (e.g. `!MyNamespace.MyScript,MyProject`) to their C# source files. Provides:
 
-- **Ctrl+Click** to jump to the C# class definition
+- **Ctrl+Click on type references** to jump to the C# class definition
+- **Ctrl+Click on property keys** to jump to the corresponding field or property in the C# class
 - **Hover tooltips** showing type name, assembly, and whether it's a local or framework type
 - **Diagnostics** for missing script types (only for types in local `.csproj` projects, not framework/NuGet types)
+
+Property navigation works for properties under user script components — it identifies the containing `!Type,Assembly` block and navigates to the matching C# member.
 
 Requires the [C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp) extension to be installed and active.
 

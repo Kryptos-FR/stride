@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AssetIndex } from '../core/assetIndex';
-import { getAssetReferenceAtPosition, getPartReferenceAtPosition, getSourcePathAtPosition, getScriptReferenceAtPosition } from '../core/referencePattern';
+import { getAssetReferenceAtPosition, getPartReferenceAtPosition, getSourcePathAtPosition, getScriptReferenceAtPosition, getPropertyKeyAtPosition, findContainingScriptType } from '../core/referencePattern';
 
 // Map type names to human-readable descriptions
 const TYPE_DESCRIPTIONS: Record<string, string> = {
@@ -147,6 +147,28 @@ export class StrideHoverProvider implements vscode.HoverProvider {
                         new vscode.Position(line, scriptRef.endColumn)
                     )
                 );
+            }
+        }
+
+        // Check for property key -> C# member
+        if (scriptNavigationEnabled) {
+            const propKey = getPropertyKeyAtPosition(text, line, col);
+            if (propKey) {
+                const containingType = findContainingScriptType(text, line);
+                if (containingType && this.index.hasProject(containingType.assemblyName)) {
+                    const className = containingType.typeName.split('.').pop() ?? containingType.typeName;
+                    const md = new vscode.MarkdownString();
+                    md.appendMarkdown(`**Property** \`${propKey.key}\` on \`${className}\`\n\n`);
+                    md.appendMarkdown(`- Type: ${containingType.typeName}\n`);
+                    md.appendMarkdown(`- Ctrl+click to navigate to C# source\n`);
+                    return new vscode.Hover(
+                        md,
+                        new vscode.Range(
+                            new vscode.Position(line, propKey.startColumn),
+                            new vscode.Position(line, propKey.endColumn)
+                        )
+                    );
+                }
             }
         }
 
