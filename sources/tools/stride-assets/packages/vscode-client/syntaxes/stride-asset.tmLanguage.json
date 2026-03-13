@@ -1,0 +1,58 @@
+{
+  "scopeName": "source.stride-asset",
+  "name": "Stride Asset",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#type-tag" },
+    { "include": "#asset-reference" },
+    { "include": "#entity-reference" },
+    { "include": "#guid" },
+    { "include": "#key" },
+    { "include": "#string" },
+    { "include": "#number" },
+    { "include": "#boolean" },
+    { "include": "#null" }
+  ],
+  "repository": {
+    "comment": {
+      "match": "#.*$",
+      "name": "comment.line.number-sign.stride-asset"
+    },
+    "type-tag": {
+      "match": "![A-Za-z][A-Za-z0-9]*",
+      "name": "entity.name.type.stride-asset"
+    },
+    "asset-reference": {
+      "match": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}:[^\\s,}\\]]+(?:\\s+[^\\s,}\\]:]+)*",
+      "name": "markup.underline.link.stride-asset"
+    },
+    "entity-reference": {
+      "match": "ref!!\\s+[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+      "name": "markup.underline.link.stride-asset"
+    },
+    "guid": {
+      "match": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+      "name": "constant.numeric.guid.stride-asset"
+    },
+    "key": {
+      "match": "^\\s*[A-Za-z_][A-Za-z0-9_]*(?=\\s*:)",
+      "name": "entity.name.tag.stride-asset"
+    },
+    "string": {
+      "match": "\"[^\"]*\"|'[^']*'",
+      "name": "string.quoted.stride-asset"
+    },
+    "number": {
+      "match": "\\b-?\\d+(\\.\\d+)?\\b",
+      "name": "constant.numeric.stride-asset"
+    },
+    "boolean": {
+      "match": "\\b(true|false)\\b",
+      "name": "constant.language.boolean.stride-asset"
+    },
+    "null": {
+      "match": "\\bnull\\b",
+      "name": "constant.language.null.stride-asset"
+    }
+  }
+}

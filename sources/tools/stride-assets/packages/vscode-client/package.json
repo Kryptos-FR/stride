@@ -1,0 +1,130 @@
+{
+  "name": "stride-assets",
+  "displayName": "Stride Asset Navigator",
+  "description": "Navigate Stride game engine asset files (.sd*) with go-to-definition, hover tooltips, broken link detection, and script navigation.",
+  "version": "0.1.0",
+  "publisher": "stride3d",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stride3d/stride",
+    "directory": "sources/tools/stride-assets"
+  },
+  "icon": "images/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "stride",
+    "stride3d",
+    "game engine",
+    "asset",
+    "yaml"
+  ],
+  "extensionPack": [
+    "ms-dotnettools.csharp"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.sdpkg"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "stride-asset",
+        "aliases": [
+          "Stride Asset"
+        ],
+        "extensions": [
+          ".sdmat",
+          ".sdtex",
+          ".sdm3d",
+          ".sdanim",
+          ".sdskel",
+          ".sdscene",
+          ".sdprefab",
+          ".sdgfxcomp",
+          ".sdgamesettings",
+          ".sdsheet",
+          ".sdfnt",
+          ".sdpkg",
+          ".sdsky",
+          ".sdsnd",
+          ".sdvid",
+          ".sdrendertex",
+          ".sduipage",
+          ".sduilib",
+          ".sdnavmesh",
+          ".sdhmap",
+          ".sdphy",
+          ".sdpcfnt",
+          ".sdvs",
+          ".sdeffectlog",
+          ".sdhull",
+          ".sdpromodel",
+          ".sdprefabmodel"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "stride-asset",
+        "scopeName": "source.stride-asset",
+        "path": "./syntaxes/stride-asset.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Stride Assets",
+      "properties": {
+        "strideAssets.diagnosticsEnabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show diagnostics (warnings/errors) for broken references in open asset files. Detects missing asset references, missing source files, and optionally missing script types."
+        },
+        "strideAssets.scanWorkspaceForBrokenLinks": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Scan **all** asset files in the workspace for broken references on startup. This is useful for auditing a project but may be slow on large workspaces. When disabled, only open files are checked."
+        },
+        "strideAssets.scriptNavigationEnabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Enable **script navigation**: Ctrl+click on script/component type references (e.g. `!MyNamespace.MyScript,MyProject`) to jump to the C# source file. Also enables property key navigation to C# fields. Requires the [C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp) extension."
+        },
+        "strideAssets.backLinksEnabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Enable **back-links**: scan all asset files to find which assets reference each other. Shows reference counts as CodeLens above `Id:` lines and in hover tooltips. Adds a workspace-wide file watcher for incremental updates. May increase memory usage on large projects."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "strideAssets.rebuildIndex",
+        "title": "Stride: Rebuild Asset Index"
+      },
+      {
+        "command": "strideAssets.findAsset",
+        "title": "Stride: Find Asset by Name"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}
