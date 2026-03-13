@@ -1,0 +1,42 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "compile: core",
+      "type": "shell",
+      "command": "npm run compile",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/core"
+      },
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "compile: server",
+      "type": "shell",
+      "command": "npm run compile",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/server"
+      },
+      "dependsOn": ["compile: core"],
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "compile: client",
+      "type": "shell",
+      "command": "npm run compile",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/vscode-client"
+      },
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "npm: compile all",
+      "dependsOn": ["compile: server", "compile: client"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

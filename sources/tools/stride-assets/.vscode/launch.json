@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-client"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/packages/vscode-client/out/**/*.js",
+        "${workspaceFolder}/packages/server/out/**/*.js"
+      ],
+      "preLaunchTask": "npm: compile all"
+    }
+  ]
+}
