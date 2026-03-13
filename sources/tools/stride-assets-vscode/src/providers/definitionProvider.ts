@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { AssetIndex } from '../core/assetIndex';
 import { getAssetReferenceAtPosition, getPartReferenceAtPosition, getSourcePathAtPosition, getScriptReferenceAtPosition, getPropertyKeyAtPosition, findContainingScriptType } from '../core/referencePattern';
+import { log } from '../core/logger';
 
 export class StrideDefinitionProvider implements vscode.DefinitionProvider {
     constructor(private index: AssetIndex) {}
@@ -16,10 +17,13 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
         const line = position.line;
         const col = position.character;
 
+        log(`provideDefinition at ${vscode.workspace.asRelativePath(document.uri)}:${line + 1}:${col}`);
+
         // Check for cross-asset reference (GUID:Name)
         const assetRef = getAssetReferenceAtPosition(text, line, col);
         if (assetRef) {
             const entry = this.index.lookupGuid(assetRef.guid);
+            log(`  asset ref: ${assetRef.guid}:${assetRef.name} → ${entry ? vscode.workspace.asRelativePath(entry.filePath) : 'NOT FOUND'}`);
             if (entry) {
                 // Reveal in Explorer on Ctrl+hover; Ctrl+click will also open the file
                 await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(entry.filePath));
@@ -35,6 +39,7 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
         const partRef = getPartReferenceAtPosition(text, line, col);
         if (partRef) {
             const part = this.index.lookupPart(partRef.guid);
+            log(`  part ref: ${partRef.guid} → ${part ? `${vscode.workspace.asRelativePath(part.filePath)}:${part.line + 1} (${part.name ?? 'unnamed'})` : 'NOT FOUND'}`);
             if (part) {
                 return new vscode.Location(
                     vscode.Uri.file(part.filePath),
@@ -49,7 +54,9 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
         if (sourcePath) {
             const dir = path.dirname(document.uri.fsPath);
             const resolved = path.resolve(dir, sourcePath.path);
-            if (fs.existsSync(resolved)) {
+            const exists = fs.existsSync(resolved);
+            log(`  source path: ${sourcePath.path} → ${exists ? resolved : 'NOT FOUND'}`);
+            if (exists) {
                 // Reveal in Explorer on Ctrl+hover; Ctrl+click will also open the file
                 await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(resolved));
                 return new vscode.Location(
@@ -67,6 +74,7 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
         if (scriptNavigationEnabled) {
             const scriptRef = getScriptReferenceAtPosition(text, line, col);
             if (scriptRef) {
+                log(`  script ref: !${scriptRef.typeName},${scriptRef.assemblyName}`);
                 const symbols = await vscode.commands.executeCommand<vscode.SymbolInformation[]>(
                     'vscode.executeWorkspaceSymbolProvider',
                     scriptRef.typeName
@@ -77,9 +85,11 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
                         s.kind === vscode.SymbolKind.Class && s.name === className
                     );
                     if (match) {
+                        log(`    → class found: ${vscode.workspace.asRelativePath(match.location.uri)}`);
                         return match.location;
                     }
                 }
+                log(`    → class NOT FOUND (${symbols?.length ?? 0} symbols returned)`);
                 return undefined;
             }
 
@@ -87,14 +97,23 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
             const propKey = getPropertyKeyAtPosition(text, line, col);
             if (propKey) {
                 const containingType = findContainingScriptType(text, line);
-                if (containingType && this.index.hasProject(containingType.assemblyName)) {
-                    const classLocation = await this.resolveClassLocation(containingType.typeName);
-                    if (classLocation) {
-                        // Try to navigate to the specific member; fall back to the class
-                        const memberLocation = await this.resolveMemberLocation(classLocation, propKey.key);
-                        return memberLocation ?? classLocation;
+                log(`  property key: "${propKey.key}" → containing type: ${containingType ? `!${containingType.typeName},${containingType.assemblyName} (line ${containingType.line + 1})` : 'NONE'}`);
+                if (containingType) {
+                    const isLocal = this.index.hasProject(containingType.assemblyName);
+                    log(`    assembly "${containingType.assemblyName}" is local: ${isLocal}`);
+                    if (isLocal) {
+                        const classLocation = await this.resolveClassLocation(containingType.typeName);
+                        log(`    class location: ${classLocation ? vscode.workspace.asRelativePath(classLocation.uri) : 'NOT FOUND'}`);
+                        if (classLocation) {
+                            // Try to navigate to the specific member; fall back to the class
+                            const memberLocation = await this.resolveMemberLocation(classLocation, propKey.key);
+                            log(`    member "${propKey.key}": ${memberLocation ? `found at ${memberLocation.range.start.line + 1}:${memberLocation.range.start.character}` : 'NOT FOUND, falling back to class'}`);
+                            return memberLocation ?? classLocation;
+                        }
                     }
                 }
+            } else {
+                log(`  no match at position (not a reference or property key)`);
             }
         }
 
@@ -131,11 +150,15 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
                 'vscode.executeDocumentSymbolProvider',
                 classLocation.uri
             );
+            log(`    docSymbolProvider attempt ${attempt + 1}: ${docSymbols ? `${docSymbols.length} symbols` : 'undefined'}`);
             if (docSymbols && docSymbols.length > 0) {
+                this.logSymbolTree(docSymbols, '      ');
                 const member = this.findMemberSymbol(docSymbols, memberName);
                 if (member) {
+                    log(`    docSymbolProvider: found "${memberName}" (kind=${member.kind}) at line ${member.selectionRange.start.line + 1}`);
                     return new vscode.Location(classLocation.uri, member.selectionRange.start);
                 }
+                log(`    docSymbolProvider: "${memberName}" not found among symbols`);
                 break; // Symbols loaded but member not found — no point retrying
             }
             if (attempt < 2) {
@@ -144,6 +167,7 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
         }
 
         // Fallback: text search for a declaration line containing the member name
+        log(`    falling back to text search for "${memberName}"`);
         const text = doc.getText();
         const lines = text.split('\n');
         const memberRegex = new RegExp(`\\b${memberName}\\b`);
@@ -152,16 +176,30 @@ export class StrideDefinitionProvider implements vscode.DefinitionProvider {
             const line = lines[i];
             if (declarationPrefix.test(line) && memberRegex.test(line)) {
                 const col = line.indexOf(memberName);
+                log(`    text search: found "${memberName}" at line ${i + 1}`);
                 return new vscode.Location(classLocation.uri, new vscode.Position(i, col));
             }
         }
+        log(`    text search: "${memberName}" not found`);
         return undefined;
     }
 
-    // Recursively search document symbols for a field or property by name
+    // Log the symbol tree for debugging
+    private logSymbolTree(symbols: vscode.DocumentSymbol[], indent: string): void {
+        for (const sym of symbols) {
+            log(`${indent}${sym.name} (kind=${sym.kind}, children=${sym.children?.length ?? 0})`);
+            if (sym.children && sym.children.length > 0) {
+                this.logSymbolTree(sym.children, indent + '  ');
+            }
+        }
+    }
+
+    // Recursively search document symbols for a field or property by name.
+    // C# extension may return names like "Font : SpriteFont" — extract the member name before comparing.
     private findMemberSymbol(symbols: vscode.DocumentSymbol[], name: string): vscode.DocumentSymbol | undefined {
         for (const sym of symbols) {
-            if (sym.name === name && (sym.kind === vscode.SymbolKind.Field || sym.kind === vscode.SymbolKind.Property)) {
+            const symName = sym.name.split(' : ')[0];
+            if (symName === name && (sym.kind === vscode.SymbolKind.Field || sym.kind === vscode.SymbolKind.Property)) {
                 return sym;
             }
             if (sym.children && sym.children.length > 0) {

@@ -8,12 +8,14 @@ import { StrideHoverProvider } from './providers/hoverProvider';
 import { StrideDocumentLinkProvider } from './providers/documentLinkProvider';
 import { StrideDiagnosticsProvider } from './providers/diagnosticsProvider';
 import { StrideReferencesCodeLensProvider } from './providers/referencesCodeLensProvider';
+import { initLogger } from './core/logger';
 
 const LANGUAGE_SELECTOR: vscode.DocumentSelector = { language: 'stride-asset' };
 
 let statusBarItem: vscode.StatusBarItem;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+    initLogger(context);
     const index = new AssetIndex();
     const scanner = new WorkspaceScanner(index);
 
