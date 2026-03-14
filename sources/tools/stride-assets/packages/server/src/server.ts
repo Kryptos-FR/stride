@@ -131,8 +131,24 @@ async function refreshSettings(): Promise<void> {
     }
 }
 
-connection.onDidChangeConfiguration(async () => {
+connection.onDidChangeConfiguration(async (params) => {
+    // VS client pushes settings directly in params.settings.strideAssets
+    // (because VS's LSP client doesn't route workspace/configuration through the middleware)
+    const pushed = params.settings?.strideAssets;
+    if (pushed) {
+        settings = {
+            diagnosticsEnabled: pushed.diagnosticsEnabled ?? true,
+            scriptNavigationEnabled: pushed.scriptNavigationEnabled ?? false,
+            backLinksEnabled: pushed.backLinksEnabled ?? false,
+            scanWorkspaceForBrokenLinks: pushed.scanWorkspaceForBrokenLinks ?? false,
+        };
+        log(`Settings updated (pushed): diagnostics=${settings.diagnosticsEnabled}, scriptNav=${settings.scriptNavigationEnabled}, backLinks=${settings.backLinksEnabled}`);
+        return;
+    }
+
+    // VS Code path: pull settings from client via workspace/configuration
     await refreshSettings();
+    log(`Settings updated (pulled): diagnostics=${settings.diagnosticsEnabled}, scriptNav=${settings.scriptNavigationEnabled}, backLinks=${settings.backLinksEnabled}`);
 });
 
 // --- Document synchronization ---

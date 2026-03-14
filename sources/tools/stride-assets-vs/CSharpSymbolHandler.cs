@@ -30,6 +30,7 @@ namespace StrideAssets.VisualStudio
             var memberName = arg["memberName"]?.Value<string>();
 
             Log.Write($"[CSharpBridge] Resolve: type=\"{typeName}\", member=\"{memberName ?? "(none)"}\"");
+            Log.Debug($"[CSharpBridge] Full request payload: {arg}");
 
             if (string.IsNullOrEmpty(typeName))
             {
@@ -46,6 +47,7 @@ namespace StrideAssets.VisualStudio
 
             var projects = workspace.CurrentSolution.Projects.ToList();
             Log.Write($"[CSharpBridge] Searching {projects.Count} project(s)");
+            Log.Debug($"[CSharpBridge] Projects: {string.Join(", ", projects.Select(p => p.Name))}");
 
             foreach (var project in projects)
             {

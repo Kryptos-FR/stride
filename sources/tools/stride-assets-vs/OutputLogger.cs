@@ -1,6 +1,7 @@
 #pragma warning disable VSTHRD010 // OutputStringThreadSafe is explicitly designed for cross-thread use
 
 using System;
+using System.Diagnostics;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 
@@ -34,6 +35,15 @@ namespace StrideAssets.VisualStudio
         public static void Error(string message)
         {
             _pane?.OutputStringThreadSafe($"[{DateTime.Now:HH:mm:ss.fff}] ERROR: {message}\n");
+        }
+
+        /// <summary>
+        /// Verbose debug logging — only active in DEBUG builds, stripped in Release.
+        /// </summary>
+        [Conditional("DEBUG")]
+        public static void Debug(string message)
+        {
+            _pane?.OutputStringThreadSafe($"[{DateTime.Now:HH:mm:ss.fff}] [DEBUG] {message}\n");
         }
     }
 }

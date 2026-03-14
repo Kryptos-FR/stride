@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using Microsoft.VisualStudio.Shell;
 
@@ -28,16 +29,14 @@ namespace StrideAssets.VisualStudio
         protected override void OnApply(PageApplyEventArgs e)
         {
             base.OnApply(e);
-            StrideSettings.DiagnosticsEnabled = DiagnosticsEnabled;
-            StrideSettings.ScriptNavigationEnabled = ScriptNavigationEnabled;
-            StrideSettings.BackLinksEnabled = BackLinksEnabled;
-            StrideSettings.ScanWorkspaceForBrokenLinks = ScanWorkspaceForBrokenLinks;
+            StrideSettings.Update(DiagnosticsEnabled, ScriptNavigationEnabled,
+                BackLinksEnabled, ScanWorkspaceForBrokenLinks);
         }
     }
 
     /// <summary>
-    /// Static settings holder read by the LSP middleware to respond to
-    /// workspace/configuration requests from the server.
+    /// Static settings holder. Notifies subscribers when settings change
+    /// so the language client can push updates to the server immediately.
     /// </summary>
     internal static class StrideSettings
     {
@@ -45,5 +44,16 @@ namespace StrideAssets.VisualStudio
         public static bool ScriptNavigationEnabled { get; set; }
         public static bool BackLinksEnabled { get; set; }
         public static bool ScanWorkspaceForBrokenLinks { get; set; }
+
+        public static event Action? Changed;
+
+        public static void Update(bool diagnostics, bool scriptNav, bool backLinks, bool scanWorkspace)
+        {
+            DiagnosticsEnabled = diagnostics;
+            ScriptNavigationEnabled = scriptNav;
+            BackLinksEnabled = backLinks;
+            ScanWorkspaceForBrokenLinks = scanWorkspace;
+            Changed?.Invoke();
+        }
     }
 }

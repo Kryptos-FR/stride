@@ -50,7 +50,7 @@ namespace StrideAssets.VisualStudio
 
         public string Name => "Stride Asset Navigator";
 
-        public IEnumerable<string>? ConfigurationSections => new[] { "strideAssets" };
+        public IEnumerable<string>? ConfigurationSections => null;
 
         public object? InitializationOptions => null;
 
@@ -69,6 +69,7 @@ namespace StrideAssets.VisualStudio
 
         private JsonRpc? _rpc;
         private string? _solutionDir;
+        private bool _serverReady;
 
         public async Task<Connection?> ActivateAsync(CancellationToken token)
         {
@@ -151,6 +152,9 @@ namespace StrideAssets.VisualStudio
                 _solutionDir = solutionDir;
             }
 
+            // Subscribe to settings changes — pushes updates to server live
+            StrideSettings.Changed += PushSettingsToServer;
+
             Log.Write("Stride Asset Navigator extension loaded");
             Log.Write($"Extension assembly: {Assembly.GetExecutingAssembly().Location}");
             Log.Write($"Solution directory: {_solutionDir ?? "(not available)"}");
@@ -165,6 +169,12 @@ namespace StrideAssets.VisualStudio
         public Task OnServerInitializedAsync()
         {
             Log.Write("LSP server initialized successfully");
+            _serverReady = true;
+
+            // Push current settings to server (may be defaults if package hasn't loaded yet;
+            // the package will push again when it loads persisted values from the registry)
+            PushSettingsToServer();
+
             return Task.CompletedTask;
         }
 
@@ -183,7 +193,48 @@ namespace StrideAssets.VisualStudio
         {
             _rpc = rpc;
             Log.Write("Custom message handler attached (C# symbol resolution ready)");
+            Log.Debug($"[LanguageClient] JsonRpc attached, handler type: {_handler?.GetType().Name ?? "(null)"}");
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Sends current settings to the LSP server via workspace/didChangeConfiguration.
+        /// Called on initial server connection and whenever the user changes settings.
+        /// </summary>
+        private void PushSettingsToServer()
+        {
+            if (_rpc == null || !_serverReady)
+            {
+                Log.Debug("[LanguageClient] PushSettingsToServer: skipped (server not ready)");
+                return;
+            }
+
+            try
+            {
+                var settings = new JObject
+                {
+                    ["strideAssets"] = new JObject
+                    {
+                        ["diagnosticsEnabled"] = StrideSettings.DiagnosticsEnabled,
+                        ["scriptNavigationEnabled"] = StrideSettings.ScriptNavigationEnabled,
+                        ["backLinksEnabled"] = StrideSettings.BackLinksEnabled,
+                        ["scanWorkspaceForBrokenLinks"] = StrideSettings.ScanWorkspaceForBrokenLinks,
+                    },
+                };
+
+                Log.Write($"Pushing settings to server: diagnostics={StrideSettings.DiagnosticsEnabled}, " +
+                           $"scriptNav={StrideSettings.ScriptNavigationEnabled}, " +
+                           $"backLinks={StrideSettings.BackLinksEnabled}");
+
+#pragma warning disable CS4014 // fire-and-forget is intentional
+                _rpc.NotifyWithParameterObjectAsync(
+                    "workspace/didChangeConfiguration",
+                    new JObject { ["settings"] = settings });
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Failed to push settings: {ex.Message}");
+            }
         }
 
         private string? FindServerPath()
@@ -242,36 +293,26 @@ namespace StrideAssets.VisualStudio
     }
 
     /// <summary>
-    /// Middleware that intercepts workspace/configuration requests from the server
-    /// and returns settings from the VS options page.
+    /// Middleware that intercepts hover responses to strip markdown for VS plaintext rendering.
+    /// Settings are pushed via workspace/didChangeConfiguration instead of being intercepted here.
     /// </summary>
     internal class SettingsMiddleLayer : ILanguageClientMiddleLayer
     {
         public bool CanHandle(string methodName)
-            => methodName == "workspace/configuration" || methodName == "textDocument/hover";
+        {
+            var result = methodName == "textDocument/hover";
+            Log.Debug($"[Middleware] CanHandle({methodName}) = {result}");
+            return result;
+        }
 
         public Task HandleNotificationAsync(string methodName, JToken methodParam, Func<JToken, Task> sendNotification)
         {
+            Log.Debug($"[Middleware] HandleNotificationAsync: {methodName}");
             return sendNotification(methodParam);
         }
 
         public async Task<JToken?> HandleRequestAsync(string methodName, JToken methodParam, Func<JToken, Task<JToken?>> sendRequest)
         {
-            if (methodName == "workspace/configuration")
-            {
-                Log.Write($"Settings request: diagnostics={StrideSettings.DiagnosticsEnabled}, " +
-                           $"scriptNav={StrideSettings.ScriptNavigationEnabled}, " +
-                           $"backLinks={StrideSettings.BackLinksEnabled}");
-                var settings = new JObject
-                {
-                    ["diagnosticsEnabled"] = StrideSettings.DiagnosticsEnabled,
-                    ["scriptNavigationEnabled"] = StrideSettings.ScriptNavigationEnabled,
-                    ["backLinksEnabled"] = StrideSettings.BackLinksEnabled,
-                    ["scanWorkspaceForBrokenLinks"] = StrideSettings.ScanWorkspaceForBrokenLinks,
-                };
-                return new JArray(settings);
-            }
-
             if (methodName == "textDocument/hover")
             {
                 var result = await sendRequest(methodParam);

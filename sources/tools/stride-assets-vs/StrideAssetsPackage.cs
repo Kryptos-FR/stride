@@ -18,6 +18,15 @@ namespace StrideAssets.VisualStudio
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+
+            // Load persisted settings and notify subscribers (triggers push to LSP server)
+            var page = (StrideOptionsPage)GetDialogPage(typeof(StrideOptionsPage));
+            StrideSettings.Update(page.DiagnosticsEnabled, page.ScriptNavigationEnabled,
+                page.BackLinksEnabled, page.ScanWorkspaceForBrokenLinks);
+            Log.Debug($"[Package] Settings loaded from registry: diagnostics={StrideSettings.DiagnosticsEnabled}, " +
+                       $"scriptNav={StrideSettings.ScriptNavigationEnabled}, " +
+                       $"backLinks={StrideSettings.BackLinksEnabled}, " +
+                       $"scanWorkspace={StrideSettings.ScanWorkspaceForBrokenLinks}");
         }
     }
 

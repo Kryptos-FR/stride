@@ -6,32 +6,32 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <VssdkCompatibleExtension>true</VssdkCompatibleExtension>
 
     <!-- Debug: launch VS experimental instance on F5 -->
     <StartAction>Program</StartAction>
     <StartProgram>$(DevEnvDir)devenv.exe</StartProgram>
     <StartArguments>/rootsuffix Exp /log</StartArguments>
 
-    <!-- Import VsSDK targets for VSIX container creation and pkgdef generation -->
-    <CustomAfterMicrosoftCSharpTargets Condition="'$(VsSDKInstall)' != ''">$(VsSDKInstall)\Microsoft.VsSDK.targets</CustomAfterMicrosoftCSharpTargets>
-
     <!-- VSIX properties -->
+    <!-- GeneratePkgDefFile: needed for our AsyncPackage (SDK defaults to false) -->
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
     <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
     <IncludeDebugSymbolsInVSIXContainer>false</IncludeDebugSymbolsInVSIXContainer>
     <CopyBuildOutputToOutputDirectory>true</CopyBuildOutputToOutputDirectory>
     <CopyOutputSymbolsToOutputDirectory>false</CopyOutputSymbolsToOutputDirectory>
     <UseCodebase>true</UseCodebase>
-    <DeployExtension>true</DeployExtension>
-    <CreateVsixContainer>true</CreateVsixContainer>
+    <!-- DeployExtension: intentionally omitted (SDK defaults to false).
+         The Extensibility Build handles F5 deployment via ExtensibilityProjectExtension
+         project capability. Setting this to true causes a DUPLICATE VSSDK deployment
+         alongside the Extensibility deployment, breaking the extension. -->
+    <!-- CreateVsixContainer: intentionally omitted (SDK defaults to true) -->
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Extensibility.Sdk" Version="17.14.40608" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.VisualStudio.Extensibility.Build" Version="17.14.40608" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.6.36389" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.6.2164">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.LanguageServer.Client" Version="17.6.42" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.LanguageServices" Version="4.6.0" ExcludeAssets="runtime" />
   </ItemGroup>
