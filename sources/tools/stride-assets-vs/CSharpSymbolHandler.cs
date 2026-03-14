@@ -29,14 +29,25 @@ namespace StrideAssets.VisualStudio
             var typeName = arg["typeName"]?.Value<string>();
             var memberName = arg["memberName"]?.Value<string>();
 
+            Log.Write($"[CSharpBridge] Resolve: type=\"{typeName}\", member=\"{memberName ?? "(none)"}\"");
+
             if (string.IsNullOrEmpty(typeName))
+            {
+                Log.Write("[CSharpBridge] Empty type name, returning empty result");
                 return new JObject();
+            }
 
             var workspace = _getWorkspace();
             if (workspace == null)
+            {
+                Log.Write("[CSharpBridge] Roslyn workspace not available");
                 return new JObject();
+            }
 
-            foreach (var project in workspace.CurrentSolution.Projects)
+            var projects = workspace.CurrentSolution.Projects.ToList();
+            Log.Write($"[CSharpBridge] Searching {projects.Count} project(s)");
+
+            foreach (var project in projects)
             {
                 if (ct.IsCancellationRequested)
                     break;
@@ -49,6 +60,7 @@ namespace StrideAssets.VisualStudio
                 if (type == null)
                     continue;
 
+                Log.Write($"[CSharpBridge] Found type in project: {project.Name}");
                 ISymbol targetSymbol = type;
 
                 if (!string.IsNullOrEmpty(memberName))
@@ -56,7 +68,14 @@ namespace StrideAssets.VisualStudio
                     var member = type.GetMembers(memberName!)
                         .FirstOrDefault(m => m.Kind == SymbolKind.Property || m.Kind == SymbolKind.Field);
                     if (member != null)
+                    {
+                        Log.Write($"[CSharpBridge] Found member: {member.Name} ({member.Kind})");
                         targetSymbol = member;
+                    }
+                    else
+                    {
+                        Log.Write($"[CSharpBridge] Member \"{memberName}\" not found, falling back to type");
+                    }
                 }
 
                 var location = targetSymbol.Locations.FirstOrDefault(l => l.IsInSource);
@@ -64,6 +83,8 @@ namespace StrideAssets.VisualStudio
                     continue;
 
                 var lineSpan = location.GetLineSpan();
+                Log.Write($"[CSharpBridge] Resolved: {lineSpan.Path}:{lineSpan.StartLinePosition.Line}");
+
                 return new JObject
                 {
                     ["location"] = new JObject
@@ -86,6 +107,7 @@ namespace StrideAssets.VisualStudio
                 };
             }
 
+            Log.Write($"[CSharpBridge] Type \"{typeName}\" not found in any project");
             return new JObject();
         }
     }

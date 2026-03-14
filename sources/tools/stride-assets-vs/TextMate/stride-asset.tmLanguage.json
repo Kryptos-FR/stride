@@ -1,6 +1,13 @@
 {
   "scopeName": "source.stride-asset",
   "name": "Stride Asset",
+  "fileTypes": [
+    "sdscene", "sdprefab", "sdmat", "sdtex", "sdm3d", "sdanim", "sdskel",
+    "sdgfxcomp", "sdgamesettings", "sdsheet", "sdfnt", "sdpkg", "sdsky",
+    "sdsnd", "sdvid", "sdrendertex", "sduipage", "sduilib", "sdnavmesh",
+    "sdhmap", "sdphy", "sdpcfnt", "sdvs", "sdeffectlog", "sdhull",
+    "sdpromodel", "sdprefabmodel", "sdtpl"
+  ],
   "patterns": [
     { "include": "#comment" },
     { "include": "#type-tag" },

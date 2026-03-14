@@ -1,4 +1,5 @@
 using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.LanguageServer.Client;
 using Microsoft.VisualStudio.Utilities;
 
 #pragma warning disable CS0649 // MEF fields are assigned by the composition container
@@ -13,7 +14,7 @@ namespace StrideAssets.VisualStudio
     {
         [Export]
         [Name("stride-asset")]
-        [BaseDefinition("code")]
+        [BaseDefinition(CodeRemoteContentDefinition.CodeRemoteContentTypeName)]
         internal static ContentTypeDefinition? StrideAssetContentType;
 
         // --- File extension mappings ---

@@ -48,14 +48,21 @@ function log(msg: string): void {
 }
 
 connection.onInitialize((params: InitializeParams): InitializeResult => {
-    log(`onInitialize: ${(params.workspaceFolders ?? []).length} workspace folder(s)`);
+    log(`onInitialize: ${(params.workspaceFolders ?? []).length} workspace folder(s), rootUri=${params.rootUri ?? '(none)'}`);
     for (const f of params.workspaceFolders ?? []) {
         log(`  workspace folder URI: ${f.uri}`);
     }
 
-    const workspaceFolders = (params.workspaceFolders ?? []).map(f => {
+    // Use workspaceFolders if available, fall back to rootUri (VS may only send rootUri)
+    let folderUris = (params.workspaceFolders ?? []).map(f => f.uri);
+    if (folderUris.length === 0 && params.rootUri) {
+        log(`  No workspaceFolders, falling back to rootUri: ${params.rootUri}`);
+        folderUris = [params.rootUri];
+    }
+
+    const workspaceFolders = folderUris.map(uri => {
         // Convert URI to file path
-        const url = new URL(f.uri);
+        const url = new URL(uri);
         const fsPath = decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, '$1');
         log(`  resolved path: ${fsPath}`);
         return fsPath;
