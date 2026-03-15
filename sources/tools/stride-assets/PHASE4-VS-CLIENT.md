@@ -1,24 +1,27 @@
 # Phase 4: Visual Studio Client
 
-## Current Status
+## Current Status — REWRITE IN PROGRESS
 
-The VS extension (`sources/tools/stride-assets-vs/`) is functional with the following features:
+The VS extension (`sources/tools/stride-assets-vs/`) is being rewritten from scratch. The previous hybrid VSSDK+Extensibility approach with a Node.js LSP server had fundamental deployment incompatibilities that prevented CodeLens from working. The new approach uses **pure C#** with no Node.js dependency.
 
-### Working
-- **Syntax highlighting** via TextMate grammar (registered through pkgdef)
-- **LSP server connection** via stdio transport (`node server.js --stdio`)
-- **Go-to-definition** for entity references within files
-- **Hover tooltips** (plaintext only — see Known Limitations)
-- **Diagnostics** for broken asset references
-- **C# symbol resolution** via Roslyn workspace (`stride/resolveCSharpSymbol`)
-- **Script navigation** (Ctrl+click on `!Namespace.Type,Assembly` references to jump to C# source)
-- **Settings** via Tools > Options > Stride > Asset Navigator (push-based, live updates)
-- **Output logging** to a dedicated "Stride Asset Navigator" output pane
-- **Debug logging** via `Log.Debug()` — stripped from Release builds via `[Conditional("DEBUG")]`
+See [REWRITE-ROADMAP.md](../stride-assets-vs/REWRITE-ROADMAP.md) for the full plan.
 
-### Not Yet Working (In Progress)
-- **CodeLens** showing reference counts above `Id:` lines — implementation complete (VisualStudio.Extensibility tagger + provider + BackReferenceScanner), but the Extensibility runtime does not activate reliably. See Troubleshooting below.
-- **Back-links** — depends on CodeLens infrastructure working
+### Phase 0 Complete
+- **Syntax highlighting** via TextMate grammar (pkgdef registration from AsyncPackage)
+- **MEF content type definitions** for 28 Stride file extensions (base: `CodeRemoteContentDefinition.CodeRemoteContentTypeName`)
+- **Extensibility runtime entry point** (`StrideExtension : Extension`) with test command
+- **Output logging** utility (`OutputLogger.cs`)
+
+### Removed (from original extension)
+- Node.js LSP server dependency
+- LSP middleware (`SettingsMiddleLayer`)
+- JSON-RPC custom message handler
+- CodeLens code (deferred to Phase 6, needs different approach per official sample)
+- C# symbol handler (deferred to Phase 4)
+- Settings/options page (deferred to Phase 7)
+
+### Not Yet Implemented
+See [REWRITE-ROADMAP.md](../stride-assets-vs/REWRITE-ROADMAP.md) for the full step-by-step plan.
 
 ## Architecture
 

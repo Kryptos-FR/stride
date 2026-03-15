@@ -6,33 +6,24 @@ using Task = System.Threading.Tasks.Task;
 
 namespace StrideAssets.VisualStudio
 {
+    /// <summary>
+    /// Minimal AsyncPackage whose sole purpose is to generate pkgdef entries
+    /// for TextMate grammar registration. The Extensibility deployment doesn't
+    /// process static pkgdef files, so we need a Package class to trigger
+    /// pkgdef generation and VSSDK processing.
+    /// </summary>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [Guid(PackageGuidString)]
-    [ProvideOptionPage(typeof(StrideOptionsPage), "Stride", "Asset Navigator", 0, 0, true)]
+    [Guid("d4b5c6a7-8e9f-4a1b-b2c3-d4e5f6a7b8c9")]
     [ProvideTextMateRepository("StrideAssets", @"$PackageFolder$\TextMate")]
     [ProvideTextMateContentTypeMapping("stride-asset", "source.stride-asset")]
     public sealed class StrideAssetsPackage : AsyncPackage
     {
-        public const string PackageGuidString = "d4b5c6a7-8e9f-4a1b-b2c3-d4e5f6a7b8c9";
-
-        protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
-        {
-            await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-
-            // Load persisted settings and notify subscribers (triggers push to LSP server)
-            var page = (StrideOptionsPage)GetDialogPage(typeof(StrideOptionsPage));
-            StrideSettings.Update(page.DiagnosticsEnabled, page.ScriptNavigationEnabled,
-                page.BackLinksEnabled, page.ScanWorkspaceForBrokenLinks);
-            Log.Debug($"[Package] Settings loaded from registry: diagnostics={StrideSettings.DiagnosticsEnabled}, " +
-                       $"scriptNav={StrideSettings.ScriptNavigationEnabled}, " +
-                       $"backLinks={StrideSettings.BackLinksEnabled}, " +
-                       $"scanWorkspace={StrideSettings.ScanWorkspaceForBrokenLinks}");
-        }
+        protected override Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+            => Task.CompletedTask;
     }
 
     /// <summary>
     /// Registers a TextMate grammar repository directory in the VS registry.
-    /// Generates a pkgdef entry: [$RootKey$\TextMate\Repositories] "id"="path"
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     internal sealed class ProvideTextMateRepositoryAttribute : RegistrationAttribute
@@ -53,14 +44,11 @@ namespace StrideAssets.VisualStudio
         }
 
         public override void Unregister(RegistrationContext context)
-        {
-            context.RemoveKey(@"TextMate\Repositories");
-        }
+            => context.RemoveKey(@"TextMate\Repositories");
     }
 
     /// <summary>
     /// Maps a VS content type to a TextMate grammar scope name.
-    /// Generates a pkgdef entry: [$RootKey$\TextMate\LanguageMapping\ContentTypeMapping] "contentType"="scopeName"
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     internal sealed class ProvideTextMateContentTypeMappingAttribute : RegistrationAttribute
@@ -81,8 +69,6 @@ namespace StrideAssets.VisualStudio
         }
 
         public override void Unregister(RegistrationContext context)
-        {
-            context.RemoveKey(@"TextMate\LanguageMapping\ContentTypeMapping");
-        }
+            => context.RemoveKey(@"TextMate\LanguageMapping\ContentTypeMapping");
     }
 }

@@ -10,12 +10,10 @@ namespace StrideAssets.VisualStudio
     [VisualStudioContribution]
     internal class StrideExtension : Extension
     {
-        // File-based logging for Extensibility lifecycle — the Output pane
-        // may not be initialized when the Extensibility runtime activates.
         private static readonly string DiagLogPath = Path.Combine(
             Path.GetTempPath(), "stride-vs-extension.log");
 
-        private static void DiagLog(string message)
+        internal static void DiagLog(string message)
         {
             try
             {
@@ -33,15 +31,13 @@ namespace StrideAssets.VisualStudio
         protected override void InitializeServices(IServiceCollection serviceCollection)
         {
             base.InitializeServices(serviceCollection);
-            DiagLog("[Extension] InitializeServices called — VisualStudio.Extensibility runtime activated");
-            Log.Debug("[Extension] InitializeServices called");
+            DiagLog("[Extension] InitializeServices called — Extensibility runtime activated");
         }
 
         protected override async Task OnInitializedAsync(VisualStudioExtensibility extensibility, CancellationToken cancellationToken)
         {
             await base.OnInitializedAsync(extensibility, cancellationToken);
-            DiagLog("[Extension] OnInitializedAsync completed — extension parts are now available");
-            Log.Debug("[Extension] OnInitializedAsync completed");
+            DiagLog("[Extension] OnInitializedAsync completed");
         }
     }
 }

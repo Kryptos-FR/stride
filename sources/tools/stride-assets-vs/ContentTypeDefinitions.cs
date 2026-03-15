@@ -8,7 +8,6 @@ namespace StrideAssets.VisualStudio
 {
     /// <summary>
     /// Defines the "stride-asset" content type and maps all Stride asset file extensions to it.
-    /// This enables the LSP client to activate for these file types.
     /// </summary>
     internal static class ContentTypeDefinitions
     {
