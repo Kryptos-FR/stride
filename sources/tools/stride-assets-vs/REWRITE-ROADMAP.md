@@ -246,6 +246,33 @@ Source:     ^\s*Source:\s+(.+)
 
 **Test**: F12 or Ctrl+click on `!SpaceEscape.CharacterScript,SpaceEscape.Game` → opens `CharacterScript.cs` at class declaration.
 
+### Phase 4.5: Inline Ref Hints ✅ DONE
+
+**Goal**: Show the entity/asset name inline after every `ref!! <guid>` value.
+
+**Approach**: `IAdornmentLayer` + `ITextViewCreationListener` (MEF, in-proc).
+- `RefInlayHintManager` subscribes to `ITextView.LayoutChanged`
+- On each layout change, re-renders only `e.NewOrReformattedLines` (no flicker on scroll)
+- Looks up GUID in `AssetIndex`:
+  - Entity GUID → entity `Name` directly
+  - Component GUID → `OwnerName` (enclosing entity name, tracked during parse)
+  - Top-level asset GUID → asset filename (fallback)
+- Positions a gray italic `TextBlock` at the right edge of the GUID via `Canvas.SetLeft/Top`
+- `AdornmentPositioningBehavior.TextRelative` anchors adornment to the `ref!!` span — VS auto-removes it when the text changes
+- `RefInlayHintManager.Enabled` static flag (default `true`) — wired to Phase 7 `DialogPage`
+- Setting is independent from Roslyn inlay hints (different file type, different purpose)
+
+**Component owner tracking** (`AssetParser.ParseParts`):
+- `AssetPartEntry` gains `OwnerName: string?`
+- First indented `Id:` indent seen = entity level; deeper indents = component level
+- Component parts get `OwnerName = currentEntityName` (the enclosing entity's name)
+
+**New files**: `RefInlayHintManager.cs`
+
+**Modified files**: `AssetParser.cs` (`OwnerName` field + entity-tracking in `ParseParts`), `RefInlayHintManager.cs`
+
+**Test**: Open `Scene.sdscene` → `ref!!` lines show gray italic `⟨EntityName⟩` after each GUID (entity refs, component refs, and Children refs all resolve to the owning entity name).
+
 ### Phase 5: Diagnostics
 
 **Goal**: Squiggly underlines on broken asset references.

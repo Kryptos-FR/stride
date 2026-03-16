@@ -23,18 +23,22 @@ namespace StrideAssets.VisualStudio
 
     internal sealed class AssetPartEntry
     {
-        public AssetPartEntry(string id, string filePath, int line, string? name)
+        public AssetPartEntry(string id, string filePath, int line, string? name, string? ownerName = null)
         {
             Id = id;
             FilePath = filePath;
             Line = line;
             Name = name;
+            OwnerName = ownerName;
         }
 
         public string Id { get; }
         public string FilePath { get; }
         public int Line { get; }
+        /// <summary>Entity name, set for entity-level parts.</summary>
         public string? Name { get; }
+        /// <summary>Owning entity name, set for component-level parts.</summary>
+        public string? OwnerName { get; }
     }
 
     internal sealed class BackReference
@@ -179,6 +183,11 @@ namespace StrideAssets.VisualStudio
             var parts = new List<AssetPartEntry>();
             var lines = content.Split('\n');
 
+            // Track the current entity context to assign OwnerName to component-level parts.
+            // The first Id: indent seen is the entity level; deeper indents are components.
+            int? entityIndent = null;
+            string? currentEntityName = null;
+
             for (int i = 0; i < lines.Length; i++)
             {
                 var line = lines[i];
@@ -194,26 +203,38 @@ namespace StrideAssets.VisualStudio
                 var partId = idMatch.Groups[1].Value.ToLowerInvariant();
                 var indent = line.Length - line.TrimStart().Length;
 
-                // Look ahead for sibling Name: at the same indentation
-                string? name = null;
-                for (int j = i + 1; j < Math.Min(i + 6, lines.Length); j++)
+                bool isEntity = (entityIndent == null || indent <= entityIndent);
+                if (isEntity)
                 {
-                    var next = lines[j];
-                    if (string.IsNullOrWhiteSpace(next))
-                        continue;
-                    var nextIndent = next.Length - next.TrimStart().Length;
-                    if (nextIndent != indent)
-                        break;
-                    var trimmed = next.TrimStart();
-                    if (trimmed.StartsWith("Name:", StringComparison.Ordinal))
-                    {
-                        name = trimmed.Substring(5).Trim();
-                        break;
-                    }
-                    break; // different field at same indent — no Name sibling
-                }
+                    entityIndent = indent;
 
-                parts.Add(new AssetPartEntry(partId, filePath, i + 1, name));
+                    // Look ahead for sibling Name: at the same indentation
+                    string? name = null;
+                    for (int j = i + 1; j < Math.Min(i + 6, lines.Length); j++)
+                    {
+                        var next = lines[j];
+                        if (string.IsNullOrWhiteSpace(next))
+                            continue;
+                        var nextIndent = next.Length - next.TrimStart().Length;
+                        if (nextIndent != indent)
+                            break;
+                        var trimmed = next.TrimStart();
+                        if (trimmed.StartsWith("Name:", StringComparison.Ordinal))
+                        {
+                            name = trimmed.Substring(5).Trim();
+                            break;
+                        }
+                        break; // different field at same indent — no Name sibling
+                    }
+
+                    currentEntityName = name;
+                    parts.Add(new AssetPartEntry(partId, filePath, i + 1, name, ownerName: null));
+                }
+                else
+                {
+                    // Component-level Id — no Name: field exists in YAML for components.
+                    parts.Add(new AssetPartEntry(partId, filePath, i + 1, name: null, ownerName: currentEntityName));
+                }
             }
 
             return parts;
