@@ -174,27 +174,32 @@ Switching between deployment modes or VSIX Identity IDs causes persistent proble
 3. Tools menu → "Stride: Test Extension" command exists
 4. Open `.sdscene` file → syntax coloring visible
 
-### Phase 1: Asset Parsing Engine
+### Phase 1: Asset Parsing Engine ✅ DONE
 
 **Goal**: In-memory index of all Stride assets, with live updates.
 
 **New files**:
 - `AssetParser.cs` — regex extraction of Id, references, parts, type refs from one file
-- `AssetIndex.cs` — dictionaries: guid→asset, guid→part, path→asset, guid→backRefs
-- `WorkspaceScanner.cs` — `.sdpkg` discovery, asset folder scanning, `FileSystemWatcher`
+- `AssetIndex.cs` — thread-safe dictionaries: guid→asset, guid→part, guid→backRefs, with reverse file indexes
+- `WorkspaceScanner.cs` — recursive file discovery, `FileSystemWatcher` (64 KB buffer)
 
-**Integration**: Initialize from `StrideAssetsPackage.InitializeAsync` (runs on package load). Use solution directory from `IVsSolution`.
+**Integration**: `StrideAssetsPackage.InitializeAsync` → `Log.Initialize` → `IVsSolution.GetSolutionInfo` → `JoinableTaskFactory.RunAsync` + `FileAndForget` for background scan.
 
-**Regex patterns** (ported from TypeScript server):
+**Key design decisions**:
+- `[GeneratedRegex]` not available in net472 → use `new Regex(..., RegexOptions.Compiled)`
+- `lock` not `SemaphoreSlim` → index operations are purely synchronous, no await inside lock
+- `FileSystemWatcher` not `IVsFileChangeEx` → simpler, no COM; buffer doubled to 64 KB to reduce missed events
+- Fire-and-forget via `JoinableTaskFactory.RunAsync(...).FileAndForget(...)` → VS tracks the task for shutdown coordination and surfaces exceptions
+
+**Regex patterns** (ported from TypeScript referencePattern.ts):
 ```
-Id line:        ^\s*Id:\s+([0-9a-f-]{36})
-Asset ref:      ([0-9a-f-]{36}):(\S+)
-Part ref:       ref!!\s+([0-9a-f-]{36})
-Type ref:       !([A-Za-z_][\w.]*(?:,\s*[A-Za-z_][\w.]*)?)
-Property key:   ^(\s*)(\w[\w\s]*):\s
+Id line:    ^\s*Id:\s+([0-9a-fA-F]{8}-...-[0-9a-fA-F]{12})
+Asset ref:  (GUID):([^\s,}\]]+(?:\s+[^\s,}\]]+)*)
+Type tag:   ^!([A-Za-z_][\w.]*(?:,\s*[A-Za-z_][\w.]*)?)
+Source:     ^\s*Source:\s+(.+)
 ```
 
-**Test**: Output pane → "Indexed N assets from M files".
+**Test**: Output pane → "Indexed N assets, M parts, K back-references".
 
 ### Phase 2: Hover Tooltips
 
