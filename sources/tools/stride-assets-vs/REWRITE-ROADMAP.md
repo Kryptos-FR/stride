@@ -201,7 +201,7 @@ Source:     ^\s*Source:\s+(.+)
 
 **Test**: Output pane → "Indexed N assets, M parts, K back-references".
 
-### Phase 2: Hover Tooltips
+### Phase 2: Hover Tooltips ✅ DONE
 
 **Goal**: Hover on GUID references shows asset info.
 
