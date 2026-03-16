@@ -222,6 +222,8 @@ Source:     ^\s*Source:\s+(.+)
 - Top-level assets → open file at line 0; entity parts → jump to exact `Id:` line
 - WPF assemblies added to csproj: `PresentationCore`, `PresentationFramework`, `System.Xaml`, `WindowsBase`
 
+**Bonus**: Ctrl+hover shows underline + hand cursor (`ITagger<ClassificationTag>` + `HoverLinkState` per-buffer, lazily wired via `ITextBuffer.Properties`).
+
 **Future**: Peek Definition (Alt+F12) via `IPeekableItemSourceProvider` — deferred, more complex.
 
 **Test**: F12 or Ctrl+click on `GUID:AssetName` → jumps to target file at `Id:` line.

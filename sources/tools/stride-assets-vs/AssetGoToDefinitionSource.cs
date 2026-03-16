@@ -144,24 +144,43 @@ namespace StrideAssets.VisualStudio
     internal sealed class AssetMouseProcessorProvider : IMouseProcessorProvider
     {
         public IMouseProcessor GetAssociatedProcessor(IWpfTextView wpfTextView)
-            => new AssetMouseProcessor(wpfTextView);
+        {
+            // Store HoverLinkState in the buffer so both this processor and the tagger
+            // (created independently by MEF) can share it via buffer.Properties.
+            var state = wpfTextView.TextBuffer.Properties.GetOrCreateSingletonProperty(
+                typeof(HoverLinkState), () => new HoverLinkState());
+            return new AssetMouseProcessor(wpfTextView, state);
+        }
     }
 
     internal sealed class AssetMouseProcessor : MouseProcessorBase
     {
         private readonly IWpfTextView _view;
+        private readonly HoverLinkState _hoverState;
 
-        public AssetMouseProcessor(IWpfTextView view) => _view = view;
+        public AssetMouseProcessor(IWpfTextView view, HoverLinkState hoverState)
+        {
+            _view = view;
+            _hoverState = hoverState;
+        }
+
+        public override void PreprocessMouseMove(System.Windows.Input.MouseEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
+                UpdateHover(e.GetPosition(_view.VisualElement));
+            else
+                ClearHover();
+        }
+
+        public override void PostprocessMouseLeave(System.Windows.Input.MouseEventArgs e)
+            => ClearHover();
 
         public override void PostprocessMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs e)
         {
             if ((Keyboard.Modifiers & ModifierKeys.Control) == 0) return;
 
             var point = e.GetPosition(_view.VisualElement);
-            var line = _view.TextViewLines.GetTextViewLineContainingYCoordinate(point.Y + _view.ViewportTop);
-            if (line == null) return;
-
-            SnapshotPoint? bufferPos = line.GetBufferPositionFromXCoordinate(point.X + _view.ViewportLeft);
+            var bufferPos = GetBufferPosition(point);
             if (bufferPos == null) return;
 
             var textLine = bufferPos.Value.GetContainingLine();
@@ -170,6 +189,48 @@ namespace StrideAssets.VisualStudio
             ThreadHelper.ThrowIfNotOnUIThread();
             if (AssetNavigation.TryNavigate(textLine.GetText(), col))
                 e.Handled = true;
+        }
+
+        private void UpdateHover(System.Windows.Point point)
+        {
+            var bufferPos = GetBufferPosition(point);
+            if (bufferPos == null) { ClearHover(); return; }
+
+            var textLine = bufferPos.Value.GetContainingLine();
+            var lineText = textLine.GetText();
+            var col = bufferPos.Value.Position - textLine.Start.Position;
+
+            foreach (System.Text.RegularExpressions.Match m in AssetNavigation.GuidRegex.Matches(lineText))
+            {
+                if (col < m.Index || col > m.Index + m.Length) continue;
+
+                var guid = m.Value.ToLowerInvariant();
+                bool inIndex = AssetIndex.Instance.LookupGuid(guid) != null
+                            || AssetIndex.Instance.LookupPart(guid) != null;
+                if (inIndex)
+                {
+                    var span = new SnapshotSpan(bufferPos.Value.Snapshot,
+                        textLine.Start.Position + m.Index, m.Length);
+                    _hoverState.Update(span);
+                    _view.VisualElement.Cursor = System.Windows.Input.Cursors.Hand;
+                    return;
+                }
+                break;
+            }
+            ClearHover();
+        }
+
+        private void ClearHover()
+        {
+            _hoverState.Update(null);
+            _view.VisualElement.Cursor = null; // restore I-beam
+        }
+
+        private SnapshotPoint? GetBufferPosition(System.Windows.Point point)
+        {
+            var line = _view.TextViewLines.GetTextViewLineContainingYCoordinate(
+                point.Y + _view.ViewportTop);
+            return line?.GetBufferPositionFromXCoordinate(point.X + _view.ViewportLeft);
         }
     }
 }
