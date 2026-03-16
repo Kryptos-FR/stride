@@ -212,15 +212,19 @@ Source:     ^\s*Source:\s+(.+)
 
 **Test**: Hover on `GUID:AssetName` → tooltip with asset type, name, file path.
 
-### Phase 3: Go-to-Definition
+### Phase 3: Go-to-Definition ✅ DONE
 
-**Goal**: Ctrl+click on references navigates to target.
+**Goal**: F12 and Ctrl+click on GUID references navigate to the target asset or entity.
 
-- `ITextViewCreationListener` or mouse processor (MEF, VSSDK)
-- GUID → file:line from AssetIndex
-- Open document and navigate
+- `ITextViewCreationListener` + `IOleCommandTarget` filter for F12 (`GotoDefn` command)
+- `IMouseProcessorProvider` + `MouseProcessorBase` for Ctrl+click (`PostprocessMouseLeftButtonUp`)
+- Shared `AssetNavigation` helper: GUID regex, `TryNavigate`, `NavigateTo` (`VsShellUtilities.OpenDocument` + `SetCaretPos`)
+- Top-level assets → open file at line 0; entity parts → jump to exact `Id:` line
+- WPF assemblies added to csproj: `PresentationCore`, `PresentationFramework`, `System.Xaml`, `WindowsBase`
 
-**Test**: Ctrl+click `GUID:AssetName` → jumps to target file at `Id:` line.
+**Future**: Peek Definition (Alt+F12) via `IPeekableItemSourceProvider` — deferred, more complex.
+
+**Test**: F12 or Ctrl+click on `GUID:AssetName` → jumps to target file at `Id:` line.
 
 ### Phase 4: Script Navigation (Roslyn)
 
