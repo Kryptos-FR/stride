@@ -228,15 +228,23 @@ Source:     ^\s*Source:\s+(.+)
 
 **Test**: F12 or Ctrl+click on `GUID:AssetName` → jumps to target file at `Id:` line.
 
-### Phase 4: Script Navigation (Roslyn)
+### Phase 4: Script Navigation (Roslyn) ✅ DONE
 
-**Goal**: Ctrl+click on `!Namespace.Type,Assembly` jumps to C# source.
+**Goal**: F12 and Ctrl+click on `!Namespace.Type,Assembly` jump to C# source.
 
-- Add `Microsoft.VisualStudio.LanguageServices` package
-- `CSharpSymbolHandler` resolves type/member via Roslyn workspace
-- Wire into go-to-definition handler
+**New files**:
+- `CSharpNavigation.cs` — `TypeTagRegex`, `TryNavigate`, `ResolveAndNavigate` via `IComponentModel → VisualStudioWorkspace → TryGetCompilation → GetTypeByMetadataName`
 
-**Test**: Ctrl+click `!MyNamespace.MyScript,MyProject` → jumps to C# source file.
+**Modified files**:
+- `AssetGoToDefinitionSource.cs` — `AssetNavigation.TryNavigate` delegates to `CSharpNavigation.TryNavigate` first; `AssetMouseProcessor.UpdateHover` also underlines type tags on Ctrl+hover
+- `StrideAssets.VisualStudio.csproj` — added `Microsoft.VisualStudio.LanguageServices 4.6.0`
+
+**Key design decisions**:
+- `TryGetCompilation` — synchronous cached compilation, no await needed; gracefully skips if not yet compiled
+- Type tags checked before GUIDs in `TryNavigate` (`!` prefix makes them unambiguous)
+- Ctrl+hover underlines all `!TypeName` tags regardless of whether Roslyn has resolved them (avoids false negatives on uncompiled projects)
+
+**Test**: F12 or Ctrl+click on `!SpaceEscape.CharacterScript,SpaceEscape.Game` → opens `CharacterScript.cs` at class declaration.
 
 ### Phase 5: Diagnostics
 

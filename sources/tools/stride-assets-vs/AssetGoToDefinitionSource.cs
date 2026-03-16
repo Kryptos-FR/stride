@@ -32,6 +32,12 @@ namespace StrideAssets.VisualStudio
         internal static bool TryNavigate(string lineText, int col)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+
+            // 1. Type tag: !TypeName,Assembly → C# source via Roslyn
+            if (CSharpNavigation.TryNavigate(lineText, col))
+                return true;
+
+            // 2. GUID → asset file
             foreach (Match m in GuidRegex.Matches(lineText))
             {
                 if (col < m.Index || col > m.Index + m.Length)
@@ -126,8 +132,10 @@ namespace StrideAssets.VisualStudio
             {
                 var caretPos = _view.Caret.Position.BufferPosition;
                 var line = caretPos.GetContainingLine();
+                var lineText = line.GetText();
                 var col = caretPos.Position - line.Start.Position;
-                if (AssetNavigation.TryNavigate(line.GetText(), col))
+                if (AssetNavigation.TryNavigate(lineText, col)
+                    || CSharpNavigation.TryNavigateToProperty(lineText, col, caretPos.Snapshot, line.LineNumber))
                     return VSConstants.S_OK;
             }
             return NextTarget?.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)
@@ -187,7 +195,9 @@ namespace StrideAssets.VisualStudio
             var col = bufferPos.Value.Position - textLine.Start.Position;
 
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (AssetNavigation.TryNavigate(textLine.GetText(), col))
+            var lineText2 = textLine.GetText();
+            if (AssetNavigation.TryNavigate(lineText2, col)
+                || CSharpNavigation.TryNavigateToProperty(lineText2, col, bufferPos.Value.Snapshot, textLine.LineNumber))
                 e.Handled = true;
         }
 
@@ -217,6 +227,38 @@ namespace StrideAssets.VisualStudio
                 }
                 break;
             }
+
+            // Check for type tag: !TypeName,Assembly — only underline if the assembly is a local project
+            foreach (System.Text.RegularExpressions.Match m in CSharpNavigation.TypeTagRegex.Matches(lineText))
+            {
+                if (col < m.Index || col > m.Index + m.Length) continue;
+                if (!CSharpNavigation.IsLocalAssembly(m.Groups[3].Value)) break;
+                var span = new SnapshotSpan(bufferPos.Value.Snapshot,
+                    textLine.Start.Position + m.Index, m.Length);
+                _hoverState.Update(span);
+                _view.VisualElement.Cursor = System.Windows.Input.Cursors.Hand;
+                return;
+            }
+
+            // Check for YAML property name — only underline if the enclosing type is a local project
+            var pm = CSharpNavigation.PropertyNameRegex.Match(lineText);
+            if (pm.Success)
+            {
+                var nameGroup = pm.Groups[1];
+                if (col >= nameGroup.Index && col <= nameGroup.Index + nameGroup.Length
+                    && nameGroup.Value != "Id"
+                    && CSharpNavigation.TryGetEnclosingTypeTag(bufferPos.Value.Snapshot, textLine.LineNumber,
+                        lineText, out _, out var propAssembly)
+                    && CSharpNavigation.IsLocalAssembly(propAssembly))
+                {
+                    var span = new SnapshotSpan(bufferPos.Value.Snapshot,
+                        textLine.Start.Position + nameGroup.Index, nameGroup.Length);
+                    _hoverState.Update(span);
+                    _view.VisualElement.Cursor = System.Windows.Input.Cursors.Hand;
+                    return;
+                }
+            }
+
             ClearHover();
         }
 
