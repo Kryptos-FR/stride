@@ -120,8 +120,7 @@ namespace StrideAssets.VisualStudio
                 if (entry != null)
                     AssetIndex.Instance.AddAsset(entry);
 
-                if (AssetParser.IsComposite(filePath))
-                    ReindexPartsOnly(filePath);
+                ReindexPartsOnly(filePath);
             }
             catch (Exception ex)
             {

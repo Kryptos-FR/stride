@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text.RegularExpressions;
 
 namespace StrideAssets.VisualStudio
@@ -104,15 +103,6 @@ namespace StrideAssets.VisualStudio
             RegexOptions.Compiled | RegexOptions.Multiline);
 
         private const int HeaderReadLength = 1000;
-
-        // Composite asset types that contain parts (entities, UI elements)
-        private static readonly HashSet<string> CompositeExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".sdscene", ".sdprefab", ".sduipage", ".sduilib"
-        };
-
-        public static bool IsComposite(string filePath)
-            => CompositeExtensions.Contains(Path.GetExtension(filePath));
 
         /// <summary>
         /// Fast header parse — examines at most the first 1000 chars.

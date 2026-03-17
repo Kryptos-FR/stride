@@ -273,15 +273,31 @@ Source:     ^\s*Source:\s+(.+)
 
 **Test**: Open `Scene.sdscene` → `ref!!` lines show gray italic `⟨EntityName⟩` after each GUID (entity refs, component refs, and Children refs all resolve to the owning entity name).
 
-### Phase 5: Diagnostics
+### Phase 5: Diagnostics ✅ DONE
 
-**Goal**: Squiggly underlines on broken asset references.
+**Goal**: Squiggly underlines on broken asset references, malformed GUIDs, and missing source files.
 
-- `ITaggerProvider<IErrorTag>` (MEF, VSSDK)
-- Scan document for GUID references, check against AssetIndex
-- Debounce on document changes
+**New files**: `AssetDiagnosticsTagger.cs`
 
-**Test**: Reference to non-existent GUID → yellow warning squiggle.
+**Modified files**: `AssetIndex.cs` (added `static event Action? IndexUpdated`), `AssetParser.cs` (removed `IsComposite`/`CompositeExtensions`), `WorkspaceScanner.cs` (always index parts for all file types)
+
+**Five diagnostic passes** (all debounced 500ms on edit, 200ms on index update):
+1. `GUID:Name` — unresolved GUID → **warning** (yellow)
+2. `ref!! GUID` — unresolved part GUID → **warning** (yellow)
+3. `GUID:Name` — malformed GUID slot (lenient hex+dash pattern) → **error** (red)
+4. `ref!! <token>` — token is not a valid GUID → **error** (red)
+5. `Source: <path>` — file not found on disk → **error** (red); path resolved relative to asset file dir; skips YAML type refs (`!`) and `null`
+
+**Part indexing**: Removed `IsComposite` extension allowlist — all `.sd*` file types are now parsed for internal parts structurally (any file with indented `Id:` lines). Fixes `.sdgfxcomp` and any future composite type.
+
+**`AssetIndex.IndexUpdated`**: Static event fired after `UpdateFile`/`RemoveFile` so open taggers refresh when the workspace index changes, without requiring a buffer edit.
+
+**Test**:
+1. Open `Scene.sdscene` → no squiggles
+2. Corrupt a GUID → yellow warning after ~500ms
+3. Change `ref!!` GUID to `ref!! not-a-guid` → red error squiggle
+4. Change `Source:` to non-existent path → red error squiggle
+5. Open `GraphicsCompositor.sdgfxcomp` → `ref!!` hints show part names, no false-positive warnings
 
 ### Phase 6: CodeLens
 
