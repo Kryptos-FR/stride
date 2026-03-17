@@ -38,6 +38,12 @@ namespace StrideAssets.VisualStudio
         private readonly Dictionary<string, HashSet<string>> _backRefsByFile =
             new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Fired (outside the lock) after <see cref="UpdateFile"/> or <see cref="RemoveFile"/>
+        /// completes so that open document taggers can refresh their diagnostics.
+        /// </summary>
+        internal static event Action? IndexUpdated;
+
         private AssetIndex() { }
 
         public void AddAsset(AssetEntry entry)
@@ -83,6 +89,7 @@ namespace StrideAssets.VisualStudio
         {
             lock (_lock)
                 RemoveFileUnsafe(filePath);
+            IndexUpdated?.Invoke();
         }
 
         /// <summary>
@@ -126,6 +133,7 @@ namespace StrideAssets.VisualStudio
                     guids.Add(key);
                 }
             }
+            IndexUpdated?.Invoke();
         }
 
         public AssetEntry? LookupGuid(string guid)
