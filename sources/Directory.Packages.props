@@ -42,6 +42,9 @@
     <PackageVersion Include="WinPixEventRuntime" Version="1.0.240308001" />
   </ItemGroup>
   <!-- Other dependencies -->
+  <PropertyGroup>
+    <NuGetVersion>7.3.1</NuGetVersion>
+  </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="JetBrains.Rider.PathLocator" Version="1.0.12" />
     <PackageVersion Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
@@ -62,11 +65,11 @@
     <PackageVersion Include="Mono.Options" Version="6.12.0.148" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <!-- 7.3.1 matches what .NET 10 SDK 10.0.202 ships. -->
-    <PackageVersion Include="NuGet.Commands" Version="7.3.1" />
-    <PackageVersion Include="NuGet.Configuration" Version="7.3.1" />
-    <PackageVersion Include="NuGet.PackageManagement" Version="7.3.1" />
-    <PackageVersion Include="NuGet.Protocol" Version="7.3.1" />
-    <PackageVersion Include="NuGet.Resolver" Version="7.3.1" />
+    <PackageVersion Include="NuGet.Commands" Version="$(NuGetVersion)" />
+    <PackageVersion Include="NuGet.Configuration" Version="$(NuGetVersion)" />
+    <PackageVersion Include="NuGet.PackageManagement" Version="$(NuGetVersion)" />
+    <PackageVersion Include="NuGet.Protocol" Version="$(NuGetVersion)" />
+    <PackageVersion Include="NuGet.Resolver" Version="$(NuGetVersion)" />
     <PackageVersion Include="Silk.NET.Assimp" Version="2.22.0" />
     <PackageVersion Include="Stride.GNU.Getopt" Version="2.0.0" />
     <PackageVersion Include="Stride.GNU.Gettext" Version="2.0.0" />
