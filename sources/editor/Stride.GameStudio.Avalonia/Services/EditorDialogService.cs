@@ -2,9 +2,11 @@
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
 using Avalonia.Controls;
+using Stride.Core.Assets.Editor.Avalonia.Views;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.Settings;
 using Stride.Core.Assets.Editor.ViewModels;
+using Stride.Core.Assets.Presentation.ViewModels;
 using Stride.Core.Presentation.Avalonia.Services;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Presentation.ViewModels;
@@ -108,6 +110,22 @@ internal class EditorDialogService : DialogService, IEditorDialogService
             {
                 DataContext = new SettingsViewModel(serviceProvider, EditorSettings.SettingsContainer.CurrentProfile)
             }.ShowDialog(MainWindow);
+        });
+    }
+
+    public async Task<AssetViewModel?> OpenAssetPickerAsync(
+        SessionViewModel session,
+        IEnumerable<Type> acceptedTypes,
+        Func<AssetViewModel, bool>? filter = null)
+    {
+        if (MainWindow is null) return null;
+
+        return await Dispatcher.InvokeTask(async () =>
+        {
+            var vm = new AssetPickerViewModel(session, acceptedTypes, filter);
+            var window = new AssetPickerWindow { DataContext = vm };
+            var confirmed = await window.ShowDialog<bool>(MainWindow);
+            return confirmed ? vm.SelectedAsset : null;
         });
     }
 }

@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+        xmlns:caevm="using:Stride.Core.Assets.Editor.ViewModels"
+        xmlns:capvm="using:Stride.Core.Assets.Presentation.ViewModels"
+        mc:Ignorable="d"
+        x:Class="Stride.Core.Assets.Editor.Avalonia.Views.AssetPickerWindow"
+        x:DataType="caevm:AssetPickerViewModel"
+        Title="Pick an Asset"
+        Width="700" Height="500"
+        MinWidth="400" MinHeight="300"
+        WindowStartupLocation="CenterOwner">
+  <Grid RowDefinitions="*,Auto">
+
+    <!-- Main two-pane area -->
+    <Grid Grid.Row="0" ColumnDefinitions="200,Auto,*">
+
+      <!-- Left: Folder tree -->
+      <TreeView Grid.Column="0"
+                ItemsSource="{Binding AllPackages}"
+                SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
+                Margin="4">
+        <TreeView.ItemTemplate>
+          <TreeDataTemplate DataType="{x:Type capvm:PackageViewModel}"
+                            ItemsSource="{Binding Content}">
+            <TextBlock Text="{Binding Name}" />
+          </TreeDataTemplate>
+        </TreeView.ItemTemplate>
+      </TreeView>
+
+      <GridSplitter Grid.Column="1" Width="4" ResizeDirection="Columns" />
+
+      <!-- Right: Search + asset list -->
+      <DockPanel Grid.Column="2" Margin="4">
+        <TextBox DockPanel.Dock="Top"
+                 PlaceholderText="Search assets..."
+                 Text="{Binding SearchText, Mode=TwoWay}"
+                 Margin="0,0,0,4" />
+        <ListBox ItemsSource="{Binding FilteredAssets}"
+                 SelectedItem="{Binding SelectedAsset, Mode=TwoWay}">
+          <ListBox.ItemTemplate>
+            <DataTemplate DataType="{x:Type capvm:AssetViewModel}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding AssetType.Name}"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                           FontSize="11" VerticalAlignment="Center" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Grid>
+
+    <!-- Bottom buttons -->
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="8">
+      <Button Content="OK" IsDefault="True"
+              IsEnabled="{Binding SelectedAsset, Converter={sd:ObjectToBool}}"
+              Click="OnOkClick" Width="80" />
+      <Button Content="Cancel" IsCancel="True"
+              Click="OnCancelClick" Width="80" />
+    </StackPanel>
+  </Grid>
+</Window>
