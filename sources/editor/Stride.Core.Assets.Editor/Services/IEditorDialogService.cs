@@ -9,4 +9,6 @@ namespace Stride.Core.Assets.Editor.Services;
 public interface IEditorDialogService : IDialogService
 {
     void ShowProgressWindow(WorkProgressViewModel workProgress);
+
+    void ShowNotification(WorkProgressViewModel workProgress);
 }

@@ -27,7 +27,7 @@
     </ResourceDictionary>
   </UserControl.Resources>
 
-  <Grid RowDefinitions="Auto, *, 25"
+  <Grid RowDefinitions="Auto, *, Auto, 25"
         Background="Transparent">
     <!-- Menus -->
     <Menu Grid.Row="0" Grid.Column="0"
@@ -218,8 +218,38 @@
       </Grid>
     </Grid>
 
+    <!-- Notifications -->
+    <ItemsControl Grid.Row="2"
+                  ItemsSource="{Binding Notifications.ActiveNotifications}"
+                  IsVisible="{Binding Notifications.ActiveNotifications.Count, Converter={sd:NumericToBool}}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate DataType="caevm:WorkProgressViewModel">
+          <Border Padding="8,4" BorderThickness="0,1,0,0" BorderBrush="Gray">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+              <TextBlock Grid.Column="0"
+                         VerticalAlignment="Center"
+                         Margin="0,0,8,0"
+                         Text="{Binding Title}"/>
+              <ProgressBar Grid.Column="1"
+                           VerticalAlignment="Center"
+                           Height="16"
+                           Margin="4,0"
+                           IsIndeterminate="{Binding IsIndeterminate}"
+                           Maximum="1"
+                           Value="{Binding ProgressValue}"/>
+              <Button Grid.Column="2"
+                      Content="Cancel"
+                      Margin="8,0,0,0"
+                      Command="{Binding CancelCommand}"
+                      IsVisible="{Binding IsCancellable}"/>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
     <!-- Status bar -->
-    <Grid Grid.Row="2"
+    <Grid Grid.Row="3"
           IsVisible="{Binding Session, Converter={sd:ObjectToBool}}"
           ColumnDefinitions="2*, Auto, *, Auto, *, 100">
       <TextBlock Grid.Column="0"

@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Components.Status;
+using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Extensions;
 using Stride.Core.IO;
@@ -48,6 +49,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
 
         Status = new StatusViewModel(ServiceProvider);
         Status.PushStatus("Ready");
+        Notifications = serviceProvider.Get<INotificationService>();
     }
 
     public SessionViewModel? Session
@@ -57,6 +59,8 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
     }
 
     public StatusViewModel Status { get; }
+
+    public INotificationService Notifications { get; }
 
     public string Title
     {

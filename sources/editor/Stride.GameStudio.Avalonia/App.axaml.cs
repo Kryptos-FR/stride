@@ -13,6 +13,7 @@ using MarkView.Avalonia;
 using MarkView.Avalonia.Rendering;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.Settings;
+using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.IO;
 using Stride.Core.Presentation.Avalonia.Extensions;
 using Stride.Core.Presentation.Avalonia.Services;
@@ -185,6 +186,7 @@ public partial class App : Application
         };
         var serviceProvider = new ViewModelServiceProvider(services);
         serviceProvider.RegisterService(new EditorDebugService(serviceProvider));
+        serviceProvider.RegisterService(new NotificationsViewModel(serviceProvider));
         serviceProvider.RegisterService(new EditorDialogService(serviceProvider));
         return serviceProvider;
     }

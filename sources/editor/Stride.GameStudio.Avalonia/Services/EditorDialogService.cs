@@ -16,11 +16,13 @@ internal class EditorDialogService : DialogService, IEditorDialogService
 {
     private DebugWindow? debugWindow;
     private readonly IViewModelServiceProvider serviceProvider;
+    private readonly INotificationService notifications;
 
     public EditorDialogService(IViewModelServiceProvider serviceProvider)
         : base(serviceProvider.Get<IDispatcherService>())
     {
         this.serviceProvider = serviceProvider;
+        this.notifications = serviceProvider.Get<INotificationService>();
     }
 
     public async Task ShowAboutWindowAsync()
@@ -89,6 +91,11 @@ internal class EditorDialogService : DialogService, IEditorDialogService
         {
             workProgress.NotifyWindowClosed();
         }
+    }
+
+    public void ShowNotification(WorkProgressViewModel workProgress)
+    {
+        notifications.AddNotification(workProgress);
     }
 
     public async Task ShowSettingsWindowAsync()

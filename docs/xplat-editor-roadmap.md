@@ -288,6 +288,7 @@ The roadmap is structured as successive PoC and MVP milestones. Each milestone i
 - [ ] **Crash report** — Avalonia-side crash reporting dialog and log submission
 - [ ] **Build integration** — full MSBuild-based project build, error list, output log
 - [ ] **Plugin system** — dynamic assembly loading so Stride-specific plugins (and 3rd-party ones) are not hard-referenced
+- [ ] **Dependency injection** — replace the ad-hoc `ViewModelServiceProvider` (manual `RegisterService`/`Get<T>`) with a proper DI container, enabling cleaner service lifetimes, constructor injection, and a proper plugin system
 - [ ] **Translation/localization UI** — populate the `Stride.Core.Translation.Presentation` placeholder with Avalonia helpers
 - [ ] **Cross-platform polish** — test and fix Linux/macOS-specific rendering, keyboard shortcuts, file dialogs
 - [ ] **Performance & accessibility** — virtualized tree/tile panels, keyboard navigation, high-DPI support
