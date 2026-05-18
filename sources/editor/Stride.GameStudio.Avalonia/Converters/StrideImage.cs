@@ -12,6 +12,10 @@ public sealed class StrideImage : OneWayValueConverter<StrideImage>
     {
         if (value == null) return AvaloniaProperty.UnsetValue;
 
+        // Already an Avalonia image (e.g. from static thumbnails) — pass through
+        if (value is global::Avalonia.Media.IImage)
+            return value;
+
         try
         {
             // FIXME xplat-editor this is a first attempt ut it's very likely broken

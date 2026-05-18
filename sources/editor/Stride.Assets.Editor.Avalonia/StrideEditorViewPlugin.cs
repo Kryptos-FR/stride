@@ -11,6 +11,7 @@ using Stride.Core.Presentation.Avalonia.Views;
 using Stride.Core.Presentation.Views;
 using Stride.Editor.Annotations;
 using Stride.Editor.Avalonia.Preview;
+using Stride.Editor.Avalonia.Thumbnails;
 using Stride.Editor.Preview;
 using Stride.Editor.Preview.Views;
 
@@ -43,6 +44,8 @@ public sealed class StrideEditorViewPlugin : AssetsEditorPlugin
         var previewService = new GameStudioPreviewService(session);
         previewService.RegisterAssetPreviewFactories(previewFactories);
         session.ServiceProvider.RegisterService(previewService);
+
+        session.ServiceProvider.RegisterService(new StaticThumbnailService());
     }
 
     public override void RegisterAssetPreviewViewModelTypes(IDictionary<Type, Type> assetPreviewViewModelTypes)
