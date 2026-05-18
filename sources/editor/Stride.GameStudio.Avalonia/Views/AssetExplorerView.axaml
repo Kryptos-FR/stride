@@ -5,6 +5,7 @@
              xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
              xmlns:caevm="using:Stride.Core.Assets.Editor.ViewModels"
              xmlns:caec="using:Stride.Core.Assets.Editor.Avalonia.Converters"
+             xmlns:dd="using:Stride.Core.Assets.Editor.Avalonia.DragDrop"
              xmlns:capvm="using:Stride.Core.Assets.Presentation.ViewModels"
              xmlns:gscv="using:Stride.GameStudio.Avalonia.Converters"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -205,6 +206,7 @@
               <EventTriggerBehavior EventName="DoubleTapped">
                 <InvokeCommandAction Command="{Binding ((caevm:SessionViewModel)Session).EditSelectedContentCommand}" />
               </EventTriggerBehavior>
+              <dd:AssetDragBehavior />
             </Interaction.Behaviors>
             <TextBlock Text="Asset: " />
             <TextBlock Text="{Binding Name}" />
