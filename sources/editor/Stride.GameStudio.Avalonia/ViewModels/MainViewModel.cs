@@ -122,7 +122,39 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
 
         Session = loadedSession;
         Title = $"{baseTitle} - {Session.SolutionPath.GetFileNameWithoutExtension()}";
+
+        // Trigger asset compilation in the background after the session is fully loaded.
+        if (Session.ServiceProvider.TryGet<IBuildService>() is { } buildService)
+        {
+            _ = RunBuildOnOpenAsync(buildService);
+        }
+
         return true;
+    }
+
+    private async Task RunBuildOnOpenAsync(IBuildService buildService)
+    {
+        var logger = Stride.Core.Diagnostics.GlobalLogger.GetLogger("BuildOnOpen");
+        var progress = new WorkProgressViewModel(ServiceProvider, logger)
+        {
+            Title = "Building assets (session open)…",
+            KeepOpen = KeepOpen.Never,
+        };
+
+        DialogService.ShowNotification(progress);
+
+        try
+        {
+            await buildService.BuildProjectAsync(BuildTrigger.SessionOpen);
+        }
+        catch (Exception ex)
+        {
+            logger.Error("Asset build failed.", ex);
+        }
+        finally
+        {
+            progress.NotifyWorkFinished(false, false);
+        }
     }
 
     private async Task OnAbout()
