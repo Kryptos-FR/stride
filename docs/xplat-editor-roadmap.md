@@ -38,6 +38,10 @@ Before the porting effort, the master branch had **no meaningful separation** be
 - **AvalonEdit** — syntax-highlighted text editor (used inside RoslynPad).
 - **SharpDX / ServiceWire** — game rendering and remote debugging channels.
 
+### Completed Avalonia migrations
+- **Avalonia 12.0.2** — migrated from Avalonia 11: `Watermark` → `PlaceholderText`; `SystemDecorations` → `WindowDecorations`; `MultiBinding` → `MultiBindingExtension`.
+- **MarkView.Avalonia 12.0.3** — integrated for markdown rendering; `MarkdownViewerWindow` and `AboutWindow` use `<mv:MarkdownViewer>` — no custom control needed.
+
 ---
 
 ## 3. Current State (xplat-editor branch)
@@ -87,9 +91,10 @@ Before the porting effort, the master branch had **no meaningful separation** be
 - Window helpers: `MessageBox`, `CheckedMessageBox`, `WindowHelper`
 
 **Missing or not yet ported from WPF:**
-- **Controls:** `FilteringComboBox` (with sort support), `ColorPicker`, `MarkdownTextBlock`, `ModalWindow`/`PopupModalWindow`, `TagControl`, `TreeView` (virtualized custom), `VirtualizingTilePanel`, `VirtualizingTreePanel`, `RotationEditor`, `ScaleBar`, `TrackerControl`, `CanvasView`
+- **Controls:** `FilteringComboBox` (with sort support, needed for Phase 3 entity/material editors), `ColorPicker`, `ModalWindow`/`PopupModalWindow`, `TagControl`, `TreeView` (virtualized custom), `VirtualizingTilePanel`, `VirtualizingTreePanel`, `RotationEditor`, `ScaleBar`, `TrackerControl`, `CanvasView`
+- **Note:** `MarkdownTextBlock` — covered by **MarkView.Avalonia** (no custom port needed)
 - **Behaviors:** `BindableSelectedItemsBehavior`, `ContainTextAdornerBehavior`, `DeferredBehaviorBase`, `TreeViewDragDropBehavior`, `PropertyViewDragDropBehavior`, and ~30 others across adorners, drag & drop, tree views
-- **Services (agnostic placeholder):** File dialogs interface (`IFileOpenModalDialog`, `IFileSaveModalDialog`, `IFolderOpenModalDialog`) are still in the WPF-only `Stride.Core.Presentation.Wpf` `Services/` folder. The agnostic `Stride.Core.Presentation.Dialogs` project is empty.
+- **Services:** File picker methods (`OpenFilePickerAsync`, `SaveFilePickerAsync`, `OpenFolderPickerAsync`, `OpenMultipleFilesPickerAsync`) are already in the agnostic `IDialogService` and implemented in the Avalonia `DialogService` via `Avalonia.Platform.Storage`. ✅
 
 ### 3.3 `Stride.Assets.Editor.Avalonia` — asset editor views
 
@@ -174,7 +179,7 @@ For comparison, the WPF `Stride.Assets.Presentation.Wpf` contains 279 files unde
 | Asset picker dialog | ~3 files | ❌ Not started |
 | Notification / progress windows | ~6 files | 🟡 Progress window exists |
 | Node graph editor (visual script / graphics compositor) | ~21 files | ❌ Not started |
-| FilteringComboBox | 2 files | ❌ Not ported |
+| FilteringComboBox (Phase 3 — entity/material editors) | 2 files | ❌ Deferred to Phase 3 |
 | ColorPicker | 1 file | ❌ Not ported |
 | Custom TreeView (virtualized) | ~5 files | ❌ Not ported |
 | Drag-and-drop behaviors | ~15 files | ❌ Not ported |
@@ -212,15 +217,19 @@ The roadmap is structured as successive PoC and MVP milestones. Each milestone i
 - Property grid for selected assets (with Quantum template providers)
 - Undo/redo surfaced in the menu and action history panel
 - Asset references panel
+- ✅ File-picker interfaces in agnostic `IDialogService` + Avalonia implementation via `Avalonia.Platform.Storage`
+- ✅ Avalonia v12.0.2 migration
+- ✅ MarkView.Avalonia markdown integration
 
-**Remaining for this phase:**
-- [ ] Asset thumbnails displayed in the asset browser
-- [ ] Complete `FilteringComboBox` / `SearchComboBox` for asset type filtering
-- [ ] Extract file-picker interfaces (`IFileOpenModalDialog`, `IFileSaveModalDialog`, `IFolderOpenModalDialog`) from `Stride.Core.Presentation.Wpf/Services` to an agnostic location and provide an Avalonia implementation
-- [ ] Asset picker dialog — basic modal for selecting an asset by type
-- [ ] Drag-and-drop from asset browser to property fields (content references)
-- [ ] Build-on-open (auto asset compilation) with progress reporting
-- [ ] Notification window for background operations
+**Remaining for this phase** (ordered by effort — see `docs/superpowers/specs/2026-05-18-phase1-browse-and-inspect-design.md`):
+- [ ] `SearchComboBox` end-to-end asset type filter verification (XS)
+- [ ] Notification status bar for background operations (S)
+- [ ] Static asset thumbnails displayed in the asset browser (M)
+- [ ] Asset picker dialog — folder tree + filtered asset list + search box (M-L)
+- [ ] Drag-and-drop from asset browser to content-reference property fields (L)
+- [ ] Build-on-open: auto asset compilation with progress reporting (L)
+
+> **Note:** `FilteringComboBox` (type-ahead combo with sort) is only needed for Phase 3 editors (entity properties, material shader picker, visual scripting). It is not required for Phase 1.
 
 ---
 
