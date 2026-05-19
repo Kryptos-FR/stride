@@ -4,5 +4,14 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Stride.GameStudio.Avalonia.Views.AssetPreviewView">
-  Asset Preview
+  <Panel>
+    <TextBlock x:Name="PlaceholderText"
+               Text="No asset selected"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               Opacity="0.5"/>
+    <ContentPresenter x:Name="PreviewContent"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"/>
+  </Panel>
 </UserControl>

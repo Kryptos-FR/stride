@@ -53,5 +53,6 @@
     <StyleInclude Source="avares://Stride.Core.Presentation.Avalonia/Themes/SearchComboBoxStyle.axaml"/>
     <StyleInclude Source="avares://Stride.Core.Presentation.Avalonia/Themes/TextLogViewerStyle.axaml"/>
     <StyleInclude Source="avares://Stride.Core.Presentation.Avalonia/Themes/ToolBarStyle.axaml"/>
+    <StyleInclude Source="avares://Stride.Editor.Avalonia/Themes/Generic.axaml"/>
   </Application.Styles>
 </Application>
