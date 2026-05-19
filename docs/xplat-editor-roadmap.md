@@ -174,15 +174,15 @@ For comparison, the WPF `Stride.Assets.Presentation.Wpf` contains 279 files unde
 | Script/code editor (Roslyn) | ~15 files | ❌ Not started |
 | Entity factories | ~22 files | ❌ Not started |
 | Templates & wizards | ~252 files | ❌ Not started |
-| Build integration + live log | ~5 files | ❌ Not started |
+| Build integration + live log | ~5 files | 🟡 Interface + build-on-open trigger (placeholder compiler invocation) |
 | Assembly recompiler / hot-reload | ~4 files | ❌ Not started |
-| Asset picker dialog | ~3 files | ❌ Not started |
-| Notification / progress windows | ~6 files | 🟡 Progress window exists |
+| Asset picker dialog | ~3 files | ✅ Done (`AssetPickerViewModel` + `AssetPickerWindow`) |
+| Notification / progress windows | ~6 files | ✅ Done (`INotificationService`, `NotificationsViewModel`, status bar) |
 | Node graph editor (visual script / graphics compositor) | ~21 files | ❌ Not started |
 | FilteringComboBox (Phase 3 — entity/material editors) | 2 files | ❌ Deferred to Phase 3 |
 | ColorPicker | 1 file | ❌ Not ported |
 | Custom TreeView (virtualized) | ~5 files | ❌ Not ported |
-| Drag-and-drop behaviors | ~15 files | ❌ Not ported |
+| Drag-and-drop behaviors | ~15 files | 🟡 Basic asset→content-reference done; full tree/property DnD not ported |
 | Crash report | ~7 files | ❌ Not ported |
 
 ---
@@ -206,28 +206,26 @@ The roadmap is structured as successive PoC and MVP milestones. Each milestone i
 
 ---
 
-### Phase 1 — PoC: Browse & Inspect 🟡 (In Progress)
+### Phase 1 — PoC: Browse & Inspect ✅ (Done)
 
 **Goal:** A usable read-only project browser. Open a Stride project, explore its assets, inspect properties.
 
-**Already done:**
+**Achievements:**
 - Open/close session
 - Solution explorer (package/project/folder tree)
 - Asset collection view with filters and display options
 - Property grid for selected assets (with Quantum template providers)
 - Undo/redo surfaced in the menu and action history panel
 - Asset references panel
-- ✅ File-picker interfaces in agnostic `IDialogService` + Avalonia implementation via `Avalonia.Platform.Storage`
-- ✅ Avalonia v12.0.2 migration
-- ✅ MarkView.Avalonia markdown integration
-
-**Remaining for this phase** (ordered by effort — see `docs/superpowers/specs/2026-05-18-phase1-browse-and-inspect-design.md`):
-- [ ] `SearchComboBox` end-to-end asset type filter verification (XS)
-- [ ] Notification status bar for background operations (S)
-- [ ] Static asset thumbnails displayed in the asset browser (M)
-- [ ] Asset picker dialog — folder tree + filtered asset list + search box (M-L)
-- [ ] Drag-and-drop from asset browser to content-reference property fields (L)
-- [ ] Build-on-open: auto asset compilation with progress reporting (L)
+- File-picker interfaces in agnostic `IDialogService` + Avalonia implementation via `Avalonia.Platform.Storage`
+- Avalonia v12.0.2 migration
+- MarkView.Avalonia markdown integration
+- `SearchComboBox` end-to-end asset type filter verification
+- Notification status bar for background operations (`INotificationService` + `NotificationsViewModel`)
+- Static asset thumbnails displayed in the asset browser (`StaticThumbnailService`)
+- Asset picker dialog — folder tree + filtered asset list + search box (`AssetPickerViewModel` + `AssetPickerWindow`)
+- Drag-and-drop from asset browser to content-reference property fields (Avalonia 12 `DataTransfer` API)
+- Build-on-open: auto asset compilation with progress reporting (`IBuildService.BuildProjectAsync` + `BuildTrigger`)
 
 > **Note:** `FilteringComboBox` (type-ahead combo with sort) is only needed for Phase 3 editors (entity properties, material shader picker, visual scripting). It is not required for Phase 1.
 
