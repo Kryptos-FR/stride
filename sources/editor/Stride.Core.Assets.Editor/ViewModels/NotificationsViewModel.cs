@@ -1,7 +1,6 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
-using System.ComponentModel;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Presentation.Collections;
 using Stride.Core.Presentation.ViewModels;
@@ -26,30 +25,19 @@ public sealed class NotificationsViewModel : DispatcherViewModel, INotificationS
     {
         Dispatcher.Invoke(() =>
         {
-            activeNotifications.Add(workProgress);
-            workProgress.PropertyChanged += OnNotificationPropertyChanged;
             if (workProgress.WorkDone)
-            {
-                ScheduleDismiss(workProgress);
-            }
+                return;
+
+            activeNotifications.Add(workProgress);
+            workProgress.WorkFinished += OnWorkFinished;
         });
     }
 
-    private void OnNotificationPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnWorkFinished(object? sender, WorkProgressNotificationEventArgs e)
     {
-        if (e.PropertyName == nameof(WorkProgressViewModel.WorkDone) && sender is WorkProgressViewModel vm && vm.WorkDone)
-        {
-            ScheduleDismiss(vm);
-        }
-    }
-
-    private async void ScheduleDismiss(WorkProgressViewModel workProgress)
-    {
-        await Task.Delay(5000);
-        await Dispatcher.InvokeAsync(() =>
-        {
-            workProgress.PropertyChanged -= OnNotificationPropertyChanged;
-            activeNotifications.Remove(workProgress);
-        });
+        // WorkFinished is already raised on the UI thread via RaiseEvent → Dispatcher.Invoke.
+        e.WorkProgress.WorkFinished -= OnWorkFinished;
+        activeNotifications.Remove(e.WorkProgress);
+        e.WorkProgress.NotifyWindowClosed();
     }
 }

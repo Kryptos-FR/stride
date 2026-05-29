@@ -140,9 +140,9 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
             Title = "Building assets (session open)…",
             KeepOpen = KeepOpen.Never,
         };
-
         DialogService.ShowNotification(progress);
 
+        bool error = false;
         try
         {
             await buildService.BuildProjectAsync(BuildTrigger.SessionOpen);
@@ -150,10 +150,11 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
         catch (Exception ex)
         {
             logger.Error("Asset build failed.", ex);
+            error = true;
         }
         finally
         {
-            progress.NotifyWorkFinished(false, false);
+            progress.NotifyWorkFinished(false, error);
         }
     }
 
