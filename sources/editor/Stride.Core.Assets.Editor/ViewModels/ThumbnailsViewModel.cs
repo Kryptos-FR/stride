@@ -133,7 +133,7 @@ public class ThumbnailsViewModel : DispatcherViewModel
         var asset = session.GetAssetById(e.AssetId);
         if (asset != null)
         {
-            Dispatcher.InvokeAsync(async () =>
+            _ = Dispatcher.InvokeTask(async () =>
             {
                 asset.ThumbnailData = e.Data;
                 await e.Data.PrepareForPresentation(Dispatcher);

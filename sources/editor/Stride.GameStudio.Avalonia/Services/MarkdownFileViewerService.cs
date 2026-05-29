@@ -5,7 +5,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Stride.GameStudio.Avalonia.Views;
 
 namespace Stride.GameStudio.Avalonia.Services;
@@ -17,34 +16,31 @@ public static class MarkdownFileViewerService
 
     public static async Task ShowFileAsync(string filePath, string title = "Markdown Viewer")
     {
-        await Dispatcher.UIThread.InvokeAsync(async () =>
+        try
         {
-            try
+            if (!File.Exists(filePath))
             {
-                if (!File.Exists(filePath))
-                {
-                    await ShowErrorAsync($"We are facing some technical challenges to fetch the content: {filePath}", title);
-                    return;
-                }
-
-                string markdownContent = await File.ReadAllTextAsync(filePath);
-
-                var window = new MarkdownViewerWindow(markdownContent, title);
-
-                if (MainWindow != null)
-                {
-                    await window.ShowDialog(MainWindow);
-                }
-                else
-                {
-                    window.Show(); // fallback if MainWindow is unavailable
-                }
+                await ShowErrorAsync($"We are facing some technical challenges to fetch the content: {filePath}", title);
+                return;
             }
-            catch (Exception ex)
+
+            string markdownContent = await File.ReadAllTextAsync(filePath);
+
+            var window = new MarkdownViewerWindow(markdownContent, title);
+
+            if (MainWindow != null)
             {
-                await ShowErrorAsync($"Failed to open markdown file:\n{ex.Message}", title);
+                await window.ShowDialog(MainWindow);
             }
-        });
+            else
+            {
+                window.Show(); // fallback if MainWindow is unavailable
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Failed to open markdown file:\n{ex.Message}", title);
+        }
     }
 
     private static async Task ShowErrorAsync(string message, string title)
