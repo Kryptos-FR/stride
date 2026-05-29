@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using System.Collections.Concurrent;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Services;
 
@@ -30,6 +31,10 @@ public sealed class StaticThumbnailService : IThumbnailService
 
     private static readonly Uri FallbackUri = new(BaseUri + "DefaultThumbnail.png");
 
+    // One thumbnail data instance per icon, shared across every asset that uses it: all assets of a given
+    // type point at the same (already-decoded) instance, so there is nothing to recompute or allocate per asset.
+    private readonly ConcurrentDictionary<Uri, StaticIconThumbnailData> thumbnailData = new();
+
     public event EventHandler<ThumbnailCompletedArgs>? ThumbnailCompleted;
 
     public void AddThumbnailAssetItems(IEnumerable<AssetItem> assetItems, QueuePosition position)
@@ -37,7 +42,7 @@ public sealed class StaticThumbnailService : IThumbnailService
         foreach (var item in assetItems)
         {
             var uri = TypeNameToUri.TryGetValue(item.Asset.GetType().Name, out var u) ? u : FallbackUri;
-            var data = new StaticIconThumbnailData(uri);
+            var data = thumbnailData.GetOrAdd(uri, static u => new StaticIconThumbnailData(u));
             ThumbnailCompleted?.Invoke(this, new ThumbnailCompletedArgs(item.Id, data));
         }
     }
