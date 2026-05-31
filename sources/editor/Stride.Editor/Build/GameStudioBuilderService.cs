@@ -36,13 +36,19 @@ public sealed class GameStudioBuilderService : AssetBuilderService
 
         Session = session;
 
-        // FIXME xplat-editor crashes
         var shaderImporter = new StrideShaderImporter();
         var shaderBuildSteps = shaderImporter.CreateSystemShaderBuildSteps(session);
-        if (shaderBuildSteps !=  null)
+        if (shaderBuildSteps != null)
         {
             shaderBuildSteps.StepProcessed += ShaderBuildStepsStepProcessed;
             PushBuildUnit(new PrecompiledAssetBuildUnit(AssetBuildUnitIdentifier.Default, shaderBuildSteps, true));
+        }
+        else
+        {
+            // No system shaders to import (no shader assets discovered, or they are already loaded).
+            // Signal the event right away so WaitForShaders() does not block the preview/thumbnail game
+            // thread forever waiting for a build step that will never run.
+            shaderLoadedEvent.Set();
         }
 
         Database = new GameStudioDatabase(this, settingsProvider);
