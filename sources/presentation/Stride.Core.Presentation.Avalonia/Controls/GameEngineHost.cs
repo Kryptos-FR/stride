@@ -37,6 +37,7 @@ public class GameEngineHost : NativeControlHost, IDisposable
     /// </summary>
     public IntPtr Handle { get; }
 
+    /// <inheritdoc />
     public void Dispose()
     {
         if (isDisposed)
@@ -45,6 +46,7 @@ public class GameEngineHost : NativeControlHost, IDisposable
         isDisposed = true;
     }
 
+    /// <inheritdoc />
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
         if (Handle == IntPtr.Zero)
@@ -53,14 +55,20 @@ public class GameEngineHost : NativeControlHost, IDisposable
         return new PlatformHandle(Handle, GetHandleDescriptor());
     }
 
+    /// <inheritdoc />
     protected override void DestroyNativeControlCore(IPlatformHandle control)
     {
-        // SDL owns the window lifetime; do not destroy it here.
+        // Intentionally a no-op: SDL owns the hosted window and destroys it with the game,
+        // so Avalonia must not destroy the native handle here.
     }
 
     /// <summary>
     /// Forwards a message from the hosted window. Currently a no-op placeholder for future input forwarding.
     /// </summary>
+    /// <param name="hwnd">The native handle of the hosted window that produced the message.</param>
+    /// <param name="msg">The message identifier.</param>
+    /// <param name="wParam">The word parameter of the message.</param>
+    /// <param name="lParam">The long parameter of the message.</param>
     public void ForwardMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam)
     {
         // TODO: Implement input forwarding for Avalonia (keyboard/mouse events from SDL)
