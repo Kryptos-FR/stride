@@ -42,6 +42,7 @@ internal sealed class Program
             // Parse launcher arguments before starting the Avalonia app so that
             // App.LauncherNotifier is set before the first window opens.
             ParseLauncherArgs(args);
+            ParseStartupProjectArg(args);
 
             BuildAvaloniaApp()
                 .StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose);
@@ -81,6 +82,24 @@ internal sealed class Program
             var handle = launcherWindowHandle;
             var pipe = launcherPipeName;
             Stride.GameStudio.Avalonia.App.LauncherNotifier = () => NotifyLauncher(handle, pipe);
+        }
+    }
+
+    /// <summary>
+    /// Parses the <c>--project &lt;path&gt;</c> argument and, when present, sets
+    /// <see cref="Stride.GameStudio.Avalonia.App.StartupProject"/> so the session is opened on startup.
+    /// Intended for development and automated testing.
+    /// </summary>
+    /// <param name="args">The command-line arguments.</param>
+    private static void ParseStartupProjectArg(string[] args)
+    {
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] is "--project" or "/project")
+            {
+                Stride.GameStudio.Avalonia.App.StartupProject = args[i + 1];
+                return;
+            }
         }
     }
 

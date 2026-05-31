@@ -33,6 +33,13 @@ public partial class App : Application
     /// </summary>
     public static Action? LauncherNotifier;
 
+    /// <summary>
+    /// When non-null, the session at this path is opened automatically once the main window is shown.
+    /// Set by <c>Program.cs</c> from the <c>--project</c> command-line argument. Intended for development
+    /// and automated testing.
+    /// </summary>
+    public static UFile? StartupProject;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -111,6 +118,19 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow();
+
+            // The startup project must be opened only after the main window is visible, otherwise the
+            // session-load progress dialog cannot be shown (its owner would be a non-visible window).
+            if (StartupProject is { } startupProject)
+            {
+                desktop.MainWindow.Opened += OnceOpened;
+
+                void OnceOpened(object? sender, EventArgs e)
+                {
+                    desktop.MainWindow.Opened -= OnceOpened;
+                    (desktop.MainWindow.DataContext as MainViewModel)?.OpenCommand.Execute(startupProject);
+                }
+            }
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
