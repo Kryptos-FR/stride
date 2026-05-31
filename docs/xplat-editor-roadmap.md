@@ -231,15 +231,21 @@ The roadmap is structured as successive PoC and MVP milestones. Each milestone i
 
 ---
 
-### Phase 2 — PoC: Asset Preview 🔴 (Not Started)
+### Phase 2 — PoC: Asset Preview 🟡 (In Progress)
 
 **Goal:** Render live previews of assets (textures, models, materials, sounds) inside the editor.
 
+The editor-layer preview **pipeline is wired and works end-to-end** (selection → preview service → asset
+build → renderer invoked on the preview game thread). Two engine/native-level blockers remain before
+pixels appear. Full analysis and resume guide: [`xplat-editor-phase2-notes.md`](xplat-editor-phase2-notes.md).
+
 **Requires:**
-- [ ] Full `Stride.Editor.Avalonia` integration — wire `GameEngineHost` to a `PreviewGame` instance
-- [ ] `GameStudioPreviewService` fully connected to `StridePreviewView`
-- [ ] Asset preview views: `TexturePreviewView`, `ModelPreviewView`, `MaterialPreviewView`, `EntityPreviewView`, `SoundPreviewView`, `SkyboxPreviewView`, `SpriteFontPreviewView`, `HeightmapPreviewView`
-- [ ] Thumbnail generation pipeline wired to asset browser
+- [x] Full `Stride.Editor.Avalonia` integration — `GameEngineHost` rewritten as a cross-platform `NativeControlHost`; `PreviewGame` constructs and runs
+- [x] `GameStudioPreviewService` connected to `StridePreviewView` (selection→render verified live)
+- [x] Asset preview views registered (thin `StridePreviewView` subclasses per asset type)
+- [ ] **Blocker 1 — runtime shader resolution:** rendering fails with `Shader SpriteBatchShader could not be found` (editor effect compiler can't resolve built-in shader source; `EditorShadersD3D11.bundle` absent + database separation)
+- [ ] **Blocker 2 — native window embedding:** the SDL preview window appears as a separate floating top-level window instead of being pinned into the preview pane (`NativeControlHost` reparenting incomplete)
+- [ ] Thumbnail generation pipeline wired to asset browser (still `StaticThumbnailService`; real `GameStudioThumbnailService` shares the same shader/builder path → gated by Blocker 1)
 
 ---
 
