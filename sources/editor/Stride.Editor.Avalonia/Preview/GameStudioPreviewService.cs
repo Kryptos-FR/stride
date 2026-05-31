@@ -129,8 +129,8 @@ public class GameStudioPreviewService : IAssetPreviewService, IPreviewBuilder
 
     private void StrideUIThread()
     {
-        // FIXME xplat-editor
-        //gameForm = new EmbeddedGameForm { TopLevel = false, Visible = false };
+        // Create the SDL window hidden; GameEngineHost.CreateNativeControlCore will convert it
+        // to a child window (WS_CHILD on Windows) so Avalonia's NativeControlHost can embed it.
         gameForm = new EmbeddedGameForm { Visible = false };
         windowHandle = gameForm.Handle;
 

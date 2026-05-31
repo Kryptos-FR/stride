@@ -10,7 +10,8 @@ namespace Stride.Core.Presentation.Avalonia.Controls;
 
 /// <summary>
 /// A <see cref="NativeControlHost"/> that embeds a game engine SDL window.
-/// Avalonia handles reparenting, positioning, and visibility automatically.
+/// The hosted window must already have WS_CHILD style set (done by EmbeddedGameForm on Windows).
+/// Avalonia's NativeControlHost internally handles SetParent and visibility management.
 /// </summary>
 public class GameEngineHost : NativeControlHost, IDisposable
 {
@@ -52,6 +53,9 @@ public class GameEngineHost : NativeControlHost, IDisposable
         if (Handle == IntPtr.Zero)
             return base.CreateNativeControlCore(parent);
 
+        // The SDL window is expected to already have WS_CHILD set (done by EmbeddedGameForm
+        // at construction time). Avalonia's Win32NativeControlAttachment will call SetParent
+        // and ShowWindow on the returned handle.
         return new PlatformHandle(Handle, GetHandleDescriptor());
     }
 
