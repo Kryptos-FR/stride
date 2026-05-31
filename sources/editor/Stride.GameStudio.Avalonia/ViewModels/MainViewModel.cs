@@ -55,12 +55,26 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
     public SessionViewModel? Session
     {
         get => session;
-        set => SetValue(ref session, value);
+        set
+        {
+            if (SetValue(ref session, value))
+            {
+                // The preview view model owns the preview service (and its background game),
+                // so its lifetime must track the session rather than the preview view's load/unload.
+                Preview?.Dispose();
+                Preview = value is not null ? new PreviewViewModel(value) : null;
+            }
+        }
     }
 
     public StatusViewModel Status { get; }
 
     public INotificationService Notifications { get; }
+
+    /// <summary>
+    /// Gets the view model driving the asset preview panel, or <c>null</c> when no session is open.
+    /// </summary>
+    public PreviewViewModel? Preview { get; private set => SetValue(ref field, value); }
 
     public string Title
     {

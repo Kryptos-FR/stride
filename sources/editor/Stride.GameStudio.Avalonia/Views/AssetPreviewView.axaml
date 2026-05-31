@@ -2,16 +2,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:gsvm="using:Stride.GameStudio.Avalonia.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="Stride.GameStudio.Avalonia.Views.AssetPreviewView">
+             x:Class="Stride.GameStudio.Avalonia.Views.AssetPreviewView"
+             x:DataType="gsvm:MainViewModel">
   <Panel>
-    <TextBlock x:Name="PlaceholderText"
-               Text="No asset selected"
+    <TextBlock Text="No asset selected"
                HorizontalAlignment="Center"
                VerticalAlignment="Center"
-               Opacity="0.5"/>
+               Opacity="0.5"
+               IsVisible="{Binding !IsVisible, ElementName=PreviewContent}"/>
     <ContentPresenter x:Name="PreviewContent"
                       HorizontalAlignment="Stretch"
-                      VerticalAlignment="Stretch"/>
+                      VerticalAlignment="Stretch"
+                      Content="{Binding Preview.PreviewObject}"
+                      IsVisible="{Binding Preview.PreviewObject, Converter={sd:ObjectToBool}}"/>
   </Panel>
 </UserControl>
