@@ -56,6 +56,9 @@ public sealed class StrideEditorPlugin : AssetsEditorPlugin
 
         var builderService = new GameStudioBuilderService((SessionViewModel)session, settingsProvider, buildDirectory);
         session.ServiceProvider.RegisterService(builderService);
+        // The asset database is resolved (via the throwing Get<>) by EditorContentLoader and the
+        // preview/thumbnail services, so it must be registered alongside the builder service.
+        session.ServiceProvider.RegisterService(builderService.Database);
 
         //var thumbnailService = new GameStudioThumbnailService((SessionViewModel)session, settingsProvider, builderService);
         //session.ServiceProvider.RegisterService(thumbnailService);

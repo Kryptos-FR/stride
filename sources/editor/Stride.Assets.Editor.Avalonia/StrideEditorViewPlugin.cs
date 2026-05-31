@@ -11,6 +11,7 @@ using Stride.Core.Presentation.Avalonia.Views;
 using Stride.Core.Presentation.Views;
 using Stride.Editor.Annotations;
 using Stride.Editor.Avalonia.Preview;
+using Stride.Editor.Build;
 using Stride.Editor.Avalonia.Thumbnails;
 using Stride.Editor.Preview;
 using Stride.Editor.Preview.Views;
@@ -41,9 +42,22 @@ public sealed class StrideEditorViewPlugin : AssetsEditorPlugin
             }
         }
 
-        var previewService = new GameStudioPreviewService(session);
-        previewService.RegisterAssetPreviewFactories(previewFactories);
-        session.ServiceProvider.RegisterService(previewService);
+        // GameStudioPreviewService depends on the builder and game-settings services that the agnostic
+        // StrideEditorPlugin registers earlier during session initialization. Guard against a changed
+        // plugin order (or that plugin failing) so we fail with a clear message instead of an opaque
+        // exception deep inside the preview service constructor.
+        if (session.ServiceProvider.TryGet<GameStudioBuilderService>() is null ||
+            session.ServiceProvider.TryGet<GameSettingsProviderService>() is null)
+        {
+            GlobalLogger.GetLogger(nameof(StrideEditorViewPlugin)).Error(
+                "Cannot create the asset preview service: the builder or game-settings service is not registered. Asset preview will be unavailable.");
+        }
+        else
+        {
+            var previewService = new GameStudioPreviewService(session);
+            previewService.RegisterAssetPreviewFactories(previewFactories);
+            session.ServiceProvider.RegisterService(previewService);
+        }
 
         session.ServiceProvider.RegisterService(new StaticThumbnailService());
     }
