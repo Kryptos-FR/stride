@@ -14,7 +14,7 @@ namespace Stride.Editor.Build;
 public sealed class GameStudioBuilderService : AssetBuilderService
 {
     public static string GlobalEffectLogPath;
-    private readonly ManualResetEvent shaderLoadedEvent = new(false);
+    private readonly Task<ResultStatus>? shaderBuildTask;
     private readonly EffectPriorityScheduler taskScheduler;
     private readonly EffectCompilerBase effectCompiler;
     private readonly IEditorDebugService? debugService;
@@ -40,15 +40,11 @@ public sealed class GameStudioBuilderService : AssetBuilderService
         var shaderBuildSteps = shaderImporter.CreateSystemShaderBuildSteps(session);
         if (shaderBuildSteps != null)
         {
-            shaderBuildSteps.StepProcessed += ShaderBuildStepsStepProcessed;
-            PushBuildUnit(new PrecompiledAssetBuildUnit(AssetBuildUnitIdentifier.Default, shaderBuildSteps, true));
-        }
-        else
-        {
-            // No system shaders to import (no shader assets discovered, or they are already loaded).
-            // Signal the event right away so WaitForShaders() does not block the preview/thumbnail game
-            // thread forever waiting for a build step that will never run.
-            shaderLoadedEvent.Set();
+            var shaderBuildUnit = new PrecompiledAssetBuildUnit(AssetBuildUnitIdentifier.Default, shaderBuildSteps, true);
+            PushBuildUnit(shaderBuildUnit);
+            // Wait on the build unit's task which completes AFTER PostBuild() (AddToSharedGroup),
+            // ensuring shader sources are in the shared database before the preview game uses them.
+            shaderBuildTask = shaderBuildUnit.Wait();
         }
 
         Database = new GameStudioDatabase(this, settingsProvider);
@@ -111,15 +107,11 @@ public sealed class GameStudioBuilderService : AssetBuilderService
         }
     }
 
-    private void ShaderBuildStepsStepProcessed(object? sender, BuildStepEventArgs e)
-    {
-        shaderLoadedEvent.Set();
-    }
-
     public void WaitForShaders()
     {
-        // TODO: turn into task
-        shaderLoadedEvent.WaitOne();
+        // Block until the shader import build unit completes (including PostBuild/AddToSharedGroup),
+        // ensuring shader sources are available in the shared database for the preview EffectCompiler.
+        shaderBuildTask?.GetAwaiter().GetResult();
     }
 
     private void StartPushNotificationsTask()
