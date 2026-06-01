@@ -108,6 +108,11 @@ public sealed class ScriptSourceFileEditorViewModel : AssetEditorViewModel<Scrip
 
     private async Task SaveAsync()
     {
+        // Nothing to persist when the buffer matches the saved content. This also guards the
+        // Ctrl+S key binding, whose command CanExecute can be stale relative to IsModified.
+        if (!IsModified)
+            return;
+
         var path = FilePath;
         if (string.IsNullOrEmpty(path))
             return;
