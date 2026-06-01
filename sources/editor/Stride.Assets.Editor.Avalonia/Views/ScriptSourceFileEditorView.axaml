@@ -3,13 +3,17 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Stride.Assets.Editor.ViewModels"
+             xmlns:controls="using:Stride.Core.Presentation.Avalonia.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Stride.Assets.Editor.Avalonia.Views.ScriptSourceFileEditorView"
              x:DataType="vm:ScriptSourceFileEditorViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+  </UserControl.KeyBindings>
   <DockPanel>
-    <Grid DockPanel.Dock="Top">
-      <TextBlock Text="ScriptSourceFile Editor" />
-    </Grid>
-    <TextBlock Text="{Binding Asset.Name}" />
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="4">
+      <Button Content="Save" Command="{Binding SaveCommand}" IsEnabled="{Binding IsModified}" />
+    </StackPanel>
+    <controls:CodeTextEditor x:Name="Editor" FontSize="{Binding FontSize}" />
   </DockPanel>
 </UserControl>
