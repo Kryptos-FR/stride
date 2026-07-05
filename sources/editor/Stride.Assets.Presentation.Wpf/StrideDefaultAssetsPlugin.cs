@@ -21,6 +21,7 @@ using Stride.Assets.Presentation.NodePresenters.Updaters;
 using Stride.Assets.Presentation.SceneEditor.Services;
 using Stride.Assets.Presentation.ViewModel;
 using Stride.Assets.Presentation.ViewModel.CopyPasteProcessors;
+using Stride.Assets.Templates;
 using Stride.Editor;
 using Stride.Engine;
 using Stride.Engine.Gizmos;
@@ -90,32 +91,7 @@ namespace Stride.Assets.Presentation
             LoadDefaultTemplates();
         }
 
-        public static void LoadDefaultTemplates()
-        {
-            // Load editor-internal templates (asset / script / project-modification .sdtpl files).
-            // Currently hardcoded, this will need to change with plugin system.
-            foreach (var packageInfo in new[] { new { Name = "Stride.Assets.Presentation.Wpf", Version = StrideVersion.NuGetVersion }, new { Name = "Stride.SpriteStudio.Offline", Version = StrideVersion.NuGetVersion } })
-            {
-                var logger = new LoggerResult();
-                var packageFile = PackageStore.Instance.GetPackageFileName(packageInfo.Name, new PackageVersionRange(new PackageVersion(packageInfo.Version)));
-                if (packageFile is null)
-                    throw new InvalidOperationException($"Could not find package {packageInfo.Name} {packageInfo.Version}. Ensure packages have been resolved.");
-                var package = Package.Load(logger, packageFile.ToOSPath());
-                if (logger.HasErrors)
-                    throw new InvalidOperationException($"Could not load package {packageInfo.Name}:{Environment.NewLine}{logger.ToText()}");
-
-                TemplateManager.RegisterPackage(package);
-            }
-
-            // Project-creation templates ship across Stride.Templates.Games (bundled NewGame),
-            // Stride.Templates.Games.Starters (genre starters), and Stride.Templates.Samples
-            // (feature demos) — all dotnet new template packages (vanilla NuGet), not Stride .sdpkgs.
-            // The bridge resolves each via PackageStore (auto-pack drops the .nupkg in dev mode),
-            // installs into the in-process Microsoft.TemplateEngine bootstrapper, then exposes
-            // each dotnet new template as a TemplateDotNetNewDescription so the existing template
-            // list UI picks them up.
-            Templates.DotNetNewTemplateBridge.RegisterProjectTemplates();
-        }
+        public static void LoadDefaultTemplates() => StrideDefaultTemplates.Load();
 
         /// <inheritdoc />
         protected override void Initialize(ILogger logger)
@@ -137,6 +113,15 @@ namespace Stride.Assets.Presentation
             // Make script editor styles and icons available to StaticResourceConverter
             Application.Current.Resources.MergedDictionaries.Add((ResourceDictionary)Application.LoadComponent(new Uri("/Stride.Assets.Presentation.Wpf;component/AssetEditors/ScriptEditor/Resources/Icons.xaml", UriKind.RelativeOrAbsolute)));
             Application.Current.Resources.MergedDictionaries.Add((ResourceDictionary)Application.LoadComponent(new Uri("/Stride.Assets.Presentation.Wpf;component/AssetEditors/ScriptEditor/Resources/ThemeScriptEditor.xaml", UriKind.RelativeOrAbsolute)));
+
+            // RoslynPad's light-bulb menu derives from ContextMenu, and WPF implicit styles aren't
+            // inherited by derived types - so register our themed ContextMenu style under that type.
+            var bulbMenuType = typeof(RoslynPad.Editor.AvalonEditTextContainer).Assembly
+                .GetType("RoslynPad.Editor.ContextActionsBulbContextMenu");
+            if (bulbMenuType != null && Application.Current.TryFindResource(typeof(System.Windows.Controls.ContextMenu)) is Style contextMenuStyle)
+            {
+                Application.Current.Resources[bulbMenuType] = new Style(bulbMenuType, contextMenuStyle);
+            }
 
             var entityFactories = new Core.Collections.SortedList<EntityFactoryCategory, EntityFactoryCategory>();
             foreach (var factoryType in Assembly.GetExecutingAssembly().GetTypes().Where(x => typeof(IEntityFactory).IsAssignableFrom(x) && x.GetConstructor(Type.EmptyTypes) != null))

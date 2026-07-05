@@ -341,7 +341,7 @@ public sealed partial class SessionViewModel : DispatcherViewModel, ISessionView
     {
         if (e.Action == NotifyCollectionChangedAction.Reset)
         {
-            session.Projects.RemoveWhere(x => !x.Package.IsSystem);
+            session.Projects.RemoveWhere(x => !x.Package.IsReadOnly);
         }
         if (e.NewItems != null)
         {

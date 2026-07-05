@@ -59,10 +59,10 @@ public class StrideShaderImporter
     /// <returns>A <see cref="ListBuildStep"/> containing the steps to build all shaders from system packages.</returns>
     public ListBuildStep? CreateSystemShaderBuildSteps(SessionViewModel session)
     {
-        // Check if there are any new system projects to preload
-        // TODO: PDX-1251: For now, allow non-system project as well (which means they will be loaded only once at startup)
-        // Later, they should be imported depending on what project the currently previewed/built asset is
-        var systemPackages = session.AllPackages.Where(project => /*project.IsSystem &&*/ !systemProjectsLoaded.Contains(project.Package.Meta.Name)).ToList();
+        if (session == null) throw new ArgumentNullException(nameof(session));
+        // Preload shaders from every not-yet-loaded package once at startup.
+        // TODO: scope this to the project owning the currently previewed/built asset instead of loading all.
+        var systemPackages = session.AllPackages.Where(project => !systemProjectsLoaded.Contains(project.Package.Meta.Name)).ToList();
         if (systemPackages.Count == 0)
             return null;
 
@@ -97,7 +97,7 @@ public class StrideShaderImporter
 
     public ListBuildStep CreateUserShaderBuildSteps(SessionViewModel session)
     {
-        var packages = session.AllPackages.Where(project => !project.Package.IsSystem).ToList();
+        var packages = session.AllPackages.Where(project => !project.Package.IsReadOnly).ToList();
         if (packages.Count == 0)
             return null;
 

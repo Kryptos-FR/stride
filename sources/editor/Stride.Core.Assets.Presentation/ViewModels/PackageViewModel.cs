@@ -52,7 +52,7 @@ public class PackageViewModel : SessionObjectViewModel, IComparable<PackageViewM
     /// <summary>
     /// Gets whether this package is editable.
     /// </summary>
-    public override bool IsEditable => !Package.IsSystem && IsLoaded;
+    public override bool IsEditable => !Package.IsReadOnly && IsLoaded;
 
     public IEnumerable<MountPointViewModel> MountPoints => Content.OfType<MountPointViewModel>();
 
@@ -164,7 +164,7 @@ public class PackageViewModel : SessionObjectViewModel, IComparable<PackageViewM
 
     protected override void UpdateIsDeletedStatus()
     {
-        var collection = Package.IsSystem ? Session.StorePackages : Session.LocalPackages;
+        var collection = Package.IsReadOnly ? Session.StorePackages : Session.LocalPackages;
 
         if (IsDeleted)
         {
