@@ -36,6 +36,20 @@ internal sealed unsafe class MediaEngineVideoBackend : VideoBackend
     private int videoWidth;
     private int videoHeight;
     private bool reachedEOF;
+    // OnVideoStreamTick can return S_OK after LOADEDMETADATA but before the first frame is
+    // actually decoded — TransferVideoFrame then produces a blank surface. Gate frame-presented
+    // reporting on LOADEDDATA (engine has data at the current position) so the load-handshake
+    // tick doesn't count as a real frame.
+    private volatile bool firstFrameDecoded;
+
+    // A paused MediaFoundation seek can leave its frame decoded-but-unpresented under load
+    // (OnVideoStreamTick keeps returning S_FALSE even though the engine reaches HAVE_ENOUGH_DATA).
+    // FrameStep forces that ready frame to present at the exact seek position; these track when to
+    // apply it: only while paused, after the present had time to arrive on its own.
+    private IMFMediaEngineEx* mediaEngineEx;
+    private bool awaitingSeekFrame;
+    private TimeSpan elapsedSinceSeek;
+    private static readonly TimeSpan SeekFramePresentTimeout = TimeSpan.FromMilliseconds(500);
 
     public MediaEngineVideoBackend(VideoInstance instance, MediaEngineVideoBackendFactory factory) : base(instance)
     {
@@ -65,8 +79,8 @@ internal sealed unsafe class MediaEngineVideoBackend : VideoBackend
             classFactory->CreateInstance(default, attr, &engine);
             mediaEngine = engine;
 
-            mediaEngine->QueryInterface<IMFMediaEngineEx>(out var mediaEngineEx).ThrowOnFailure();
-            using var _3 = ComHelpers.AsPtr(mediaEngineEx);
+            mediaEngine->QueryInterface<IMFMediaEngineEx>(out var ext).ThrowOnFailure();
+            mediaEngineEx = ext;   // kept alive for FrameStep; released in ReleaseMedia
 
             videoFileStream = new VirtualFileStream(File.OpenRead(url), startPosition, startPosition + length);
             using var videoDataStream = ComHelpers.CreateCCW<IStream>(new ComStreamWrapper(videoFileStream));
@@ -89,6 +103,10 @@ internal sealed unsafe class MediaEngineVideoBackend : VideoBackend
 
     public override void ReleaseMedia()
     {
+        if (mediaEngineEx != null)
+            mediaEngineEx->Release();
+        mediaEngineEx = null;
+
         if (mediaEngine != null)
         {
             mediaEngine->Shutdown();
@@ -126,6 +144,8 @@ internal sealed unsafe class MediaEngineVideoBackend : VideoBackend
     {
         mediaEngine->SetCurrentTime(time.TotalSeconds);
         reachedEOF = false;
+        awaitingSeekFrame = true;
+        elapsedSinceSeek = TimeSpan.Zero;
     }
 
     public override void SetPlaybackSpeed(float speed) => mediaEngine->SetPlaybackRate(speed);
@@ -147,8 +167,28 @@ internal sealed unsafe class MediaEngineVideoBackend : VideoBackend
         // to produce a frame should still land in the target this tick. The native engine
         // owns the play clock; we just upload whatever's ready.
 
-        if (!mediaEngine->OnVideoStreamTick(out var presentationTimeTicks).Succeeded)
+        // S_OK (0) means a new frame is ready; S_FALSE (1) means none this tick (nothing to present).
+        if (mediaEngine->OnVideoStreamTick(out var presentationTimeTicks).Value != 0)
+        {
+            // The seek's frame never made it to the present path while paused under load. The frame
+            // is decoded and ready, so FrameStep forces it to present at the exact seek position.
+            // Gated to the paused state since FrameStep pauses the engine.
+            if (awaitingSeekFrame && firstFrameDecoded && mediaEngine->IsPaused())
+            {
+                elapsedSinceSeek += elapsed;
+                if (elapsedSinceSeek >= SeekFramePresentTimeout)
+                {
+                    awaitingSeekFrame = false;
+                    mediaEngineEx->FrameStep(true);
+                }
+            }
             return;
+        }
+
+        if (!firstFrameDecoded)
+            return;
+
+        awaitingSeekFrame = false;
 
         Instance.SetCurrentTime(TimeSpan.FromTicks(presentationTimeTicks));
 
@@ -184,6 +224,8 @@ internal sealed unsafe class MediaEngineVideoBackend : VideoBackend
             mediaEngine->TransferVideoFrame((IUnknown*)videoOutputSurface, pSrc: null, new RECT(0, 0, videoWidth, videoHeight), pBorderClr: null);
             Instance.VideoTexture.CopyDecoderOutputToTopLevelMipmap(graphicsContext, videoOutputTexture);
             Instance.VideoTexture.GenerateMipMaps(graphicsContext);
+
+            Instance.NotifyFramePresented();
         }
     }
 
@@ -218,6 +260,9 @@ internal sealed unsafe class MediaEngineVideoBackend : VideoBackend
             case MF_MEDIA_ENGINE_EVENT.MF_MEDIA_ENGINE_EVENT_ERROR:
                 VideoInstance.Logger.Error($"Failed to load the video source. The file codec or format is likely not to be supported. MediaEngine error code=[{(MF_MEDIA_ENGINE_ERR)param1}], Windows error code=[{param2}]");
                 ReleaseMedia();
+                break;
+            case MF_MEDIA_ENGINE_EVENT.MF_MEDIA_ENGINE_EVENT_LOADEDDATA:
+                firstFrameDecoded = true;
                 break;
             case MF_MEDIA_ENGINE_EVENT.MF_MEDIA_ENGINE_EVENT_ENDED:
                 reachedEOF = true;

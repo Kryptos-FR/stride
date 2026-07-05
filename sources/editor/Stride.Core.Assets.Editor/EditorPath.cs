@@ -19,5 +19,5 @@ public static class EditorPath
 
     public static string InternalConfigPath => Path.Combine(UserDataPath, "GameStudioInternal.conf");
 
-    private static string ProductNameDirectory => "Stride";
+    private static string ProductNameDirectory => "stride";
 }

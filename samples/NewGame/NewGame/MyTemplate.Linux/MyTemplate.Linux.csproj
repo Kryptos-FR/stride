@@ -6,11 +6,10 @@
     <OutputPath>..\Bin\Linux\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
-    <StrideCurrentPackagePath>$(MSBuildThisFileDirectory)..\MyTemplate\MyTemplate.sdpkg</StrideCurrentPackagePath>
-    <StrideProjectType>Executable</StrideProjectType>
+    <StrideCurrentPackagePath>$(MSBuildThisFileDirectory)..\MyTemplate.Game\MyTemplate.Game.sdpkg</StrideCurrentPackagePath>
     <StridePlatform>Linux</StridePlatform>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MyTemplate\MyTemplate.csproj" />
+    <ProjectReference Include="..\MyTemplate.Game\MyTemplate.Game.csproj" />
   </ItemGroup>
 </Project>

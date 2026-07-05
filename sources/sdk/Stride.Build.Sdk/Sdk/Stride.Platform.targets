@@ -34,6 +34,13 @@
   </PropertyGroup>
 
   <!-- ================================================================ -->
+  <!-- Platform Defines - macOS -->
+  <!-- ================================================================ -->
+  <PropertyGroup Condition="'$(StrideTargetFramework)' == '$(StrideFrameworkmacOS)'">
+    <StridePlatformDefines>STRIDE_PLATFORM_MACOS</StridePlatformDefines>
+  </PropertyGroup>
+
+  <!-- ================================================================ -->
   <!-- .NET Runtime Defines -->
   <!-- ================================================================ -->
   <PropertyGroup Condition="$(TargetFramework.StartsWith('net10'))">
@@ -56,10 +63,12 @@
   <PropertyGroup Condition="'$(StrideTargetFramework)' == '$(StrideFrameworkAndroid)'">
     <!-- On Android, everything is library (even Exe) -->
     <OutputType>Library</OutputType>
-    <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
+    <!-- 24 (Nougat): Vulkan is API 24+, and our native libs are built with android-24. -->
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
     <AndroidStoreUncompressedFileExtensions />
-    <!-- Use AssemblyName for Resource class to avoid clashes between assemblies -->
-    <AndroidResgenNamespace>$(AssemblyName)</AndroidResgenNamespace>
+    <!-- Use AssemblyName for Resource class to avoid clashes between assemblies. Respect
+         caller-provided values; AssemblyName may not be a valid C# namespace (e.g. .10_0). -->
+    <AndroidResgenNamespace Condition="'$(AndroidResgenNamespace)' == ''">$(AssemblyName)</AndroidResgenNamespace>
   </PropertyGroup>
   <PropertyGroup Condition="'$(StrideTargetFramework)' == '$(StrideFrameworkAndroid)' And '$(OutputType)' == 'Exe'">
     <AndroidApplication>true</AndroidApplication>

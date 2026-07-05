@@ -30,9 +30,10 @@ namespace Stride.Audio.Tests.Engine
                 game.BeforeDrawing += onBeforeDraw;
                 game.AfterDrawing += onAfterDraw;
 
-                // DesktopSDL on macOS hits an AppKit menu-on-non-main-thread crash; xunit runs
-                // tests off the main thread. Headless avoids the SDL window/menu init entirely.
-                var context = OperatingSystem.IsMacOS()
+                // DesktopSDL doesn't work for xunit on macOS (AppKit main-thread requirement),
+                // Android (SDL can't init its window without an Activity), or iOS (SDL_VideoInit
+                // calls UIApplication.setIdleTimerDisabled which asserts on non-main thread).
+                var context = OperatingSystem.IsMacOS() || OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()
                     ? GameContextFactory.NewGameContext(AppContextType.Headless)
                     : null;
                 game.Run(context);

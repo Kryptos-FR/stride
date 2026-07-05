@@ -62,6 +62,14 @@ public interface IUITestContext
     Task<bool> WaitForWindow(string windowTypeName, double timeoutSeconds = 120);
 
     /// <summary>
+    /// Polls until any one of <paramref name="windowTypeNames"/> is visible and loaded, returning the
+    /// class name of the first to appear (or <c>null</c> on timeout). Use to fast-fail when an
+    /// alternative outcome window (e.g. the modal project picker after a failed open) shows instead of
+    /// the expected one, rather than waiting out a single-window timeout.
+    /// </summary>
+    Task<string?> WaitForAnyWindow(string[] windowTypeNames, double timeoutSeconds = 180);
+
+    /// <summary>
     /// Selects a template in the ProjectSelectionWindow by template id and returns true if found.
     /// The dialog stays open; close it via <see cref="CloseModalWithOk"/>.
     /// </summary>
@@ -111,6 +119,23 @@ public interface IUITestContext
     Task<Guid> AddAssetFromTemplate(Guid templateId, string templateName = null);
 
     /// <summary>
+    /// Opens the asset whose <c>Url</c> equals — or ends with — <paramref name="assetUrl"/> in its
+    /// registered editor (e.g. a script source file in the RoslynPad-backed script editor), so the
+    /// document docks. Returns the asset's actual <c>Url</c> (pass it to <see cref="CapturePanel"/>,
+    /// which matches a document by its title = Url), or <c>null</c> if no such asset was found.
+    /// </summary>
+    Task<string?> OpenAssetEditor(string assetUrl);
+
+    /// <summary>
+    /// Polls the code-editor document titled <paramref name="title"/> (an AvalonEdit-based editor
+    /// opened via <see cref="OpenAssetEditor"/>) until its visible text renders in at least three
+    /// distinct foreground colors — i.e. Roslyn classification has been computed and applied, which
+    /// happens asynchronously after the document opens. Returns false on timeout (editor missing,
+    /// still monochrome, or blank).
+    /// </summary>
+    Task<bool> WaitForSyntaxHighlighting(string title, double timeoutSeconds = 60);
+
+    /// <summary>
     /// Registers a one-shot handler for the next <c>AssetPickerWindow</c>: selects the asset by
     /// <c>Name</c> and confirms. Pass <c>null</c> to cancel the picker.
     /// </summary>
@@ -122,6 +147,14 @@ public interface IUITestContext
     /// <c>CreateEntityInRootCommand</c> with a custom <c>IEntityFactory</c>.
     /// </summary>
     Task<bool> AddEntityToScene(string entityName, Guid modelAssetId, Stride.Core.Mathematics.Vector3 position);
+
+    /// <summary>
+    /// Walks the loaded session's assets and returns how many objects failed to deserialize (were
+    /// replaced with <c>IUnloadable</c> placeholders) — e.g. a script component whose type/assembly
+    /// couldn't be resolved. Returns 0 when no project/session is loaded. Call after the project's
+    /// assemblies/assets have built so a correct reference resolves and only a genuine break counts.
+    /// </summary>
+    Task<int> CountUnloadable();
 
     /// <summary>Sets the process exit code and shuts the editor down.</summary>
     void Exit(int exitCode = 0);

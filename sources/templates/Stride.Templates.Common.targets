@@ -6,6 +6,14 @@
     preprocess+aggregate pipeline, auto-pack-deploy, CI safeguards).
   -->
 
+  <!-- StrideSamplesVersion: version authority for the content-versioned packages (set
+       StrideTemplateContentVersioned=true in the csproj to opt in). -->
+  <Import Project="$(MSBuildThisFileDirectory)StrideSamplesVersion.props" />
+
+  <!-- StrideNuGetVersion (+ parts) from SharedAssemblyInfo[.Generated].cs; shared with Stride.PackageInfo.targets.
+       Imported here (vanilla Microsoft.NET.Sdk, outside the Stride SDK chain). -p:PackageVersion=X pins explicitly. -->
+  <Import Project="$(StrideRoot)sources\targets\Stride.NuGetVersion.props" />
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>true</IsPackable>
@@ -19,25 +27,26 @@
     <RepositoryUrl>https://github.com/stride3d/stride</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
 
-    <!-- Inherit the engine's NuGet version derivation. Mirrors Stride.PackageInfo.targets at
-         sources/sdk/Stride.Build.Sdk/Sdk/ but inlined here because we use the vanilla
-         Microsoft.NET.Sdk (not the Stride SDK chain). Override at the CLI with
-         -p:PackageVersion=X to pin explicitly (release pipeline use). -->
-    <_StrideSharedAssemblyInfoFile Condition="'$(StridePackageBuild)' == 'true'">$(StrideRoot)sources/shared/SharedAssemblyInfo.NuGet.cs</_StrideSharedAssemblyInfoFile>
-    <_StrideSharedAssemblyInfoFile Condition="'$(StridePackageBuild)' != 'true'">$(StrideRoot)sources/shared/SharedAssemblyInfo.cs</_StrideSharedAssemblyInfoFile>
-    <_StrideSharedAssemblyInfoLines>$([System.IO.File]::ReadAllText('$(_StrideSharedAssemblyInfoFile)'))</_StrideSharedAssemblyInfoLines>
-    <StridePublicVersion>$([System.Text.RegularExpressions.Regex]::Match($(_StrideSharedAssemblyInfoLines), `.*PublicVersion = \"(.*)\";.*`).Groups[1].Value)</StridePublicVersion>
-    <StrideNuGetVersionSuffix>$([System.Text.RegularExpressions.Regex]::Match($(_StrideSharedAssemblyInfoLines), `.*NuGetVersionSuffix = \"(.*)\";.*`).Groups[1].Value)</StrideNuGetVersionSuffix>
-    <StrideBuildMetadata>$([System.Text.RegularExpressions.Regex]::Match($(_StrideSharedAssemblyInfoLines), `.*BuildMetadata = \"(.*)\";.*`).Groups[1].Value)</StrideBuildMetadata>
-    <StrideNuGetVersion>$(StridePublicVersion)$(StrideNuGetVersionSuffix)$(StrideBuildMetadata)</StrideNuGetVersion>
+    <!-- Content-versioned packages (Samples, Starters) = StrideSamplesVersion + engine prerelease suffix (matches
+         the bridge query); the rest (Games) follow the engine version. CLI -p:PackageVersion= wins over both. -->
+    <PackageVersion Condition="'$(PackageVersion)' == '' And '$(StrideTemplateContentVersioned)' == 'true'">$(StrideSamplesVersion)$(StrideNuGetVersionSuffix)</PackageVersion>
     <PackageVersion Condition="'$(PackageVersion)' == ''">$(StrideNuGetVersion)</PackageVersion>
 
     <IncludeBuildOutput>false</IncludeBuildOutput>
-    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <NoDefaultExcludes>true</NoDefaultExcludes>
-    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <!-- NU5128: content-only package (no lib/ref assemblies). NU5104: on dev builds the Stride.Core marker
+         dependency (see the ProjectReference below) is prerelease while the package version may read stable. -->
+    <NoWarn>$(NoWarn);NU5128;NU5104</NoWarn>
 
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+
+    <!-- NoTargets disables FUTDC by default; re-enable it since we declare UpToDateCheckInput/Built below. -->
+    <DisableFastUpToDateCheck>false</DisableFastUpToDateCheck>
+
+    <!-- No code = no symbols. Stop the build (and VS Build Acceleration) from declaring a pdb output
+         that NoTargets never produces, which otherwise fails FUTDC as a missing output every check. -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
 
     <TemplateContentRoot>$(MSBuildProjectDirectory)/obj/template-content</TemplateContentRoot>
     <StrideTemplatesProject>$(StrideRoot)sources/tools/Stride.TemplateGenerator/Stride.TemplateGenerator.csproj</StrideTemplatesProject>
@@ -52,20 +61,36 @@
     <_StrideTemplatesSkipPruneFlag Condition="'$(StrideTemplatesPackMode)' == 'minimal'">--skip-prune</_StrideTemplatesSkipPruneFlag>
   </PropertyGroup>
 
-  <!-- Auto-pack to bin/packages and deploy to %LocalAppData%\Stride\NugetDev on build. Mirrors
-       Stride.Build.Sdk/Sdk.targets (StrideAutoPackDeploy + GeneratePackageOnBuild block); inlined
-       here because this project doesn't use the Stride SDK chain. -->
-  <PropertyGroup Condition="$(DesignTimeBuild) != 'true' And '$(StrideSkipAutoPack)' != 'true'">
-    <PackageOutputPath>$(StrideRoot)bin\packages\</PackageOutputPath>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-  </PropertyGroup>
-  <Target Name="StrideAutoPackDeploy" AfterTargets="Pack" Condition="'$(StrideSkipAutoPack)' != 'true'">
-    <Copy Condition="'%(Extension)' == '.nupkg'" SourceFiles="@(NuGetPackOutput)" DestinationFolder="$(LocalAppData)\Stride\NugetDev"/>
-    <!-- Purge the extracted copy in the global NuGet cache so consumer restores re-extract
-         from the freshly built .nupkg (otherwise same-version repacks load stale content). -->
-    <RemoveDir Condition="Exists('$(NuGetPackageRoot)$(PackageId.ToLowerInvariant())\$(PackageVersion)')"
-               Directories="$(NuGetPackageRoot)$(PackageId.ToLowerInvariant())\$(PackageVersion)" />
+  <!-- Per-checkout NuGet version suffix; mirrors StrideAppendWorktreeVersion in
+       Stride.PackageInfo.targets (templates use Microsoft.NET.Sdk so don't get it transitively).
+       Must run before the preprocessor too so $EngineVersion$ matches the engine's suffix. -->
+  <Import Project="$(StrideRoot)sources/targets/Stride.WorktreeVersion.targets"
+          Condition="'$(_StrideWorktreeVersionTargetsImported)' != 'true'" />
+  <Target Name="StrideTemplatesAppendWorktreeVersion"
+          DependsOnTargets="StrideEnsureWorktreeVersion"
+          BeforeTargets="StrideGenerateTemplateContent;_GetOutputItemsFromPack;GenerateNuspec;_GetProjectVersion">
+    <PropertyGroup Condition="'$(StrideWorktreeSuffix)' != '' And !$(PackageVersion.EndsWith('$(StrideWorktreeSuffix)'))">
+      <PackageVersion>$(PackageVersion)$(StrideWorktreeSuffix)</PackageVersion>
+    </PropertyGroup>
+    <!-- The engine version stamped into template content (the engine-version flag below). Distinct
+         from PackageVersion: content-versioned packages (Samples/Starters) follow StrideSamplesVersion,
+         but their PackageReferences must name engine packages that actually exist. -->
+    <PropertyGroup>
+      <_StrideTemplatesEngineVersion>$(StrideNuGetVersion)</_StrideTemplatesEngineVersion>
+      <_StrideTemplatesEngineVersion Condition="'$(StrideWorktreeSuffix)' != '' And !$(_StrideTemplatesEngineVersion.EndsWith('$(StrideWorktreeSuffix)'))">$(_StrideTemplatesEngineVersion)$(StrideWorktreeSuffix)</_StrideTemplatesEngineVersion>
+    </PropertyGroup>
   </Target>
+
+  <!-- Also suffix during a parent's cross-project version query (_GetProjectVersion), so GameStudio's
+       nuspec <dependency> on a template records the produced -devN version, not the base. -->
+  <PropertyGroup>
+    <GetPackageVersionDependsOn>$(GetPackageVersionDependsOn);StrideTemplatesAppendWorktreeVersion</GetPackageVersionDependsOn>
+  </PropertyGroup>
+
+  <!-- Auto-pack to bin/packages and deploy to %LocalAppData%\stride\nugetdev on build
+       (shared with the Stride SDK chain; imported directly here because this project uses
+       vanilla Microsoft.NET.Sdk). -->
+  <Import Project="$(StrideRoot)sources\targets\Stride.AutoPackDeploy.targets" />
 
   <!-- CI safeguard: never publish a non-preprocessed nupkg. -->
   <Target Name="StrideAssertPackModeForRelease" BeforeTargets="GenerateNuspec"
@@ -89,10 +114,23 @@
   </Target>
 
   <ItemGroup>
+    <!-- Build-order only dependency on the preprocessor tool; PrivateAssets=all keeps it out of the
+         package's nuspec dependencies (ReferenceOutputAssembly=false already does, this makes it explicit). -->
     <ProjectReference Include="$(StrideTemplatesProject)">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <Private>false</Private>
+      <PrivateAssets>all</PrivateAssets>
       <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+    </ProjectReference>
+    <!-- Marker dependency: stamps the engine version the templates were built against as a Stride.Core >=
+         dependency. The CLI reads it from nuget metadata to pick a compatible template. Private=false keeps
+         the package content-only (nothing compiles against Stride.Core). ReferenceOutputAssembly must be
+         forced back on: the NoTargets SDK defaults it to false on every ProjectReference, and NuGet restore
+         drops such references from the   dependency graph, which silently drops this marker from the nuspec. -->
+    <ProjectReference Include="$(StrideRoot)sources/core/Stride.Core/Stride.Core.csproj">
+      <Private>false</Private>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
     </ProjectReference>
   </ItemGroup>
 
@@ -103,11 +141,30 @@
     <None Include="$(MSBuildThisFileDirectory)PackageReadme.md" Pack="true" PackagePath="README.md" Visible="false" />
   </ItemGroup>
 
-  <!-- VS fast up-to-date inputs: project has no .cs files, so without these VS skips Build → no Pack → stale nupkg. -->
+  <!-- Eval-time mirror of StrideEnsureWorktreeVersion: reads the same ledger so UpToDateCheckBuilt
+       below can name the actually-produced .nupkg (e.g. 4.4.0.2-dev1) rather than the un-suffixed
+       4.4.0.2. Without this, VS's fast up-to-date check looks for the wrong file every build and
+       this project rebuilds on every F5. The build-time target stays authoritative; this only feeds
+       the up-to-date check. -->
+  <PropertyGroup Condition="'$(CI)' != 'true' And '$(GITHUB_ACTIONS)' != 'true' And '$(TF_BUILD)' != 'true' And '$(StrideSkipWorktreeVersion)' != 'true' And '$(StridePackageBuild)' != 'true'">
+    <_StrideEvalWorktreeLedger Condition="'$(StrideWorktreeLedger)' != ''">$(StrideWorktreeLedger)</_StrideEvalWorktreeLedger>
+    <_StrideEvalWorktreeLedger Condition="'$(_StrideEvalWorktreeLedger)' == ''">$(LocalAppData)\stride\worktree-ids.txt</_StrideEvalWorktreeLedger>
+    <_StrideEvalWorktreeLedgerContent Condition="Exists('$(_StrideEvalWorktreeLedger)')">$([System.IO.File]::ReadAllText('$(_StrideEvalWorktreeLedger)'))</_StrideEvalWorktreeLedgerContent>
+    <_StrideEvalRootNorm>$([System.IO.Path]::GetFullPath('$(StrideRoot)').TrimEnd('\').TrimEnd('/'))</_StrideEvalRootNorm>
+    <_StrideEvalRootEscaped>$([System.Text.RegularExpressions.Regex]::Escape('$(_StrideEvalRootNorm)'))</_StrideEvalRootEscaped>
+    <_StrideEvalWorktreeToken Condition="'$(_StrideEvalWorktreeLedgerContent)' != ''">$([System.Text.RegularExpressions.Regex]::Match($(_StrideEvalWorktreeLedgerContent), `(?im)^\s*([^\s#=][^=]*?)\s*=\s*$(_StrideEvalRootEscaped)\s*$`).Groups[1].Value)</_StrideEvalWorktreeToken>
+    <!-- Mirror StrideVersionTasks.cs TokenToSuffix (keep in sync): '(primary)' (legacy) -> -dev,
+         '(empty)' -> no suffix, '' -> no suffix, else -<token>. -->
+    <_StrideEvalWorktreeSuffix Condition="'$(_StrideEvalWorktreeToken)' == '(primary)'">-dev</_StrideEvalWorktreeSuffix>
+    <_StrideEvalWorktreeSuffix Condition="'$(_StrideEvalWorktreeToken)' != '' And '$(_StrideEvalWorktreeToken)' != '(primary)' And '$(_StrideEvalWorktreeToken)' != '(empty)'">-$(_StrideEvalWorktreeToken)</_StrideEvalWorktreeSuffix>
+  </PropertyGroup>
+
+  <!-- VS fast up-to-date inputs: no .cs files here, so without these VS skips Build → no Pack → stale nupkg.
+       Per-sample file inputs are added in each csproj as literal-wildcard UpToDateCheckInput: CPS reads only
+       static pre-expanded inputs, and MSBuild only globs wildcards written literally (can't be batched here). -->
   <ItemGroup>
     <UpToDateCheckInput Include="$(StrideTemplatesDll)" />
-    <UpToDateCheckInput Include="@(StrideSampleTemplate->'%(SamplePath)/**/*')" Exclude="@(StrideSampleTemplate->'%(SamplePath)/bin/**;%(SamplePath)/obj/**;%(SamplePath)/Cache/**')" />
-    <UpToDateCheckBuilt Include="$(StrideRoot)bin\packages\$(PackageId).$(PackageVersion).nupkg" />
+    <UpToDateCheckBuilt Include="$(StrideRoot)bin\packages\$(PackageId).$(PackageVersion)$(_StrideEvalWorktreeSuffix).nupkg" />
   </ItemGroup>
 
   <Target Name="StrideGenerateTemplateContent" BeforeTargets="_GetPackageFiles;GenerateNuspec">
@@ -116,8 +173,13 @@
     <Message Text="StrideTemplates [$(PackageId)]: pack mode = $(StrideTemplatesPackMode), templates = @(StrideSampleTemplate->Count())" Importance="high" />
 
     <!-- Per-template preprocess. MSBuild's per-item Exec batching runs one command per item.
-         The engine-version flag substitutes $EngineVersion$ literals in template content. -->
-    <Exec Command="dotnet &quot;$(StrideTemplatesDll)&quot; preprocess-template --input-path=&quot;%(StrideSampleTemplate.SamplePath)&quot; --output-path=&quot;$(TemplateContentRoot)/%(StrideSampleTemplate.Identity)&quot; --template-name=%(StrideSampleTemplate.Identity) --engine-version=&quot;$(PackageVersion)&quot; $(_StrideTemplatesSkipPruneFlag)" />
+         The engine-version flag stamps the engine version into template content ($EngineVersion$
+         literals + concrete Stride.* PackageReference versions), so packed content instantiates
+         against the engine it shipped with — including via plain `dotnet new`, which has no
+         Stride-side rewrite hook. platform-template-path points the preprocessor at the NewGame
+         scaffold so samples that ship only Windows (most of them) gain Linux/macOS/iOS/Android
+         exec projects in the packed output. -->
+    <Exec Command="dotnet &quot;$(StrideTemplatesDll)&quot; preprocess-template --input-path=&quot;%(StrideSampleTemplate.SamplePath)&quot; --output-path=&quot;$(TemplateContentRoot)/%(StrideSampleTemplate.Identity)&quot; --template-name=%(StrideSampleTemplate.Identity) --engine-version=&quot;$(_StrideTemplatesEngineVersion)&quot; --platform-template-path=&quot;$(StrideRoot)samples/NewGame/NewGame&quot; $(_StrideTemplatesSkipPruneFlag)" />
 
     <!-- Aggregate every wrapped template's .sdtpl into a single multi-doc YAML at the package
          root. GameStudio's bridge reads this one file for display metadata. -->
@@ -129,7 +191,7 @@
     <ItemGroup>
       <!-- nuget.config is preprocessor staging machinery for `dotnet restore` against sample
            templates; sources/modifiers strips it on instantiation. -->
-      <_StrideTemplateFiles Include="$(TemplateContentRoot)/**/*" Exclude="$(TemplateContentRoot)/**/nuget.config" />
+      <_StrideTemplateFiles Include="$(TemplateContentRoot)/**/*" Exclude="$(TemplateContentRoot)/**/nuget.config;$(TemplateContentRoot)/**/bin/**;$(TemplateContentRoot)/**/obj/**" />
       <_PackageFiles Include="@(_StrideTemplateFiles)">
         <BuildAction>Content</BuildAction>
         <PackagePath>content/%(RecursiveDir)%(Filename)%(Extension)</PackagePath>

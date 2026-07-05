@@ -1,10 +1,12 @@
 <Project>
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'Directory.Build.props'))/sdk/Stride.Build.Sdk.MultiPlatform.Tests/Sdk/Sdk.props" />
   <PropertyGroup>
+    <TargetFrameworks>$(StrideTestTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup>
     <AssemblyName>Stride.Engine.NoAssets.Tests</AssemblyName>
     <RootNamespace>Stride.Engine.Tests</RootNamespace>
     <StrideCompileAssets>false</StrideCompileAssets>
-    <StrideGraphicsApiDependent>true</StrideGraphicsApiDependent>
     <StrideGraphicsRegression>true</StrideGraphicsRegression>
   </PropertyGroup>
   <ItemGroup>

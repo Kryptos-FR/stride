@@ -11,10 +11,6 @@ AssetFolders:
     -   Path: !dir Effects
 ResourceFolders:
     - !dir ../Resources
-OutputGroupDirectories: {}
-ExplicitFolders: []
-Bundles: []
-TemplateFolders: []
 RootAssets:
     - 1534e89e-d5de-4e57-97c8-acbe1ea9bded:Scenes/Colliders
     - 1bd2dca5-6e73-443e-8613-afd501bfdd05:Scenes/MainScene

@@ -9,6 +9,8 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Stride.Assets.Templates;
+using Stride.Core;
 using Stride.Core.Diagnostics;
 
 namespace Stride.TemplateGenerator;
@@ -44,7 +46,7 @@ internal class TemplatePreprocessor
     /// </summary>
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".cs", ".csproj", ".sln", ".targets", ".props", ".config",
+        ".cs", ".csproj", ".sln", ".slnx", ".targets", ".props", ".config",
         ".json", ".yaml", ".yml",
         ".xml", ".html", ".htm",
         ".md", ".txt", ".gitignore", ".gitattributes", ".editorconfig",
@@ -79,10 +81,13 @@ internal class TemplatePreprocessor
     public string? TemplateName { get; set; }
 
     /// <summary>
-    /// When set, every literal <c>$EngineVersion$</c> in <c>.csproj</c> output files is rewritten
-    /// to this value (typically pack-time <c>PackageVersion</c>). No-op for samples that hardcode
-    /// their version; required for the NewGame starter so its <c>PackageReference</c> versions
-    /// pin to the matching engine release.
+    /// When set, staged <c>.csproj</c> files get this engine version stamped in: every literal
+    /// <c>$EngineVersion$</c> (NewGame starter) and every concrete engine-family <c>Stride.*</c>
+    /// <c>PackageReference</c> version (samples commit the samples-authority version, which may
+    /// not match — or even restore against — the engine being packed). Stamping at pack time
+    /// makes the content instantiable as-is by every consumer, including plain <c>dotnet new</c>,
+    /// which has no Stride-side rewrite hook; instantiation-side upgrading remains only for
+    /// running a template against a newer engine than it was packed with.
     /// </summary>
     public string? EngineVersion { get; set; }
 
@@ -113,6 +118,13 @@ internal class TemplatePreprocessor
     /// escape hatch for the "minimal" pack mode and for diagnostics.
     /// </summary>
     public bool SkipPrune { get; set; }
+
+    /// <summary>
+    /// Reference template (NewGame) whose <c>MyTemplate.{Platform}/</c> exec-project folders are
+    /// copied verbatim into the staged tree for any platform the input sample doesn't already ship.
+    /// Null disables injection.
+    /// </summary>
+    public string? PlatformTemplatePath { get; set; }
 
     /// <summary>
     /// Map of original GUID → placeholder index (1-based). Populated by the GUID scan pass,
@@ -190,13 +202,6 @@ internal class TemplatePreprocessor
         // slow.
         CleanBuildArtifacts(logger);
 
-        // Generate MyTemplate.sln if absent. Samples typically don't include their sln (input is
-        // the inner dir, not the sample root); synthesize one referencing only the csprojs that
-        // exist in staging. Per-platform exec csprojs get wrapped in #if (XActive) conditional
-        // regions so template.json's SpecialCustomOperations strips unselected platforms at
-        // instantiation.
-        GenerateSlnIfMissing(logger);
-
         // Sample-name → MyTemplate rename. Replaces the sample's literal name (CSharpBeginner /
         // SpriteStudioDemo / ...) with the sourceName placeholder "MyTemplate" across file
         // contents, file names, and directory names. The template engine then sourceName-
@@ -204,11 +209,29 @@ internal class TemplatePreprocessor
         // source name is already "MyTemplate" (NewGame scaffold case).
         RenameSourceName(logger);
 
+        // Copy MyTemplate.{Platform}/ from --platform-template-path for any platform the sample
+        // didn't author. EmitTemplateJson's per-platform modifiers then gate the result by the
+        // platforms parameter at instantiation. No-op when the flag isn't set.
+        InjectMissingPlatforms(logger);
+
+        // Generate MyTemplate.sln if absent. Samples typically don't include their sln (input is
+        // the inner dir, not the sample root); synthesize one referencing every csproj in staging,
+        // including any platform exec project injected above. Per-platform exec csprojs get wrapped
+        // in #if (XActive) conditional regions so template.json's SpecialCustomOperations strips
+        // unselected platforms at instantiation.
+        GenerateSlnxIfMissing(logger);
+
         // Inject a BasicCameraController placeholder component into the Camera entity, BEFORE
         // the GUID scan so the injected component's Id gets caught by the placeholder pass
         // (fresh GUID per dotnet new instantiation). The type/assembly prefix is the literal
         // "MyTemplate" which the template engine substitutes via sourceName.
         InjectCameraScript(logger);
+
+        // Rewrite the Android activity ScreenOrientation and the engine GameSettings
+        // DisplayOrientation into placeholders consumed by the orientation template.json symbols.
+        // Only when the template opts into the orientation parameter.
+        if (Sdtpl?.HasParameter("orientation") == true)
+            InjectOrientationPlaceholders(logger);
 
         // Scan all text files for unique GUIDs, then rewrite with placeholders. A pre-pass
         // indexes every Id explicitly declared in the staged .sd* tree (the asset's own Id at
@@ -228,8 +251,9 @@ internal class TemplatePreprocessor
         EmitTemplateJson();
         logger.Info($"Wrote template.json with {GuidMap.Count} generated/guid symbols");
 
-        // $EngineVersion$ substitution. Only NewGame's csprojs use this literal; samples
-        // hardcode their version and pass through unchanged.
+        // Engine-version stamp: $EngineVersion$ literals (NewGame) plus concrete Stride.*
+        // PackageReference versions (samples), so packed content instantiates against the
+        // engine it shipped with. See the EngineVersion property doc.
         if (!string.IsNullOrEmpty(EngineVersion))
             SubstituteEngineVersion(logger);
 
@@ -242,7 +266,7 @@ internal class TemplatePreprocessor
     }
 
     /// <summary>
-    /// Final-pass line-ending normalization. <c>.sln</c> → CRLF (VS/dotnet sln write CRLF on
+    /// Final-pass line-ending normalization. <c>.sln</c>/<c>.slnx</c> → CRLF (VS/dotnet write CRLF on
     /// edit; matching avoids the "Inconsistent line endings" prompt on first save). Everything
     /// else → LF (modern cross-platform convention, matches what <c>dotnet/sdk</c> templates
     /// ship). Only files in the <see cref="TextExtensions"/> whitelist are touched — binaries
@@ -255,7 +279,8 @@ internal class TemplatePreprocessor
         {
             var content = File.ReadAllText(path);
             var normalized = content.Replace("\r\n", "\n");
-            if (Path.GetExtension(path).Equals(".sln", StringComparison.OrdinalIgnoreCase))
+            var ext = Path.GetExtension(path);
+            if (ext.Equals(".sln", StringComparison.OrdinalIgnoreCase) || ext.Equals(".slnx", StringComparison.OrdinalIgnoreCase))
                 normalized = normalized.Replace("\n", "\r\n");
             if (normalized != content)
             {
@@ -306,19 +331,48 @@ internal class TemplatePreprocessor
             Copy(screenshot);
     }
 
+    /// <summary>Matches a <c>Stride*</c> Include + Version attribute pair (PackageReference shape).</summary>
+    private static readonly Regex StridePackageReferenceRegex = new(
+        "(Include=\"(Stride[^\"]*)\"\\s+Version=\")([^\"]*)(\")", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Community/third-party <c>Stride.*</c>-prefixed packages that version independently of the
+    /// engine; their references pass through the engine-version stamp untouched.
+    /// </summary>
+    private static readonly string[] NonEnginePackagePrefixes =
+    {
+        "Stride.Awesome.Shaders", "Stride.Community", "Stride.Dependencies.", "Stride.GNU.",
+        "Stride.GraphX", "Stride.Metrics", "Stride.Mono.", "Stride.OpenTK", "Stride.QuickGraph",
+    };
+
+    private static bool IsNonEnginePackage(string packageId)
+        => NonEnginePackagePrefixes.Any(prefix => packageId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+
     private void SubstituteEngineVersion(ILogger logger)
     {
-        var replaced = 0;
+        var files = 0;
+        var references = 0;
         foreach (var csproj in Directory.EnumerateFiles(OutputDirectory!, "*.csproj", SearchOption.AllDirectories))
         {
             var content = File.ReadAllText(csproj);
-            if (content.IndexOf("$EngineVersion$", StringComparison.Ordinal) < 0)
+            var updated = content.Replace("$EngineVersion$", EngineVersion);
+            updated = StridePackageReferenceRegex.Replace(updated, match =>
+            {
+                var version = match.Groups[3].Value;
+                // A remaining $placeholder$ is someone else's substitution point; community
+                // packages keep their committed version.
+                if (version.IndexOf('$') >= 0 || version == EngineVersion || IsNonEnginePackage(match.Groups[2].Value))
+                    return match.Value;
+                references++;
+                return match.Groups[1].Value + EngineVersion + match.Groups[4].Value;
+            });
+            if (updated == content)
                 continue;
-            File.WriteAllText(csproj, content.Replace("$EngineVersion$", EngineVersion));
-            replaced++;
+            File.WriteAllText(csproj, updated);
+            files++;
         }
-        if (replaced > 0)
-            logger.Info($"Substituted $EngineVersion$ → {EngineVersion} in {replaced} .csproj file(s)");
+        if (files > 0)
+            logger.Info($"Stamped engine version {EngineVersion} into {files} .csproj file(s) ({references} Stride.* reference(s) rewritten)");
     }
 
     /// <summary>
@@ -503,23 +557,31 @@ internal class TemplatePreprocessor
         { "Android", "AndroidActive" },
     };
 
+    // Default-startup priority: desktop platforms first, then mobile. The highest-priority platform the
+    // user keeps gets the .slnx DefaultStartup. PlatformType (not strings) so the names stay
+    // compile-checked; covers every PlatformActiveSymbol platform.
+    private static readonly PlatformType[] StartupPlatformPriority =
+        [PlatformType.Windows, PlatformType.Linux, PlatformType.macOS, PlatformType.Android, PlatformType.iOS];
+
     /// <summary>
-    /// Synthesizes a <c>MyTemplate.sln</c> at the staged root when one isn't already present.
-    /// Walks <c>*.csproj</c> under the tree and emits a Project block for each, wrapping
+    /// Synthesizes a <c>MyTemplate.slnx</c> at the staged root when no solution is already present.
+    /// Walks <c>*.csproj</c> under the tree and emits a <c>&lt;Project&gt;</c> for each, wrapping
     /// per-platform exec projects (those whose dir name ends in a known platform suffix) in
     /// <c>#if (XActive)</c> markers so the template engine's SpecialCustomOperations strips
-    /// unselected platforms at instantiation. Instance GUIDs are random but flow through the
-    /// subsequent GUID-placeholder pass and get fresh values per dotnet new invocation.
+    /// unselected platforms at instantiation. Exactly one exec — the highest-priority platform the
+    /// user keeps (<see cref="StartupPlatformPriority"/>) — is marked <c>DefaultStartup</c>, since
+    /// .slnx, unlike classic .sln, doesn't pick the startup project from file order.
     /// </summary>
-    private void GenerateSlnIfMissing(ILogger logger)
+    private void GenerateSlnxIfMissing(ILogger logger)
     {
-        var existing = Directory.EnumerateFiles(OutputDirectory!, "*.sln", SearchOption.TopDirectoryOnly).ToList();
+        var existing = Directory.EnumerateFiles(OutputDirectory!, "*.sln", SearchOption.TopDirectoryOnly)
+            .Concat(Directory.EnumerateFiles(OutputDirectory!, "*.slnx", SearchOption.TopDirectoryOnly))
+            .ToList();
         if (existing.Count > 0)
             return;
 
-        // Discover csprojs and classify.
-        // Each entry: (csprojPath, dirName, platformSuffix-or-null, instanceGuid)
-        var projects = new List<(string Csproj, string DirName, string? Platform, Guid InstanceId)>();
+        // Discover csprojs and classify by per-platform suffix (null = the shared game library).
+        var projects = new List<(string Csproj, string DirName, string? Platform)>();
         foreach (var csproj in Directory.EnumerateFiles(OutputDirectory!, "*.csproj", SearchOption.AllDirectories))
         {
             var dirName = Path.GetFileName(Path.GetDirectoryName(csproj)!);
@@ -532,66 +594,101 @@ internal class TemplatePreprocessor
                     break;
                 }
             }
-            projects.Add((csproj, dirName, platform, Guid.NewGuid()));
+            projects.Add((csproj, dirName, platform));
         }
         if (projects.Count == 0)
             return;
 
-        // Per-platform execs sort first (in PlatformActiveSymbol order, so Windows leads),
-        // game library after. VS / dotnet picks the first project in the .sln as the startup
-        // project when no .vs/ user state exists; putting Windows first means the user can
-        // F5 / dotnet run straight after instantiation without manually picking a startup.
-        var ordered = projects
-            .OrderBy(p => p.Platform == null ? 1 : 0)
-            .ThenBy(p => p.Platform == null ? 0 : new List<string>(PlatformActiveSymbol.Keys).IndexOf(p.Platform))
-            .ToList();
+        string Rel(string csproj) => Path.GetRelativePath(OutputDirectory!, csproj).Replace('\\', '/');
 
-        const string SdkProjectTypeGuid = "9A19103F-16F7-4668-BE54-9A1E7A4F7556";
         var sb = new StringBuilder();
-        sb.AppendLine("Microsoft Visual Studio Solution File, Format Version 12.00");
-        sb.AppendLine("# Visual Studio Version 17");
-        sb.AppendLine("VisualStudioVersion = 17.0.0.0");
-        sb.AppendLine("MinimumVisualStudioVersion = 10.0.40219.1");
-        foreach (var p in ordered)
-        {
-            var relCsproj = Path.GetRelativePath(OutputDirectory!, p.Csproj).Replace('/', '\\');
-            if (p.Platform != null)
-                sb.AppendLine($"#if ({PlatformActiveSymbol[p.Platform]})");
-            sb.AppendLine($"Project(\"{{{SdkProjectTypeGuid}}}\") = \"{p.DirName}\", \"{relCsproj}\", \"{{{p.InstanceId.ToString().ToUpperInvariant()}}}\"");
-            sb.AppendLine("EndProject");
-            if (p.Platform != null)
-                sb.AppendLine("#endif");
-        }
-        sb.AppendLine("Global");
-        sb.AppendLine("\tGlobalSection(SolutionConfigurationPlatforms) = preSolution");
-        sb.AppendLine("\t\tDebug|Any CPU = Debug|Any CPU");
-        sb.AppendLine("\t\tRelease|Any CPU = Release|Any CPU");
-        sb.AppendLine("\tEndGlobalSection");
-        sb.AppendLine("\tGlobalSection(ProjectConfigurationPlatforms) = postSolution");
-        foreach (var p in ordered)
-        {
-            if (p.Platform != null)
-                sb.AppendLine($"#if ({PlatformActiveSymbol[p.Platform]})");
-            var idStr = p.InstanceId.ToString().ToUpperInvariant();
-            sb.AppendLine($"\t\t{{{idStr}}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU");
-            sb.AppendLine($"\t\t{{{idStr}}}.Debug|Any CPU.Build.0 = Debug|Any CPU");
-            sb.AppendLine($"\t\t{{{idStr}}}.Release|Any CPU.ActiveCfg = Release|Any CPU");
-            sb.AppendLine($"\t\t{{{idStr}}}.Release|Any CPU.Build.0 = Release|Any CPU");
-            if (p.Platform != null)
-                sb.AppendLine("#endif");
-        }
-        sb.AppendLine("\tEndGlobalSection");
-        sb.AppendLine("\tGlobalSection(SolutionProperties) = preSolution");
-        sb.AppendLine("\t\tHideSolutionNode = FALSE");
-        sb.AppendLine("\tEndGlobalSection");
-        sb.AppendLine("\tGlobalSection(ExtensibilityGlobals) = postSolution");
-        sb.AppendLine($"\t\tSolutionGuid = {{{Guid.NewGuid().ToString().ToUpperInvariant()}}}");
-        sb.AppendLine("\tEndGlobalSection");
-        sb.AppendLine("EndGlobal");
+        sb.AppendLine("<Solution>");
 
-        var slnPath = Path.Combine(OutputDirectory!, "MyTemplate.sln");
-        File.WriteAllText(slnPath, sb.ToString());
-        logger.Info($"Generated MyTemplate.sln with {ordered.Count} project(s)");
+        // Game library (and any other non-platform project) first; .slnx project order is irrelevant —
+        // the startup project is the DefaultStartup below, not the first entry.
+        foreach (var p in projects.Where(p => p.Platform == null))
+            sb.AppendLine($"  <Project Path=\"{Rel(p.Csproj)}\" />");
+
+        // Per-platform execs in startup priority order. DefaultStartup goes on the first active one: each
+        // lower-priority exec claims it only when no higher-priority platform is active, so exactly one
+        // DefaultStartup survives whatever set of platforms the user selects.
+        var higherPriority = new List<string>();
+        foreach (var p in projects.Where(p => p.Platform != null)
+                     .OrderBy(p => Enum.TryParse<PlatformType>(p.Platform, out var pt) ? Array.IndexOf(StartupPlatformPriority, pt) : int.MaxValue))
+        {
+            var rel = Rel(p.Csproj);
+            var symbol = PlatformActiveSymbol[p.Platform!];
+            if (higherPriority.Count == 0)
+            {
+                sb.AppendLine($"#if ({symbol})");
+                sb.AppendLine($"  <Project Path=\"{rel}\" DefaultStartup=\"true\" />");
+                sb.AppendLine("#endif");
+            }
+            else
+            {
+                var noneHigher = string.Join(" && ", higherPriority.Select(s => $"!{s}"));
+                sb.AppendLine($"#if ({symbol} && {noneHigher})");
+                sb.AppendLine($"  <Project Path=\"{rel}\" DefaultStartup=\"true\" />");
+                sb.AppendLine($"#elseif ({symbol})");
+                sb.AppendLine($"  <Project Path=\"{rel}\" />");
+                sb.AppendLine("#endif");
+            }
+            higherPriority.Add(symbol);
+        }
+
+        sb.AppendLine("</Solution>");
+
+        var slnxPath = Path.Combine(OutputDirectory!, "MyTemplate.slnx");
+        File.WriteAllText(slnxPath, sb.ToString());
+        logger.Info($"Generated MyTemplate.slnx with {projects.Count} project(s)");
+    }
+
+    /// <summary>
+    /// Copies any platform exec-project folder (<c>MyTemplate.{Linux,macOS,iOS,Android,Windows}</c>)
+    /// from <see cref="PlatformTemplatePath"/> into the staged output when the sample didn't ship
+    /// its own. Verbatim copy — the reference template (NewGame) and samples both use
+    /// <c>MyTemplate.Game/</c> as the shared-library dir name, so injected csprojs reference the
+    /// correct sibling unchanged.
+    /// </summary>
+    private void InjectMissingPlatforms(ILogger logger)
+    {
+        if (string.IsNullOrEmpty(PlatformTemplatePath))
+            return;
+        if (!Directory.Exists(PlatformTemplatePath))
+        {
+            logger.Warning($"--platform-template-path does not exist: {PlatformTemplatePath}");
+            return;
+        }
+        // Only inject into templates that look like runnable games (have a MyTemplate.Game/
+        // shared-library dir). Library-only templates (stride-library) use bare MyTemplate/
+        // and shouldn't gain platform exec projects.
+        if (!Directory.Exists(Path.Combine(OutputDirectory!, "MyTemplate.Game")))
+        {
+            logger.Info("No MyTemplate.Game/ shared-library dir in staged tree; skipping platform injection (looks like a library, not a game).");
+            return;
+        }
+
+        var injected = 0;
+        foreach (var srcDir in Directory.EnumerateDirectories(PlatformTemplatePath, "MyTemplate.*", SearchOption.TopDirectoryOnly))
+        {
+            var dirName = Path.GetFileName(srcDir);
+            // Only inject directories that match a known platform suffix (Linux/macOS/iOS/Android/Windows).
+            if (!dirName.StartsWith("MyTemplate.", StringComparison.Ordinal))
+                continue;
+            var suffix = dirName["MyTemplate.".Length..];
+            if (!PlatformActiveSymbol.ContainsKey(suffix))
+                continue;
+            var destDir = Path.Combine(OutputDirectory!, dirName);
+            if (Directory.Exists(destDir))
+                continue;
+
+            CopyDirectory(srcDir, destDir);
+            injected++;
+            logger.Info($"Injected platform folder: {dirName}");
+        }
+
+        if (injected > 0)
+            logger.Info($"Injected {injected} platform folder(s) from {PlatformTemplatePath}");
     }
 
     /// <summary>
@@ -901,6 +998,14 @@ internal class TemplatePreprocessor
     /// </summary>
     private void InjectCameraScript(ILogger logger)
     {
+        // Skip when BasicCameraController.cs isn't staged (samples, not the NewGame starter): the
+        // injected component would reference a missing type and load as unloadable.
+        if (!Directory.EnumerateFiles(OutputDirectory!, "BasicCameraController.cs", SearchOption.AllDirectories).Any())
+        {
+            logger.Info("No BasicCameraController.cs in staged output; skipping camera-script injection");
+            return;
+        }
+
         // Inject into every MainScene variant — the dual-pass HDR/LDR orchestrator emits both
         // MainScene.sdscene (HDR) and MainScene.LDR.sdscene (LDR). Each variant has its own
         // Camera entity that needs the script wired up; template.json sources/modifiers picks
@@ -937,12 +1042,56 @@ internal class TemplatePreprocessor
 
         // Components-dict entries are at indent 20, sub-fields at indent 24.
         var injection =
-            $"\n                    {CameraScriptKeyHex}: !MyTemplate.BasicCameraController,MyTemplate"
+            $"\n                    {CameraScriptKeyHex}: !MyTemplate.BasicCameraController,MyTemplate.Game"
             + $"\n                        Id: {CameraScriptIdDashed}";
 
         var rewritten = content.Substring(0, insertPoint) + injection + content.Substring(insertPoint);
         File.WriteAllText(scenePath, rewritten);
         logger.Info($"Injected BasicCameraController placeholder into {Path.GetFileName(scenePath)}");
+    }
+
+    /// <summary>
+    /// Rewrites orientation values in the staged tree into placeholders the orientation
+    /// template.json symbols replace at instantiation: the engine-wide <c>DisplayOrientation</c>
+    /// in every GameSettings variant (→ <c>STRIDE_ORIENTATION</c>), the Android activity's
+    /// <c>ScreenOrientation</c> (→ <c>STRIDE_ANDROID_ORIENTATION</c>), and the iOS Info.plist's
+    /// <c>UIInterfaceOrientation*</c> entry (→ <c>UIInterfaceOrientationSTRIDE_IOS_ORIENTATION</c>).
+    /// The source scaffold keeps real, buildable values; only the staged copy is tokenized.
+    /// </summary>
+    private void InjectOrientationPlaceholders(ILogger logger)
+    {
+        foreach (var settingsPath in Directory.EnumerateFiles(OutputDirectory!, "GameSettings*.sdgamesettings", SearchOption.AllDirectories))
+        {
+            var content = File.ReadAllText(settingsPath);
+            var rewritten = Regex.Replace(content, @"DisplayOrientation:\s*\w+", "DisplayOrientation: STRIDE_ORIENTATION");
+            if (rewritten != content)
+            {
+                File.WriteAllText(settingsPath, rewritten);
+                logger.Info($"Injected DisplayOrientation placeholder into {Path.GetFileName(settingsPath)}");
+            }
+        }
+
+        // ScreenOrientation is an Android-only type, so only the Android activity carries it.
+        foreach (var csPath in Directory.EnumerateFiles(OutputDirectory!, "*.cs", SearchOption.AllDirectories))
+        {
+            var content = File.ReadAllText(csPath);
+            if (!content.Contains("ScreenOrientation.Landscape", StringComparison.Ordinal))
+                continue;
+            File.WriteAllText(csPath, content.Replace("ScreenOrientation.Landscape", "ScreenOrientation.STRIDE_ANDROID_ORIENTATION"));
+            logger.Info($"Injected ScreenOrientation placeholder into {Path.GetFileName(csPath)}");
+        }
+
+        // iOS Info.plist carries UISupportedInterfaceOrientations. The scaffold ships
+        // UIInterfaceOrientationLandscapeRight (matching the choice's Default branch); rewrite
+        // the orientation token so the iosInterfaceOrientation switch symbol can swap it in.
+        foreach (var plistPath in Directory.EnumerateFiles(OutputDirectory!, "Info.plist", SearchOption.AllDirectories))
+        {
+            var content = File.ReadAllText(plistPath);
+            if (!content.Contains("UIInterfaceOrientationLandscapeRight", StringComparison.Ordinal))
+                continue;
+            File.WriteAllText(plistPath, content.Replace("UIInterfaceOrientationLandscapeRight", "UIInterfaceOrientationSTRIDE_IOS_ORIENTATION"));
+            logger.Info($"Injected UIInterfaceOrientation placeholder into {Path.GetFileName(plistPath)}");
+        }
     }
 
     private static IEnumerable<string> EnumerateTextFiles(string root)
@@ -1002,10 +1151,12 @@ internal class TemplatePreprocessor
         sb.AppendLine($"  \"defaultName\": \"{defaultName}\",");
         sb.AppendLine("  \"tags\": { \"language\": \"C#\", \"type\": \"project\" },");
         sb.AppendLine("  \"preferNameDirectory\": true,");
-        // sourceName: every literal occurrence of "MyTemplate" in template content gets replaced
-        // with the user's -n value at instantiation. The preprocessor injects "MyTemplate" into
-        // the Camera entity's script-component type/assembly ref; users get a working camera
-        // script bound to their own namespace.
+        // sourceName: every literal occurrence of "MyTemplate" in template content + file paths
+        // gets replaced with the user's -n value at instantiation. The source tree uses
+        // MyTemplate.Game/ for the shared lib and MyTemplate.{Platform}/ for exec projects, so
+        // a user running e.g. `dotnet new stride-game -n JumpyClone` lands JumpyClone.Game/ +
+        // JumpyClone.Windows/ + JumpyClone.Linux/ — the .Game suffix on the shared lib is
+        // preserved to mirror what samples already use.
         sb.AppendLine("  \"sourceName\": \"MyTemplate\",");
         sb.AppendLine("  \"symbols\": {");
 
@@ -1026,9 +1177,9 @@ internal class TemplatePreprocessor
     }
 
     /// <summary>
-    /// Always-emitted: Platforms multichoice + the env-bind / computed-bool chain that turns the
-    /// "Host" sentinel into per-platform Active bools used by sources/modifiers. Every template
-    /// has per-platform exec projects, so this set applies universally.
+    /// Always-emitted: Platforms multichoice + env-bind / computed-bool chain turning the "Host"
+    /// sentinel into per-platform Active bools used by sources/modifiers, plus the
+    /// <c>updateOnly</c> flag UpdatePlatforms uses to skip the game library + .sln.
     /// </summary>
     private static void EmitBaseParameterSymbols(StringBuilder sb)
     {
@@ -1047,6 +1198,12 @@ internal class TemplatePreprocessor
                     { "choice": "ios",     "description": "iOS arm64" },
                     { "choice": "android", "description": "Android arm64/x64" }
                   ]
+                },
+                "updateOnly": {
+                  "type": "parameter",
+                  "datatype": "bool",
+                  "description": "Emit only per-platform exec projects (skip game library + .sln). Used by GameStudio's Update Platforms flow.",
+                  "defaultValue": "false"
                 },
                 "envOS":     { "type": "bind", "binding": "env:OS",     "defaultValue": "" },
                 "envOSTYPE": { "type": "bind", "binding": "env:OSTYPE", "defaultValue": "" },
@@ -1087,19 +1244,55 @@ internal class TemplatePreprocessor
                 },
     """);
 
-    /// <summary>Per-template opt-in mobile display Orientation choice.</summary>
+    /// <summary>
+    /// Per-template opt-in mobile display Orientation choice. The choice values match the engine's
+    /// <c>RequiredDisplayOrientation</c> enum names, so the parameter replaces the GameSettings
+    /// placeholder verbatim. Android and iOS use platform-native enums (<c>ScreenOrientation</c> /
+    /// <c>UIInterfaceOrientation*</c>), so a switch symbol maps the choice onto each:
+    /// Android — Default/LandscapeRight → Landscape, LandscapeLeft → ReverseLandscape, Portrait → Portrait;
+    /// iOS     — Default/LandscapeRight → LandscapeRight, LandscapeLeft → LandscapeLeft, Portrait → Portrait.
+    /// </summary>
     private static void EmitOrientationSymbol(StringBuilder sb) => sb.AppendLine("""
                 "orientation": {
                   "type": "parameter",
                   "datatype": "choice",
                   "description": "Display orientation (mobile)",
                   "defaultValue": "Default",
+                  "replaces": "STRIDE_ORIENTATION",
                   "choices": [
                     { "choice": "Default"        },
                     { "choice": "LandscapeLeft"  },
                     { "choice": "LandscapeRight" },
                     { "choice": "Portrait"       }
                   ]
+                },
+                "androidScreenOrientation": {
+                  "type": "generated",
+                  "generator": "switch",
+                  "replaces": "STRIDE_ANDROID_ORIENTATION",
+                  "parameters": {
+                    "evaluator": "C++",
+                    "datatype": "string",
+                    "cases": [
+                      { "condition": "(orientation == \"LandscapeLeft\")", "value": "ReverseLandscape" },
+                      { "condition": "(orientation == \"Portrait\")",      "value": "Portrait" },
+                      { "condition": "",                                   "value": "Landscape" }
+                    ]
+                  }
+                },
+                "iosInterfaceOrientation": {
+                  "type": "generated",
+                  "generator": "switch",
+                  "replaces": "STRIDE_IOS_ORIENTATION",
+                  "parameters": {
+                    "evaluator": "C++",
+                    "datatype": "string",
+                    "cases": [
+                      { "condition": "(orientation == \"LandscapeLeft\")", "value": "LandscapeLeft" },
+                      { "condition": "(orientation == \"Portrait\")",      "value": "Portrait" },
+                      { "condition": "",                                   "value": "LandscapeRight" }
+                    ]
+                  }
                 },
     """);
 
@@ -1127,7 +1320,9 @@ internal class TemplatePreprocessor
                 { "condition": "(!LinuxActive)",   "exclude": [ "MyTemplate.Linux/**"   ] },
                 { "condition": "(!MacOSActive)",   "exclude": [ "MyTemplate.macOS/**"   ] },
                 { "condition": "(!iOsActive)",     "exclude": [ "MyTemplate.iOS/**"     ] },
-                { "condition": "(!AndroidActive)", "exclude": [ "MyTemplate.Android/**" ] }
+                { "condition": "(!AndroidActive)", "exclude": [ "MyTemplate.Android/**" ] },
+                { "condition": "(updateOnly)",     "exclude": [ "MyTemplate/**", "*.slnx" ] },
+                { "exclude": [ ".sdtpl/**" ] }
         """);
         if (Sdtpl?.HasParameter("HDR") == true && Sdtpl?.HasParameter("GraphicsProfile") == true)
         {
@@ -1168,7 +1363,7 @@ internal class TemplatePreprocessor
             }
           ],
           "SpecialCustomOperations": {
-            "**/*.sln": {
+            "**/*.slnx": {
               "operations": [
                 {
                   "type": "conditional",
@@ -1206,6 +1401,12 @@ internal class TemplatePreprocessor
         }
     }
 
+    /// <summary>Directory names never staged into a template: build outputs and editor/VS state.</summary>
+    private static readonly HashSet<string> ExcludedCopyDirs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bin", "obj", ".vs",
+    };
+
     public static void CopyDirectory(string source, string dest)
     {
         Directory.CreateDirectory(dest);
@@ -1215,6 +1416,10 @@ internal class TemplatePreprocessor
         }
         foreach (var subdir in Directory.EnumerateDirectories(source))
         {
+            // Skip build outputs / editor state: they bloat the package and their deep asset-build
+            // cache paths blow past Windows MAX_PATH once nested under the staging dir.
+            if (ExcludedCopyDirs.Contains(Path.GetFileName(subdir)))
+                continue;
             CopyDirectory(subdir, Path.Combine(dest, Path.GetFileName(subdir)));
         }
     }

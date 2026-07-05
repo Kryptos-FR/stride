@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net) and Silicon Studio Corp. (https://www.siliconstudio.co.jp)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 using System.Threading;
+using Stride.Core;
 using Stride.Core.IO;
 using Xunit;
 
@@ -9,6 +10,7 @@ using Stride.Core.Serialization.Contents;
 using Stride.Core.Storage;
 using Stride.Engine;
 using Stride.Graphics.Font;
+using Stride.Graphics.Regression;
 
 namespace Stride.Graphics.Tests
 {
@@ -17,18 +19,25 @@ namespace Stride.Graphics.Tests
     /// </summary>
     public class TestFontManager
     {
+        private static readonly string SuiteBundleName = GameTestBase.FindBundleName(typeof(TestFontManager));
+
         private void Init()
         {
-            Game.InitializeAssetDatabase();
+            // Pass the suite bundle so the /asset mount uses this suite's bundle (side effect
+            // on VirtualFileSystem, used by other ContentManager paths in the process).
+            Game.InitializeAssetDatabase(SuiteBundleName);
         }
 
         private IDatabaseFileProviderService CreateDatabaseProvider()
         {
-            VirtualFileSystem.CreateDirectory(VirtualFileSystem.ApplicationDatabasePath);
-            return new DatabaseFileProviderService(new DatabaseFileProvider(ObjectDatabase.CreateDefaultDatabase()));
+            // FontManager builds its own ContentManager off the provider we return here, so we
+            // must point it at this suite's bundle directly — the Init() mount is for other code
+            // paths, not this one. /data/db is read-only on mobile (APK / .app); FileOdbBackend's
+            // ctor handles that and writes go to /local/db (vfsAdditionalUrl).
+            return new DatabaseFileProviderService(new DatabaseFileProvider(ObjectDatabase.CreateDefaultDatabase(SuiteBundleName)));
         }
 
-        [Fact]
+        [SkippableFact]
         public void TestCreationDisposal()
         {
             Init();
@@ -36,8 +45,8 @@ namespace Stride.Graphics.Tests
             var fontManager = new FontManager(CreateDatabaseProvider());
             fontManager.Dispose();
         }
-        
-        [Fact]
+
+        [SkippableFact]
         public void TestDoesFontContains()
         {
             Init();
@@ -50,7 +59,7 @@ namespace Stride.Graphics.Tests
 
         //Note: Test may fail due to some issues with SharpFont.
         //Updated TestGetFontInfo to now properly check if various Font Info is properly loaded
-        [Fact]
+        [SkippableFact]
         public void TestGetFontInfo()
         {
             Init();
@@ -71,7 +80,7 @@ namespace Stride.Graphics.Tests
             fontManager.Dispose();
         }
 
-        [Fact]
+        [SkippableFact]
         public void TestGenerateBitmap()
         {
             Init();
@@ -110,6 +119,45 @@ namespace Stride.Graphics.Tests
             WaitAndCheck(characterD, 2 * waitTime);
             Assert.Null(characterC.Bitmap);
             
+            fontManager.Dispose();
+        }
+
+        [SkippableFact]
+        public void TestGenerateBitmapSynchronously()
+        {
+            Init();
+
+            var fontManager = new FontManager(CreateDatabaseProvider());
+
+            // Synchronous generation must produce the bitmap before returning, with no builder-thread wait.
+            var character = new CharacterSpecification('a', "Risaltyp_024", 10f * Vector2.One, FontStyle.Regular, FontAntiAliasMode.Default);
+            fontManager.GenerateBitmap(character, true);
+            Assert.NotNull(character.Bitmap);
+            Assert.True(character.Bitmap.Width > 0);
+            Assert.True(character.Bitmap.Rows > 0);
+
+            // Redundant synchronous request on an already-generated glyph is a no-op.
+            fontManager.GenerateBitmap(character, true);
+            Assert.NotNull(character.Bitmap);
+
+            fontManager.Dispose();
+        }
+
+        [SkippableFact]
+        public void TestSynchronousFallbackAfterAsync()
+        {
+            Init();
+
+            var fontManager = new FontManager(CreateDatabaseProvider());
+
+            // Draw path: async kick then synchronous fallback on the same glyph must not deadlock or clobber.
+            var character = new CharacterSpecification('g', "Risaltyp_024", 24f * Vector2.One, FontStyle.Regular, FontAntiAliasMode.Default);
+            fontManager.GenerateBitmap(character, false);
+            fontManager.GenerateBitmap(character, true);
+            Assert.NotNull(character.Bitmap);
+            Assert.True(character.Bitmap.Width > 0);
+            Assert.True(character.Bitmap.Rows > 0);
+
             fontManager.Dispose();
         }
 

@@ -16,27 +16,34 @@ on:
       - '!**/.gitignore'
       - '!**/*.md'
       - '!crowdin.yml'
+  # No paths filter here: the Gate job is a required check, so CI must report on every PR.
+  # The changes job's filters skip the actual work for out-of-scope PRs.
   pull_request:
-    paths:
-      - '.github/workflows/**'
-      - 'build/**'
-      - 'deps/**'
-      - 'sources/**'
-      - 'tests/**'
-      - '!**/.all-contributorsrc'
-      - '!**/.editorconfig'
-      - '!**/.gitignore'
-      - '!**/*.md'
-      - '!crowdin.yml'
-    types: [opened, synchronize, reopened, ready_for_review]
+    # labeled/unlabeled so a `ci-run-on-draft` label takes effect immediately on a draft —
+    # without them main.yml wouldn't re-evaluate its draft gate until the next push.
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   workflow_dispatch:
+    inputs:
+      ios:
+        description: Run iOS jobs
+        type: boolean
+        default: true
+      android:
+        description: Run Android jobs
+        type: boolean
+        default: true
+      macos:
+        description: Run macOS jobs
+        type: boolean
+        default: true
 
 permissions:
   checks: write
   contents: read
+  pull-requests: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.client_payload.pr_number || github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -54,102 +61,68 @@ jobs:
       (github.event_name != 'push' && github.event_name != 'pull_request')
       || github.repository == 'stride3d/stride'
       || vars.STRIDE_ENABLE_PUSH_CI == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      runtime: ${{ steps.filter.outputs.runtime || 'true' }}
-      ios: ${{ steps.filter.outputs.ios || 'true' }}
-      full: ${{ steps.filter.outputs.full || 'true' }}
-    steps:
-      - uses: actions/checkout@v4
-        if: github.event_name == 'pull_request'
-      - uses: dorny/paths-filter@v3
-        if: github.event_name == 'pull_request'
-        id: filter
-        with:
-          filters: |
-            runtime:
-              - 'sources/engine/**'
-              - 'sources/core/**'
-              - 'sources/shaders/**'
-              - 'sources/native/**'
-              - 'sources/shared/**'
-              - 'sources/sdk/**'
-              - 'sources/assets/**'
-              - 'deps/**'
-              - 'tests/**'
-              - 'build/Stride.Runtime.slnf'
-            ios:
-              - 'sources/engine/**'
-              - 'sources/core/**'
-              - 'sources/native/**'
-              - 'sources/shared/**'
-              - 'sources/sdk/**'
-              - 'deps/**'
-              - 'build/Stride.iOS.slnf'
-            full:
-              - 'sources/**'
-              - 'deps/**'
-              - 'build/Stride.sln'
+    uses: ./.github/workflows/changes.yml
 
-  # Draft PRs skip all automatic CI to save runner minutes; use the /ci chatops command
-  # to opt into specific suites while iterating. ready_for_review re-runs everything.
+  # Draft PRs skip all automatic CI to save runner minutes. Add a `ci-run-on-draft` label to
+  # run the normal path-gated suites while iterating, or a `ci-<suite>` label (see
+  # pr-label-suites.yml) for a specific opt-in suite. ready_for_review re-runs everything.
   ### Misc ###
   Assembly-Processor:
     needs: changes
-    if: github.event.pull_request.draft != true && (needs.changes.outputs.runtime == 'true' || needs.changes.outputs.full == 'true')
+    if: (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft')) && (needs.changes.outputs.runtime == 'true' || needs.changes.outputs.full == 'true')
     uses: ./.github/workflows/build-assembly-processor.yml
-    secrets: inherit
     with:
       build-type: Release
 
   VS-Package:
     needs: changes
-    if: github.event.pull_request.draft != true && needs.changes.outputs.full == 'true'
-    uses: ./.github/workflows/build-vs-package.yml
-    secrets: inherit
+    if: (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft')) && needs.changes.outputs.full == 'true'
+    uses: ./.github/workflows/build-vspackage.yml
     with:
       build-type: Debug   # Release has a bug and cannot build
 
   ### Runtimes ###
   iOS-Runtime:
     needs: changes
-    if: github.event.pull_request.draft != true && needs.changes.outputs.ios == 'true'
+    if: (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft')) && needs.changes.outputs.ios == 'true' && (github.event_name != 'workflow_dispatch' || inputs.ios)
     uses: ./.github/workflows/build-ios.yml
-    secrets: inherit
+    with:
+      build-type: Release
+
+  Android-Runtime:
+    needs: changes
+    if: (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft')) && needs.changes.outputs.runtime == 'true' && (github.event_name != 'workflow_dispatch' || inputs.android)
+    uses: ./.github/workflows/build-android.yml
     with:
       build-type: Release
 
   Linux-Runtime:
     needs: changes
-    if: github.event.pull_request.draft != true && needs.changes.outputs.runtime == 'true'
+    if: (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft')) && needs.changes.outputs.runtime == 'true'
     uses: ./.github/workflows/build-linux-runtime.yml
-    secrets: inherit
     with:
       build-type: Release
 
   Windows-Runtime-D3D11:
     needs: changes
-    if: github.event.pull_request.draft != true && needs.changes.outputs.runtime == 'true'
+    if: (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft')) && needs.changes.outputs.runtime == 'true'
     uses: ./.github/workflows/build-windows-runtime.yml
-    secrets: inherit
     with:
       build-type: Release
       graphics-api: Direct3D11
 
   Windows-Runtime-D3D12:
     needs: changes
-    if: github.event.pull_request.draft != true && needs.changes.outputs.runtime == 'true'
+    if: (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft')) && needs.changes.outputs.runtime == 'true'
     uses: ./.github/workflows/build-windows-runtime.yml
-    secrets: inherit
     with:
       build-type: Release
       graphics-api: Direct3D12
 
   Windows-Runtime-Vulkan:
     needs: changes
-    if: github.event.pull_request.draft != true && needs.changes.outputs.runtime == 'true'
+    if: (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft')) && needs.changes.outputs.runtime == 'true'
     uses: ./.github/workflows/build-windows-runtime.yml
-    secrets: inherit
     with:
       build-type: Release
       graphics-api: Vulkan
@@ -157,9 +130,8 @@ jobs:
   ### Full Windows build (engine + editor + assets + samples) ###
   Windows-Full:
     needs: changes
-    if: github.event.pull_request.draft != true && needs.changes.outputs.full == 'true'
+    if: (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft')) && needs.changes.outputs.full == 'true'
     uses: ./.github/workflows/build-windows-full.yml
-    secrets: inherit
     with:
       build-type: Debug
 
@@ -169,13 +141,12 @@ jobs:
   Windows-Tests-Game-ApiNeutral:
     needs: [changes, Windows-Runtime-D3D11]
     if: |
-      always()
-      && github.event.pull_request.draft != true
+      !cancelled()
+      && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
       && needs.changes.outputs.runtime == 'true'
       && needs['Windows-Runtime-D3D11'].result != 'failure'
       && needs['Windows-Runtime-D3D11'].result != 'cancelled'
     uses: ./.github/workflows/test-windows-game-api-neutral.yml
-    secrets: inherit
     with:
       build-type: Debug
 
@@ -183,26 +154,24 @@ jobs:
   Windows-Tests-Simple:
     needs: [changes, Windows-Runtime-D3D11]
     if: |
-      always()
-      && github.event.pull_request.draft != true
+      !cancelled()
+      && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
       && needs.changes.outputs.runtime == 'true'
       && needs['Windows-Runtime-D3D11'].result != 'failure'
       && needs['Windows-Runtime-D3D11'].result != 'cancelled'
     uses: ./.github/workflows/test-windows-simple.yml
-    secrets: inherit
     with:
       build-type: Debug
 
   Windows-Tests-Game-D3D11:
     needs: [changes, Windows-Runtime-D3D11]
     if: |
-      always()
-      && github.event.pull_request.draft != true
+      !cancelled()
+      && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
       && needs.changes.outputs.runtime == 'true'
       && needs['Windows-Runtime-D3D11'].result != 'failure'
       && needs['Windows-Runtime-D3D11'].result != 'cancelled'
     uses: ./.github/workflows/test-windows-game.yml
-    secrets: inherit
     with:
       build-type: Debug
       graphics-api: Direct3D11
@@ -210,13 +179,12 @@ jobs:
   Windows-Tests-Game-D3D12:
     needs: [changes, Windows-Runtime-D3D12]
     if: |
-      always()
-      && github.event.pull_request.draft != true
+      !cancelled()
+      && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
       && needs.changes.outputs.runtime == 'true'
       && needs['Windows-Runtime-D3D12'].result != 'failure'
       && needs['Windows-Runtime-D3D12'].result != 'cancelled'
     uses: ./.github/workflows/test-windows-game.yml
-    secrets: inherit
     with:
       build-type: Debug
       graphics-api: Direct3D12
@@ -224,13 +192,12 @@ jobs:
   Windows-Tests-Game-Vulkan:
     needs: [changes, Windows-Runtime-Vulkan]
     if: |
-      always()
-      && github.event.pull_request.draft != true
+      !cancelled()
+      && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
       && needs.changes.outputs.runtime == 'true'
       && needs['Windows-Runtime-Vulkan'].result != 'failure'
       && needs['Windows-Runtime-Vulkan'].result != 'cancelled'
     uses: ./.github/workflows/test-windows-game.yml
-    secrets: inherit
     with:
       build-type: Debug
       graphics-api: Vulkan
@@ -238,26 +205,24 @@ jobs:
   Linux-Tests-Simple:
     needs: [changes, Linux-Runtime]
     if: |
-      always()
-      && github.event.pull_request.draft != true
+      !cancelled()
+      && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
       && needs.changes.outputs.runtime == 'true'
       && needs['Linux-Runtime'].result != 'failure'
       && needs['Linux-Runtime'].result != 'cancelled'
     uses: ./.github/workflows/test-linux-simple.yml
-    secrets: inherit
     with:
       build-type: Debug
 
   Linux-Tests-Game:
     needs: [changes, Linux-Runtime]
     if: |
-      always()
-      && github.event.pull_request.draft != true
+      !cancelled()
+      && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
       && needs.changes.outputs.runtime == 'true'
       && needs['Linux-Runtime'].result != 'failure'
       && needs['Linux-Runtime'].result != 'cancelled'
     uses: ./.github/workflows/test-linux-game.yml
-    secrets: inherit
     with:
       build-type: Debug
 
@@ -267,13 +232,13 @@ jobs:
   macOS-Tests-Game:
     needs: [changes, Linux-Runtime]
     if: |
-      always()
-      && github.event.pull_request.draft != true
+      !cancelled()
+      && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
       && needs.changes.outputs.runtime == 'true'
       && needs['Linux-Runtime'].result != 'failure'
       && needs['Linux-Runtime'].result != 'cancelled'
+      && (github.event_name != 'workflow_dispatch' || inputs.macos)
     uses: ./.github/workflows/test-macos-game.yml
-    secrets: inherit
     with:
       build-type: Debug
 
@@ -297,3 +262,70 @@ jobs:
     with:
       build-type: ${{ matrix.build-type }}
       platform: ${{ matrix.platform }}
+
+  # iOS Simulator tests run on macOS runners and take ~24 min, so PRs only trigger them on
+  # strictly iOS-specific paths (ios-tests filter); master pushes still run them per-commit.
+  iOS-Tests-Game:
+    needs: [changes, Linux-Runtime]
+    if: |
+      !cancelled()
+      && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
+      && needs.changes.outputs.ios-tests == 'true'
+      && needs['Linux-Runtime'].result != 'failure'
+      && needs['Linux-Runtime'].result != 'cancelled'
+      && (github.event_name != 'workflow_dispatch' || inputs.ios)
+    uses: ./.github/workflows/test-ios-game.yml
+    with:
+      build-type: Debug
+
+  # Android tests run on Linux + KVM-accelerated x86_64 emulator. Build APKs on the host,
+  # boot the emulator inside reactivecircus/android-emulator-runner, run each suite serially.
+  Android-Tests-Game:
+    needs: [changes, Linux-Runtime]
+    if: |
+      !cancelled()
+      && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
+      && needs.changes.outputs.android == 'true'
+      && needs['Linux-Runtime'].result != 'failure'
+      && needs['Linux-Runtime'].result != 'cancelled'
+      && (github.event_name != 'workflow_dispatch' || inputs.android)
+    uses: ./.github/workflows/test-android-game.yml
+    with:
+      build-type: Debug
+
+  # Aggregate result for branch protection: mark only "Gate" as required.
+  # Skipped jobs (path filters, draft PRs) are fine; failure/cancellation is not.
+  # always() on purpose (unlike the !cancelled() test jobs): a cancelled run must
+  # report a red Gate, not a skipped (= passing) one.
+  Gate:
+    needs:
+      - changes
+      - Assembly-Processor
+      - VS-Package
+      - iOS-Runtime
+      - Android-Runtime
+      - Linux-Runtime
+      - Windows-Runtime-D3D11
+      - Windows-Runtime-D3D12
+      - Windows-Runtime-Vulkan
+      - Windows-Full
+      - Windows-Tests-Game-ApiNeutral
+      - Windows-Tests-Simple
+      - Windows-Tests-Game-D3D11
+      - Windows-Tests-Game-D3D12
+      - Windows-Tests-Game-Vulkan
+      - Linux-Tests-Simple
+      - Linux-Tests-Game
+      - macOS-Tests-Game
+      - iOS-Tests-Game
+      - Android-Tests-Game
+      - Editor
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any needed job failed or was cancelled
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.value.result)\t\(.key)"'
+          test "$(echo "$NEEDS" | jq '[.[] | select(.result=="failure" or .result=="cancelled")] | length')" -eq 0

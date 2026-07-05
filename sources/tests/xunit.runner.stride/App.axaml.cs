@@ -5,20 +5,51 @@ using System.Reflection;
 using System.Text;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using xunit.runner.stride.ViewModels;
 using xunit.runner.stride.Views;
 
 namespace xunit.runner.stride;
 
-public partial class App : Application
+public partial class App : Avalonia.Application
 {
     internal readonly CancellationTokenSource cts = new();
-    internal Action<bool>? setInteractiveMode;
-    internal Action<bool>? setForceSaveImage;
-    internal Action<string?>? setRenderDocMode;
-    internal Action<Action<ImageCompareResult>>? subscribeImageComparison;
+
+    // Callbacks are process-wide (each runner instance toggles the same per-platform GameTestBase
+    // state). Static so desktop Main and Android MainActivity assign them the same way — no need
+    // for per-instance injection at App.Configure time.
+    public static Action<bool>? SetInteractiveMode;
+    public static Action<bool>? SetForceSaveImage;
+    public static Action<string?>? SetRenderDocMode;
+    public static Action<Action<ImageCompareResult>>? SubscribeImageComparison;
+
+    // Android has no entry assembly; the per-project MainActivity (injected by the Tests SDK
+    // into each test assembly) sets this so test discovery knows where to look. Public because
+    // the setter lives in the test assembly, not in xunit.runner.stride.
+    public static System.Reflection.Assembly? TestAssembly;
+
+    // When set (by Android MainActivity reading the launch Intent), Avalonia still loads its
+    // single-view UI for hosting the Stride game surfaces, but RunAll fires immediately and
+    // the process exits with the failed-test count when complete. Driven by:
+    //   adb shell am start --es xunit_command run --ez xunit_exit_on_complete true
+    public static bool HeadlessMode;
+
+    // Optional vstest --filter expression for headless runs (Android/iOS launcher reads it from
+    // the launch Intent: --es xunit_filter "<expr>"). Null/empty runs the whole suite.
+    public static string? HeadlessFilter;
+
+    // Optional --repeat N: run the filtered set up to N times, stop on first failed iteration.
+    // String so empty/missing == default 1 (parsed in RunHeadless).
+    public static string? HeadlessRepeat;
+
+    // SingleView VM kept here so MainActivity can drive a headless run after Avalonia init
+    // (in Avalonia 12 the lifetime starts in the custom Application class, well before
+    // MainActivity.OnCreate gets a chance to read the launch Intent).
+    private static MainViewModel? singleViewVm;
+
+    // Set by MainView on attach. Android MainActivity invokes this on back gesture so narrow-mode
+    // detail view backs to the list instead of closing the app. Returns true when handled.
+    public static Func<bool>? HandleBackRequest;
 
     public override void Initialize()
     {
@@ -33,36 +64,67 @@ public partial class App : Application
             {
                 Tests =
                 {
-                    SetInteractiveMode = setInteractiveMode,
-                    SetForceSaveImage = setForceSaveImage,
-                    SetRenderDocMode = setRenderDocMode,
+                    SetInteractiveMode = SetInteractiveMode,
+                    SetForceSaveImage = SetForceSaveImage,
+                    SetRenderDocMode = SetRenderDocMode,
                 }
             };
             // Subscribe once for the process lifetime; the launcher wires this to
             // ImageTester.ImageComparisonCompleted.
-            subscribeImageComparison?.Invoke(vm.Tests.OnImageComparison);
+            SubscribeImageComparison?.Invoke(vm.Tests.OnImageComparison);
             desktop.MainWindow = new MainWindow { Title = ComputeWindowTitle(), DataContext = vm };
             desktop.MainWindow.Closed += (_, __) => cts.Cancel();
             desktop.MainWindow.Show();
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
-            // don't remove; also used by visual designer.
-            singleViewPlatform.MainView = new MainView
+            var vm = new MainViewModel
             {
-                DataContext = new MainViewModel
+                Tests =
                 {
-                    Tests =
-                    {
-                        SetInteractiveMode = setInteractiveMode,
-                        SetForceSaveImage = setForceSaveImage,
-                        SetRenderDocMode = setRenderDocMode,
-                    }
+                    SetInteractiveMode = SetInteractiveMode,
+                    SetForceSaveImage = SetForceSaveImage,
+                    SetRenderDocMode = SetRenderDocMode,
                 }
             };
+            SubscribeImageComparison?.Invoke(vm.Tests.OnImageComparison);
+            // don't remove; also used by visual designer.
+            singleViewPlatform.MainView = new MainView { DataContext = vm };
+            singleViewVm = vm;
+            // HeadlessMode may already be set by Android Application init (process-restart with
+            // intent extras still in the launch state); MainActivity also calls this after reading
+            // a fresh Intent, so we handle both ordering paths.
+            TryStartHeadlessRun();
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    // Bypasses TestsViewModel — its single-assembly discovery (App.TestAssembly = entry) misses
+    // inner suites in the Combined host. RunHeadless walks every loaded *.Tests assembly and
+    // honours --filter (we forward HeadlessFilter as the args RunHeadless's ParseVstestFilter
+    // expects). The try/catch keeps a crash from being swallowed as an unobserved Task
+    // exception — without it the process stays alive until CI's inactivity guard fires.
+    public static void TryStartHeadlessRun()
+    {
+        if (!HeadlessMode || singleViewVm is null) return;
+        singleViewVm = null;
+        System.Threading.Tasks.Task.Run(() =>
+        {
+            try
+            {
+                var argList = new List<string>();
+                if (!string.IsNullOrEmpty(HeadlessFilter)) { argList.Add("--filter"); argList.Add(HeadlessFilter); }
+                if (!string.IsNullOrEmpty(HeadlessRepeat)) { argList.Add("--repeat"); argList.Add(HeadlessRepeat); }
+                var exit = StrideXunitRunner.RunHeadless(argList.ToArray());
+                System.Environment.Exit(exit);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Headless test run crashed: {ex}");
+                System.Environment.Exit(2);
+            }
+        });
     }
 
     // Build a window title that identifies what this runner instance is testing:
@@ -107,13 +169,13 @@ public partial class App : Application
         return null;
     }
 
-    // Pick up the Stride engine assembly's informational version (the dev1/dev2 suffix is
-    // useful, plain Version drops it). The Stride assembly is loaded by the entry assembly
+    // Pick up the Stride.Foundation assembly's informational version (the dev1/dev2 suffix is
+    // useful, plain Version drops it). The Stride.Foundation assembly is loaded by the entry assembly
     // during test discovery, which happens before the window is shown.
     static string? InferStrideVersion()
     {
         var strideAsm = AppDomain.CurrentDomain.GetAssemblies()
-            .FirstOrDefault(a => a.GetName().Name == "Stride");
+            .FirstOrDefault(a => a.GetName().Name == "Stride.Foundation");
         if (strideAsm is null) return null;
         var info = strideAsm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         return info ?? strideAsm.GetName().Version?.ToString();

@@ -12,10 +12,6 @@ AssetFolders:
     -   Path: !dir Effects
 ResourceFolders:
     - !dir ../Resources
-OutputGroupDirectories: {}
-ExplicitFolders: []
-Bundles: []
-TemplateFolders: []
 RootAssets:
     - 465718fa-96e7-4d3b-897d-8e7075b1a9ae:WesternChunk
     - 7cdb3d4a-151d-4851-a736-fec1bba593d3:SouthernChunk

@@ -26,6 +26,7 @@ namespace Stride.Graphics
 
         private const int kNumberOfFramesInFlight = 2;
         private int currentFrameIndex = 0;
+        private int acquireRecreateDepth;
         private VkSemaphore[] acquireSemaphores;
         private VkFence[] frameFences;
 
@@ -200,24 +201,30 @@ namespace Stride.Graphics
             GraphicsDevice.CheckResult(GraphicsDevice.NativeDeviceApi.vkWaitForFences(GraphicsDevice.NativeDevice, frameFences[currentFrameIndex], VkBool32.True, ulong.MaxValue));
             GraphicsDevice.NativeDeviceApi.vkResetFences(GraphicsDevice.NativeDevice, frameFences[currentFrameIndex]);
 
-            AcquireNextImage(true);
+            AcquireNextImage();
         }
 
-        private unsafe void AcquireNextImage(bool recreateIfFails)
+        private unsafe void AcquireNextImage()
         {
             // Get next image
             var result = GraphicsDevice.NativeDeviceApi.vkAcquireNextImageKHR(GraphicsDevice.NativeDevice, swapChain, ulong.MaxValue, acquireSemaphores[currentFrameIndex], VkFence.Null, out currentBufferIndex);
-            if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.SuboptimalKHR || result == VkResult.ErrorSurfaceLostKHR)
+            if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.ErrorSurfaceLostKHR)
             {
-                if (recreateIfFails)
-                {
-                    OnRecreated();
-                    return;
-                }
-                else
+                // No image acquired: the surface changed while the swapchain was being (re)created
+                // (continuous interactive resize) or was lost. Recreate against the current surface
+                // state; bounded, as each attempt re-queries the surface so it converges once the
+                // surface settles.
+                if (acquireRecreateDepth >= 3)
                     throw new InvalidOperationException($"Could not acquire swapchain image: {result}");
+                acquireRecreateDepth++;
+                try { OnRecreated(); }
+                finally { acquireRecreateDepth--; }
+                return;
             }
-            else
+
+            // SuboptimalKHR is a success code: an image was acquired and the semaphore will be
+            // signaled; the next Present reports it again and recreates the swapchain.
+            if (result != VkResult.SuboptimalKHR)
             {
                 GraphicsDevice.CheckResult(result, "vkAcquireNextImageKHR");
             }
@@ -562,7 +569,10 @@ namespace Stride.Graphics
 
             // Create surface
 #if STRIDE_UI_SDL
-            if (Description.DeviceWindowHandle.Context == Games.AppContextType.DesktopSDL)
+            // iOS reuses the SDL surface-creation path (GameContextiOS inherits GameContextSDL);
+            // SDL's VulkanCreateSurface routes to VkMetalSurfaceCreateInfoEXT internally on iOS.
+            if (Description.DeviceWindowHandle.Context == Games.AppContextType.DesktopSDL
+                || Description.DeviceWindowHandle.Context == Games.AppContextType.iOS)
             {
                 var control = Description.DeviceWindowHandle.NativeWindow as SDL.Window;
                 Silk.NET.Core.Native.VkNonDispatchableHandle surfaceHandle = default;
@@ -699,8 +709,7 @@ namespace Stride.Graphics
             // Get next image
             currentFrameIndex = 0;
 
-            // We allow failure to not have recursion (we just created, if it failed, it will likely fail again)
-            AcquireNextImage(false);
+            AcquireNextImage();
         }
     }
 }

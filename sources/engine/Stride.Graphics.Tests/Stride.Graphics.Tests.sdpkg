@@ -3,9 +3,6 @@ Id: 04ed1618-1a06-4a69-ac34-1006a978af11
 SerializedVersion: {Assets: 3.1.0.0}
 AssetFolders:
     -   Path: !dir Assets/Shared
-ExplicitFolders: []
-Bundles: []
-TemplateFolders: []
 RootAssets:
     - 016f522f-7283-4bd5-a8b1-03056f2c80bd:PrecompiledFonts/Arial18
     - 02f7368b-8c33-4b23-a923-c6ead567e96d:PrecompiledFonts/Arial20
@@ -28,6 +25,7 @@ RootAssets:
     - 5d7ecea5-50f2-49c1-8fe8-16e67dd65ab0:SpriteSphere
     - 5d8ecea5-50f2-49c1-8fe8-16e67dd65ab0:BallSprite1
     - 693f0d3d-b0ef-4cb8-bc84-0aa69efb3462:DynamicFonts/HanSans18
+    - 7d5f0001-1a2b-4c3d-9e01-000000000001:StaticFonts/NotoSansSDF
     - 7ea96b46-d786-42c8-9541-0dba7cd63a44:PrecompiledFonts/CourierNew13
     - 804b77a2-792d-4113-a148-756d55aaa3b1:JpegImage
     - 83cbacc4-ae04-4a9b-94ef-4ecd49557287:StaticFonts/Calibri85

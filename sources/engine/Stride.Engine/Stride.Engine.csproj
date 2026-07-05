@@ -3,11 +3,12 @@
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>Stride</RootNamespace>
-    <StrideRuntime>true</StrideRuntime>
+    <TargetFrameworks>$(StrideRuntimeTargetFrameworks)</TargetFrameworks>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
     <StrideAssemblyProcessorOptions>--parameter-key --auto-module-initializer --serialization</StrideAssemblyProcessorOptions>
     <StrideCodeAnalysis>true</StrideCodeAnalysis>
     <StridePackAssets>true</StridePackAssets>
+    <StrideContainsAssetTypes>true</StrideContainsAssetTypes>
     <!-- force generate Resource.designer.cs to namespace Stride.Engine to fix issue #553 -->
     <AndroidResgenNamespace>Stride.Engine</AndroidResgenNamespace>
   </PropertyGroup>
@@ -17,8 +18,11 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="buildTransitive\**\*.targets" PackagePath="buildTransitive\" Pack="true" />
+    <None Include="buildTransitive\**\*.props" PackagePath="buildTransitive\" Pack="true" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="System.ValueTuple" />
-    <PackageReference Include="System.Threading.Tasks.Dataflow" />
     <ProjectReference Include="..\Stride.Audio\Stride.Audio.csproj" />
     <ProjectReference Include="..\Stride.Rendering\Stride.Rendering.csproj" />
     <ProjectReference Include="..\Stride.VirtualReality\Stride.VirtualReality.csproj" />

@@ -11,36 +11,67 @@ let collapsedSuites = new Set();
 let compareLeft = {};         // {"suite:name": "gold:<platform>" or "src:<sourceId>"}
 let compareRight = {};        // {"suite:name": "gold:<platform>" or "src:<sourceId>"}
 let cellStats = {};           // {`${sourceId}:${suite}:${name}`: stats}
+let serverIsLocal = false;    // viewer on the same machine as the server → enable reveal-in-explorer
 
 // === Init ===
 async function init() {
-  // Show Stride root path
+  // Show Stride root path, hostname, and current git branch
   try {
     const infoRes = await fetch('/api/info');
     const info = await infoRes.json();
     document.getElementById('strideRoot').textContent = info.strideRoot;
+    if (info.hostname) document.getElementById('hostInfo').textContent = info.hostname;
+    if (info.branch) document.getElementById('branchInfo').textContent = info.branch;
+    serverIsLocal = !!info.isLocal;
   } catch {}
 
   const res = await fetch('/api/suites');
   allSuites = await res.json();
 
-  // Collect all platforms across all suites
-  const allPlatforms = new Set();
-  for (const suite of allSuites) {
-    const pRes = await fetch(`/api/platforms?suite=${enc(suite)}`);
-    (await pRes.json()).forEach(p => allPlatforms.add(p));
-  }
-  const platforms = [...allPlatforms].sort();
+  await refreshPlatforms();
   const sel = document.getElementById('platformSelect');
-  sel.innerHTML = platforms.map(p => `<option value="${p}">${p}</option>`).join('');
-  // Use platform from restoreState() if valid, otherwise default to first
-  if (!currentPlatform || !platforms.includes(currentPlatform))
-    currentPlatform = platforms[0] || '';
-  sel.value = currentPlatform;
   sel.onchange = onPlatformChange;
 
   document.getElementById('statusFilter').onchange = () => render();
   await reload();
+}
+
+// Re-query /api/platforms across all suites and rebuild the dropdown. Called from init and
+// after any source-add — server-side returns platforms from gold + every configured source,
+// so a freshly-added Local pointing at tests/local/ surfaces its new platforms (e.g. iOS/Vulkan)
+// without forcing a page reload. When `autoSelect` is true (after a source add/remove), we
+// auto-jump to the first platform that has source images so the user doesn't land on an
+// empty bucket. On the initial F5, we preserve whatever currentPlatform was selected even
+// if it's now source-less.
+async function refreshPlatforms({ autoSelect = false } = {}) {
+  const hasSource = new Map();   // platform → bool (any source has images at this platform)
+  for (const suite of allSuites) {
+    const pRes = await fetch(`/api/platforms?suite=${enc(suite)}`);
+    for (const entry of await pRes.json()) {
+      // Server returns [{platform, hasSource}]; OR'd across suites — a platform is
+      // "has source" if any suite has source images there.
+      hasSource.set(entry.platform, (hasSource.get(entry.platform) || false) || entry.hasSource);
+    }
+  }
+  const platforms = [...hasSource.keys()].sort();
+  const sel = document.getElementById('platformSelect');
+  sel.innerHTML = platforms.map(p => {
+    const empty = !hasSource.get(p);
+    return `<option value="${p}"${empty ? ' class="empty"' : ''}>${p}${empty ? ' — empty' : ''}</option>`;
+  }).join('');
+  // On add/remove, prefer the first platform that has source images so the table isn't blank.
+  if (autoSelect && !hasSource.get(currentPlatform))
+    currentPlatform = platforms.find(p => hasSource.get(p)) || platforms[0] || '';
+  else if (!currentPlatform || !platforms.includes(currentPlatform))
+    currentPlatform = platforms[0] || '';
+  sel.value = currentPlatform;
+}
+
+function extractMatchedPlatform(path) {
+  if (!path) return null;
+  const parts = path.split(/[\\/]/);
+  if (parts.length < 3) return null;
+  return `${parts[parts.length - 3]}/${parts[parts.length - 2]}`;
 }
 
 async function onPlatformChange() {
@@ -51,29 +82,97 @@ async function onPlatformChange() {
 async function reload() {
   if (!currentPlatform) return;
   suiteData = {};
-  for (const suite of allSuites) {
-    const gRes = await fetch(`/api/gold/images?suite=${enc(suite)}&platform=${enc(currentPlatform)}`);
-    const gData = await gRes.json();
-    // Merge primary + fallback gold, tagging fallbacks
+  // Fan out: every per-suite request fires concurrently. Browser HTTP/1.1 still caps at
+  // 6 connections per host, but that's far better than 30+ awaited in serial.
+  const json = (r) => r.ok ? r.json() : null;
+  await Promise.all(allSuites.map(async (suite) => {
+    const [gData, tData, ...srcLists] = await Promise.all([
+      fetch(`/api/gold/images?suite=${enc(suite)}&platform=${enc(currentPlatform)}`).then(json),
+      fetch(`/api/thresholds?suite=${enc(suite)}`).then(json),
+      ...sources.map(src => fetch(`/api/source/${src.id}/images?suite=${enc(suite)}&platform=${enc(currentPlatform)}`).then(json)),
+    ]);
+    if (!gData) return;
     const gold = [
       ...(gData.images || []).map(g => ({ name: g.name, fallback: null })),
       ...(gData.fallbacks || []).map(g => ({ name: g.name, fallback: g.fallbackPlatform }))
     ];
     const srcImgs = {};
-    for (const src of sources) {
-      const sRes = await fetch(`/api/source/${src.id}/images?suite=${enc(suite)}&platform=${enc(currentPlatform)}`);
-      srcImgs[src.id] = await sRes.json();
-    }
-    // Load thresholds for this suite
-    const tRes = await fetch(`/api/thresholds?suite=${enc(suite)}`);
-    const thresholdRules = tRes.ok ? await tRes.json() : [];
-    // Only include suite if it has any images
+    sources.forEach((src, i) => { srcImgs[src.id] = srcLists[i] || []; });
     if (gold.length > 0 || Object.values(srcImgs).some(imgs => imgs.length > 0))
-      suiteData[suite] = { gold, sourceImages: srcImgs, thresholdRules };
-  }
+      suiteData[suite] = { gold, sourceImages: srcImgs, thresholdRules: tData || [] };
+  }));
   cellStats = {};
+  // Pre-populate cellStats from the sidecar (authoritative verdict + stats from the test
+  // run) — unless a hash check says the data is stale. Staleness: any gold the sidecar
+  // referenced now hashes to something different, OR the current primary gold isn't
+  // among the hashes the run saw. When recompute is viable (hasPng=true) we fall through
+  // so the browser does a real diff; when there's no PNG (Pass case), we trust as-is.
+  for (const suite of allSuites) {
+    const srcImgs = suiteData[suite]?.sourceImages;
+    if (!srcImgs) continue;
+    for (const src of sources) {
+      for (const it of srcImgs[src.id] || []) {
+        if (!it.sidecar) continue;
+        const sc = it.sidecar;
+        const attempts = sc.attempts || [];
+        if (it.hasPng) {
+          const matchedAttempt = attempts.find(a => a.gold === sc.matched) || attempts[0];
+          if (!matchedAttempt?.goldHash || !it.matchedGoldHash || it.matchedGoldHash !== matchedAttempt.goldHash) continue;
+          if (it.primaryGoldHash && !attempts.some(a => a.goldHash === it.primaryGoldHash)) continue;
+        }
+        const best = attempts.find(a => a.passed) || attempts.find(a => a.kind === 'reference') || attempts[0];
+        if (!best) continue;
+        // Buckets is a dict {"0":..., "1-2":..., ...}; flatten to the 5-element histogram
+        // shape that browser recompute also produces, so downstream code is uniform.
+        const b = best.buckets || {};
+        const histogram = [b['0']||0, b['1-2']||0, b['3-5']||0, b['6-15']||0, b['16+']||0];
+        const totalPixels = histogram.reduce((a, b) => a + b, 0);
+        const diffPixels = histogram[2] + histogram[3] + histogram[4];
+        cellStats[`${src.id}:${suite}:${it.name}`] = {
+          maxDiff: best.maxDiff,
+          psnr: best.psnrDb === 'Infinity' ? Infinity : best.psnrDb,
+          histogram,
+          diffPixels, totalPixels,
+          sidecarVerdict: sc.outcome === 'Pass',
+          sidecarBrief: formatHistogramBrief(histogram, best.thresholds),
+          sidecarMatched: sc.matched,
+          // On Fail outcome `matched` is null; fall back to the best attempt's gold path
+          // for the "via X" hint — still the gold the comparison was actually against.
+          sidecarMatchedPlatform: extractMatchedPlatform(sc.matched || best.gold),
+        };
+      }
+    }
+  }
   resetAltGoldState();
   render();
+  loadFixableHints();
+}
+
+// Background fetch of per-suite identical-gold lists; populates fixableVia so Pass cells
+// with a content-identical twin at another platform light up as "consolidate". Decoupled
+// from the initial render so the whole-suite gold scan doesn't block first paint.
+async function loadFixableHints() {
+  for (const suite of allSuites) {
+    try {
+      const r = await fetch(`/api/identical-platforms?suite=${enc(suite)}&platform=${enc(currentPlatform)}`);
+      if (!r.ok) continue;
+      const map = await r.json();
+      let dirty = false;
+      for (const name of Object.keys(map)) {
+        const plats = map[name];
+        if (!plats?.length) continue;
+        const fixKey = `${suite}:${name}`;
+        if (fixableVia[fixKey]) continue;
+        fixableVia[fixKey] = { platform: plats[0], goldFallback: currentPlatform };
+        // Refresh the row tag if it's already in the DOM.
+        const tagEl = document.querySelector(`[data-row-tag="${CSS.escape(fixKey)}"]`);
+        if (tagEl && tagEl.innerHTML === '')
+          tagEl.innerHTML = `<span class="tag-fix" title="Identical gold at ${esc(plats[0])}">consolidate</span>`;
+        dirty = true;
+      }
+      if (dirty) scheduleCountUpdate();
+    } catch {}
+  }
 }
 
 // === Sources ===
@@ -83,6 +182,7 @@ async function addLocalSource() {
   const src = await res.json();
   sources.push(src);
   sourceDefs.push({ type: 'local' });
+  await refreshPlatforms({ autoSelect: true });
   await reload();
 }
 
@@ -90,6 +190,7 @@ function showCiModal() {
   document.getElementById('ciModal').style.display = 'flex';
   selectedCiRun = null;
   selectedCiRunRepo = null;
+  selectedCiRunNumber = null;
   document.getElementById('ciRunId').value = '';
   document.getElementById('ciDownloadBtn').disabled = true;
   loadForks();
@@ -116,7 +217,7 @@ async function downloadCiRun() {
       const res = await fetch('/api/sources/add-ci', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runId: String(runId), artifactName: artifacts[i], repo, label: `${labelPrefix} #${String(runId).substring(0, 5)}` })
+        body: JSON.stringify({ runId: String(runId), artifactName: artifacts[i], repo, label: `${labelPrefix} #${selectedCiRunNumber ?? runId}` })
       });
       if (!res.ok) { alert(`Failed to download ${artifacts[i]}: ${await res.text()}`); continue; }
       const src = await res.json();
@@ -127,6 +228,7 @@ async function downloadCiRun() {
       }
     }
     closeCiModal();
+    await refreshPlatforms({ autoSelect: true });
     await reload();
   } finally {
     btn.textContent = 'Download & Add';
@@ -145,6 +247,7 @@ async function removeSource(id) {
   selected.clear();
   compareLeft = {};
   compareRight = {};
+  await refreshPlatforms({ autoSelect: true });
   if (sources.length === 0) {
     suiteData = {};
     render();
@@ -222,6 +325,14 @@ function buildSuiteImages(suite) {
   });
 }
 
+// New (no gold yet) and pending (still loading) count as "Failing" — both need a gold decision,
+// matching the failing count and Select Failing. The separate "New" filter still isolates new only.
+function passesStatusFilter(status, filter) {
+  if (!filter) return true;
+  if (filter === 'fail') return status === 'fail' || status === 'new' || status === 'pending';
+  return status === filter;
+}
+
 function renderTable() {
   const filter = document.getElementById('statusFilter').value;
 
@@ -242,7 +353,7 @@ function renderTable() {
 
   for (const suite of Object.keys(suiteData).sort()) {
     let images = buildSuiteImages(suite);
-    if (filter) images = images.filter(i => i.status === filter || (filter === 'fail' && i.status === 'pending'));
+    if (filter) images = images.filter(i => passesStatusFilter(i.status, filter));
     if (search) images = images.filter(i => i.name.toLowerCase().includes(search));
     if (images.length === 0) continue;
 
@@ -310,12 +421,12 @@ function buildRowCells(img, key) {
   let goldThumb = '';
   if (img.hasGold && sources.length > 0) {
     const thumbUrl = `/api/gold/image?suite=${enc(img.suite)}&platform=${enc(currentPlatform)}&name=${enc(img.name)}`;
-    goldThumb = `<div class="thumb-row"><img class="thumb" src="${thumbUrl}"></div>`;
+    goldThumb = `<div class="thumb-row"><img class="thumb" loading="lazy" src="${thumbUrl}"></div>`;
   }
 
   let cells = `
     <td class="cb"><input type="checkbox" ${isSel ? 'checked' : ''} onclick="event.stopPropagation(); toggleSelect('${esc(key)}')"></td>
-    <td style="padding-left:24px">${esc(img.name)}${isLoading ? ' <span class="spinner"></span>' : ''}<span data-row-tag="${esc(key)}">${img.status === 'fail' ? `<span class="tag-fail">${fixableVia[key] ? 'failing (fixable)' : 'failing'}</span>` : img.status === 'new' ? '<span class="tag-new">new</span>' : img.status === 'pending' ? '<span class="tag-pending">...</span>' : ''}</span></td>
+    <td style="padding-left:24px">${esc(img.name)}${isLoading ? ' <span class="spinner"></span>' : ''}<span data-row-tag="${esc(key)}">${img.status === 'fail' ? `<span class="tag-fail">${fixableVia[key] ? 'failing (fixable)' : 'failing'}</span>` : img.status === 'new' ? '<span class="tag-new">new</span>' : img.status === 'pending' ? '<span class="tag-pending">...</span>' : fixableVia[key] ? `<span class="tag-fix" title="Identical gold at ${esc(fixableVia[key].platform)}">consolidate</span>` : ''}</span></td>
     <td><span class="cell ${img.goldFallback ? 'miss' : 'ref'}">${img.hasGold ? (img.goldFallback ? 'fb' : 'ref') : '—'}</span>${img.hasGold ? ` <span style="font-size:10px;color:#666">${esc(img.goldFallback || currentPlatform)}</span>` : ''}${goldThumb}</td>`;
 
   const activeRef = compareRight[key] || `src:${getSourceForKey(key)}`;
@@ -331,21 +442,36 @@ function buildRowCells(img, key) {
       cellHtml = '<span class="cell new">○ new</span>';
     } else if (stats) {
       const result = checkCellThreshold(img.suite, img.name, stats);
-      const cls = result.passed ? 'pass' : 'fail';
+      const passing = isCellPassing(src.id, img.suite, img.name, stats);
+      const cls = passing === true ? 'pass' : passing === false ? 'fail' : 'pending';
+      const icon = passing === true ? '✓' : passing === false ? '✗' : '…';
       const brief = formatThresholdBrief(result);
-      cellHtml = `<span class="cell ${cls}">${cls === 'pass' ? '✓' : '✗'} ${brief}</span>`;
+      // Prefer the sidecar's precise matched gold; fall back to the browser-side
+      // alternate-scan result when only that knew which alt rescued the cell.
+      // Tooltip carries the full path as a safety net if the inline text wraps.
+      const matchedPlat = stats.sidecarMatchedPlatform
+        || altGoldStatus[statsKey]?.passingPlatform;
+      let matchSuffix = '';
+      if (matchedPlat && matchedPlat !== currentPlatform)
+        matchSuffix = ` <span title="${esc(matchedPlat)}">(via ${esc(matchedPlat)})</span>`;
+      else if (passing === true && !result.passed)
+        matchSuffix = ' (via alt)';
+      cellHtml = `<span class="cell ${cls}" data-stats-key="${esc(statsKey)}">${icon} ${brief}${matchSuffix}</span>`;
     } else {
-      cellHtml = `<span class="cell" data-stats-key="${esc(statsKey)}" style="color:#666">...</span>`;
+      cellHtml = `<span class="cell pending" data-stats-key="${esc(statsKey)}">…</span>`;
       computeCellStats(src.id, img.suite, img.name);
     }
-    if (has) {
+    // Passing tests are sidecar-only (no PNG); the cell shows only the verdict text.
+    const srcItem = (suiteData[img.suite]?.sourceImages[src.id] || []).find(s => s.name === img.name);
+    const hasPng = srcItem?.hasPng !== false;
+    if (has && hasPng) {
       const thumbSrc = `/api/source/${src.id}/image?suite=${enc(img.suite)}&platform=${enc(currentPlatform)}&name=${enc(img.name)}`;
       if (img.hasGold) {
         const thumbId = `thumb-${css(src.id)}-${css(key)}`;
-        cellHtml += `<div class="thumb-row"><img class="thumb" src="${thumbSrc}"><canvas class="thumb" id="${thumbId}"></canvas></div>`;
+        cellHtml += `<div class="thumb-row"><img class="thumb" loading="lazy" src="${thumbSrc}"><canvas class="thumb" id="${thumbId}"></canvas></div>`;
         requestAnimationFrame(() => computeThumbDiff(img.suite, img.name, src.id, thumbId));
       } else {
-        cellHtml += `<div class="thumb-row"><img class="thumb" src="${thumbSrc}"></div>`;
+        cellHtml += `<div class="thumb-row"><img class="thumb" loading="lazy" src="${thumbSrc}"></div>`;
       }
     }
     cells += `<td onclick="event.stopPropagation(); setActiveSource('${esc(key)}','${src.id}')"${isActive ? ' class="active-source"' : ''}>${cellHtml}</td>`;
@@ -396,6 +522,77 @@ function resolveImageRef(ref, suite, name) {
     return `/api/source/${srcId}/image?suite=${enc(suite)}&platform=${enc(currentPlatform)}&name=${enc(name)}`;
   }
   return null;
+}
+
+// Metadata sidecar URL for the same ref. 404 is normal (older gold without sidecar).
+function resolveMetadataRef(ref, suite, name) {
+  if (!ref) return null;
+  if (ref.startsWith('gold:')) {
+    const plat = ref.slice(5);
+    return `/api/gold/metadata?suite=${enc(suite)}&platform=${enc(plat)}&name=${enc(name)}`;
+  }
+  if (ref.startsWith('src:')) {
+    const srcId = ref.slice(4);
+    return `/api/source/${srcId}/metadata?suite=${enc(suite)}&platform=${enc(currentPlatform)}&name=${enc(name)}`;
+  }
+  return null;
+}
+
+async function fetchMetadata(url) {
+  if (!url) return null;
+  try { const r = await fetch(url); return r.ok ? await r.json() : null; } catch { return null; }
+}
+
+// Reveal endpoint for the PNG behind a ref. Mirrors resolveMetadataRef but targets the
+// image (not the .metadata.json) and is a POST (it has the side effect of opening Explorer).
+function resolveRevealRef(ref, suite, name) {
+  if (!ref) return null;
+  if (ref.startsWith('gold:'))
+    return `/api/gold/reveal?suite=${enc(suite)}&platform=${enc(ref.slice(5))}&name=${enc(name)}`;
+  if (ref.startsWith('src:'))
+    return `/api/source/${ref.slice(4)}/reveal?suite=${enc(suite)}&platform=${enc(currentPlatform)}&name=${enc(name)}`;
+  return null;
+}
+
+async function revealFile(url) {
+  if (!url) return;
+  try { await fetch(url, { method: 'POST' }); } catch {}
+}
+
+function metadataSummary(m) {
+  // GPU name is already in the folder label; surface the next most useful axis: driver.
+  if (!m) return null;
+  const parts = [m.driverName, m.driverInfo || m.driverVersion].filter(Boolean);
+  return parts.length ? parts.join(' ') : (m.apiName || m.os || null);
+}
+
+function renderMetadataTable(m) {
+  if (!m) return '';
+  const rows = [];
+  // GPU intentionally skipped — already shown in the folder/dropdown above.
+  if (m.driverName || m.driverInfo || m.driverVersion)
+    rows.push(['Driver', [m.driverName, m.driverInfo, m.driverVersion].filter(Boolean).join(' · ')]);
+  if (m.apiName) rows.push(['API', `${m.apiName}${m.apiVersion ? ' ' + m.apiVersion : ''}`]);
+  if (m.os) rows.push(['OS', m.os]);
+  if (m.cpu) rows.push(['CPU', m.cpu]);
+  return `<table class="metadata">` + rows.map(([k, v]) => `<tr><th>${k}</th><td>${esc(v)}</td></tr>`).join('') + `</table>`;
+}
+
+function fillMetaPill(el, m, revealUrl) {
+  if (!el) return;
+  // Reveal icon only when the viewer is on the server's machine (server-gated too).
+  const reveal = serverIsLocal && revealUrl
+    ? `<button class="meta-reveal" title="Reveal in Explorer" onclick="revealFile('${revealUrl}')">📂</button>`
+    : '';
+  if (!m) {
+    // No metadata: still offer reveal if available, otherwise collapse to invisible (no
+    // text, no border) so the row reserves no extra height and controls stay bottom-aligned.
+    if (reveal) { el.classList.remove('empty'); el.innerHTML = reveal; }
+    else { el.classList.add('empty'); el.innerHTML = ''; }
+    return;
+  }
+  el.classList.remove('empty');
+  el.innerHTML = `<span class="meta-text">${esc(metadataSummary(m) || '?')}</span>${reveal}<div class="meta-popup">${renderMetadataTable(m)}</div>`;
 }
 
 function buildRefOptions(goldPlatforms, selectedRef) {
@@ -490,8 +687,30 @@ async function fillDetail(id, key, suite, name, { ver, leftImg, rightImg, goldPl
   else html += `<div class="empty-msg" style="padding:20px">—</div>`;
   html += `</div>`;
   html += '</div>';
-  html += `<div class="detail-footer"><div class="zoom-controls">Scroll to zoom · Drag to pan · <button class="secondary" onclick="resetZoom('${id}')">Reset</button></div><div class="stats" id="stats-${id}"></div></div>`;
+  // Footer columns: each is a flex column with meta-pill at top, controls (or nothing)
+  // at bottom. The right column (stats) is taller; the others stretch to match, so the
+  // bottom row aligns with the last stats line without growing the total height.
+  html += `<div class="detail-footer">`
+       + `<div class="footer-col">`
+       +   `<div class="meta-pill" id="metaLeft-${id}"></div>`
+       +   `<div class="zoom-controls">Scroll to zoom · Drag to pan · <button class="secondary" onclick="resetZoom('${id}')">Reset</button></div>`
+       + `</div>`
+       + `<div class="footer-col">`
+       +   `<div class="meta-pill" id="metaRight-${id}"></div>`
+       + `</div>`
+       + `<div class="stats" id="stats-${id}"></div>`
+       + `</div>`;
   container.innerHTML = html;
+
+  // Metadata sidecars: compact pill under each image, full table popup on hover.
+  Promise.all([
+    fetchMetadata(resolveMetadataRef(leftRef, suite, name)),
+    fetchMetadata(resolveMetadataRef(rightRef, suite, name)),
+  ]).then(([leftMeta, rightMeta]) => {
+    if (detailVersion[key] !== ver) return;
+    fillMetaPill(document.getElementById(`metaLeft-${id}`), leftMeta, resolveRevealRef(leftRef, suite, name));
+    fillMetaPill(document.getElementById(`metaRight-${id}`), rightMeta, resolveRevealRef(rightRef, suite, name));
+  });
 
   if (leftImg) drawToCanvas(document.getElementById(`left-${id}`), leftImg);
   if (rightImg) drawToCanvas(document.getElementById(`right-${id}`), rightImg);
@@ -586,6 +805,10 @@ function resetAltGoldState() {
 function computeCellStats(srcId, suite, name) {
   const key = `${srcId}:${suite}:${name}`;
   if (cellStats[key] || statsQueue.has(key)) return;
+  // Skip when the source has no PNG (sidecar-only passing test); browser-side
+  // recompute would 404 every render and spin forever.
+  const item = (suiteData[suite]?.sourceImages[srcId] || []).find(s => s.name === name);
+  if (item && item.hasPng === false) return;
   statsQueue.add(key);
   if (!statsRunning) runStatsQueue();
 }
@@ -635,6 +858,9 @@ async function runStatsQueue() {
 }
 
 function checkCellThreshold(suite, name, stats) {
+  // Sidecar carries the runtime's authoritative verdict + pre-formatted threshold string.
+  if (stats.sidecarVerdict !== undefined)
+    return { passed: stats.sidecarVerdict, details: [], brief: stats.sidecarBrief };
   const data = suiteData[suite];
   const rules = data?.thresholdRules || [];
   const [platApi, device] = currentPlatform.split('/');
@@ -650,6 +876,10 @@ function checkCellThreshold(suite, name, stats) {
 // Returns true (pass), false (fail), or null (pending) — pending means the
 // preferred gold failed but the alternate-gold scan hasn't finished yet.
 function isCellPassing(srcId, suite, name, stats) {
+  // Sidecar carries the runtime's authoritative verdict; trust it without
+  // re-asking the alt-gold scanner (which would keep this cell pending
+  // forever on a fail at a platform with only fallback golds).
+  if (stats.sidecarVerdict !== undefined) return stats.sidecarVerdict;
   if (checkCellThreshold(suite, name, stats).passed) return true;
   // Graphics.Regression only enumerates fallbacks when the primary gold for
   // the current platform doesn't exist. If it does exist, that single file is
@@ -673,11 +903,16 @@ function updateCellInline(key, stats) {
   if (el) {
     el.className = `cell ${cls}`;
     el.removeAttribute('style');
-    el.removeAttribute('data-stats-key');
     const icon = passing === true ? '✓' : passing === false ? '✗' : '…';
     const brief = formatThresholdBrief(result);
-    const viaAlt = passing === true && !result.passed ? ' (via alt)' : '';
-    el.innerHTML = `${icon} ${brief}${viaAlt}`;
+    const matchedPlat = stats.sidecarMatchedPlatform
+      || altGoldStatus[key]?.passingPlatform;
+    let matchSuffix = '';
+    if (matchedPlat && matchedPlat !== currentPlatform)
+      matchSuffix = ` <span title="${esc(matchedPlat)}">(via ${esc(matchedPlat)})</span>`;
+    else if (passing === true && !result.passed)
+      matchSuffix = ' (via alt)';
+    el.innerHTML = `${icon} ${brief}${matchSuffix}`;
   }
   // Update the row tag once all sources for this image are resolved
   const rowKey = `${suite}:${name}`;
@@ -698,6 +933,7 @@ function updateCellInline(key, stats) {
       const label = fixableVia[rowKey] ? 'failing (fixable)' : 'failing';
       tagEl.innerHTML = `<span class="tag-fail">${label}</span>`;
     } else if (anyPending) tagEl.innerHTML = '<span class="tag-pending">...</span>';
+    else if (fixableVia[rowKey]) tagEl.innerHTML = `<span class="tag-fix" title="Identical gold at ${esc(fixableVia[rowKey].platform)}">consolidate</span>`;
     else tagEl.innerHTML = '';
   }
   if (!anyFail && !anyPending) {
@@ -754,8 +990,10 @@ async function computeThumbDiff(suite, name, srcId, canvasId) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const stats = computeImageDiff(goldImg, srcImg, canvas);
-    // Also cache stats
-    cellStats[`${srcId}:${suite}:${name}`] = stats;
+    // Cache for non-sidecar items only — overwriting would drop the sidecar's
+    // authoritative verdict (sidecarVerdict, etc.) and flip the cell to pending.
+    const key = `${srcId}:${suite}:${name}`;
+    if (!cellStats[key]) cellStats[key] = stats;
   } catch { }
 }
 
@@ -845,7 +1083,7 @@ function toggleSelect(name) {
 function toggleSelectSuite(suite, checked) {
   const filter = document.getElementById('statusFilter').value;
   let images = buildSuiteImages(suite);
-  if (filter) images = images.filter(i => i.status === filter || (filter === 'fail' && i.status === 'pending'));
+  if (filter) images = images.filter(i => passesStatusFilter(i.status, filter));
   images.forEach(i => {
     const key = `${i.suite}:${i.name}`;
     if (checked) selected.add(key); else selected.delete(key);
@@ -861,7 +1099,7 @@ function toggleSelectAll() {
   const filter = document.getElementById('statusFilter').value;
   for (const suite of Object.keys(suiteData)) {
     let images = buildSuiteImages(suite);
-    if (filter) images = images.filter(i => i.status === filter || (filter === 'fail' && i.status === 'pending'));
+    if (filter) images = images.filter(i => passesStatusFilter(i.status, filter));
     images.forEach(i => {
       const key = `${i.suite}:${i.name}`;
       if (checked) selected.add(key); else selected.delete(key);
@@ -880,11 +1118,16 @@ function getMaxDiffForImage(img) {
   return null;
 }
 
+// "Select Failing/Fixable" ignore the status dropdown (the button itself defines the status — and
+// fixable rows pass, so a status filter would hide them) but honour the search box, so they select
+// within the name-narrowed scope you're looking at rather than across the whole suite list.
 function selectAllFailing() {
   selected.clear();
+  const search = (document.getElementById('searchFilter')?.value || '').toLowerCase();
   for (const suite of Object.keys(suiteData)) {
-    const images = buildSuiteImages(suite);
-    images.filter(i => i.status === 'fail' || i.status === 'new').forEach(i => selected.add(`${i.suite}:${i.name}`));
+    let images = buildSuiteImages(suite).filter(i => i.status === 'fail' || i.status === 'new');
+    if (search) images = images.filter(i => i.name.toLowerCase().includes(search));
+    images.forEach(i => selected.add(`${i.suite}:${i.name}`));
   }
   syncCheckboxes();
   updateSelectedCount();
@@ -896,8 +1139,10 @@ function selectFixable() {
   // alternate gold) while still carrying a stale primary gold at the current
   // platform. Selecting them lets the user clean up those redundant primaries.
   selected.clear();
+  const search = (document.getElementById('searchFilter')?.value || '').toLowerCase();
   for (const suite of Object.keys(suiteData)) {
     for (const img of buildSuiteImages(suite)) {
+      if (search && !img.name.toLowerCase().includes(search)) continue;
       const fixKey = `${img.suite}:${img.name}`;
       if (fixableVia[fixKey]) selected.add(fixKey);
     }
@@ -909,22 +1154,20 @@ function selectFixable() {
 
 async function deleteSelectedGold() {
   if (selected.size === 0) return alert('No images selected.');
-  // Group fixable images by the platform whose gold should be deleted
+  // Always target the current platform's gold. For fixable selections the test then falls
+  // through to a passing alternate; for non-fixable ones it's just a direct delete.
   const toDelete = {};
   for (const key of selected) {
-    const fix = fixableVia[key];
-    if (!fix) continue;
-    const [suite, ...nameParts] = key.split(':');
-    const name = nameParts.join(':');
-    // Delete the gold for the current platform (the failing one)
-    const k = `${suite}|${fix.goldFallback}`;
-    if (!toDelete[k]) toDelete[k] = { suite, platform: fix.goldFallback, names: [] };
-    toDelete[k].names.push(name);
+    const colon = key.indexOf(':');
+    const suite = key.substring(0, colon);
+    const name = key.substring(colon + 1);
+    if (!toDelete[suite]) toDelete[suite] = { suite, platform: currentPlatform, names: [] };
+    toDelete[suite].names.push(name);
   }
   const entries = Object.values(toDelete);
-  if (entries.length === 0) return alert('No fixable images selected. Select images that show a green checkmark hint.');
   const total = entries.reduce((s, e) => s + e.names.length, 0);
-  if (!confirm(`Delete ${total} device-specific gold image(s)? They will fall back to a passing alternate.`)) return;
+  if (total === 0) return;
+  if (!confirm(`Delete ${total} gold image(s) for ${currentPlatform}?`)) return;
   let totalDeleted = 0;
   for (const entry of entries) {
     const res = await fetch('/api/gold/delete', {
@@ -1007,7 +1250,7 @@ function syncCheckboxes() {
     if (!cb) return;
     const images = buildSuiteImages(suite);
     const filter = document.getElementById('statusFilter').value;
-    const filtered = filter ? images.filter(i => i.status === filter || (filter === 'fail' && i.status === 'pending')) : images;
+    const filtered = filter ? images.filter(i => passesStatusFilter(i.status, filter)) : images;
     const keys = filtered.map(i => `${i.suite}:${i.name}`);
     const allSel = keys.length > 0 && keys.every(k => selected.has(k));
     const someSel = !allSel && keys.some(k => selected.has(k));
@@ -1044,10 +1287,12 @@ function updateSuiteBadges() {
 }
 
 function updateActionCounts() {
+  // Scoped to the search box so the counts match what Select Failing/Fixable would select.
+  const search = (document.getElementById('searchFilter')?.value || '').toLowerCase();
   let failCount = 0, fixableCount = 0;
   for (const suite of Object.keys(suiteData)) {
-    const images = buildSuiteImages(suite);
-    for (const i of images) {
+    for (const i of buildSuiteImages(suite)) {
+      if (search && !i.name.toLowerCase().includes(search)) continue;
       if (i.status === 'fail' || i.status === 'new') failCount++;
       if (fixableVia[`${i.suite}:${i.name}`]) fixableCount++;
     }
@@ -1126,6 +1371,7 @@ function naturalSort(a, b) { return a.localeCompare(b, undefined, { numeric: tru
 // === CI Modal ===
 let ciRuns = [];
 let selectedCiRun = null;
+let selectedCiRunNumber = null;
 let selectedCiRunRepo = null;
 let forksList = [];
 
@@ -1179,15 +1425,16 @@ async function loadCiRuns() {
     }
     const res = await fetch('/api/ci/runs?limit=30');
     const allRuns = await res.json();
-    // Deduplicate by (repo, SHA) — keep one per commit per repo, prefer the CI workflow.
-    // Different forks at the same SHA still get separate rows so the user can tell them apart.
+    // Deduplicate by (repo, SHA, workflow) so each platform-specific workflow at a SHA gets
+    // its own row (a commit with separate iOS + Android dispatches shows both). The "CI"
+    // umbrella collapses to one row across re-runs. Different forks at the same SHA also get
+    // separate rows. Latest run wins per key (allRuns is created_at desc).
     const seen = new Map();
     for (const run of allRuns) {
       const repo = run.repo ?? 'stride3d/stride';
-      const key = `${repo}|${run.head_sha ?? ''}`;
       const name = run.name ?? '';
-      if (!seen.has(key) || name === 'CI')
-        seen.set(key, run);
+      const key = `${repo}|${run.head_sha ?? ''}|${name}`;
+      if (!seen.has(key)) seen.set(key, run);
     }
     ciRuns = [...seen.values()].slice(0, 15);
     console.log('CI runs:', ciRuns);
@@ -1221,7 +1468,7 @@ function renderCiRuns() {
     const repoChip = `<span class="repo-chip ${isUpstream ? 'upstream' : 'fork'}">${esc(repo)}</span>`;
     const runUrl = `https://github.com/${repo}/actions/runs/${id}`;
     const runLink = `<a href="${runUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><b>#${number}</b></a>`;
-    return `<div class="ci-run ${selectedCiRun === id ? 'selected' : ''}" onclick="selectCiRun(${id}, '${esc(repo)}')">
+    return `<div class="ci-run ${selectedCiRun === id ? 'selected' : ''}" onclick="selectCiRun(${id}, '${esc(repo)}', ${number})">
       <div>${repoChip} ${runLink} ${esc(branch)} <span class="meta">${sha}</span></div>
       <div><span class="meta">${esc(wfName)}</span> <span class="meta">${ago}</span> ${statusIcon}</div>
     </div>`;
@@ -1264,16 +1511,17 @@ async function onCiRunIdInput() {
       btn.disabled = true;
       return;
     }
-    const { repo } = await res.json();
-    selectCiRun(Number(raw), repo);
+    const { repo, runNumber } = await res.json();
+    selectCiRun(Number(raw), repo, runNumber);
   } catch (e) {
     listEl.innerHTML = `Probe failed: ${e.message}`;
   }
 }
 
-async function selectCiRun(id, repo) {
+async function selectCiRun(id, repo, runNumber) {
   selectedCiRun = id;
   selectedCiRunRepo = repo || 'stride3d/stride';
+  selectedCiRunNumber = runNumber ?? null;
   document.getElementById('ciRunId').value = String(id);
   renderCiRuns();
 
@@ -1471,7 +1719,7 @@ document.addEventListener('mousemove', (e) => {
 
     // Get pixel data from the image
     const tmpCanvas = new OffscreenCanvas(w, h);
-    const tmpCtx = tmpCanvas.getContext('2d');
+    const tmpCtx = tmpCanvas.getContext('2d', { willReadFrequently: true });
     tmpCtx.drawImage(ri, 0, 0);
 
     const half = Math.floor(piZoomSize / 2);
@@ -1549,7 +1797,9 @@ let kbFocusKey = null; // persists across re-renders
 
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
-  const rows = [...document.querySelectorAll('tr.suite-row, tr.row')];
+  // Skip rows hidden by updateCellInline (filter drop-out) — they're in the DOM but invisible,
+  // so including them would cause arrow keys to "stick" on blank steps.
+  const rows = [...document.querySelectorAll('tr.suite-row, tr.row')].filter(r => r.style.display !== 'none');
   if (rows.length === 0) return;
 
   const focusedIdx = kbFocusKey != null ? rows.findIndex(r => r.dataset.kbKey === kbFocusKey) : -1;
@@ -1599,7 +1849,7 @@ function kbExpand(row) {
   if (row.classList.contains('suite-row')) {
     if (!collapsedSuites.has(key)) {
       // Already expanded — move to first child
-      const rows = [...document.querySelectorAll('tr.suite-row, tr.row')];
+      const rows = [...document.querySelectorAll('tr.suite-row, tr.row')].filter(r => r.style.display !== 'none');
       const idx = rows.indexOf(row);
       if (idx >= 0 && idx + 1 < rows.length && rows[idx + 1].classList.contains('row')) {
         kbSetFocus(rows, idx + 1);
@@ -1619,7 +1869,7 @@ function kbCollapse(row) {
     collapsedSuites.add(key);
   } else {
     // Test row — move to parent suite
-    const rows = [...document.querySelectorAll('tr.suite-row, tr.row')];
+    const rows = [...document.querySelectorAll('tr.suite-row, tr.row')].filter(r => r.style.display !== 'none');
     const idx = rows.indexOf(row);
     for (let i = idx - 1; i >= 0; i--) {
       if (rows[i].classList.contains('suite-row')) {
@@ -1778,6 +2028,7 @@ init().then(async () => {
   // Restore saved sources, or auto-add local
   if (savedSourceDefs && savedSourceDefs.length > 0) {
     await restoreSources();
+    await refreshPlatforms();
     await reload();
   } else {
     await addLocalSource().catch(() => {});

@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Stride.Assets.Presentation;
 using Stride.Assets.Presentation.Templates;
 using Stride.Assets.Templates;
@@ -42,16 +44,19 @@ public class EditorScreenshotTests
 
     public static IEnumerable<object[]> Fixtures()
     {
-        // (fixtureName, optional template GUID to instantiate and upgrade before opening, timeout-minutes)
-        yield return new object?[] { "EmptyEditor",   (Guid?)null,                                                       3 };
-        yield return new object?[] { "TopDownCreate", (Guid?)null,                                                       8 };
-        yield return new object?[] { "TopDownLoad",   (Guid?)new Guid("A363FBC5-89EF-4E7A-B870-6D070813D034"),           5 };
-        yield return new object?[] { "NewGameEditor", (Guid?)null,                                                       5 };
+        // (fixtureName, optional template GUID to instantiate and upgrade before opening, timeout-minutes,
+        //  comparison prompt — ScriptEditor ignores the script's literal text (template content can change)
+        //  and only checks it renders as syntax-highlighted C# in the editor theme)
+        yield return new object?[] { "EmptyEditor",   (Guid?)null,                                             3, EditorComparisonPrompt.Default };
+        yield return new object?[] { "TopDownCreate", (Guid?)null,                                             8, EditorComparisonPrompt.Default };
+        yield return new object?[] { "TopDownLoad",   (Guid?)new Guid("A363FBC5-89EF-4E7A-B870-6D070813D034"), 5, EditorComparisonPrompt.Default };
+        yield return new object?[] { "ScriptEditor",  (Guid?)new Guid("81d2adea-37b1-4711-834c-0d73a05c206c"), 6, EditorComparisonPrompt.ScriptEditor };
+        yield return new object?[] { "NewGameEditor", (Guid?)null,                                             5, EditorComparisonPrompt.Default };
     }
 
     [Theory]
     [MemberData(nameof(Fixtures))]
-    public void Capture(string fixtureName, Guid? templateGuid, int timeoutMin)
+    public void Capture(string fixtureName, Guid? templateGuid, int timeoutMin, EditorComparisonPrompt prompt)
     {
         var worktree = WorktreeRoot();
         var captureRoot = Path.Combine(worktree, "ui-test-out-" + Dpi);
@@ -119,21 +124,62 @@ public class EditorScreenshotTests
         // multiple fixtures' captures across test invocations.
         var baselineDir = Path.Combine(worktree, "tests", "editor", "baselines", Dpi);
         var results = ScreenshotComparator.Compare(captureRoot, baselineDir,
-            sampleFilter: fixtureName, defaultPrompt: EditorComparisonPrompt.Default);
+            sampleFilter: fixtureName, defaultPrompt: prompt,
+            deferWhenVisionUnavailable: true);
 
         foreach (var r in results)
         {
             var lpips = r.Lpips.HasValue ? $"lpips={r.Lpips.Value:F4}" : "";
             output.WriteLine($"[compare] {r.Status,-12} {r.Frame,-25} thr={r.Threshold:F2} {lpips}{(r.Detail is null ? "" : "  " + r.Detail)}");
         }
+
+        // Frames over the LPIPS threshold that opted into the Claude vision tiebreak but ran without a
+        // key (fork PRs get no secrets). Record them so the trusted vision gate (workflow_run, which
+        // has the key) can rule on them. One manifest per fixture → no cross-test races.
+        var deferred = results.Where(r => r.Status is "deferred").ToList();
+        if (deferred.Count > 0)
+            WriteDeferredManifest(fixtureCapture, fixtureName, deferred);
+
+        // Hard regressions (LPIPS drift with no vision tiebreak, capture/compare errors, missing
+        // baseline) fail regardless of any deferral.
         var failures = results.Where(r => r.Status is "drift" or "error" or "new").ToList();
         Assert.Empty(failures);
+
+        // Deferred-only (no hard failures): the verdict belongs to the trusted vision gate. xunit's
+        // Assert.Skip isn't available under this project's custom runner, so the test just passes here
+        // and logs; the manifest above plus the required, fail-closed gate keep it honest.
+        if (deferred.Count > 0)
+            output.WriteLine($"[compare] DEFERRED {deferred.Count} frame(s) to the vision gate " +
+                             $"(no ANTHROPIC_API_KEY in this run): {string.Join(", ", deferred.Select(r => r.Frame))}");
+    }
+
+    /// <summary>
+    /// Write <c>&lt;fixtureCapture&gt;/vision-deferred.json</c> listing the frames this keyless run couldn't
+    /// rule on. The trusted vision gate globs these across fixtures, re-judges each with the key, and
+    /// fails closed if a listed frame can't be resolved.
+    /// </summary>
+    private static void WriteDeferredManifest(string fixtureCapture, string fixture, IReadOnlyList<ComparisonResult> deferred)
+    {
+        Directory.CreateDirectory(fixtureCapture);
+        var payload = new
+        {
+            sample = fixture,
+            frames = deferred.Select(r => new { frame = r.Frame, lpips = r.Lpips, threshold = r.Threshold, detail = r.Detail }).ToArray(),
+        };
+        File.WriteAllText(
+            Path.Combine(fixtureCapture, "vision-deferred.json"),
+            // Allow NaN/Infinity — a deferred frame's lpips can be non-finite, so serialization mustn't fail the keyless run.
+            JsonSerializer.Serialize(payload, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+            }));
     }
 
     /// <summary>
     /// Instantiates a template sample (by .sdtpl Id GUID) into a per-fixture temp dir via
     /// <see cref="DotNetNewTemplateGenerator"/> — the same path GS's New Project wizard takes
-    /// at runtime. Returns the absolute .sln path the AutoTesting runner should open.
+    /// at runtime. Returns the absolute .slnx path the AutoTesting runner should open.
     /// </summary>
     internal static string GenerateSampleFromTemplate(Guid templateGuid, string sampleName)
     {
@@ -161,7 +207,7 @@ public class EditorScreenshotTests
         parameters.OutputDirectory = outputDir;
         parameters.Logger = logger;
 
-        session.SolutionPath = UPath.Combine<UFile>(outputDir, sampleName + ".sln");
+        session.SolutionPath = UPath.Combine<UFile>(outputDir, sampleName + ".slnx");
 
         var generator = new DotNetNewTemplateGenerator();
         if (!generator.PrepareForRun(parameters).Result)

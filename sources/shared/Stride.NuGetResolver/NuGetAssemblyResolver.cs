@@ -13,7 +13,7 @@ namespace Stride.Core.Assets;
 
 public static partial class NuGetAssemblyResolver
 {
-    public static readonly string DevSource = Path.Combine("Stride", "NugetDev");
+    public static readonly string DevSource = Path.Combine("stride", "nugetdev");
 #if STRIDE_NUGET_RESOLVER_UI
     public static string AvaloniaVersion = string.Empty;
 #endif
@@ -41,13 +41,18 @@ public static partial class NuGetAssemblyResolver
     {
         if (packagesConfigs.Count == 0) return;
 
+        // Launch-time graphics API (one live API per process); shared by both host layouts.
+        // Local build: wire the subfolder resolver before the deps.json early-return below. No-op on flat.
+        var selectedGraphicsApi = GraphicsApiHostResolver.Setup(GraphicsApiSelector.Resolve());
+
         // Make sure our nuget local store is added to nuget config
-        var folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        var executingPath = Assembly.GetExecutingAssembly().Location;
+        var folder = Path.GetDirectoryName(executingPath);
         var devSourcePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), DevSource);
 
         while (folder != null)
         {
-            if (File.Exists(Path.Combine(folder, "build", "Stride.sln")))
+            if (File.Exists(Path.Combine(folder, "build", "Stride.slnx")))
             {
                 var settings = Settings.LoadDefaultSettings(null);
 
@@ -59,6 +64,13 @@ public static partial class NuGetAssemblyResolver
             }
             folder = Path.GetDirectoryName(folder);
         }
+
+        // Sibling .deps.json present = standard .NET app layout (source-tree bin/, dev-redirected
+        // install): the host's own probing already resolves transitive deps, our restore would be
+        // redundant. Only the NuGet-cache pack path (no deps.json) needs the restore handler.
+        var entryPath = Assembly.GetEntryAssembly()?.Location;
+        if (entryPath != null && File.Exists(Path.ChangeExtension(entryPath, ".deps.json")))
+            return;
 
         // Note: we perform nuget restore inside the assembly resolver rather than top level module ctor (otherwise it freezes)
         AppDomain.CurrentDomain.AssemblyResolve += (_, eventArgs) =>
@@ -127,8 +139,8 @@ public static partial class NuGetAssemblyResolver
                                     $"Could not restore NuGet packages for {packageName} {packageVersion} ({targetFramework}).{Environment.NewLine}{diagnostics}");
                             }
 
-                            // Build list of assemblies
-                            var assemblies = RestoreHelper.ListAssemblies(result.LockFile);
+                            // Deployed path: pick the selected API's subfolder per package (null -> platform default).
+                            var assemblies = RestoreHelper.ListAssemblies(result.LockFile, selectedGraphicsApi);
 
                             // Create a dictionary by assembly name
                             // note: we ignore case as filename might not be properly matching assembly name casing
@@ -206,6 +218,7 @@ public static partial class NuGetAssemblyResolver
                 var aname = new AssemblyName(eventArgs.Name);
                 if (aname.Name!.StartsWith("Microsoft.Build", StringComparison.Ordinal) && aname.Name != "Microsoft.Build.Locator")
                     return null;
+
                 if (assemblyNameToPath.TryGetValue(aname.Name, out var assemblyPath))
                 {
                     return Assembly.LoadFrom(assemblyPath);

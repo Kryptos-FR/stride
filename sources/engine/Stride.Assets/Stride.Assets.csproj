@@ -23,10 +23,13 @@
     <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="SSH.NET" PrivateAssets="compile" />
     <PackageReference Include="FFmpeg.AutoGen" Condition="'$(TargetFramework)' == '$(StrideFramework)'" />
+    <PackageReference Include="Microsoft.TemplateEngine.IDE" />
+    <PackageReference Include="Microsoft.TemplateEngine.Edge" />
+    <PackageReference Include="Microsoft.TemplateEngine.Abstractions" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\assets\Stride.Core.Assets\Stride.Core.Assets.csproj" />
-    <ProjectReference Include="..\..\tools\Stride.Core.ProjectTemplating\Stride.Core.ProjectTemplating.csproj" />
+    <ProjectReference Include="..\..\assets\Stride.Core.Assets.Quantum\Stride.Core.Assets.Quantum.csproj" />
     <ProjectReference Include="..\..\tools\Stride.TextureConverter\Stride.TextureConverter.csproj" />
     <ProjectReference Include="..\Stride.Engine\Stride.Engine.csproj" />
     <ProjectReference Include="..\Stride.Navigation\Stride.Navigation.csproj" />
@@ -34,7 +37,7 @@
     <ProjectReference Include="..\Stride.BepuPhysics\Stride.BepuPhysics\Stride.BepuPhysics.csproj" />
     <ProjectReference Include="..\Stride.UI\Stride.UI.csproj" />
     <ProjectReference Include="..\Stride.Video\Stride.Video.csproj" />
-    <ProjectReference Include="..\Stride\Stride.csproj" />
+    <ProjectReference Include="..\Stride.Foundation\Stride.Foundation.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\shared\SharedAssemblyInfo.cs">
@@ -71,19 +74,19 @@
     </StrideNativeLib>
     <!-- Asset compiler ffmpeg CLI — ship every RID under runtimes/<rid>/native/ so the package
          is portable across hosts. ToolLocator resolves the right one at runtime via the current RID. -->
-    <Content Include="..\..\..\deps\FFmpeg\ffmpeg.exe">
+    <Content Include="..\..\..\deps\FFmpeg\win-x64\ffmpeg.exe" Pack="true" PackagePath="runtimes\win-x64\native\">
       <Link>runtimes\win-x64\native\ffmpeg.exe</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\..\..\deps\FFmpeg\ffmpeg.win-arm64.exe">
+    <Content Include="..\..\..\deps\FFmpeg\win-arm64\ffmpeg.exe" Pack="true" PackagePath="runtimes\win-arm64\native\">
       <Link>runtimes\win-arm64\native\ffmpeg.exe</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\..\..\deps\FFmpeg\ffmpeg.linux-x64">
+    <Content Include="..\..\..\deps\FFmpeg\linux-x64\ffmpeg" Pack="true" PackagePath="runtimes\linux-x64\native\">
       <Link>runtimes\linux-x64\native\ffmpeg</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\..\..\deps\FFmpeg\ffmpeg.osx-arm64">
+    <Content Include="..\..\..\deps\FFmpeg\osx-arm64\ffmpeg" Pack="true" PackagePath="runtimes\osx-arm64\native\">
       <Link>runtimes\osx-arm64\native\ffmpeg</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

@@ -12,10 +12,6 @@ AssetFolders:
     -   Path: !dir Effects
 ResourceFolders:
     - !dir ../Resources
-OutputGroupDirectories: {}
-ExplicitFolders: []
-Bundles: []
-TemplateFolders: []
 RootAssets:
     - 0a019d87-d943-4543-9b51-a4016200dff9:Scenes/Basics/Properties
     - 137dcdfa-bfc8-4805-92a3-dd48f2b79061:Scenes/Basics/DeltaTime

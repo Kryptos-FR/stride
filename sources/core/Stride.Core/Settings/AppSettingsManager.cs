@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Stride.Core.Reflection;
 
 namespace Stride.Core.Settings;
@@ -35,6 +36,8 @@ public static class AppSettingsManager
     /// If provider is not set, getter of this property will attempt to find an implementation
     /// among the registered assemblies and cache it.
     /// </remarks>
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "Provider types come from the assembly scan registry, which keeps their ctors.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Provider types come from the assembly scan registry.")]
     public static IAppSettingsProvider? SettingsProvider
     {
         get
@@ -50,7 +53,7 @@ public static class AppSettingsManager
                 {
                     foreach (var type in providerTypes)
                     {
-                        if (!type.IsAbstract &&
+                        if (!type.IsAbstract && !type.IsGenericTypeDefinition &&
                             type.GetConstructor(Type.EmptyTypes) != null)
                         {
                             provider = (IAppSettingsProvider?)Activator.CreateInstance(type);
@@ -73,12 +76,15 @@ public static class AppSettingsManager
     /// </summary>
     public static void ReloadSettings()
     {
-        if (SettingsProvider != null)
+        try
         {
-            settings = SettingsProvider.LoadAppSettings();
+            settings = SettingsProvider?.LoadAppSettings() ?? new AppSettings();
         }
-        else
+        catch (Exception e)
         {
+            // Reached from Logger static initialization: a throwing provider would crash the process
+            // during type load, and Logger can't be used to report from here.
+            Console.Error.WriteLine($"Error loading application settings: {e.Message}");
             settings = new AppSettings();
         }
     }

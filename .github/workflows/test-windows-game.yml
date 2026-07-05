@@ -1,10 +1,7 @@
 name: Test Windows (Game)
 
 run-name: >-
-  ${{ github.event.client_payload.pr_number
-      && format('Test Windows (Game) — PR #{0} @ {1}', github.event.client_payload.pr_number, github.event.client_payload.pr_head_sha)
-      || (github.event.inputs.commit-sha != '' && format('Test Windows (Game) @ {0}', github.event.inputs.commit-sha))
-      || '' }}
+  ${{ github.event.inputs.commit-sha != '' && format('Test Windows (Game) @ {0}', github.event.inputs.commit-sha) || '' }}
 
 on:
   workflow_dispatch:
@@ -25,10 +22,26 @@ on:
           - Direct3D11
           - Direct3D12
           - Vulkan
+      test-filter:
+        description: 'dotnet test --filter expression (blank = all tests)'
+        type: string
+        default: ''
+      repeat:
+        description: 'Rerun the filtered test set up to N times, stop on first failure (flake hunting). 1 = single run (default).'
+        type: number
+        default: 1
+      project:
+        description: 'Single test .csproj path to build/test (blank = whole GPU solution filter)'
+        type: string
+        default: ''
       commit-sha:
         description: Commit SHA to test (default = HEAD of selected branch)
         type: string
         default: ''
+      upload-binlog:
+        description: Capture and upload build binlog (off by default; adds some I/O overhead)
+        default: false
+        type: boolean
   workflow_call:
     inputs:
       build-type:
@@ -37,16 +50,29 @@ on:
       graphics-api:
         default: ''
         type: string
+      test-filter:
+        default: ''
+        type: string
+      repeat:
+        default: 1
+        type: number
+      project:
+        default: ''
+        type: string
       commit-sha:
         default: ''
         type: string
-  repository_dispatch:
-    # Fired by chatops bot. Payload: { pr_number, graphics-api, dispatched_by }.
-    types: [test-windows-game]
-
+      # Internal (callers only, e.g. test-gold-gen): tolerate test failures so generating new gold
+      # doesn't fail the run. Build failures still fail. Not exposed in the dispatch UI.
+      tolerate-test-failures:
+        default: false
+        type: boolean
+      upload-binlog:
+        default: false
+        type: boolean
 
 concurrency:
-  group: test-windows-game-${{ github.event.pull_request.number || github.event.client_payload.pr_number || github.ref }}-${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }}-${{ github.event.client_payload['graphics-api'] || github.event.inputs.graphics-api || inputs.graphics-api || 'all' }}
+  group: test-windows-game-${{ github.event.pull_request.number || github.ref }}-${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }}-${{ github.event.inputs.graphics-api || inputs.graphics-api || 'all' }}
   cancel-in-progress: true
 
 jobs:
@@ -55,13 +81,13 @@ jobs:
   # API-independent tests live in test-windows-game-api-neutral.yml so they run once.
   #
   Game-GraphicsApi:
-    name: Test Game ${{ matrix.graphics-api }} (${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }})
+    name: Windows (${{ matrix.graphics-api }}, ${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }})
     runs-on: windows-2025-vs2026
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        graphics-api: ${{ (github.event.client_payload['graphics-api'] || github.event.inputs.graphics-api || inputs.graphics-api) != '' && fromJson(format('["{0}"]', github.event.client_payload['graphics-api'] || github.event.inputs.graphics-api || inputs.graphics-api)) || fromJson('["Direct3D11","Direct3D12","Vulkan"]') }}
+        graphics-api: ${{ (github.event.inputs.graphics-api || inputs.graphics-api) != '' && fromJson(format('["{0}"]', github.event.inputs.graphics-api || inputs.graphics-api)) || fromJson('["Direct3D11","Direct3D12","Vulkan"]') }}
     env:
       STRIDE_GRAPHICS_SOFTWARE_RENDERING: "1"
       STRIDE_TESTS_RENDERDOC: "error"
@@ -74,17 +100,17 @@ jobs:
       DOTNET_DbgMiniDumpType: "4"                                                    # MiniDumpWithFullMemory
       DOTNET_DbgMiniDumpName: "${{ github.workspace }}\\TestResults\\dotnet_%p.dmp"  # Type 2: dump path
     steps:
+      # Bootstrap .github so the local composite action below is resolvable pre-checkout.
       - uses: actions/checkout@v4
         with:
-          lfs: true
-          submodules: true
-          # commit-sha (workflow_dispatch/_call input) wins for explicit bisecting. Otherwise
-          # chatops dispatch passes a PR number; check out its merge ref so we test the
-          # post-merge state (works uniformly for same-repo and fork PRs).
-          ref: ${{ (github.event.inputs.commit-sha != '' && github.event.inputs.commit-sha) || (inputs.commit-sha != '' && inputs.commit-sha) || (github.event.client_payload.pr_number && format('refs/pull/{0}/merge', github.event.client_payload.pr_number)) || github.ref }}
-      - uses: actions/setup-dotnet@v4
+          sparse-checkout: .github
+      - uses: ./.github/actions/stride-checkout
         with:
-          dotnet-version: '10.0.x'
+          # commit-sha (workflow_dispatch/_call input) wins for explicit bisecting; otherwise
+          # github.ref is the PR merge ref under pull_request, so we test the post-merge state
+          # (works uniformly for same-repo and fork PRs).
+          ref: ${{ (github.event.inputs.commit-sha != '' && github.event.inputs.commit-sha) || (inputs.commit-sha != '' && inputs.commit-sha) || github.ref }}
+          exclude: samples
       - name: Configure crash dumps
         shell: pwsh
         run: |
@@ -124,27 +150,56 @@ jobs:
           } else {
             Write-Warning "Lavapipe DLL not found in NuGet cache"
           }
+      - name: Resolve build/test target
+        shell: pwsh
+        run: |
+          # `project` (a single .csproj) narrows the build+test to one suite; blank = whole GPU solution filter.
+          $proj = "${{ github.event.inputs.project || inputs.project }}"
+          $target = if ($proj) { $proj } else { 'build\Stride.Tests.Game.GPU.slnf' }
+          Add-Content $env:GITHUB_ENV "STRIDE_TEST_TARGET=$target"
+          Add-Content $env:GITHUB_ENV "STRIDE_TEST_FILTER=${{ github.event.inputs.test-filter || inputs.test-filter }}"
       - name: Build
         run: |
-          dotnet build build\Stride.Tests.Game.GPU.slnf `
+          dotnet build $env:STRIDE_TEST_TARGET `
             -p:StrideTestRuntimeIdentifier=win-x64 `
+            -p:StrideSkipAutoPack=true `
             -nr:false `
+            ${{ inputs.upload-binlog && '-bl:build.binlog' || '' }} `
             -v:m -p:WarningLevel=0 `
             -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }} `
             -p:StridePlatforms=Windows `
             -p:StrideGraphicsApis=${{ matrix.graphics-api }} `
             -p:StrideGraphicsApi=${{ matrix.graphics-api }}
+      - name: Upload build binlog
+        # failure() so we still get the binlog when Build dies (most useful case)
+        if: failure() || inputs.upload-binlog
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-binlog-game-${{ matrix.graphics-api }}
+          path: build.binlog
+          if-no-files-found: ignore
       - name: Test
         if: success() || failure()
+        continue-on-error: ${{ inputs.tolerate-test-failures == true }}
         run: |
-          dotnet test build\Stride.Tests.Game.GPU.slnf `
-            --no-build `
-            --logger:trx --results-directory TestResults `
-            --blame-hang-timeout 5m --blame-hang-dump-type full `
-            -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }} `
-            -p:StrideGraphicsApis=${{ matrix.graphics-api }} `
-            -p:StrideGraphicsApi=${{ matrix.graphics-api }} `
-            -- RunConfiguration.MaxCpuCount=1
+          $repeat = [int]("${{ github.event.inputs.repeat || inputs.repeat || '1' }}")
+          $filterArgs = if ($env:STRIDE_TEST_FILTER) { @('--filter', $env:STRIDE_TEST_FILTER) } else { @() }
+          for ($i = 1; $i -le $repeat; $i++) {
+            Write-Host "=== Test run $i / $repeat ==="
+            dotnet test $env:STRIDE_TEST_TARGET `
+              --no-build `
+              --logger:"trx;LogFilePrefix=run-$i" --results-directory TestResults `
+              --blame-hang-timeout 5m --blame-hang-dump-type full `
+              -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type || 'Debug' }} `
+              -p:StrideGraphicsApis=${{ matrix.graphics-api }} `
+              -p:StrideGraphicsApi=${{ matrix.graphics-api }} `
+              @filterArgs `
+              -- RunConfiguration.MaxCpuCount=1
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "Run $i failed (exit $LASTEXITCODE); stopping."
+              exit $LASTEXITCODE
+            }
+          }
       - name: Publish Test Report
         if: always()
         uses: phoenix-actions/test-reporting@v15
@@ -154,6 +209,9 @@ jobs:
           reporter: dotnet-trx
           output-to: step-summary
           list-tests: 'failed'
+          # Tolerated (gold-gen) test failures shouldn't red the run via the reporter; the Build
+          # and Test steps still fail normally. Defaults to true for direct / PR-gate runs.
+          fail-on-error: ${{ inputs.tolerate-test-failures != true }}
       - name: Collect symbols for crash analysis
         if: always()
         shell: pwsh

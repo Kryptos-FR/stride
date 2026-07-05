@@ -97,8 +97,18 @@ namespace Stride.Graphics
             NativeColorAttachmentView = attachmentView;
         }
 
+        // Platform-partial hook for externally-provided images (AHardwareBuffer on Android).
+        // Implementation sets importedImageHandled=true and populates Native* fields itself.
+        private bool importedImageHandled;
+        partial void TryInitializeImportedImage();
+
         private partial void InitializeFromImpl(DataBox[] dataBoxes = null)
         {
+            importedImageHandled = false;
+            TryInitializeImportedImage();
+            if (importedImageHandled)
+                return;
+
             NativeFormat = VulkanConvertExtensions.ConvertPixelFormat(ViewFormat);
             HasStencil = IsStencilFormat(ViewFormat);
 
@@ -457,10 +467,14 @@ namespace Stride.Graphics
                     GraphicsDevice.Collect(NativeDepthStencilView);
                     NativeDepthStencilView = VkImageView.Null;
                 }
+
+                ReleaseImportedImageResources();
             }
 
             base.OnDestroyed(immediately);
         }
+
+        partial void ReleaseImportedImageResources();
 
         /// <summary>
         ///   Perform Vulkan-specific recreation of the Texture.
@@ -497,9 +511,18 @@ namespace Stride.Graphics
 
             var layerCount = Dimension == TextureDimension.Texture3D ? 1 : arrayOrDepthCount;
 
+            // Narrow view usage to what it's actually bound as (drops ColorAttachment etc.) — avoids MoltenVK's layered-render check on iOS sim.
+            var viewUsage = VkImageUsageFlags.Sampled;
+            if (IsUnorderedAccess) viewUsage |= VkImageUsageFlags.Storage;
+            var viewUsageInfo = new VkImageViewUsageCreateInfo
+            {
+                sType = VkStructureType.ImageViewUsageCreateInfo,
+                usage = viewUsage,
+            };
             var createInfo = new VkImageViewCreateInfo
             {
                 sType = VkStructureType.ImageViewCreateInfo,
+                pNext = &viewUsageInfo,
                 format = NativeFormat, //VulkanConvertExtensions.ConvertPixelFormat(ViewFormat),
                 image = NativeImage,
                 components = VkComponentMapping.Identity,

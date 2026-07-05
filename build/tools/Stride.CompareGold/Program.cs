@@ -1,18 +1,58 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 // 5505 instead of 5555: the latter is Android ADB's daemon port, which the Android emulator
-// already binds when running test pulls — they collide otherwise.
-const int Port = 5505;
+// already binds when running test pulls — they collide otherwise. Override with --port N
+// when running a second instance against another checkout.
+// Top-level help (subcommand help is handled inside HeadlessPromote). No args = start the UI.
+if (args is [var first, ..] && first is "--help" or "-h" or "help")
+{
+    Console.WriteLine("""
+        Stride.CompareGold — gold image review tool.
+
+          (no args)       Start the web UI at http://localhost:5505 (default mode).
+          --port N        Bind a different port.
+          --lan           Expose the UI on the local network (no auth; trusted networks only).
+
+          promote [...]   Headless: promote generated images to gold.  See `promote --help`.
+          dedup   [...]   Headless: remove redundant existing gold.     See `dedup --help`.
+        """);
+    return 0;
+}
+
+// Headless gold subcommands (test-gold-gen CI flow) — run and exit without the server.
+if (args.Length > 0 && (args[0] == "promote" || args[0] == "dedup"))
+    return HeadlessPromote.Run(args, FindStrideRoot);
+
+int port = 5505;
+for (int i = 0; i < args.Length; i++)
+{
+    if ((args[i] == "--port" || args[i] == "-p") && i + 1 < args.Length && int.TryParse(args[i + 1], out var p))
+        port = p;
+}
+
+// --lan (or --bind 0.0.0.0) opens the server to the local network instead of binding loopback
+// only. No auth — only flip this on a network you trust.
+var lanMode = args.Contains("--lan") || args.Contains("--bind");
+var bindHost = lanMode ? "0.0.0.0" : "localhost";
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseUrls($"http://localhost:{Port}");
+builder.WebHost.UseUrls($"http://{bindHost}:{port}");
 builder.Services.AddSingleton<SourceManager>();
 builder.Services.AddSingleton<ForkManager>();
+// Sidecar PSNR can be +Infinity on exact-match passes; opt into the named-literal
+// extension. camelCase to match the producer + JS conventions.
+builder.Services.ConfigureHttpJsonOptions(o =>
+{
+    o.SerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals;
+    o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+});
 var app = builder.Build();
 
-const string UpstreamRepo = "stride3d/stride";
+const string UpstreamRepo = CiArtifacts.UpstreamRepo;
 
 // Find Stride root
 var strideRoot = FindStrideRoot(AppContext.BaseDirectory)
@@ -21,6 +61,16 @@ var strideRoot = FindStrideRoot(AppContext.BaseDirectory)
 
 var testsDir = Path.Combine(strideRoot, "tests");
 var localDir = Path.Combine(testsDir, "local");
+// Path → (mtime, hash). Cleared automatically by mtime mismatch; no eviction needed.
+var hashCache = new System.Collections.Concurrent.ConcurrentDictionary<string, (long mtimeTicks, string hash)>();
+// Runtime serialises +Infinity for exact-match PSNR; opt into the named-literal extension.
+// camelCase to match the producer (ImageTester writes camelCase keys).
+var sidecarReadOptions = new JsonSerializerOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true,
+    NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
+};
 var ciCacheDir = Path.Combine(Path.GetTempPath(), "stride-compare-gold");
 
 var sourceManager = app.Services.GetRequiredService<SourceManager>();
@@ -32,11 +82,37 @@ Console.WriteLine($"Gold images: {testsDir}");
 Console.WriteLine($"Local output: {localDir}");
 Console.WriteLine($"CI cache: {ciCacheDir}");
 Console.WriteLine();
-Console.WriteLine($"CompareGold running at http://localhost:{Port}");
+Console.WriteLine($"CompareGold running at http://localhost:{port}");
+if (lanMode)
+{
+    foreach (var ip in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+        .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up
+                 && n.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+        .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+        .Where(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork))
+        Console.WriteLine($"  LAN: http://{ip.Address}:{port}");
+}
 Console.WriteLine("Press Ctrl+C to stop.");
 
-try { Process.Start(new ProcessStartInfo($"http://localhost:{Port}") { UseShellExecute = true }); }
+try { Process.Start(new ProcessStartInfo($"http://localhost:{port}") { UseShellExecute = true }); }
 catch { }
+
+// Warm hashCache + goldByNameCache off the request path. Without this, the first
+// /identical-platforms call after startup synchronously walks/hashes the whole suite
+// tree and blocks other requests behind it.
+_ = Task.Run(() =>
+{
+    if (!Directory.Exists(testsDir)) return;
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    int files = 0;
+    foreach (var suiteDir in Directory.GetDirectories(testsDir))
+    {
+        if (Path.GetFileName(suiteDir) == "local") continue;
+        foreach (var (_, list) in GetSuiteGoldByName(suiteDir))
+        foreach (var (_, path) in list) { CachedGoldHash(path); files++; }
+    }
+    Console.WriteLine($"Hash warm: {files} files in {sw.ElapsedMilliseconds}ms");
+});
 
 app.UseDefaultFiles();
 // no-store on every static response so dev edits to html/js/css show up on next reload
@@ -82,7 +158,39 @@ Console.WriteLine(ghAvailable ? "GitHub CLI: authenticated" : $"GitHub CLI: {ghE
 
 // === Info API ===
 
-app.MapGet("/api/info", () => new { StrideRoot = strideRoot });
+// Branch caching: a slow git on this repo can take 10+s for rev-parse, which blocks
+// every page load. Watch .git/HEAD for actual checkout changes (cheap, no polling) and
+// recompute on miss; reads in between just return the cached string.
+var headPath = Path.Combine(strideRoot, ".git", "HEAD");
+string? cachedBranch = null;
+long cachedBranchHeadTicks = 0;
+string ReadBranchCached()
+{
+    long currentHeadTicks = 0;
+    try { currentHeadTicks = File.GetLastWriteTimeUtc(headPath).Ticks; } catch { }
+    if (cachedBranch != null && currentHeadTicks == cachedBranchHeadTicks) return cachedBranch;
+    string branch = "";
+    try
+    {
+        var proc = Process.Start(new ProcessStartInfo
+        {
+            FileName = "git", Arguments = "rev-parse --abbrev-ref HEAD",
+            WorkingDirectory = strideRoot,
+            RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false,
+        });
+        if (proc != null && proc.WaitForExit(5000) && proc.ExitCode == 0)
+            branch = proc.StandardOutput.ReadToEnd().Trim();
+    }
+    catch { }
+    cachedBranch = branch;
+    cachedBranchHeadTicks = currentHeadTicks;
+    return branch;
+}
+
+// IsLocal gates the "Reveal in Explorer" affordance: the reveal runs on the server, so it
+// only makes sense when the viewer is on the same machine (loopback). Default localhost
+// binding makes every request loopback; with --lan, remote viewers see no reveal button.
+app.MapGet("/api/info", (HttpContext ctx) => new { StrideRoot = strideRoot, Hostname = Environment.MachineName, Branch = ReadBranchCached(), IsLocal = IsLocalRequest(ctx) });
 
 // === Gold API ===
 
@@ -105,11 +213,17 @@ app.MapGet("/api/suites", () =>
 
 app.MapGet("/api/platforms", (string suite) =>
 {
-    var platforms = new HashSet<string>();
-    CollectPlatforms(Path.Combine(testsDir, suite), platforms);
+    var goldPlatforms = new HashSet<string>();
+    CollectPlatforms(Path.Combine(testsDir, suite), goldPlatforms);
+    var sourcePlatforms = new HashSet<string>();
     foreach (var src in sourceManager.GetAll())
-        CollectPlatforms(Path.Combine(src.Path, suite), platforms);
-    return platforms.OrderBy(p => p);
+        CollectPlatforms(Path.Combine(src.Path, suite), sourcePlatforms);
+    var all = new HashSet<string>(goldPlatforms);
+    all.UnionWith(sourcePlatforms);
+    // hasSource lets the UI grey out platforms that no source has images for (so the user
+    // immediately sees which buckets the currently-loaded run actually covers).
+    return all.OrderBy(p => p)
+        .Select(p => new { platform = p, hasSource = sourcePlatforms.Contains(p) });
 });
 
 app.MapGet("/api/gold/images", (string suite, string platform) =>
@@ -196,6 +310,19 @@ app.MapGet("/api/gold/image", (string suite, string platform, string name) =>
     return Results.NotFound();
 });
 
+// Gold metadata sidecar (renderer that baked this PNG). Returns 404 if absent.
+app.MapGet("/api/gold/metadata", (string suite, string platform, string name) =>
+{
+    var parts = platform.Split('/', 2);
+    if (parts.Length != 2) return Results.BadRequest("Invalid platform");
+    var metaPath = Path.ChangeExtension(Path.Combine(testsDir, suite, parts[0], parts[1], name), ".metadata.json");
+    return File.Exists(metaPath) ? Results.File(metaPath, "application/json") : Results.NotFound();
+});
+
+// Open the host file manager with this gold PNG selected. Local-only (see /api/info).
+app.MapPost("/api/gold/reveal", (HttpContext ctx, string suite, string platform, string name) =>
+    RevealImage(testsDir, suite, platform, name, ctx));
+
 // Thresholds
 app.MapGet("/api/thresholds", (string suite) =>
 {
@@ -272,24 +399,12 @@ app.MapPost("/api/sources/add-ci", async (HttpRequest request) =>
         Directory.Delete(tmpDir, true);
     Directory.CreateDirectory(tmpDir);
 
-    // Download this artifact
-    var proc = Process.Start(new ProcessStartInfo
+    // Download this artifact (shared with the headless promote/dedup so both download identically).
+    var dlError = CiArtifacts.Download(body.RunId, repo, artifactName, tmpDir);
+    if (dlError != null)
     {
-        FileName = "gh",
-        Arguments = $"run download {body.RunId} --repo {repo} --name {artifactName} --dir \"{tmpDir}\"",
-        RedirectStandardOutput = true,
-        RedirectStandardError = true,
-        UseShellExecute = false
-    });
-    if (proc != null)
-    {
-        await proc.WaitForExitAsync();
-        if (proc.ExitCode != 0)
-        {
-            var err = await proc.StandardError.ReadToEndAsync();
-            if (Directory.Exists(tmpDir)) Directory.Delete(tmpDir, true);
-            return Results.Problem($"gh failed for {artifactName}: {err}");
-        }
+        if (Directory.Exists(tmpDir)) Directory.Delete(tmpDir, true);
+        return Results.Problem(dlError);
     }
 
     // Merge temp into cache dir (overwrite existing files)
@@ -336,7 +451,31 @@ app.MapGet("/api/source/{id}/images", (string id, string suite, string platform)
     var parts = platform.Split('/', 2);
     if (parts.Length != 2) return Results.BadRequest("Invalid platform");
     var dir = Path.Combine(src.Path, suite, parts[0], parts[1]);
-    return Results.Ok(ListPngs(dir));
+    var primaryGoldDir = Path.Combine(testsDir, suite, parts[0], parts[1]);
+    return Results.Ok(ListSourceItems(dir, primaryGoldDir));
+});
+
+// Per-name lists of other platforms whose gold has identical content hash to the
+// current platform's primary gold — the data the frontend turns into "consolidate"
+// hints. Split off from /images so initial page load isn't blocked by the whole-suite
+// gold scan; the frontend calls this in the background after render.
+app.MapGet("/api/identical-platforms", (string suite, string platform) =>
+{
+    var parts = platform.Split('/', 2);
+    if (parts.Length != 2) return Results.BadRequest("Invalid platform");
+    var primaryDir = Path.Combine(testsDir, suite, parts[0], parts[1]);
+    if (!Directory.Exists(primaryDir)) return Results.Ok(new Dictionary<string, List<string>>());
+    var goldByName = GetSuiteGoldByName(Path.Combine(testsDir, suite));
+    var result = new Dictionary<string, List<string>>();
+    foreach (var f in Directory.GetFiles(primaryDir, "*.png"))
+    {
+        var name = Path.GetFileName(f);
+        if (!goldByName.TryGetValue(name, out var twins)) continue;
+        var primaryHash = CachedGoldHash(f);
+        var twinPlats = twins.Where(t => t.platform != platform && CachedGoldHash(t.path) == primaryHash).Select(t => t.platform).ToList();
+        if (twinPlats.Count > 0) result[name] = twinPlats;
+    }
+    return Results.Ok(result);
 });
 
 app.MapGet("/api/source/{id}/image", (string id, string suite, string platform, string name) =>
@@ -344,6 +483,24 @@ app.MapGet("/api/source/{id}/image", (string id, string suite, string platform, 
     var src = sourceManager.Get(id);
     if (src == null) return Results.NotFound();
     return ServeImage(src.Path, suite, platform, name);
+});
+
+// Per-source metadata sidecar (renderer that produced this run's PNG).
+app.MapGet("/api/source/{id}/metadata", (string id, string suite, string platform, string name) =>
+{
+    var src = sourceManager.Get(id);
+    if (src == null) return Results.NotFound();
+    var parts = platform.Split('/', 2);
+    if (parts.Length != 2) return Results.BadRequest("Invalid platform");
+    var metaPath = Path.ChangeExtension(Path.Combine(src.Path, suite, parts[0], parts[1], name), ".metadata.json");
+    return File.Exists(metaPath) ? Results.File(metaPath, "application/json") : Results.NotFound();
+});
+
+// Open the host file manager with this source PNG selected. Local-only (see /api/info).
+app.MapPost("/api/source/{id}/reveal", (HttpContext ctx, string id, string suite, string platform, string name) =>
+{
+    var src = sourceManager.Get(id);
+    return src == null ? Results.NotFound() : RevealImage(src.Path, suite, platform, name, ctx);
 });
 
 // === CI Runs API ===
@@ -372,7 +529,7 @@ app.MapGet("/api/ci/resolve", async (string runId) =>
         var proc = Process.Start(new ProcessStartInfo
         {
             FileName = "gh",
-            Arguments = $"api repos/{repo}/actions/runs/{runId} --jq .id",
+            Arguments = $"api repos/{repo}/actions/runs/{runId} --jq .run_number",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -380,7 +537,10 @@ app.MapGet("/api/ci/resolve", async (string runId) =>
         if (proc == null) continue;
         await proc.WaitForExitAsync();
         if (proc.ExitCode == 0)
-            return Results.Ok(new { repo });
+        {
+            var runNumber = (await proc.StandardOutput.ReadToEndAsync()).Trim();
+            return Results.Ok(new { repo, runNumber });
+        }
     }
     return Results.NotFound();
 });
@@ -459,6 +619,10 @@ app.MapPost("/api/promote", async (HttpRequest request) =>
         if (File.Exists(srcFile))
         {
             File.Copy(srcFile, dstFile, overwrite: true);
+            // Carry .metadata.json next to the gold so it records the renderer that baked it.
+            var srcMeta = Path.ChangeExtension(srcFile, ".metadata.json");
+            if (File.Exists(srcMeta))
+                File.Copy(srcMeta, Path.ChangeExtension(dstFile, ".metadata.json"), overwrite: true);
             promoted++;
             details.Add(new { Name = name, Src = srcFile, Dst = dstFile, SrcSize = new FileInfo(srcFile).Length, DstSize = new FileInfo(dstFile).Length });
         }
@@ -491,12 +655,20 @@ app.MapPost("/api/gold/delete", async (HttpRequest request) =>
             deleted++;
             Console.WriteLine($"  Deleted: {file}");
         }
+        // Reap .metadata.json with the PNG so we don't orphan stale renderer info.
+        var metaFile = Path.ChangeExtension(file, ".metadata.json");
+        if (File.Exists(metaFile))
+        {
+            File.Delete(metaFile);
+            Console.WriteLine($"  Deleted: {metaFile}");
+        }
     }
     Console.WriteLine($"Delete gold: {deleted}/{body.Names.Length} from {goldDir}");
     return Results.Ok(new { Deleted = deleted });
 });
 
 app.Run();
+return 0;
 
 // === Helpers ===
 
@@ -517,7 +689,13 @@ static void CollectPlatforms(string suiteDir, HashSet<string> platforms)
     if (!Directory.Exists(suiteDir)) return;
     foreach (var pDir in Directory.GetDirectories(suiteDir))
         foreach (var dDir in Directory.GetDirectories(pDir))
-            platforms.Add($"{Path.GetFileName(pDir)}/{Path.GetFileName(dDir)}");
+            // Only count a 2-deep dir as a platform if it has test outputs: PNG on fail,
+            // *.results.json (sidecar) on pass. Filters out non-test subtrees (e.g.
+            // baselines/dpi100) without an OS-prefix allowlist, while still surfacing
+            // passing-only buckets (e.g. a CI run where every macOS test matched gold).
+            if (Directory.EnumerateFiles(dDir, "*.png").Any() ||
+                Directory.EnumerateFiles(dDir, "*.results.json").Any())
+                platforms.Add($"{Path.GetFileName(pDir)}/{Path.GetFileName(dDir)}");
 }
 
 static List<string> ListPngNames(string dir)
@@ -528,12 +706,92 @@ static List<string> ListPngNames(string dir)
         .ToList()!;
 }
 
-static List<object> ListPngs(string dir)
+// Results sidecar (foo.results.json) lives next to each output PNG (or alone, on a passing
+// test where the PNG is skipped). Union {*.png, *.results.json} by stem so passing tests
+// still appear in the listing. Each item also carries the current SHA256 of its matched +
+// primary gold; the frontend compares against the hashes the sidecar baked in at compare
+// time to detect staleness (gold edited or copied after the test ran).
+List<object> ListSourceItems(string dir, string primaryGoldDir)
 {
     if (!Directory.Exists(dir)) return [];
-    return Directory.GetFiles(dir, "*.png")
-        .Select(f => (object)new { Name = Path.GetFileName(f) })
+    var byStem = new Dictionary<string, (bool png, Sidecar? sc)>(StringComparer.OrdinalIgnoreCase);
+    foreach (var f in Directory.GetFiles(dir, "*.png"))
+    {
+        var stem = Path.GetFileNameWithoutExtension(f);
+        byStem[stem] = (true, null);
+    }
+    foreach (var f in Directory.GetFiles(dir, "*.results.json"))
+    {
+        // Strip the .results suffix so the stem matches the PNG's bare name.
+        var stem = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(f));
+        var sc = TryReadSidecar(f);
+        byStem[stem] = (byStem.TryGetValue(stem, out var ex) ? ex.png : false, sc);
+    }
+    return byStem
+        .Select(kv =>
+        {
+            var name = kv.Key + ".png";
+            var matchedPath = ResolveMatchedGoldLocalPath(kv.Value.sc?.Matched);
+            var primaryPath = Path.Combine(primaryGoldDir, name);
+            var matchedGoldHash = matchedPath != null && File.Exists(matchedPath) ? CachedGoldHash(matchedPath) : null;
+            var primaryGoldHash = File.Exists(primaryPath) ? CachedGoldHash(primaryPath) : null;
+            return (object)new { Name = name, HasPng = kv.Value.png, Sidecar = kv.Value.sc, MatchedGoldHash = matchedGoldHash, PrimaryGoldHash = primaryGoldHash };
+        })
         .ToList();
+}
+
+// The sidecar's matched path is whatever filesystem the test ran on (device path on
+// Android, Windows path locally). Map back to the local checkout by taking the last
+// 4 segments: <suite>/<Platform.API>/<Device>/<name>.png.
+string? ResolveMatchedGoldLocalPath(string? matched)
+{
+    if (string.IsNullOrEmpty(matched)) return null;
+    var parts = matched.Split('/', '\\');
+    if (parts.Length < 4) return null;
+    var n = parts.Length;
+    return Path.Combine(testsDir, parts[n - 4], parts[n - 3], parts[n - 2], parts[n - 1]);
+}
+
+// Always rescan — the structure (which platforms have which gold files) can change via
+// manual filesystem edits that don't go through our POST endpoints. Cheap because the
+// hashes themselves are still memoised in CachedGoldHash; this is just dir enumeration.
+Dictionary<string, List<(string platform, string path)>> GetSuiteGoldByName(string suiteDir)
+{
+    var goldByName = new Dictionary<string, List<(string platform, string path)>>(StringComparer.OrdinalIgnoreCase);
+    if (!Directory.Exists(suiteDir)) return goldByName;
+    foreach (var pDir in Directory.GetDirectories(suiteDir))
+    {
+        var pName = Path.GetFileName(pDir);
+        if (pName == "local") continue;
+        foreach (var dDir in Directory.GetDirectories(pDir))
+        {
+            var plat = $"{pName}/{Path.GetFileName(dDir)}";
+            foreach (var f in Directory.GetFiles(dDir, "*.png"))
+            {
+                var n = Path.GetFileName(f);
+                if (!goldByName.TryGetValue(n, out var list)) goldByName[n] = list = [];
+                list.Add((plat, f));
+            }
+        }
+    }
+    return goldByName;
+}
+
+// Cached SHA256 of a gold file's bytes. Cache key is path; entry invalidates when the
+// file's mtime changes. First read is sync; subsequent reads are dictionary lookups.
+string CachedGoldHash(string path)
+{
+    var mtime = File.GetLastWriteTimeUtc(path).Ticks;
+    if (hashCache.TryGetValue(path, out var entry) && entry.mtimeTicks == mtime) return entry.hash;
+    var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)));
+    hashCache[path] = (mtime, hash);
+    return hash;
+}
+
+Sidecar? TryReadSidecar(string jsonPath)
+{
+    try { return JsonSerializer.Deserialize<Sidecar>(File.ReadAllText(jsonPath), sidecarReadOptions); }
+    catch { return null; }
 }
 
 
@@ -583,6 +841,123 @@ static IResult ServeImage(string baseDir, string suite, string platform, string 
     return Results.File(filePath, "image/png");
 }
 
+// True when the request comes from this same machine (loopback). The reveal command runs
+// server-side, so anything else would pop a window on the wrong box.
+static bool IsLocalRequest(HttpContext ctx)
+{
+    var ip = ctx.Connection.RemoteIpAddress;
+    if (ip == null) return false;
+    if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
+    return IPAddress.IsLoopback(ip);
+}
+
+// Resolve the PNG under baseDir and open the host file manager with it selected. Re-checks
+// IsLocalRequest server-side (the UI hiding the button is only cosmetic) and confines the
+// resolved path to baseDir so a crafted name can't reveal arbitrary files.
+static IResult RevealImage(string baseDir, string suite, string platform, string name, HttpContext ctx)
+{
+    if (!IsLocalRequest(ctx)) return Results.StatusCode(403);
+    var parts = platform.Split('/', 2);
+    if (parts.Length != 2) return Results.BadRequest("Invalid platform");
+
+    var root = Path.GetFullPath(baseDir);
+    var filePath = Path.GetFullPath(Path.Combine(root, suite, parts[0], parts[1], name));
+    if (!filePath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        return Results.BadRequest("Path outside root");
+    if (!File.Exists(filePath)) return Results.NotFound();
+
+    return TryReveal(filePath) ? Results.Ok() : Results.StatusCode(500);
+}
+
+// Open the OS file manager with the given file selected. On WSL, hands off to the Windows
+// host's Explorer via interop + wslpath so reveal lands on the host the browser runs on.
+static bool TryReveal(string path)
+{
+    try
+    {
+        if (OperatingSystem.IsWindows())
+            return StartExplorerSelect(path);
+
+        if (IsWsl())
+        {
+            // wslpath resolves both directions, sidestepping the dotnet process's PATH (which
+            // doesn't always include the Windows dir, so bare "explorer.exe" can ENOENT) and
+            // any non-/mnt automount root config.
+            var winPath = WslToWindowsPath(path);
+            var exe = WindowsPathToWsl(@"C:\Windows\explorer.exe");
+            if (winPath == null || exe == null) return false;
+            var psi = new ProcessStartInfo(exe);
+            psi.ArgumentList.Add("/select," + winPath);
+            Process.Start(psi);
+            return true;
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            var psi = new ProcessStartInfo("open");
+            psi.ArgumentList.Add("-R");
+            psi.ArgumentList.Add(path);
+            Process.Start(psi);
+            return true;
+        }
+
+        // Generic Linux: no portable "select" verb — open the containing folder.
+        var dir = Path.GetDirectoryName(path) ?? path;
+        var xdg = new ProcessStartInfo("xdg-open");
+        xdg.ArgumentList.Add(dir);
+        Process.Start(xdg);
+        return true;
+    }
+    catch { return false; }
+}
+
+// explorer.exe /select,<path> — the comma binds into one token, so it goes in as a single
+// argument. Explorer exits 1 even on success, so we don't wait on or inspect the exit code.
+// Windows-only: snapshots existing Explorer windows so we can pull the new one to the
+// foreground (a background server process otherwise opens it behind the browser).
+static bool StartExplorerSelect(string windowsPath)
+{
+    var before = ExplorerForeground.Snapshot();
+    var psi = new ProcessStartInfo("explorer.exe");
+    psi.ArgumentList.Add("/select," + windowsPath);
+    Process.Start(psi);
+    ExplorerForeground.PullNewToFront(before);
+    return true;
+}
+
+static bool IsWsl()
+{
+    try
+    {
+        return File.Exists("/proc/sys/kernel/osrelease")
+            && File.ReadAllText("/proc/sys/kernel/osrelease").Contains("microsoft", StringComparison.OrdinalIgnoreCase);
+    }
+    catch { return false; }
+}
+
+// `wslpath -w /linux/path` → `C:\...` (or `\\wsl.localhost\...` for native-FS checkouts),
+// both of which Explorer can select.
+static string? WslToWindowsPath(string path) => RunWslpath("-w", path);
+
+// `wslpath -u 'C:\foo'` → Linux mount path under the configured automount root.
+static string? WindowsPathToWsl(string winPath) => RunWslpath("-u", winPath);
+
+static string? RunWslpath(string flag, string path)
+{
+    try
+    {
+        var psi = new ProcessStartInfo("wslpath") { RedirectStandardOutput = true };
+        psi.ArgumentList.Add(flag);
+        psi.ArgumentList.Add(path);
+        using var p = Process.Start(psi);
+        if (p == null) return null;
+        var s = p.StandardOutput.ReadToEnd().Trim();
+        p.WaitForExit(2000);
+        return string.IsNullOrEmpty(s) ? null : s;
+    }
+    catch { return null; }
+}
+
 // Accepts "owner/name", returns null if the shape doesn't match. Trims whitespace.
 // Used everywhere a repo flows in from the network or CLI so the rest of the pipeline
 // can assume the value is safe to pass to `gh`.
@@ -614,6 +989,88 @@ static async Task<List<JsonElement>> FetchJsonLinesAsync(string ghArgs)
         .Select(line => { try { return JsonSerializer.Deserialize<JsonElement>(line); } catch { return default; } })
         .Where(j => j.ValueKind != JsonValueKind.Undefined)
         .ToList();
+}
+
+// Best-effort: bring the Explorer window that /select just opened to the foreground. Windows
+// denies SetForegroundWindow to a process that doesn't own the current foreground, so we
+// briefly attach to the foreground thread's input queue (the documented work-around) to earn
+// the right. All P/Invoke is guarded by OperatingSystem.IsWindows() at the call site.
+static class ExplorerForeground
+{
+    private const string ExplorerClass = "CabinetWClass"; // top-level Explorer browser window
+    private const int SW_RESTORE = 9;
+
+    public static HashSet<IntPtr> Snapshot()
+    {
+        var set = new HashSet<IntPtr>();
+        try
+        {
+            EnumWindows((h, _) =>
+            {
+                if (GetClassName(h) == ExplorerClass) set.Add(h);
+                return true;
+            }, IntPtr.Zero);
+        }
+        catch { }
+        return set;
+    }
+
+    public static void PullNewToFront(HashSet<IntPtr> before)
+    {
+        try
+        {
+            // Explorer opens its window asynchronously; poll briefly for one not seen before.
+            for (int i = 0; i < 30; i++)
+            {
+                IntPtr found = IntPtr.Zero;
+                EnumWindows((h, _) =>
+                {
+                    if (!before.Contains(h) && GetClassName(h) == ExplorerClass) { found = h; return false; }
+                    return true;
+                }, IntPtr.Zero);
+                if (found != IntPtr.Zero) { ForceForeground(found); return; }
+                Thread.Sleep(50);
+            }
+        }
+        catch { }
+    }
+
+    private static void ForceForeground(IntPtr hWnd)
+    {
+        var fg = GetForegroundWindow();
+        uint fgThread = GetWindowThreadProcessId(fg, out _);
+        uint thisThread = GetCurrentThreadId();
+        bool attached = fgThread != thisThread && AttachThreadInput(thisThread, fgThread, true);
+        try
+        {
+            ShowWindow(hWnd, SW_RESTORE);
+            BringWindowToTop(hWnd);
+            SetForegroundWindow(hWnd);
+        }
+        finally
+        {
+            if (attached) AttachThreadInput(thisThread, fgThread, false);
+        }
+    }
+
+    private static string GetClassName(IntPtr hWnd)
+    {
+        var sb = new System.Text.StringBuilder(64);
+        int n = GetClassName(hWnd, sb, sb.Capacity);
+        return n > 0 ? sb.ToString() : "";
+    }
+
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc cb, IntPtr lParam);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder s, int max);
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] private static extern bool BringWindowToTop(IntPtr hWnd);
+    [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+    [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+    [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
 }
 
 // === Models ===
@@ -662,6 +1119,11 @@ record DeleteGoldRequest
     [System.Text.Json.Serialization.JsonPropertyName("names")]
     public string[] Names { get; set; } = [];
 }
+
+// Mirrors Stride.Graphics.Regression.ImageTester.Sidecar so the JSON written by the test
+// runtime can be deserialised here without an inter-project dependency.
+record Sidecar(string Outcome, DateTime At, string? Matched, List<SidecarAttempt> Attempts);
+record SidecarAttempt(string Gold, string Kind, bool Passed, int MaxDiff, double PsnrDb, Dictionary<string, int> Buckets, Dictionary<string, int>? Thresholds, string? GoldHash);
 
 // === Source Manager ===
 
