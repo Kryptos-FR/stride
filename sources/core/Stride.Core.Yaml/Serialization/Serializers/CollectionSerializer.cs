@@ -59,7 +59,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
     [YamlSerializerFactory(YamlSerializerFactoryAttribute.Default)]
     public class CollectionSerializer : ObjectSerializer
     {
-        public override IYamlSerializable TryCreate(SerializerContext context, ITypeDescriptor typeDescriptor)
+        public override IYamlSerializable? TryCreate(SerializerContext context, ITypeDescriptor typeDescriptor)
         {
             return typeDescriptor is CollectionDescriptor ? this : null;
         }
@@ -121,9 +121,11 @@ namespace Stride.Core.Yaml.Serialization.Serializers
 
                 WriteMemberName(ref objectContext, null, objectContext.Settings.SpecialCollectionMember);
 
-                objectContext.Writer.Emit(new SequenceStartEventInfo(objectContext.Instance, objectContext.Instance.GetType()) {Style = objectContext.Style});
+                // Instance is only ever null during deserialization; WriteMembers is the serialize path.
+                var instance = objectContext.Instance!;
+                objectContext.Writer.Emit(new SequenceStartEventInfo(instance, instance.GetType()) {Style = objectContext.Style});
                 WriteCollectionItems(ref objectContext);
-                objectContext.Writer.Emit(new SequenceEndEventInfo(objectContext.Instance, objectContext.Instance.GetType()));
+                objectContext.Writer.Emit(new SequenceEndEventInfo(instance, instance.GetType()));
             }
         }
 
@@ -137,7 +139,9 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         protected virtual void ReadCollectionItems(ref ObjectContext objectContext)
         {
             var collectionDescriptor = (CollectionDescriptor) objectContext.Descriptor;
-            var thisObject = objectContext.Instance;
+            // Instance is only ever null during deserialization before the object is created;
+            // ReadMembers already throws in that case before ReadMember/ReadCollectionItems run.
+            var thisObject = objectContext.Instance!;
 
             if (!collectionDescriptor.HasAdd)
             {
@@ -201,7 +205,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         /// <param name="itemType">Type of the item.</param>
         /// <param name="index"></param>
         /// <returns>The item to add to the current collection.</returns>
-        protected virtual object ReadCollectionItem(ref ObjectContext objectContext, object value, Type itemType, int index)
+        protected virtual object? ReadCollectionItem(ref ObjectContext objectContext, object? value, Type itemType, int index)
         {
             return objectContext.ObjectSerializerBackend.ReadCollectionItem(ref objectContext, value, itemType, index);
         }
@@ -213,7 +217,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         protected virtual void WriteCollectionItems(ref ObjectContext objectContext)
         {
             var collectionDescriptor = (CollectionDescriptor) objectContext.Descriptor;
-            var collection = (IEnumerable) objectContext.Instance;
+            // Instance is only ever null during deserialization; WriteCollectionItems is the serialize path.
+            var collection = (IEnumerable) objectContext.Instance!;
             int index = 0;
             foreach (var item in collection)
             {
@@ -229,7 +234,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         /// <param name="item">The item.</param>
         /// <param name="itemType">Type of the item.</param>
         /// <param name="index"></param>
-        protected virtual void WriteCollectionItem(ref ObjectContext objectContext, object item, Type itemType, int index)
+        protected virtual void WriteCollectionItem(ref ObjectContext objectContext, object? item, Type itemType, int index)
         {
             objectContext.ObjectSerializerBackend.WriteCollectionItem(ref objectContext, item, itemType, index);
         }

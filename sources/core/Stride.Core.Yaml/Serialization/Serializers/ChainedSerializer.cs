@@ -54,25 +54,25 @@ namespace Stride.Core.Yaml.Serialization.Serializers
     /// </summary>
     public abstract class ChainedSerializer : IYamlSerializable
     {
-        public ChainedSerializer Prev { get; private set; }
+        public ChainedSerializer? Prev { get; private set; }
 
-        public ChainedSerializer Next { get; private set; }
+        public ChainedSerializer? Next { get; private set; }
 
         public ChainedSerializer First { get { return FindBoundary(x => x.Prev); } }
 
         public ChainedSerializer Last { get { return FindBoundary(x => x.Next); } }
 
         [CanBeNull]
-        public T FindPrevious<T>() where T : ChainedSerializer => FindByType<T>(x => x.Prev);
+        public T? FindPrevious<T>() where T : ChainedSerializer => FindByType<T>(x => x.Prev);
 
         [CanBeNull]
-        public T FindNext<T>() where T : ChainedSerializer => FindByType<T>(x => x.Next);
+        public T? FindNext<T>() where T : ChainedSerializer => FindByType<T>(x => x.Next);
 
         /// <summary>
         /// Prepends the given <see cref="ChainedSerializer"/> to this serializer.
         /// </summary>
         /// <param name="previousSerializer">The serializer to prepend.</param>
-        public void Prepend([CanBeNull] ChainedSerializer previousSerializer)
+        public void Prepend([CanBeNull] ChainedSerializer? previousSerializer)
         {
             // Update current Prev if non-null to target the first of the chain we're prepending
             Prev?.SetNext(previousSerializer?.First);
@@ -89,7 +89,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         /// Appends the given <see cref="ChainedSerializer"/> to this serializer.
         /// </summary>
         /// <param name="nextSerializer">The serializer to append.</param>
-        public void Append([CanBeNull] ChainedSerializer nextSerializer)
+        public void Append([CanBeNull] ChainedSerializer? nextSerializer)
         {
             // Update current Next if non-null to target the last of the chain we're appending
             Next?.SetPrev(nextSerializer?.Last);
@@ -103,7 +103,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         }
 
         /// <inheritdoc/>
-        public virtual object ReadYaml(ref ObjectContext objectContext)
+        public virtual object? ReadYaml(ref ObjectContext objectContext)
         {
             if (Next == null) throw new InvalidOperationException("The last chained serializer is invoking non-existing next serializer");
             return Next.ReadYaml(ref objectContext);
@@ -117,18 +117,19 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         }
 
         [NotNull]
-        private ChainedSerializer FindBoundary([NotNull] Func<ChainedSerializer, ChainedSerializer> navigate)
+        private ChainedSerializer FindBoundary([NotNull] Func<ChainedSerializer, ChainedSerializer?> navigate)
         {
             var current = this;
-            while (navigate(current) != null)
+            ChainedSerializer? next;
+            while ((next = navigate(current)) != null)
             {
-                current = navigate(current);
+                current = next;
             }
             return current;
         }
 
         [CanBeNull]
-        private T FindByType<T>([NotNull] Func<ChainedSerializer, ChainedSerializer> navigate) where T : ChainedSerializer
+        private T? FindByType<T>([NotNull] Func<ChainedSerializer, ChainedSerializer?> navigate) where T : ChainedSerializer
         {
             var current = navigate(this);
             while (current != null)
@@ -141,7 +142,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             return null;
         }
 
-        private void SetPrev(ChainedSerializer prev) => Prev = prev;
-        private void SetNext(ChainedSerializer next) => Next = next;
+        private void SetPrev(ChainedSerializer? prev) => Prev = prev;
+        private void SetNext(ChainedSerializer? next) => Next = next;
     }
 }

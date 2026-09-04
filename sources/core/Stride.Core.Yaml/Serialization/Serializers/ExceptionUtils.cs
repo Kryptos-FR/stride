@@ -17,7 +17,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         {
             var targetInvocationException = exception as TargetInvocationException;
             if (targetInvocationException != null)
-                return targetInvocationException.InnerException;
+                // TargetInvocationException always wraps the target method's actual exception.
+                return targetInvocationException.InnerException!;
 
             return exception;
         }

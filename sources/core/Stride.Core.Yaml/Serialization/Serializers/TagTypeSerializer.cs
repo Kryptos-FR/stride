@@ -52,7 +52,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
 {
     internal class TagTypeSerializer : ChainedSerializer
     {
-        public override object ReadYaml(ref ObjectContext objectContext)
+        public override object? ReadYaml(ref ObjectContext objectContext)
         {
             var parsingEvent = objectContext.Reader.Peek<ParsingEvent>();
             // Can this happen here?
@@ -71,7 +71,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             var type = objectContext.Descriptor != null ? objectContext.Descriptor.Type : null;
 
             // Tries to get a Type from the TagTypes
-            Type typeFromTag = null;
+            Type? typeFromTag = null;
             if (!string.IsNullOrEmpty(node.Tag))
             {
                 bool remapped;
@@ -96,7 +96,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             if (type == null)
                 type = typeFromTag;
 
-            object value = objectContext.Instance;
+            object? value = objectContext.Instance;
 
             // Handle explicit null scalar
             if (node is Scalar && objectContext.SerializerContext.Schema.TryParse((Scalar) node, typeof(object), out value))

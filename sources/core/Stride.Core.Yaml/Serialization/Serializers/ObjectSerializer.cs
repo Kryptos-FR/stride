@@ -57,7 +57,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
     public class ObjectSerializer : IYamlSerializable, IYamlSerializableFactory
     {
         /// <inheritdoc/>
-        public virtual IYamlSerializable TryCreate(SerializerContext context, ITypeDescriptor typeDescriptor)
+        public virtual IYamlSerializable? TryCreate(SerializerContext context, ITypeDescriptor typeDescriptor)
         {
             // always accept
             return this;
@@ -84,7 +84,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             return objectContext.ObjectSerializerBackend.GetStyle(ref objectContext);
         }
 
-        public virtual object ReadYaml(ref ObjectContext objectContext)
+        public virtual object? ReadYaml(ref ObjectContext objectContext)
         {
             // Create or transform the value to deserialize
             // If the new value to serialize is not the same as the one we were expecting to serialize
@@ -189,7 +189,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         protected virtual void ReadMember(ref ObjectContext objectContext)
         {
             Scalar memberScalar;
-            string memberName;
+            string? memberName;
             if (!TryReadMember(ref objectContext, out memberScalar, out memberName))
             {
                 throw new YamlException(memberScalar.Start, memberScalar.End, $"Unable to deserialize property [{memberName}] not found in type [{objectContext.Descriptor}]");
@@ -202,7 +202,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         /// <param name="objectContext">The object context.</param>
         /// <param name="memberName">Name of the member.</param>
         /// <returns><c>true</c> if the member was successfully read, <c>false</c> otherwise.</returns>
-        protected bool TryReadMember(ref ObjectContext objectContext, out string memberName)
+        protected bool TryReadMember(ref ObjectContext objectContext, out string? memberName)
         {
             Scalar scalar;
             return TryReadMember(ref objectContext, out scalar, out memberName);
@@ -216,9 +216,10 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         /// <param name="memberName">Name of the member.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         /// <exception cref="YamlException">Unable to deserialize property [{0}] not found in type [{1}].DoFormat(propertyName, typeDescriptor)</exception>
-        public virtual bool TryReadMember(ref ObjectContext objectContext, out Scalar memberScalar, out string memberName)
+        public virtual bool TryReadMember(ref ObjectContext objectContext, out Scalar memberScalar, out string? memberName)
         {
-            memberScalar = null;
+            // memberName defaults to null: if TryReadMemberCore throws before assigning it (via
+            // ReadMemberName), this fallback is what the catch block below reports.
             memberName = null;
 
             var currentDepth = objectContext.Reader.CurrentDepth;
@@ -303,7 +304,9 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             }
 
             // Read the value according to the type
-            var memberValue = memberAccessor.Mode == DataMemberMode.Content ? memberAccessor.Get(objectContext.Instance) : null;
+            // Instance is only ever null during deserialization before the object is created;
+            // ReadMembers already throws in that case before ReadMember/TryReadMemberCore run.
+            var memberValue = memberAccessor.Mode == DataMemberMode.Content ? memberAccessor.Get(objectContext.Instance!) : null;
             var memberType = memberAccessor.Type;
 
             // In case of serializing a property/field which is not writeable
@@ -321,12 +324,15 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             {
                 try
                 {
-                    memberAccessor.Set(objectContext.Instance, memberValue);
+                    memberAccessor.Set(objectContext.Instance!, memberValue);
                 }
                 catch (Exception ex)
                 {
                     ex = ex.Unwrap();
-                    throw new YamlException(objectContext.Reader.Parser.Current.Start, objectContext.Reader.Parser.Current.End, $"Cannot set member [{objectContext.Descriptor?.Type.Name ?? "(Unknown)"}.{memberName ?? "(Unknown)"}]:\n{ex.Message}");
+                    // Current is non-null while actively reading (only null before the first
+                    // MoveNext or at end of stream, neither of which applies mid-deserialization).
+                    var current = objectContext.Reader.Parser.Current!;
+                    throw new YamlException(current.Start, current.End, $"Cannot set member [{objectContext.Descriptor?.Type.Name ?? "(Unknown)"}.{memberName ?? "(Unknown)"}]:\n{ex.Message}");
                 }
             }
 
@@ -338,8 +344,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             return objectContext.ObjectSerializerBackend.ReadMemberName(ref objectContext, memberName, out skipMember);
         }
 
-        protected virtual object ReadMemberValue(ref ObjectContext objectContext, IMemberDescriptor member,
-            object memberValue,
+        protected virtual object? ReadMemberValue(ref ObjectContext objectContext, IMemberDescriptor? member,
+            object? memberValue,
             Type memberType)
         {
             return objectContext.ObjectSerializerBackend.ReadMemberValue(ref objectContext, member, memberValue, memberType);
@@ -348,7 +354,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         /// <inheritdoc/>
         public virtual void WriteYaml(ref ObjectContext objectContext)
         {
-            var value = objectContext.Instance;
+            // Instance is only ever null during deserialization; WriteYaml is the serialize path.
+            var value = objectContext.Instance!;
             var typeOfValue = value.GetType();
 
             var isSequence = CheckIsSequence(ref objectContext);
@@ -410,7 +417,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             // Emit the key name
             WriteMemberName(ref objectContext, member, member.Name);
 
-            var memberValue = member.Get(objectContext.Instance);
+            // Instance is only ever null during deserialization; WriteMember is the serialize path.
+            var memberValue = member.Get(objectContext.Instance!);
             var memberType = member.Type;
 
             // In case of serializing a property/field which is not writeable
@@ -428,12 +436,12 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             WriteMemberValue(ref objectContext, member, memberValue, memberType);
         }
 
-        protected virtual void WriteMemberName(ref ObjectContext objectContext, IMemberDescriptor member, string name)
+        protected virtual void WriteMemberName(ref ObjectContext objectContext, IMemberDescriptor? member, string name)
         {
             objectContext.ObjectSerializerBackend.WriteMemberName(ref objectContext, member, name);
         }
 
-        protected virtual void WriteMemberValue(ref ObjectContext objectContext, IMemberDescriptor member, object memberValue,
+        protected virtual void WriteMemberValue(ref ObjectContext objectContext, IMemberDescriptor member, object? memberValue,
             Type memberType)
         {
             objectContext.ObjectSerializerBackend.WriteMemberValue(ref objectContext, member, memberValue, memberType);

@@ -60,7 +60,8 @@ namespace Stride.Core.Yaml.Serialization
 
         public override void Emit(AliasEventInfo eventInfo)
         {
-            alias.Add(eventInfo.Alias);
+            // Alias is always set on an AliasEventInfo by the time it's emitted.
+            alias.Add(eventInfo.Alias!);
             events.Add(eventInfo);
         }
 

@@ -68,12 +68,15 @@ namespace Stride.Core.Yaml.Serialization
 
         void IEventEmitter.Emit(AliasEventInfo eventInfo)
         {
-            emitter.Emit(new AnchorAlias(eventInfo.Alias));
+            // Alias is always set on an AliasEventInfo by the time it's emitted.
+            emitter.Emit(new AnchorAlias(eventInfo.Alias!));
         }
 
         void IEventEmitter.Emit(ScalarEventInfo eventInfo)
         {
-            emitter.Emit(new Scalar(eventInfo.Anchor, eventInfo.Tag, eventInfo.RenderedValue, eventInfo.Style, eventInfo.IsPlainImplicit, eventInfo.IsQuotedImplicit));
+            // RenderedValue is always set (by ScalarSerializerBase.WriteYaml) before a
+            // ScalarEventInfo reaches the writer.
+            emitter.Emit(new Scalar(eventInfo.Anchor, eventInfo.Tag, eventInfo.RenderedValue!, eventInfo.Style, eventInfo.IsPlainImplicit, eventInfo.IsQuotedImplicit));
         }
 
         void IEventEmitter.Emit(MappingStartEventInfo eventInfo)

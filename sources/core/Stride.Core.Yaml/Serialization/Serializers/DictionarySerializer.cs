@@ -60,7 +60,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
     public class DictionarySerializer : ObjectSerializer
     {
         /// <inheritdoc/>
-        public override IYamlSerializable TryCreate(SerializerContext context, ITypeDescriptor typeDescriptor)
+        public override IYamlSerializable? TryCreate(SerializerContext context, ITypeDescriptor typeDescriptor)
         {
             return typeDescriptor is DictionaryDescriptor ? this : null;
         }
@@ -76,11 +76,16 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             else if (objectContext.Settings.SerializeDictionaryItemsAsMembers && dictionaryDescriptor.KeyType == typeof(string))
             {
                 // Read dictionaries that can be serialized as items
-                string memberName;
+                string? memberName;
                 if (!TryReadMember(ref objectContext, out memberName))
                 {
                     var value = ReadMemberValue(ref objectContext, null, null, dictionaryDescriptor.ValueType);
-                    dictionaryDescriptor.AddToDictionary(objectContext.Instance, memberName, value);
+                    // Instance is only ever null during deserialization before the object is
+                    // created; ReadMembers already throws in that case before ReadMember runs.
+                    // memberName is always set here: TryReadMemberCore assigns it (via
+                    // ReadMemberName) before it can ever report the "member not found" failure
+                    // that reaches this fallback-to-dictionary-item branch.
+                    dictionaryDescriptor.AddToDictionary(objectContext.Instance!, memberName!, value);
                 }
             }
             else
@@ -127,9 +132,11 @@ namespace Stride.Core.Yaml.Serialization.Serializers
 
                 WriteMemberName(ref objectContext, null, objectContext.Settings.SpecialCollectionMember);
 
-                objectContext.Writer.Emit(new MappingStartEventInfo(objectContext.Instance, objectContext.Instance.GetType()) { Style = objectContext.Style });
+                // Instance is only ever null during deserialization; WriteMembers is the serialize path.
+                var instance = objectContext.Instance!;
+                objectContext.Writer.Emit(new MappingStartEventInfo(instance, instance.GetType()) { Style = objectContext.Style });
                 WriteDictionaryItems(ref objectContext);
-                objectContext.Writer.Emit(new MappingEndEventInfo(objectContext.Instance, objectContext.Instance.GetType()));
+                objectContext.Writer.Emit(new MappingEndEventInfo(instance, instance.GetType()));
             }
         }
 
@@ -141,7 +148,9 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         {
             var dictionaryDescriptor = (DictionaryDescriptor)objectContext.Descriptor;
 
-            dictionaryDescriptor.Clear(objectContext.Instance);
+            // Instance is only ever null during deserialization before the object is created;
+            // ReadMembers already throws in that case before ReadMember/ReadDictionaryItems run.
+            dictionaryDescriptor.Clear(objectContext.Instance!);
 
             var reader = objectContext.Reader;
             while (!reader.Accept<MappingEnd>())
@@ -155,12 +164,15 @@ namespace Stride.Core.Yaml.Serialization.Serializers
                     var keyValue = ReadDictionaryItem(ref objectContext, new KeyValuePair<Type, Type>(dictionaryDescriptor.KeyType, dictionaryDescriptor.ValueType));
                     try
                     {
-                        dictionaryDescriptor.AddToDictionary(objectContext.Instance, keyValue.Key, keyValue.Value);
+                        dictionaryDescriptor.AddToDictionary(objectContext.Instance!, keyValue.Key, keyValue.Value);
                     }
                     catch (Exception ex)
                     {
                         ex = ex.Unwrap();
-                        throw new YamlException(reader.Parser.Current.Start, reader.Parser.Current.End, $"Cannot add item with key [{keyValue.Key}] to dictionary of type [{objectContext.Descriptor}]:\n{ex.Message}", ex);
+                        // Current is non-null while actively reading (only null before the first
+                        // MoveNext or at end of stream, neither of which applies mid-deserialization).
+                        var current = reader.Parser.Current!;
+                        throw new YamlException(current.Start, current.End, $"Cannot add item with key [{keyValue.Key}] to dictionary of type [{objectContext.Descriptor}]:\n{ex.Message}", ex);
                     }
                 }
                 catch (YamlException ex)
@@ -182,11 +194,14 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         /// <param name="objectContext">The object context.</param>
         /// <param name="keyValueTypes">The types corresponding to the key and the value.</param>
         /// <returns>A <see cref="KeyValuePair{Object, Object}"/> representing the dictionary item.</returns>
-        protected virtual KeyValuePair<object, object> ReadDictionaryItem(ref ObjectContext objectContext, KeyValuePair<Type, Type> keyValueTypes)
+        protected virtual KeyValuePair<object, object?> ReadDictionaryItem(ref ObjectContext objectContext, KeyValuePair<Type, Type> keyValueTypes)
         {
-            var keyResult = objectContext.ObjectSerializerBackend.ReadDictionaryKey(ref objectContext, keyValueTypes.Key);
+            // Dictionary keys are never null in practice, even though the shared read pipeline
+            // (ReadDictionaryKey/ReadYaml) is nullable-returning; DictionaryDescriptor.AddToDictionary
+            // requires a non-null key.
+            var keyResult = objectContext.ObjectSerializerBackend.ReadDictionaryKey(ref objectContext, keyValueTypes.Key)!;
             var valueResult = objectContext.ObjectSerializerBackend.ReadDictionaryValue(ref objectContext, keyValueTypes.Value, keyResult);
-            return new KeyValuePair<object, object>(keyResult, valueResult);
+            return new KeyValuePair<object, object?>(keyResult, valueResult);
         }
 
         /// <summary>
@@ -196,7 +211,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         protected virtual void WriteDictionaryItems(ref ObjectContext objectContext)
         {
             var dictionaryDescriptor = (DictionaryDescriptor) objectContext.Descriptor;
-            var keyValues = dictionaryDescriptor.GetEnumerator(objectContext.Instance).ToList();
+            // Instance is only ever null during deserialization; WriteDictionaryItems is the serialize path.
+            var keyValues = dictionaryDescriptor.GetEnumerator(objectContext.Instance!).ToList();
 
             var settings = objectContext.Settings;
             if (settings.SortKeyForMapping && settings.ComparerForKeySorting != null)
@@ -219,7 +235,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         /// <param name="objectContext">The object context.</param>
         /// <param name="keyValue">The key value.</param>
         /// <param name="keyValueTypes">The types corresponding to the key and the value.</param>
-        protected virtual void WriteDictionaryItem(ref ObjectContext objectContext, KeyValuePair<object, object> keyValue, KeyValuePair<Type, Type> keyValueTypes)
+        protected virtual void WriteDictionaryItem(ref ObjectContext objectContext, KeyValuePair<object, object?> keyValue, KeyValuePair<Type, Type> keyValueTypes)
         {
             objectContext.ObjectSerializerBackend.WriteDictionaryKey(ref objectContext, keyValue.Key, keyValueTypes.Key);
             objectContext.ObjectSerializerBackend.WriteDictionaryValue(ref objectContext, keyValue.Key, keyValue.Value, keyValueTypes.Value);

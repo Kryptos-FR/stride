@@ -54,7 +54,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
     [YamlSerializerFactory(YamlSerializerFactoryAttribute.Default)]
     internal class ArraySerializer : IYamlSerializable, IYamlSerializableFactory
     {
-        public IYamlSerializable TryCreate(SerializerContext context, ITypeDescriptor typeDescriptor)
+        public IYamlSerializable? TryCreate(SerializerContext context, ITypeDescriptor typeDescriptor)
         {
             return typeDescriptor is ArrayDescriptor ? this : null;
         }
@@ -74,7 +74,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             {
                 while (!reader.Accept<SequenceEnd>())
                 {
-                    var node = reader.Peek<ParsingEvent>();
+                    // Accept<SequenceEnd> already confirmed a current event exists.
+                    var node = reader.Peek<ParsingEvent>()!;
                     if (index >= arrayList.Count)
                     {
                         throw new YamlException(node.Start, node.End, $"Unable to deserialize array. Current number of elements [{index}] exceeding array size [{arrayList.Count}]");
@@ -86,7 +87,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             }
             else
             {
-                var results = new List<object>();
+                var results = new List<object?>();
                 while (!reader.Accept<SequenceEnd>())
                 {
                     results.Add(ReadYaml(objectContext.SerializerContext, arrayDescriptor.ElementType));
@@ -106,7 +107,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
 
         public void WriteYaml(ref ObjectContext objectContext)
         {
-            var value = objectContext.Instance;
+            // Instance is only ever null during deserialization; WriteYaml is the serialize path.
+            var value = objectContext.Instance!;
             var arrayDescriptor = (ArrayDescriptor) objectContext.Descriptor;
 
             var valueType = value.GetType();
@@ -126,7 +128,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             objectContext.Writer.Emit(new SequenceEndEventInfo(value, valueType));
         }
 
-        private static object ReadYaml(SerializerContext context, Type expectedType)
+        private static object? ReadYaml(SerializerContext context, Type expectedType)
         {
             var node = context.Reader.Parser.Current;
             try
@@ -142,7 +144,9 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             catch (Exception ex)
             {
                 ex = ex.Unwrap();
-                throw new YamlException(node, ex);
+                // Current is non-null while actively reading (only null before the first
+                // MoveNext or at end of stream, neither of which applies mid-deserialization).
+                throw new YamlException(node!, ex);
             }
         }
 

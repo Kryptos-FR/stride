@@ -51,25 +51,25 @@ namespace Stride.Core.Yaml.Serialization.Serializers
 {
     internal class AnchorSerializer : ChainedSerializer
     {
-        private readonly Dictionary<string, object> aliasToObject;
+        private readonly Dictionary<string, object?> aliasToObject;
         private readonly Dictionary<object, string> objectToAlias;
 
         public AnchorSerializer()
         {
-            aliasToObject = new Dictionary<string, object>();
+            aliasToObject = new Dictionary<string, object?>();
             objectToAlias = new Dictionary<object, string>(new IdentityEqualityComparer<object>());
         }
 
-        public bool TryGetAliasValue(string alias, out object value)
+        public bool TryGetAliasValue(string alias, out object? value)
         {
             return aliasToObject.TryGetValue(alias, out value);
         }
 
-        public override object ReadYaml(ref ObjectContext objectContext)
+        public override object? ReadYaml(ref ObjectContext objectContext)
         {
             var context = objectContext.SerializerContext;
             var reader = context.Reader;
-            object value = null;
+            object? value = null;
 
             // Process Anchor alias (*oxxx)
             var alias = reader.Allow<AnchorAlias>();
@@ -84,7 +84,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             }
 
             // Test if current node has an anchor &oxxx
-            string anchor = null;
+            string? anchor = null;
             var nodeEvent = reader.Peek<NodeEvent>();
             if (nodeEvent != null && !string.IsNullOrEmpty(nodeEvent.Anchor))
             {
@@ -123,7 +123,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
 
             if (isAnchorable)
             {
-                string alias;
+                string? alias;
                 // isAnchorable is only true when value != null (checked above).
                 if (objectToAlias.TryGetValue(value!, out alias))
                 {

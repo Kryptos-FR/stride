@@ -53,12 +53,12 @@ namespace Stride.Core.Yaml.Serialization.Serializers
     [YamlSerializerFactory(YamlSerializerFactoryAttribute.Default)]
     internal class PrimitiveSerializer : ScalarSerializerBase, IYamlSerializableFactory
     {
-        public IYamlSerializable TryCreate(SerializerContext context, ITypeDescriptor typeDescriptor)
+        public IYamlSerializable? TryCreate(SerializerContext context, ITypeDescriptor typeDescriptor)
         {
             return typeDescriptor is PrimitiveDescriptor ? this : null;
         }
 
-        public override object ConvertFrom(ref ObjectContext context, Scalar scalar)
+        public override object? ConvertFrom(ref ObjectContext context, Scalar scalar)
         {
             var primitiveType = (PrimitiveDescriptor) context.Descriptor;
             var type = primitiveType.Type;
@@ -95,7 +95,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             switch (Type.GetTypeCode(type))
             {
                 case TypeCode.Boolean:
-                    object value;
+                    object? value;
                     context.SerializerContext.Schema.TryParse(scalar, type, out value);
                     return value;
                 case TypeCode.DateTime:
@@ -149,8 +149,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             if (type == typeof(object))
             {
                 // Try to parse the scalar directly
-                string defaultTag;
-                object scalarValue;
+                string? defaultTag;
+                object? scalarValue;
                 if (context.SerializerContext.Schema.TryParse(scalar, true, out defaultTag, out scalarValue))
                 {
                     return scalarValue;

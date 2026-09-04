@@ -50,17 +50,18 @@ namespace Stride.Core.Yaml.Serialization.Serializers
 {
     public abstract class ScalarSerializerBase : IYamlSerializable
     {
-        public object ReadYaml(ref ObjectContext objectContext)
+        public object? ReadYaml(ref ObjectContext objectContext)
         {
             var scalar = objectContext.Reader.Expect<Scalar>();
             return ConvertFrom(ref objectContext, scalar);
         }
 
-        public abstract object ConvertFrom(ref ObjectContext context, Scalar fromScalar);
+        public abstract object? ConvertFrom(ref ObjectContext context, Scalar fromScalar);
 
         public void WriteYaml(ref ObjectContext objectContext)
         {
-            var value = objectContext.Instance;
+            // Instance is only ever null during deserialization; WriteYaml is the serialize path.
+            var value = objectContext.Instance!;
             var typeOfValue = value.GetType();
 
             var context = objectContext.SerializerContext;

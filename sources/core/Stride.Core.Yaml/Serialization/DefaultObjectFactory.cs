@@ -72,7 +72,7 @@ namespace Stride.Core.Yaml.Serialization
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>The type of the implem or the same type as input if there is no default implementation</returns>
-        public static Type? GetDefaultImplementation(Type type)
+        public static Type? GetDefaultImplementation(Type? type)
         {
             if (type == null)
                 return null;

@@ -63,7 +63,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
                     if (arrayDescriptor != null)
                     {
                         isPrimitiveElementType = PrimitiveDescriptor.IsPrimitive(arrayDescriptor.ElementType);
-                        count = ((Array)objectContext.Instance)?.Length ?? -1;
+                        count = ((Array?)objectContext.Instance)?.Length ?? -1;
                     }
                 }
 
@@ -95,7 +95,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         }
 
         /// <inheritdoc/>
-        public virtual object ReadMemberValue(ref ObjectContext objectContext, IMemberDescriptor memberDescriptor, object memberValue,
+        public virtual object? ReadMemberValue(ref ObjectContext objectContext, IMemberDescriptor? memberDescriptor, object? memberValue,
             Type memberType)
         {
             var memberObjectContext = new ObjectContext(objectContext.SerializerContext, memberValue, objectContext.SerializerContext.FindTypeDescriptor(memberType));
@@ -103,28 +103,28 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         }
 
         /// <inheritdoc/>
-        public virtual object ReadCollectionItem(ref ObjectContext objectContext, object value, Type itemType, int index)
+        public virtual object? ReadCollectionItem(ref ObjectContext objectContext, object? value, Type itemType, int index)
         {
             var itemObjectContext = new ObjectContext(objectContext.SerializerContext, value, objectContext.SerializerContext.FindTypeDescriptor(itemType));
             return ReadYaml(ref itemObjectContext);
         }
 
         /// <inheritdoc/>
-        public virtual object ReadDictionaryKey(ref ObjectContext objectContext, Type keyType)
+        public virtual object? ReadDictionaryKey(ref ObjectContext objectContext, Type keyType)
         {
             var keyObjectContext = new ObjectContext(objectContext.SerializerContext, null, objectContext.SerializerContext.FindTypeDescriptor(keyType));
             return ReadYaml(ref keyObjectContext);
         }
 
         /// <inheritdoc/>
-        public virtual object ReadDictionaryValue(ref ObjectContext objectContext, Type valueType, object key)
+        public virtual object? ReadDictionaryValue(ref ObjectContext objectContext, Type valueType, object key)
         {
             var valueObjectContext = new ObjectContext(objectContext.SerializerContext, null, objectContext.SerializerContext.FindTypeDescriptor(valueType));
             return ReadYaml(ref valueObjectContext);
         }
 
         /// <inheritdoc/>
-        public virtual void WriteMemberName(ref ObjectContext objectContext, IMemberDescriptor member, string name)
+        public virtual void WriteMemberName(ref ObjectContext objectContext, IMemberDescriptor? member, string name)
         {
             // Emit the key name
             objectContext.Writer.Emit(new ScalarEventInfo(name, typeof(string))
@@ -136,7 +136,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         }
 
         /// <inheritdoc/>
-        public virtual void WriteMemberValue(ref ObjectContext objectContext, IMemberDescriptor memberDescriptor, object memberValue, Type memberType)
+        public virtual void WriteMemberValue(ref ObjectContext objectContext, IMemberDescriptor memberDescriptor, object? memberValue, Type memberType)
         {
             // Push the style of the current member
             var memberObjectContext = new ObjectContext(objectContext.SerializerContext, memberValue, objectContext.SerializerContext.FindTypeDescriptor(memberType), objectContext.ParentTypeDescriptor, memberDescriptor)
@@ -148,7 +148,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         }
 
         /// <inheritdoc/>
-        public virtual void WriteCollectionItem(ref ObjectContext objectContext, object item, Type itemType, int index)
+        public virtual void WriteCollectionItem(ref ObjectContext objectContext, object? item, Type itemType, int index)
         {
             var itemObjectcontext = new ObjectContext(objectContext.SerializerContext, item, objectContext.SerializerContext.FindTypeDescriptor(itemType));
             WriteYaml(ref itemObjectcontext);
@@ -162,18 +162,25 @@ namespace Stride.Core.Yaml.Serialization.Serializers
         }
 
         /// <inheritdoc/>
-        public virtual void WriteDictionaryValue(ref ObjectContext objectContext, object key, object value, Type valueType)
+        public virtual void WriteDictionaryValue(ref ObjectContext objectContext, object key, object? value, Type valueType)
         {
             var itemObjectcontext = new ObjectContext(objectContext.SerializerContext, value, objectContext.SerializerContext.FindTypeDescriptor(valueType));
             WriteYaml(ref itemObjectcontext);
         }
 
         /// <inheritdoc/>
-        public virtual bool ShouldSerialize(IMemberDescriptor member, ref ObjectContext objectContext) => member.ShouldSerialize(objectContext.Instance, objectContext.ParentTypeMemberDescriptor);
+        // Instance is only ever null during deserialization; ShouldSerialize is only called while
+        // serializing. ParentTypeMemberDescriptor is genuinely null for a root (parent-less)
+        // object, even though ShouldSerializePredicate's own parameter isn't nullable -
+        // pre-existing tension between this call and that (already-migrated) delegate signature,
+        // not introduced here.
+        public virtual bool ShouldSerialize(IMemberDescriptor member, ref ObjectContext objectContext) => member.ShouldSerialize(objectContext.Instance!, objectContext.ParentTypeMemberDescriptor!);
 
-        protected object ReadYaml(ref ObjectContext objectContext)
+        protected object? ReadYaml(ref ObjectContext objectContext)
         {
-            var node = objectContext.SerializerContext.Reader.Parser.Current;
+            // Current is non-null while actively reading (only null before the first MoveNext
+            // or at end of stream, neither of which applies mid-deserialization).
+            var node = objectContext.SerializerContext.Reader.Parser.Current!;
             try
             {
                 return objectContext.SerializerContext.Serializer.ObjectSerializer.ReadYaml(ref objectContext);

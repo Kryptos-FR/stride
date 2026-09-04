@@ -119,23 +119,61 @@ Branch: `feature/core-nullable-annotations`. Skill: `dotnet-upgrade:migrate-null
       `WriterEventEmitter.cs` (x2) — all already slated for Cluster 5 or the big-files pass.
       (Also fixed 8 pre-existing warnings in those same deferred files as a side effect of
       widening `ObjectContext.Instance`/`IYamlSchema`/etc. — net warning count still dropped.)
+  - **Cluster 5 (Serialization/Serializers/\* + 2 root emitters)**: `IYamlSerializable.cs`,
+    `IYamlSerializableFactory.cs`, `IObjectSerializerBackend.cs`, `ScalarSerializerBase.cs`,
+    `ExceptionUtils.cs`, `ChainedSerializer.cs`, `AnchorSerializer.cs`, `ArraySerializer.cs`,
+    `PrimitiveSerializer.cs`, `ObjectSerializer.cs`, `CollectionSerializer.cs`,
+    `DictionarySerializer.cs`, `TagTypeSerializer.cs`, `DefaultObjectSerializerBackend.cs`,
+    `RoutingSerializer.cs`, `AnchorEventEmitter.cs`, `WriterEventEmitter.cs`. Plus a correction
+    to `DefaultObjectFactory.GetDefaultImplementation`'s parameter (missed in Cluster 4). Fixed,
+    verified 0 warnings in all 18 files. Not yet committed.
+    - **Two core interfaces widened** (both unambiguous — see `nullable-breaking-changes.md`):
+      `IYamlSerializable.ReadYaml` → `object?` (a deserialized value can genuinely be CLR
+      `null`); `IYamlSerializableFactory.TryCreate` → `IYamlSerializable?` (doc already said "or
+      null"; downstream `Stride.Core.Assets`/`Stride.Core.Design` — already nullable-enabled,
+      independently of this branch — had *already* annotated their overrides as
+      `IYamlSerializable?` in anticipation, confirming the direction was expected). Every
+      implementer across this cluster updated to match (narrower non-null overrides where a
+      serializer provably never returns null, e.g. `ArraySerializer.ReadYaml`, needed no change —
+      safe/covariant direction).
+    - **`IObjectSerializerBackend` widened to match its `DefaultObjectSerializerBackend`
+      implementation**, which just forwards to the now-nullable `ReadYaml`:
+      `ReadMemberValue`/`ReadCollectionItem`/`ReadDictionaryKey`/`ReadDictionaryValue` return
+      `object?`; their value-carrying parameters nullable to match (member values/collection
+      items can be `null`). Dictionary *keys* stay non-null throughout (matches
+      `DictionaryDescriptor.AddToDictionary`'s already-migrated `object key` in
+      Stride.Core.Reflection) — `DictionarySerializer.ReadDictionaryItem` uses `!` on the key
+      result instead of threading nullability through, since keys are never null in practice.
+    - `ChainedSerializer.Prev`/`Next` widened to nullable; `FindBoundary`'s inner loop rewritten
+      to cache the `navigate(current)` call in a local instead of invoking it twice per
+      iteration (same number of *distinct* results, same behavior — needed because the compiler
+      doesn't narrow across repeated method-call expressions the way it does for locals).
+    - `ObjectSerializer.TryReadMember`: removed a dead `memberScalar = null;` initializer instead
+      of widening `Scalar` to nullable — it was unconditionally overwritten 6 lines later before
+      any use, so `Scalar` genuinely never ends up null; only `memberName` (which stays at its
+      `null` default if a deeper call throws first) needed widening.
+    - **Known pre-existing tension not fixed (flagged only):**
+      `DefaultObjectSerializerBackend.ShouldSerialize` passes `objectContext.ParentTypeMemberDescriptor`
+      (genuinely `null` for a root, parent-less object — not just a theoretical case) into
+      `ShouldSerializePredicate`'s non-nullable parameter (fixed, in the separately-migrated
+      Stride.Core.Reflection project). Used `!` to compile; this doesn't change the underlying
+      tension, just makes the type system stop hiding it.
+    - **Ripple effect (expected, small):** one new warning, `Serializer.cs(521,30)` CS8600 —
+      already slated for the big-files-last pass. Net distinct-warning count across the whole
+      project dropped from 223 to 151.
 
-## Not started (~230 warnings, ~35 files)
+## Not started (~150 warnings, ~17 files)
 
 Planned order (small/foundational → large):
 
 1. ~~Finish Cluster 2 above.~~ Done.
 2. ~~**Schemas/\***~~ Done.
 3. ~~**Serialization/\* small types**~~ Done.
-4. **Serialization/Serializers/\*** (~43 warnings, `AnchorSerializer.cs`/`ArraySerializer.cs`
-   partly done in wave 1 but still have enable-wave warnings too): `ChainedSerializer.cs` (11),
-   `DictionarySerializer.cs` (5), `TagTypeSerializer.cs` (5), `ObjectSerializer.cs` (4),
-   `CollectionSerializer.cs` (3), `PrimitiveSerializer.cs` (3),
-   `DefaultObjectSerializerBackend.cs` (2), `AnchorEventEmitter.cs` (1), `ExceptionUtils.cs` (1).
-5. `YamlAssemblyRegistry.cs` remaining enable-wave warnings (11 — separate from the wave-1
+4. ~~**Serialization/Serializers/\***~~ Done.
+5. `YamlAssemblyRegistry.cs` remaining enable-wave warnings (separate from the wave-1
    dereference fixes already committed).
-6. **Big files last**: `SortedDictionary.cs` (69 — separate from wave-1 fixes already committed),
-   `Parser.cs` (42), `Serializer.cs` (33), `Emitter.cs` (10), `Scanner.cs` (6).
+6. **Big files last**: `SortedDictionary.cs` (separate from wave-1 fixes already committed),
+   `Parser.cs`, `Serializer.cs`, `Emitter.cs`, `Scanner.cs`.
 7. Remaining scattered small files not yet clustered above (see full breakdown by re-running the
    command below).
 

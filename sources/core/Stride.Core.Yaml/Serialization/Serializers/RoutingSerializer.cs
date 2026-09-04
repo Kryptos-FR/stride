@@ -60,7 +60,7 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             this.serializerSelector = serializerSelector;
         }
 
-        public sealed override object ReadYaml(ref ObjectContext objectContext)
+        public sealed override object? ReadYaml(ref ObjectContext objectContext)
         {
             // If value is not null, use its TypeDescriptor otherwise use expected type descriptor
             var instance = objectContext.Instance;
