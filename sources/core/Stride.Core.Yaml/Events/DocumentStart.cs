@@ -65,20 +65,20 @@ namespace Stride.Core.Yaml.Events
         /// </summary>
         internal override EventType Type { get { return EventType.YAML_DOCUMENT_START_EVENT; } }
 
-        private readonly TagDirectiveCollection tags;
-        private readonly VersionDirective version;
+        private readonly TagDirectiveCollection? tags;
+        private readonly VersionDirective? version;
 
         /// <summary>
         /// Gets the tags.
         /// </summary>
         /// <value>The tags.</value>
-        public TagDirectiveCollection Tags { get { return tags; } }
+        public TagDirectiveCollection? Tags { get { return tags; } }
 
         /// <summary>
         /// Gets the version.
         /// </summary>
         /// <value>The version.</value>
-        public VersionDirective Version { get { return version; } }
+        public VersionDirective? Version { get { return version; } }
 
         private readonly bool isImplicit;
 
@@ -98,7 +98,7 @@ namespace Stride.Core.Yaml.Events
         /// <param name="isImplicit">Indicates whether the event is implicit.</param>
         /// <param name="start">The start position of the event.</param>
         /// <param name="end">The end position of the event.</param>
-        public DocumentStart(VersionDirective version, TagDirectiveCollection tags, bool isImplicit, Mark start, Mark end)
+        public DocumentStart(VersionDirective? version, TagDirectiveCollection? tags, bool isImplicit, Mark start, Mark end)
             : base(start, end)
         {
             this.version = version;
@@ -112,7 +112,7 @@ namespace Stride.Core.Yaml.Events
         /// <param name="version">The version.</param>
         /// <param name="tags">The tags.</param>
         /// <param name="isImplicit">Indicates whether the event is implicit.</param>
-        public DocumentStart(VersionDirective version, TagDirectiveCollection tags, bool isImplicit)
+        public DocumentStart(VersionDirective? version, TagDirectiveCollection? tags, bool isImplicit)
             : this(version, tags, isImplicit, Mark.Empty, Mark.Empty)
         {
         }

@@ -96,7 +96,7 @@ namespace Stride.Core.Yaml.Events
         /// <param name="style">The style of the mapping.</param>
         /// <param name="start">The start position of the event.</param>
         /// <param name="end">The end position of the event.</param>
-        public MappingStart(string anchor, string tag, bool isImplicit, DataStyle style, Mark start, Mark end)
+        public MappingStart(string? anchor, string? tag, bool isImplicit, DataStyle style, Mark start, Mark end)
             : base(anchor, tag, start, end)
         {
             this.isImplicit = isImplicit;
@@ -110,7 +110,7 @@ namespace Stride.Core.Yaml.Events
         /// <param name="tag">The tag.</param>
         /// <param name="isImplicit">Indicates whether the event is implicit.</param>
         /// <param name="style">The style of the mapping.</param>
-        public MappingStart(string anchor, string tag, bool isImplicit, DataStyle style)
+        public MappingStart(string? anchor, string? tag, bool isImplicit, DataStyle style)
             : this(anchor, tag, isImplicit, style, Mark.Empty, Mark.Empty)
         {
         }
