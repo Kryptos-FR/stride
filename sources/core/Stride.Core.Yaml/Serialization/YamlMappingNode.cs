@@ -45,6 +45,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Stride.Core.Yaml.Events;
 
@@ -224,8 +225,8 @@ namespace Stride.Core.Yaml.Serialization
         /// <param name="state">The state of the document.</param>
         internal override void ResolveAliases(DocumentLoadingState state)
         {
-            Dictionary<YamlNode, YamlNode> keysToUpdate = null;
-            Dictionary<YamlNode, YamlNode> valuesToUpdate = null;
+            Dictionary<YamlNode, YamlNode>? keysToUpdate = null;
+            Dictionary<YamlNode, YamlNode>? valuesToUpdate = null;
             foreach (var entry in children)
             {
                 if (entry.Key is YamlAliasNode)
@@ -234,7 +235,9 @@ namespace Stride.Core.Yaml.Serialization
                     {
                         keysToUpdate = new Dictionary<YamlNode, YamlNode>();
                     }
-                    keysToUpdate.Add(entry.Key, state.GetNode(entry.Key.Anchor, true, entry.Key.Start, entry.Key.End));
+                    // entry.Key is a YamlAliasNode here, which always has a non-null Anchor;
+                    // throwException: true also guarantees a non-null result (or an exception).
+                    keysToUpdate.Add(entry.Key, state.GetNode(entry.Key.Anchor!, true, entry.Key.Start, entry.Key.End)!);
                 }
                 if (entry.Value is YamlAliasNode)
                 {
@@ -242,7 +245,9 @@ namespace Stride.Core.Yaml.Serialization
                     {
                         valuesToUpdate = new Dictionary<YamlNode, YamlNode>();
                     }
-                    valuesToUpdate.Add(entry.Key, state.GetNode(entry.Value.Anchor, true, entry.Value.Start, entry.Value.End));
+                    // entry.Value is a YamlAliasNode here, which always has a non-null Anchor;
+                    // throwException: true also guarantees a non-null result (or an exception).
+                    valuesToUpdate.Add(entry.Key, state.GetNode(entry.Value.Anchor!, true, entry.Value.Start, entry.Value.End)!);
                 }
             }
             if (valuesToUpdate != null)
@@ -291,7 +296,7 @@ namespace Stride.Core.Yaml.Serialization
         }
 
         /// <summary />
-        public override bool Equals(object other)
+        public override bool Equals([NotNullWhen(true)] object? other)
         {
             var obj = other as YamlMappingNode;
             if (obj == null || !Equals(obj) || children.Count != obj.children.Count)
@@ -301,7 +306,7 @@ namespace Stride.Core.Yaml.Serialization
 
             foreach (var entry in children)
             {
-                YamlNode otherNode;
+                YamlNode? otherNode;
                 if (!obj.children.TryGetValue(entry.Key, out otherNode) || !SafeEquals(entry.Value, otherNode))
                 {
                     return false;

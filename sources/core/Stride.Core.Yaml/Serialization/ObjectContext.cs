@@ -39,8 +39,8 @@ namespace Stride.Core.Yaml.Serialization
         /// <param name="serializerContext">The serializer context.</param>
         /// <param name="instance">The instance.</param>
         /// <param name="descriptor">The descriptor.</param>
-        public ObjectContext(SerializerContext serializerContext, object instance, ITypeDescriptor descriptor,
-            ITypeDescriptor parentTypeDescriptor = null, IMemberDescriptor parentTypeMemberDescriptor = null) : this()
+        public ObjectContext(SerializerContext serializerContext, object? instance, ITypeDescriptor descriptor,
+            ITypeDescriptor? parentTypeDescriptor = null, IMemberDescriptor? parentTypeMemberDescriptor = null) : this()
         {
             SerializerContext = serializerContext;
             Instance = instance;
@@ -82,7 +82,7 @@ namespace Stride.Core.Yaml.Serialization
         /// <summary>
         /// The instance link to this context.
         /// </summary>
-        public object Instance { get; set; }
+        public object? Instance { get; set; }
 
         /// <summary>
         /// The expected type descriptor.
@@ -92,22 +92,22 @@ namespace Stride.Core.Yaml.Serialization
         /// <summary>
         /// The type descriptor of the parent of the instance type.
         /// </summary>
-        public ITypeDescriptor ParentTypeDescriptor { get; set; }
+        public ITypeDescriptor? ParentTypeDescriptor { get; set; }
 
         /// <summary>
         /// The type descriptor of the parent's member that generates this type of instance.
         /// </summary>
-        public IMemberDescriptor ParentTypeMemberDescriptor { get; set; }
+        public IMemberDescriptor? ParentTypeMemberDescriptor { get; set; }
 
         /// <summary>
         /// The tag used when serializing.
         /// </summary>
-        public string Tag { get; set; }
+        public string? Tag { get; set; }
 
         /// <summary>
         /// The anchor used when serializing.
         /// </summary>
-        public string Anchor { get; set; }
+        public string? Anchor { get; set; }
 
         /// <summary>
         /// The style used when serializing.

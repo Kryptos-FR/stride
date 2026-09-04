@@ -56,15 +56,15 @@ namespace Stride.Core.Yaml.Serialization
         public Type DeclaringType { get; }
 
         // TODO: store the proper type descriptor here
-        public ITypeDescriptor TypeDescriptor => null;
+        public ITypeDescriptor? TypeDescriptor => null;
 
         public int? Order { get; set; }
 
         public DataMemberMode Mode { get; set; }
 
-        public abstract object Get(object thisObject);
+        public abstract object? Get(object thisObject);
 
-        public abstract void Set(object thisObject, object value);
+        public abstract void Set(object thisObject, object? value);
 
         public abstract bool HasSet { get; }
 
@@ -81,11 +81,14 @@ namespace Stride.Core.Yaml.Serialization
         public bool HasDefaultValue => false;
         public object DefaultValue => throw new InvalidOperationException();
 
-        public List<string> AlternativeNames { get; set; }
+        // IMemberDescriptor declares this non-nullable; this base class never populates it.
+        public List<string> AlternativeNames { get; set; } = null!;
 
-        public object Tag { get; set; }
+        // IMemberDescriptor declares this non-nullable; this base class never populates it.
+        public object Tag { get; set; } = null!;
 
-        public MemberInfo MemberInfo => null;
+        // IMemberDescriptor declares this non-nullable; this base class never populates it.
+        public MemberInfo MemberInfo => null!;
 
         public IEnumerable<T> GetCustomAttributes<T>(bool inherit) where T : Attribute
         {

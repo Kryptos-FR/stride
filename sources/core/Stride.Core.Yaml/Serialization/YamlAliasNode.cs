@@ -45,6 +45,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Stride.Core.Yaml.Serialization
 {
@@ -93,7 +94,7 @@ namespace Stride.Core.Yaml.Serialization
         }
 
         /// <summary />
-        public override bool Equals(object other)
+        public override bool Equals([NotNullWhen(true)] object? other)
         {
             var obj = other as YamlAliasNode;
             return obj != null && Equals(obj) && SafeEquals(Anchor, obj.Anchor);

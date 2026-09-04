@@ -63,7 +63,7 @@ namespace Stride.Core.Yaml.Serialization
         /// </summary>
         /// <param name="serializer">The serializer.</param>
         /// <param name="serializerContextSettings">The serializer context settings.</param>
-        internal SerializerContext(Serializer serializer, SerializerContextSettings serializerContextSettings)
+        internal SerializerContext(Serializer serializer, SerializerContextSettings? serializerContextSettings)
         {
             Serializer = serializer;
             ObjectFactory = serializer.Settings.ObjectFactory;
@@ -83,7 +83,7 @@ namespace Stride.Core.Yaml.Serialization
         /// <summary>
         /// Gets the logger.
         /// </summary>
-        public ILogger Logger { get; }
+        public ILogger? Logger { get; }
 
         /// <summary>
         /// Gets the settings.
@@ -107,7 +107,9 @@ namespace Stride.Core.Yaml.Serialization
         /// Gets or sets the reader used while deserializing.
         /// </summary>
         /// <value>The reader.</value>
-        public EventReader Reader { get; set; }
+        // Only set while deserializing (see IsSerializing); = null! avoids forcing a nullable
+        // check at every one of this property's many call sites across the serializers.
+        public EventReader Reader { get; set; } = null!;
 
         /// <summary>
         /// Gets the object serializer backend.
@@ -152,13 +154,17 @@ namespace Stride.Core.Yaml.Serialization
         /// Gets or sets the writer used while deserializing.
         /// </summary>
         /// <value>The writer.</value>
-        public IEventEmitter Writer { get; set; }
+        // Only set while serializing (see IsSerializing); = null! avoids forcing a nullable
+        // check at every one of this property's many call sites across the serializers.
+        public IEventEmitter Writer { get; set; } = null!;
 
         /// <summary>
         /// Gets the emitter.
         /// </summary>
         /// <value>The emitter.</value>
-        public IEmitter Emitter { get; internal set; }
+        // Only set while serializing (see IsSerializing); = null! avoids forcing a nullable
+        // check at every one of this property's many call sites across the serializers.
+        public IEmitter Emitter { get; internal set; } = null!;
 
         /// <summary>
         /// Finds the type descriptor for the specified type.
@@ -217,7 +223,7 @@ namespace Stride.Core.Yaml.Serialization
         /// <param name="defaultTag">The default tag decoded from the scalar.</param>
         /// <param name="value">The value extracted from a scalar.</param>
         /// <returns>System.String.</returns>
-        public bool TryParseScalar(Scalar scalar, out string defaultTag, out object value)
+        public bool TryParseScalar(Scalar scalar, out string? defaultTag, out object? value)
         {
             return Settings.Schema.TryParse(scalar, true, out defaultTag, out value);
         }

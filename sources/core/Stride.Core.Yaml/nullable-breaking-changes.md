@@ -38,3 +38,38 @@ and `!`-based workarounds some consumers added may become unnecessary.
   even when the call succeeds (e.g. the "expand tag" fallback path).
 - `IYamlSchema.GetTypeForDefaultTag`: parameter and return `Type`/`string` → nullable. XML doc
   already documented "return null if no default tag associated".
+
+## Serialization/* small types (Cluster 4)
+
+- `ObjectContext` (struct): `Instance` property and ctor parameter → `object?` (XML doc already
+  documented "if not null, the instance..."); `ParentTypeDescriptor`/`ParentTypeMemberDescriptor`
+  (+ ctor params) → nullable (already defaulted to `null`); `Tag`/`Anchor` → nullable (never set
+  by the constructor, only via object-initializer).
+- `EventInfo` and every derived event-info type (`AliasEventInfo`, `ObjectEventInfo`,
+  `ScalarEventInfo`, `MappingStart/EndEventInfo`, `SequenceStart/EndEventInfo`): `sourceValue`
+  ctor parameter and `SourceValue` property → `object?` (a serialized value can genuinely be a
+  CLR `null`, e.g. a null field emitted as a YAML null scalar). `Alias`/`Anchor`/`Tag`/
+  `RenderedValue` → nullable (optional, never required).
+- `YamlNode.Anchor`/`Tag` → nullable (a node may have no anchor; `Tag` mirrors the already-nullable
+  `NodeEvent.Tag`).
+- `YamlScalarNode.Value` → `string?`; `ToString()` and the explicit `(string)` conversion operator
+  → nullable return, to match (a scalar node constructed via the parameterless constructor has no
+  value until set).
+- `YamlScalarNode`/`YamlMappingNode`/`YamlAliasNode`/`YamlSequenceNode.Equals(object)` →
+  `Equals(object?)`, matching `object.Equals`'s own nullable parameter (was a source-level
+  mismatch already, just not flagged until nullable was enabled on this project).
+- `DefaultObjectFactory.GetDefaultImplementation`: return `Type` → `Type?` (already returned
+  `null` for a `null` input).
+- `ChainedObjectFactory` ctor parameter and field `nextFactory` → `IObjectFactory?` (already
+  checked for `null` in `Create`).
+- `SerializerContext.Logger` → `ILogger?` (mirrors `SerializerContextSettings.Logger`, below;
+  consumers already null-conditional it, e.g. `logger?.Warning(...)`).
+- `SerializerContextSettings.Logger` → `ILogger?` (optional, never required).
+- `SerializerSettings`: ctor parameter `schema` → `IYamlSchema?` (already coalesced to
+  `new CoreSchema()`); `PreSerializer`/`PostSerializer`/`ChainedSerializerFactory` → nullable
+  (optional extension points, never assigned a default); `ComparerForKeySorting` → nullable (XML
+  doc already documented "this value can be set to null to disable the default comparer").
+- `OrderedDictionary<TKey, TValue>` now constrains `TKey : notnull` (required by the underlying
+  `KeyedCollection<TKey, TItem>`, which itself requires `notnull` — source-breaking only for a
+  caller that instantiated this type with a nullable-annotated reference type or `Nullable<T>`
+  key, which was already unsound).

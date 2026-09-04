@@ -46,6 +46,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Stride.Core.Yaml.Events;
 
 namespace Stride.Core.Yaml.Serialization
@@ -60,7 +61,7 @@ namespace Stride.Core.Yaml.Serialization
         /// Gets or sets the value of the node.
         /// </summary>
         /// <value>The value.</value>
-        public string Value { get; set; }
+        public string? Value { get; set; }
 
         /// <summary>
         /// Gets or sets the style of the node.
@@ -113,7 +114,9 @@ namespace Stride.Core.Yaml.Serialization
         /// <param name="state">The state.</param>
         internal override void Emit(IEmitter emitter, EmitterState state)
         {
-            emitter.Emit(new Scalar(Anchor, Tag, Value, Style, string.IsNullOrEmpty(Tag), false));
+            // Value must be set before a node is emitted; the parameterless constructor exists only
+            // to support object-initializer construction.
+            emitter.Emit(new Scalar(Anchor, Tag, Value!, Style, string.IsNullOrEmpty(Tag), false));
         }
 
         /// <summary>
@@ -128,7 +131,7 @@ namespace Stride.Core.Yaml.Serialization
         }
 
         /// <summary />
-        public override bool Equals(object other)
+        public override bool Equals([NotNullWhen(true)] object? other)
         {
             var obj = other as YamlScalarNode;
             return obj != null && Equals(obj) && SafeEquals(Value, obj.Value);
@@ -163,7 +166,7 @@ namespace Stride.Core.Yaml.Serialization
         /// </summary>
         /// <param name="value">The value.</param>
         /// <returns>The result of the conversion.</returns>
-        public static explicit operator string(YamlScalarNode value)
+        public static explicit operator string?(YamlScalarNode value)
         {
             return value.Value;
         }
@@ -174,7 +177,7 @@ namespace Stride.Core.Yaml.Serialization
         /// <returns>
         /// A <see cref="System.String"/> that represents this instance.
         /// </returns>
-        public override string ToString()
+        public override string? ToString()
         {
             return Value;
         }

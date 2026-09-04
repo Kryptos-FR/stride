@@ -60,7 +60,10 @@ namespace Stride.Core.Yaml.Serialization
         /// Gets or sets the root node.
         /// </summary>
         /// <value>The root node.</value>
-        public YamlNode RootNode { get; private set; }
+        // Always set by every constructor: the EventReader-based ctor's loop relies on the parser
+        // emitting at least one content event (an implicit empty scalar for an empty document)
+        // before DocumentEnd, so RootNode is never left unassigned in practice.
+        public YamlNode RootNode { get; private set; } = null!;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="YamlDocument"/> class.

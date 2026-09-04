@@ -72,7 +72,7 @@ namespace Stride.Core.Yaml.Serialization
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>The type of the implem or the same type as input if there is no default implementation</returns>
-        public static Type GetDefaultImplementation(Type type)
+        public static Type? GetDefaultImplementation(Type type)
         {
             if (type == null)
                 return null;
@@ -80,7 +80,7 @@ namespace Stride.Core.Yaml.Serialization
             // TODO change this code. Make it configurable?
             if (type.IsInterface)
             {
-                Type implementationType;
+                Type? implementationType;
                 if (type.IsGenericType)
                 {
                     if (DefaultInterfaceImplementations.TryGetValue(type.GetGenericTypeDefinition(), out implementationType))
@@ -102,7 +102,9 @@ namespace Stride.Core.Yaml.Serialization
         /// <inheritdoc/>
         public object Create(Type type)
         {
-            type = GetDefaultImplementation(type);
+            // type is never null here: GetDefaultImplementation only returns null for a null input,
+            // and Create's own type parameter is never null by contract.
+            type = GetDefaultImplementation(type)!;
 
             // We can't instantiate primitives or arrays
             if (PrimitiveDescriptor.IsPrimitive(type) || type.IsArray)
@@ -112,7 +114,10 @@ namespace Stride.Core.Yaml.Serialization
             {
                 try
                 {
-                    return Activator.CreateInstance(type);
+                    // Activator.CreateInstance is annotated nullable defensively for COM/interop
+                    // edge cases; for a regular type with a parameterless constructor it always
+                    // returns a real instance.
+                    return Activator.CreateInstance(type)!;
                 }
                 catch (Exception e)
                 {

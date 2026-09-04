@@ -61,11 +61,13 @@ namespace Stride.Core.Yaml.Serialization
         internal readonly YamlAssemblyRegistry AssemblyRegistry;
         private IAttributeRegistry attributeRegistry;
         private readonly IYamlSchema schema;
-        private IObjectFactory objectFactory;
+        // Set via the corresponding property setter in every constructor path (which throws on
+        // null), not tracked by the compiler as definite assignment.
+        private IObjectFactory objectFactory = null!;
         private int preferredIndent;
-        private string specialCollectionMember;
-        private IObjectSerializerBackend objectSerializerBackend;
-        private IMemberNamingConvention _namingConvention;
+        private string specialCollectionMember = null!;
+        private IObjectSerializerBackend objectSerializerBackend = null!;
+        private IMemberNamingConvention _namingConvention = null!;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SerializerSettings"/> class.
@@ -77,7 +79,7 @@ namespace Stride.Core.Yaml.Serialization
         /// <summary>
         /// Initializes a new instance of the <see cref="SerializerSettings" /> class.
         /// </summary>
-        public SerializerSettings(IYamlSchema schema)
+        public SerializerSettings(IYamlSchema? schema)
         {
             PreferredIndent = 2;
             IndentLess = false;
@@ -105,12 +107,12 @@ namespace Stride.Core.Yaml.Serialization
         /// <summary>
         /// Gets or sets a serializer that is executed just before the <see cref="RoutingSerializer"/>.
         /// </summary>
-        public ChainedSerializer PreSerializer { get; set; }
+        public ChainedSerializer? PreSerializer { get; set; }
 
         /// <summary>
         /// Gets or sets a serializer that is executed after all other serializers, including <see cref="TagTypeSerializer"/>.
         /// </summary>
-        public ChainedSerializer PostSerializer { get; set; }
+        public ChainedSerializer? PostSerializer { get; set; }
 
         /// <summary>
         /// Gets or sets the preferred indentation. Default is 2.
@@ -188,7 +190,7 @@ namespace Stride.Core.Yaml.Serialization
         /// To disable the default comparer, this value can be set to null.
         /// </summary>
         /// <value>The key comparer.</value>
-        public IComparer<object> ComparerForKeySorting { get; set; }
+        public IComparer<object>? ComparerForKeySorting { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to serialize dictionary items as regular members.s
@@ -320,7 +322,7 @@ namespace Stride.Core.Yaml.Serialization
         /// <summary>
         /// Gets a methods that will build the proper chain of serializers out of the default chain.
         /// </summary>
-        public Action<ChainedSerializer> ChainedSerializerFactory { get; set; }
+        public Action<ChainedSerializer>? ChainedSerializerFactory { get; set; }
 
         /// <summary>
         /// Register a mapping between a tag and a type.

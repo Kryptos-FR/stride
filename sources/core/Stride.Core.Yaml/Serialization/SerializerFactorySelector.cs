@@ -38,7 +38,7 @@ namespace Stride.Core.Yaml.Serialization
         public IYamlSerializable GetSerializer(SerializerContext context, ITypeDescriptor typeDescriptor)
         {
             if (!isSealed) throw new InvalidOperationException("A serializer factory selector must be sealed before being used.");
-            IYamlSerializable serializer;
+            IYamlSerializable? serializer;
 
             // First try, with just a read lock
             serializerLock.EnterReadLock();

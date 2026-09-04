@@ -47,11 +47,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace Stride.Core.Yaml.Serialization
 {
     public class OrderedDictionary<TKey, TValue> : IOrderedDictionary<TKey, TValue>, IList<KeyValuePair<TKey, TValue>>, IDictionary
+        where TKey : notnull
     {
         private readonly KeyedCollection items = new KeyedCollection();
 
@@ -104,11 +106,11 @@ namespace Stride.Core.Yaml.Serialization
             return items.Remove(key);
         }
 
-        public bool TryGetValue(TKey key, out TValue value)
+        public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
         {
             if (!items.Contains(key))
             {
-                value = default(TValue);
+                value = default;
                 return false;
             }
 
@@ -168,7 +170,7 @@ namespace Stride.Core.Yaml.Serialization
 
         bool ICollection.IsSynchronized => ((ICollection)items).IsSynchronized;
 
-        object IDictionary.this[object key] { get { return this[(TKey)key]; } set { this[(TKey)key] = (TValue)value; } }
+        object? IDictionary.this[object key] { get { return this[(TKey)key]; } set { this[(TKey)key] = (TValue)value!; } }
 
         ICollection IDictionary.Keys => (ICollection)Keys;
 
@@ -178,7 +180,7 @@ namespace Stride.Core.Yaml.Serialization
 
         bool IDictionary.Contains(object key) => ContainsKey((TKey)key);
 
-        void IDictionary.Add(object key, object value) => Add((TKey)key, (TValue)value);
+        void IDictionary.Add(object key, object? value) => Add((TKey)key, (TValue)value!);
 
         void IDictionary.Remove(object key) => Remove((TKey)key);
 
@@ -200,8 +202,9 @@ namespace Stride.Core.Yaml.Serialization
             public bool MoveNext() => enumerator.MoveNext();
             public void Reset() => enumerator.Reset();
             public object Current => enumerator.Current;
-            public object Key => enumerator.Current.Key;
-            public object Value => enumerator.Current.Value;
+            // TKey/TValue are unconstrained here; this collection's actual usages never store null keys/values.
+            public object Key => enumerator.Current.Key!;
+            public object Value => enumerator.Current.Value!;
             public DictionaryEntry Entry => new DictionaryEntry(Key, Value);
         }
 

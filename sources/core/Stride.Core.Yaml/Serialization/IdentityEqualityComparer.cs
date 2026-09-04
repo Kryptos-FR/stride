@@ -50,7 +50,7 @@ namespace Stride.Core.Yaml.Serialization
 {
     internal class IdentityEqualityComparer<T> : IEqualityComparer<T> where T : class
     {
-        public bool Equals(T left, T right)
+        public bool Equals(T? left, T? right)
         {
             return ReferenceEquals(left, right);
         }

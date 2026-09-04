@@ -46,6 +46,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Stride.Core.Yaml.Events;
 
@@ -165,7 +166,9 @@ namespace Stride.Core.Yaml.Serialization
             {
                 if (children[i] is YamlAliasNode)
                 {
-                    children[i] = state.GetNode(children[i].Anchor, true, children[i].Start, children[i].End);
+                    // children[i] is a YamlAliasNode here, which always has a non-null Anchor;
+                    // throwException: true also guarantees a non-null result (or an exception).
+                    children[i] = state.GetNode(children[i].Anchor!, true, children[i].Start, children[i].End)!;
                 }
             }
         }
@@ -197,7 +200,7 @@ namespace Stride.Core.Yaml.Serialization
         }
 
         /// <summary />
-        public override bool Equals(object other)
+        public override bool Equals([NotNullWhen(true)] object? other)
         {
             var obj = other as YamlSequenceNode;
             if (obj == null || !Equals(obj) || children.Count != obj.children.Count)

@@ -68,7 +68,7 @@ namespace Stride.Core.Yaml.Serialization
         /// <param name="factory">The factory.</param>
         /// <param name="nextFactory">The next factory.</param>
         /// <exception cref="System.ArgumentNullException">factory</exception>
-        public LambdaObjectFactory(Func<Type, object> factory, IObjectFactory nextFactory) : base(nextFactory)
+        public LambdaObjectFactory(Func<Type, object> factory, IObjectFactory? nextFactory) : base(nextFactory)
         {
             if (factory == null)
             {

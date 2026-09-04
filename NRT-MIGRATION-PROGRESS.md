@@ -75,20 +75,58 @@ Branch: `feature/core-nullable-annotations`. Skill: `dotnet-upgrade:migrate-null
       `PrimitiveSerializer.cs:99,100,154,156`, `YamlAssemblyRegistry.cs:199,207`. All fall inside
       files already slated for the Serialization/*, Serialization/Serializers/*, or
       `YamlAssemblyRegistry.cs` passes below.
+  - **Cluster 4 (Serialization/\* small types)**: `ObjectContext.cs`, `EventInfo.cs`,
+    `YamlMappingNode.cs`, `YamlNode.cs`, `YamlScalarNode.cs`, `YamlNodeIdentityEqualityComparer.cs`,
+    `YamlAliasNode.cs`, `YamlSequenceNode.cs`, `YamlDocument.cs`, `IdentityEqualityComparer.cs`,
+    `DocumentLoadingState.cs`, `SerializerContext.cs`, `SerializerContextSettings.cs`,
+    `SerializerFactorySelector.cs`, `DynamicMemberDescriptorBase.cs`, `DefaultObjectFactory.cs`,
+    `ChainedObjectFactory.cs`, `LambdaObjectFactory.cs`, `OrderedDictionary.cs`,
+    `SerializerSettings.cs`. Fixed, verified 0 warnings in all 19 files. Not yet committed.
+    - Public widenings unambiguous from existing code/doc comments — see
+      `nullable-breaking-changes.md` for the full list (`ObjectContext`, `EventInfo` hierarchy,
+      `YamlNode`/`YamlScalarNode`, `DefaultObjectFactory.GetDefaultImplementation`,
+      `ChainedObjectFactory`, `SerializerContext.Logger`, `SerializerContextSettings.Logger`,
+      `SerializerSettings` ctor param + 4 properties, `OrderedDictionary<TKey,TValue>` now
+      `where TKey : notnull`).
+    - `YamlScalarNode`/`YamlMappingNode`/`YamlAliasNode`/`YamlSequenceNode.Equals(object)` →
+      `Equals([NotNullWhen(true)] object?)`, matching `object.Equals`'s nullable parameter.
+    - `SerializerContext.Reader`/`Writer`/`Emitter`: **not** widened to nullable despite being
+      genuinely two-phase (only one of Reader vs Writer+Emitter is set, depending on
+      serialize/deserialize direction) — these 3 properties are read unguarded from dozens of
+      call sites across the entire (mostly not-yet-migrated) Serializers layer; widening would
+      have injected a CS8602 at every one of them, a ripple wildly disproportionate to this
+      cluster. Used `= null!` on each instead (skill-sanctioned "always set after construction,
+      by a mode the compiler can't see" pattern) — kept scope contained to this cluster's files.
+    - `SerializerSettings`: `objectFactory`/`specialCollectionMember`/`objectSerializerBackend`/
+      `_namingConvention` fields are only ever assigned through their own validating property
+      setter (never directly), so the compiler can't see them as initialized by the constructor.
+      Tried `[MemberNotNull]` on the constructor first — **doesn't compile**: the attribute is
+      only valid on method/property/indexer, not constructors (confirmed by build error CS0592).
+      Used `= null!` on the 4 field declarations instead.
+    - `OrderedDictionary<TKey, TValue>.TryGetValue`: `out TValue value` →
+      `[MaybeNullWhen(false)] out TValue value` (matches `Dictionary<TKey,TValue>`'s own real
+      annotation) rather than `TValue?`, since `TValue` is unconstrained and `?` on it would
+      change `Nullable<T>` layout for a value-type instantiation.
+    - `ChainedObjectFactory.Create`: returns a bare `null` when there is no next factory, which
+      **violates `IObjectFactory.Create`'s own doc contract** ("Throws... if the type cannot be
+      created"). Left as-is with `null!` + a `// TODO` comment rather than fixed — fixing it
+      (throw instead of returning null) would be a behavior change, out of scope for annotation.
+    - **Ripple effect (expected, not fixed here; larger than prior clusters' — this cluster's
+      types are used pervasively by the serializer layer coming next):** 27 new warnings across
+      `AnchorEventEmitter.cs`, `ArraySerializer.cs`, `CollectionSerializer.cs` (x6),
+      `DefaultObjectSerializerBackend.cs` (x3), `DictionarySerializer.cs` (x6), `ObjectSerializer.cs`
+      (x5), `ScalarSerializerBase.cs`, `Serializer.cs`, `TagTypeSerializer.cs`,
+      `WriterEventEmitter.cs` (x2) — all already slated for Cluster 5 or the big-files pass.
+      (Also fixed 8 pre-existing warnings in those same deferred files as a side effect of
+      widening `ObjectContext.Instance`/`IYamlSchema`/etc. — net warning count still dropped.)
 
-## Not started (~280 warnings, ~40 files)
+## Not started (~230 warnings, ~35 files)
 
 Planned order (small/foundational → large):
 
 1. ~~Finish Cluster 2 above.~~ Done.
 2. ~~**Schemas/\***~~ Done.
-3. **Serialization/\* small types** (~57 warnings): `ObjectContext.cs`, `EventInfo.cs`,
-   `YamlMappingNode.cs`, `YamlNode.cs`, `YamlScalarNode.cs`, `YamlNodeIdentityEqualityComparer.cs`,
-   `YamlAliasNode.cs`, `YamlSequenceNode.cs`, `YamlDocument.cs`, `IdentityEqualityComparer.cs`,
-   `DocumentLoadingState.cs`, `SerializerContext.cs`, `SerializerContextSettings.cs`,
-   `SerializerFactorySelector.cs`, `DynamicMemberDescriptorBase.cs`, `DefaultObjectFactory.cs`,
-   `ChainedObjectFactory.cs`, `LambdaObjectFactory.cs`, `OrderedDictionary.cs`,
-   `SerializerSettings.cs`.
+3. ~~**Serialization/\* small types**~~ Done.
 4. **Serialization/Serializers/\*** (~43 warnings, `AnchorSerializer.cs`/`ArraySerializer.cs`
    partly done in wave 1 but still have enable-wave warnings too): `ChainedSerializer.cs` (11),
    `DictionarySerializer.cs` (5), `TagTypeSerializer.cs` (5), `ObjectSerializer.cs` (4),

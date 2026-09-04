@@ -84,9 +84,9 @@ namespace Stride.Core.Yaml.Serialization
         /// <param name="start">The start position.</param>
         /// <param name="end">The end position.</param>
         /// <returns></returns>
-        public YamlNode GetNode(string anchor, bool throwException, Mark start, Mark end)
+        public YamlNode? GetNode(string anchor, bool throwException, Mark start, Mark end)
         {
-            YamlNode target;
+            YamlNode? target;
             if (anchors.TryGetValue(anchor, out target))
             {
                 return target;

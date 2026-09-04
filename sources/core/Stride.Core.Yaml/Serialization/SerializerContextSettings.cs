@@ -35,7 +35,7 @@ namespace Stride.Core.Yaml.Serialization
         /// <value>
         /// The logger.
         /// </value>
-        public ILogger Logger { get; set; }
+        public ILogger? Logger { get; set; }
 
         /// <summary>
         /// Gets or sets the member mask that will be used to filter <see cref="DataMemberAttribute.Mask"/>.
