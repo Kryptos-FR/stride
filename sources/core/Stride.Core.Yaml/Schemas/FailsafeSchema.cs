@@ -105,7 +105,7 @@ namespace Stride.Core.Yaml.Schemas
             return SeqShortTag;
         }
 
-        public override bool TryParse(Scalar scalar, bool parseValue, out string defaultTag, out object value)
+        public override bool TryParse(Scalar scalar, bool parseValue, out string? defaultTag, out object? value)
         {
             if (base.TryParse(scalar, parseValue, out defaultTag, out value))
             {

@@ -24,3 +24,17 @@ and `!`-based workarounds some consumers added may become unnecessary.
 - `EventReader.Allow<T>()`, `EventReader.Peek<T>()`: return type `T` → `T?` (`T` constrained to
   `Event`, a reference type). Both already returned `null` when the current event did not match
   `T` — this was the pre-existing contract, now made explicit.
+
+## Schemas/* (Cluster 3)
+
+- `IYamlSchema.ExpandTag`/`ShortenTag`: parameter and return `string` → `string?`. Both already
+  accepted and returned `null` explicitly (`if (x == null) return null;`).
+- `IYamlSchema.GetDefaultTag(NodeEvent)`, `GetDefaultTag(Type)`: return `string` → `string?`.
+  Both already returned `null` on lookup failure.
+- `IYamlSchema.IsTagImplicit`: parameter `string` → `string?`. Already treated `null` as
+  implicit (`if (tag == null) return true;`).
+- `IYamlSchema.TryParse` (both overloads): `out string defaultTag`/`out object value` →
+  `out string?`/`out object?`. Both were already initialized to `null` and could remain `null`
+  even when the call succeeds (e.g. the "expand tag" fallback path).
+- `IYamlSchema.GetTypeForDefaultTag`: parameter and return `Type`/`string` → nullable. XML doc
+  already documented "return null if no default tag associated".

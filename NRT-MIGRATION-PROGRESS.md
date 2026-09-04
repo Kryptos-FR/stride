@@ -46,14 +46,42 @@ Branch: `feature/core-nullable-annotations`. Skill: `dotnet-upgrade:migrate-null
       CS8604 passing `node`/`currentEvent` into `YamlException`). All fall inside files already
       slated for the Serialization/* and Serialization/Serializers/* passes below — left alone,
       will be fixed when those files' turn comes.
+  - **Cluster 3 (Schemas/\*)**: `IYamlSchema.cs`, `SchemaBase.cs`, `FailsafeSchema.cs`,
+    `JsonSchema.cs`, `CoreSchema.cs`, `ExtendedSchema.cs`. Fixed, verified 0 warnings in all 6
+    files. Not yet committed.
+    - **Public interface `IYamlSchema` widened** (unambiguous from existing code, not asked —
+      every widened member already had an explicit `if (x == null) return null;`/`TryGetValue`-into-return
+      pattern in `SchemaBase`'s implementation, so the non-nullable signature was already
+      inaccurate): `ExpandTag`/`ShortenTag` (param + return → `?`), `GetDefaultTag(NodeEvent)` and
+      `GetDefaultTag(Type)` (return → `?`), `IsTagImplicit` (param → `?`), `TryParse` (both
+      overloads: `out defaultTag`/`out value` → `?`), `GetTypeForDefaultTag` (param + return → `?`).
+      `RegisterTag` unchanged (already guarded with `ArgumentNullException`, guards kept).
+      `FailsafeSchema.TryParse` override updated to match.
+    - `SchemaBase`'s private nested `ScalarResolutionRule`: `Decoder` return → `object?` (the
+      `"!!null"` rule genuinely decodes to CLR `null` by design); `Encoder` field → `Func<object,
+      string>?` (the non-generic `AddScalarRule(Type[], ...)` overload is called with a literal
+      `null` encoder in three places). `Encode(object)` dereferences `Encoder!` — pre-existing
+      contract is "call only after `HasEncoder()`", not enforced by the compiler; not fixed here
+      (would be a behavior change, not an annotation).
+    - `AddScalarRule<T>`'s `encode` param → `Func<T, string>?`; its internal wrapper lambda uses
+      `encode!` — the wrapper is stored unconditionally regardless of whether `encode` was null
+      (pre-existing latent bug: `Encode()` would NRE if ever called on such a rule — not fixed,
+      zero-behavior-change).
+    - Three `AddScalarRule<object>("!!null", ..., m => null, null)` call sites (`CoreSchema.cs`,
+      `ExtendedSchema.cs`, `JsonSchema.cs`) → `AddScalarRule<object?>(...)` so the null-literal
+      decode lambda type-checks without hiding the null.
+    - **Ripple effect (expected, not fixed here):** widening `IYamlSchema` surfaces new warnings
+      in not-yet-migrated consumers — `TagTypeSerializer.cs:102,106`, `SerializerContext.cs:222`,
+      `PrimitiveSerializer.cs:99,100,154,156`, `YamlAssemblyRegistry.cs:199,207`. All fall inside
+      files already slated for the Serialization/*, Serialization/Serializers/*, or
+      `YamlAssemblyRegistry.cs` passes below.
 
-## Not started (~330 warnings, ~45 files)
+## Not started (~280 warnings, ~40 files)
 
 Planned order (small/foundational → large):
 
 1. ~~Finish Cluster 2 above.~~ Done.
-2. **Schemas/\*** (~50 warnings): `SchemaBase.cs` (14), `ExtendedSchema.cs` (15), `CoreSchema.cs`
-   (11), `JsonSchema.cs` (9), `FailsafeSchema.cs` (1).
+2. ~~**Schemas/\***~~ Done.
 3. **Serialization/\* small types** (~57 warnings): `ObjectContext.cs`, `EventInfo.cs`,
    `YamlMappingNode.cs`, `YamlNode.cs`, `YamlScalarNode.cs`, `YamlNodeIdentityEqualityComparer.cs`,
    `YamlAliasNode.cs`, `YamlSequenceNode.cs`, `YamlDocument.cs`, `IdentityEqualityComparer.cs`,

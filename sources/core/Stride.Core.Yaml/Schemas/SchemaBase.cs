@@ -87,25 +87,25 @@ namespace Stride.Core.Yaml.Schemas
         /// </summary>
         public const string StrLongTag = "tag:yaml.org,2002:str";
 
-        public string ExpandTag(string shortTag)
+        public string? ExpandTag(string? shortTag)
         {
             if (shortTag == null)
                 return null;
 
-            string tagExpanded;
+            string? tagExpanded;
             return shortTagToLongTag.TryGetValue(shortTag, out tagExpanded) ? tagExpanded : shortTag;
         }
 
-        public string ShortenTag(string longTag)
+        public string? ShortenTag(string? longTag)
         {
             if (longTag == null)
                 return null;
 
-            string tagShortened;
+            string? tagShortened;
             return longTagToShortTag.TryGetValue(longTag, out tagShortened) ? tagShortened : longTag;
         }
 
-        public string GetDefaultTag(NodeEvent nodeEvent)
+        public string? GetDefaultTag(NodeEvent nodeEvent)
         {
             EnsureScalarRules();
 
@@ -127,8 +127,8 @@ namespace Stride.Core.Yaml.Schemas
             var scalar = nodeEvent as Scalar;
             if (scalar != null)
             {
-                object value;
-                string tag;
+                object? value;
+                string? tag;
                 TryParse(scalar, false, out tag, out value);
                 return tag;
             }
@@ -136,18 +136,18 @@ namespace Stride.Core.Yaml.Schemas
             throw new NotSupportedException($"NodeEvent [{nodeEvent.GetType().FullName}] not supported");
         }
 
-        public string GetDefaultTag(Type type)
+        public string? GetDefaultTag(Type type)
         {
             if (type == null)
                 throw new ArgumentNullException("type");
             EnsureScalarRules();
 
-            string defaultTag;
+            string? defaultTag;
             mapTypeToShortTag.TryGetValue(type, out defaultTag);
             return defaultTag;
         }
 
-        public bool IsTagImplicit(string tag)
+        public bool IsTagImplicit(string? tag)
         {
             if (tag == null)
             {
@@ -191,7 +191,7 @@ namespace Stride.Core.Yaml.Schemas
         /// <returns>The default tag for a seq.</returns>
         protected abstract string GetDefaultTag(SequenceStart nodeEvent);
 
-        public virtual bool TryParse(Scalar scalar, bool parseValue, out string defaultTag, out object value)
+        public virtual bool TryParse(Scalar scalar, bool parseValue, out string? defaultTag, out object? value)
         {
             if (scalar == null)
                 throw new ArgumentNullException("scalar");
@@ -239,7 +239,7 @@ namespace Stride.Core.Yaml.Schemas
             return false;
         }
 
-        public bool TryParse(Scalar scalar, Type type, out object value)
+        public bool TryParse(Scalar scalar, Type type, out object? value)
         {
             if (scalar == null)
                 throw new ArgumentNullException("scalar");
@@ -260,7 +260,7 @@ namespace Stride.Core.Yaml.Schemas
             // Parse only values if we have some rules
             if (mapTypeToScalarResolutionRuleList.Count > 0)
             {
-                List<ScalarResolutionRule> rules;
+                List<ScalarResolutionRule>? rules;
                 if (mapTypeToScalarResolutionRuleList.TryGetValue(type, out rules))
                 {
                     foreach (var rule in rules)
@@ -279,14 +279,14 @@ namespace Stride.Core.Yaml.Schemas
             return false;
         }
 
-        public Type GetTypeForDefaultTag(string shortTag)
+        public Type? GetTypeForDefaultTag(string? shortTag)
         {
             if (shortTag == null)
             {
                 return null;
             }
 
-            Type type;
+            Type? type;
             mapShortTagToType.TryGetValue(shortTag, out type);
             return type;
         }
@@ -319,17 +319,24 @@ namespace Stride.Core.Yaml.Schemas
         /// Add( ... );
         /// EndUpdate();   // automaticall invoke internal calculation method
         ///   </code></example>
-        protected void AddScalarRule<T>(string tag, string regex, Func<Match, T> decode, Func<T, string> encode)
+        protected void AddScalarRule<T>(string tag, string regex, Func<Match, T> decode, Func<T, string>? encode)
         {
-            // Make sure the tag is expanded to its long form
-            var longTag = ShortenTag(tag);
-            scalarTagResolutionRules.Add(new ScalarResolutionRule(longTag, regex, m => decode(m), m => encode((T) m), typeof(T)));
+            // Make sure the tag is expanded to its long form.
+            // tag is always a non-null literal at every call site, so ShortenTag (whose return is
+            // nullable only for a null input) never actually returns null here.
+            var longTag = ShortenTag(tag)!;
+            // encode may be null (callers pass null when no encoder is needed); the wrapper below is
+            // still stored unconditionally to preserve the pre-existing behavior of this method, so
+            // Encode() would NRE if ever called on a rule registered without an encoder.
+            scalarTagResolutionRules.Add(new ScalarResolutionRule(longTag, regex, m => decode(m), m => encode!((T) m), typeof(T)));
         }
 
-        protected void AddScalarRule(Type[] types, string tag, string regex, Func<Match, object> decode, Func<object, string> encode)
+        protected void AddScalarRule(Type[] types, string tag, string regex, Func<Match, object> decode, Func<object, string>? encode)
         {
-            // Make sure the tag is expanded to its long form
-            var longTag = ShortenTag(tag);
+            // Make sure the tag is expanded to its long form.
+            // tag is always a non-null literal at every call site, so ShortenTag (whose return is
+            // nullable only for a null input) never actually returns null here.
+            var longTag = ShortenTag(tag)!;
             scalarTagResolutionRules.Add(new ScalarResolutionRule(longTag, regex, decode, encode, types));
         }
 
@@ -429,7 +436,7 @@ namespace Stride.Core.Yaml.Schemas
 
         private class ScalarResolutionRule
         {
-            public ScalarResolutionRule(string shortTag, string regex, Func<Match, object> decoder, Func<object, string> encoder, params Type[] types)
+            public ScalarResolutionRule(string shortTag, string regex, Func<Match, object?> decoder, Func<object, string>? encoder, params Type[] types)
             {
                 Tag = shortTag;
                 PatternSource = regex;
@@ -440,21 +447,23 @@ namespace Stride.Core.Yaml.Schemas
             }
 
             private readonly Type[] types;
-            private readonly Func<Match, object> Decoder;
-            private readonly Func<object, string> Encoder;
+            private readonly Func<Match, object?> Decoder;
+            private readonly Func<object, string>? Encoder;
 
             public string Tag { get; protected set; }
             public Regex Pattern { get; protected set; }
             public string PatternSource { get; protected set; }
 
-            public object Decode(Match m)
+            public object? Decode(Match m)
             {
                 return Decoder(m);
             }
 
             public string Encode(object obj)
             {
-                return Encoder(obj);
+                // Callers must check HasEncoder() first; Encoder is genuinely null for rules
+                // registered without an encoder (pre-existing contract, not enforced by the compiler).
+                return Encoder!(obj);
             }
 
             public Type[] GetTypeOfValue()

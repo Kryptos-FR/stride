@@ -89,7 +89,7 @@ namespace Stride.Core.Yaml.Schemas
 
         protected override void PrepareScalarRules()
         {
-            AddScalarRule<object>("!!null", @"null|Null|NULL|\~|", m => null, null);
+            AddScalarRule<object?>("!!null", @"null|Null|NULL|\~|", m => null, null);
             AddScalarRule(new Type[] {typeof(ulong), typeof(long), typeof(int)}, "!!int", @"([-+]?(0|[1-9][0-9_]*))", DecodeInteger, null);
             AddScalarRule<int>("!!int", @"([-+]?)0b([01_]+)", m =>
             {

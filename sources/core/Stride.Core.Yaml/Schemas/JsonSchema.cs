@@ -112,7 +112,7 @@ namespace Stride.Core.Yaml.Schemas
         protected override void PrepareScalarRules()
         {
             // 10.2.1.1. Null
-            AddScalarRule<object>("!!null", @"null", m => null, null);
+            AddScalarRule<object?>("!!null", @"null", m => null, null);
 
             // 10.2.1.2. Boolean
             AddScalarRule<bool>("!!bool", @"true", m => true, null);
