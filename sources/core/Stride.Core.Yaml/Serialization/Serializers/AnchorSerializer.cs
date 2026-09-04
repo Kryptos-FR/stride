@@ -124,15 +124,16 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             if (isAnchorable)
             {
                 string alias;
-                if (objectToAlias.TryGetValue(value, out alias))
+                // isAnchorable is only true when value != null (checked above).
+                if (objectToAlias.TryGetValue(value!, out alias))
                 {
-                    objectContext.Writer.Emit(new AliasEventInfo(value, value.GetType()) {Alias = alias});
+                    objectContext.Writer.Emit(new AliasEventInfo(value, value!.GetType()) {Alias = alias});
                     return;
                 }
                 else
                 {
                     alias = string.Format("o{0}", objectContext.SerializerContext.AnchorCount);
-                    objectToAlias.Add(value, alias);
+                    objectToAlias.Add(value!, alias);
 
                     objectContext.Anchor = alias;
                     objectContext.SerializerContext.AnchorCount++;

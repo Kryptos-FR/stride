@@ -133,7 +133,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
 
             if (type == null)
             {
-                type = value.GetType();
+                // The check above throws unless type != null || value != null; type is null here, so value isn't.
+                type = value!.GetType();
             }
             else if (typeFromTag != null && value != null && value.GetType() != typeFromTag)
             {

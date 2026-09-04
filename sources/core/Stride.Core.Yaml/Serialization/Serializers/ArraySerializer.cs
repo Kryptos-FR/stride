@@ -65,7 +65,8 @@ namespace Stride.Core.Yaml.Serialization.Serializers
             var arrayDescriptor = (ArrayDescriptor) objectContext.Descriptor;
 
             bool isArray = objectContext.Instance != null && objectContext.Instance.GetType().IsArray;
-            var arrayList = (IList) objectContext.Instance;
+            // arrayList is only dereferenced below when isArray is true, which implies Instance != null.
+            var arrayList = (IList) objectContext.Instance!;
 
             reader.Expect<SequenceStart>();
             int index = 0;

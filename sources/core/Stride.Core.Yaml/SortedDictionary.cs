@@ -1241,7 +1241,8 @@ namespace Stride.Core.Yaml
                             // update sibling, this is necessary for following processing
                             sibling = (parent.Left == current) ? parent.Right : parent.Left;
                         }
-                        Debug.Assert(sibling != null || sibling.IsRed == false,
+                        // TODO: condition reads as an OR where the message implies AND; not a nullable-migration concern, left as-is.
+                        Debug.Assert(sibling != null || sibling!.IsRed == false,
                             "sibling must not be null and it must be black!");
 
                         if (Is2Node(sibling))
@@ -1282,7 +1283,8 @@ namespace Stride.Core.Yaml
                                     break;
                             }
 
-                            newGrandParent.IsRed = parent.IsRed;
+                            // RotationNeeded only returns the four rotations handled above, so newGrandParent is always set.
+                            newGrandParent!.IsRed = parent.IsRed;
                             parent.IsRed = false;
                             current.IsRed = true;
                             ReplaceChildOfNodeOrRoot(grandParent, parent, newGrandParent);
@@ -1445,7 +1447,7 @@ namespace Stride.Core.Yaml
             {
                 Debug.Assert(parentOfSuccesor != null, "parent of successor cannot be null!");
                 Debug.Assert(succesor.Left == null, "Left child of succesor must be null!");
-                Debug.Assert((succesor.Right == null && succesor.IsRed) || (succesor.Right.IsRed && !succesor.IsRed),
+                Debug.Assert((succesor.Right == null && succesor.IsRed) || (succesor.Right!.IsRed && !succesor.IsRed),
                     "Succesor must be in valid state");
                 if (succesor.Right != null)
                 {

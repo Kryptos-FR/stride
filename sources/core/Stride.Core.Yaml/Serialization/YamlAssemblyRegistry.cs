@@ -312,7 +312,8 @@ namespace Stride.Core.Yaml.Serialization
                 if (assemblyName != null)
                 {
                     // Check that assembly name match, by comparing up to the first comma
-                    var assemblyFullName = assembly.FullName;
+                    // FullName is null only for dynamic assemblies, never for the loaded assemblies looked up here.
+                    var assemblyFullName = assembly.FullName!;
                     if (string.Compare(assemblyFullName, 0, assemblyName, 0, assemblyName.Length) != 0
                         || !(assemblyFullName.Length == assemblyName.Length || assemblyFullName[assemblyName.Length] == ','))
                     {
@@ -444,7 +445,8 @@ namespace Stride.Core.Yaml.Serialization
             {
                 if (type.GetArrayRank() != 1)
                     throw new NotSupportedException("Multi-dimensional arrays are not supported.");
-                type = type.GetElementType();
+                // GetElementType() is only null for non-array/pointer types; the loop condition guarantees an array type.
+                type = type.GetElementType()!;
                 ++arrayNesting;
             }
             // nested declaring types
@@ -491,7 +493,8 @@ namespace Stride.Core.Yaml.Serialization
         /// <returns>The qualified name of the assembly, but without the assembly version or public token.</returns>
         private static string GetShortAssemblyName(Assembly assembly)
         {
-            var assemblyName = assembly.FullName;
+            // FullName is null only for dynamic assemblies, never for the loaded assemblies looked up here.
+            var assemblyName = assembly.FullName!;
             var indexAfterAssembly = assemblyName.IndexOf(',');
             if (indexAfterAssembly >= 0)
             {
