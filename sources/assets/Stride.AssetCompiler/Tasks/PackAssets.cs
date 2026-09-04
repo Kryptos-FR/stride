@@ -1,6 +1,8 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+#nullable enable
+
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 using System;
@@ -17,20 +19,21 @@ namespace Stride.AssetCompiler.Tasks
 {
     public static class PackAssetsHelper
     {
-        public static bool Run(Core.Diagnostics.Logger logger, string projectFile, string intermediatePackagePath, List<(string SourcePath, string PackagePath)> generatedItems, IReadOnlyList<string> assetAssemblies = null, string assetNamespace = null)
+        public static bool Run(Core.Diagnostics.Logger logger, string projectFile, string intermediatePackagePath, List<(string SourcePath, string PackagePath)> generatedItems, IReadOnlyList<string>? assetAssemblies = null, string? assetNamespace = null)
         {
+            // Load() returns null only if projectFile can't be parsed as a package; not currently guarded here.
             var package = Package.Load(logger, projectFile, new PackageLoadParameters()
             {
                 AutoCompileProjects = false,
                 LoadAssemblyReferences = false,
                 AutoLoadTemporaryAssets = false,
-            });
+            })!;
 
             var outputPath = new UDirectory(new FileInfo(intermediatePackagePath).FullName);
             var newPackage = new Package
             {
                 Meta = package.Meta,
-                FullPath = UPath.Combine(outputPath, (UFile)package.FullPath.GetFileName()),
+                FullPath = UPath.Combine(outputPath, (UFile)package.FullPath.GetFileName()!),
             };
 
             var resourceOutputPath = UPath.Combine(outputPath, (UDirectory)"Resources");
@@ -42,7 +45,7 @@ namespace Stride.AssetCompiler.Tasks
                 generatedItems.Add((targetFilePath.ToOSPath(), UPath.Combine("stride", targetFilePath.MakeRelative(outputPath)).ToOSPath()));
             }
 
-            void TryCopyDirectory(UDirectory sourceDirectory, UDirectory targetDirectory, string exclude = null)
+            void TryCopyDirectory(UDirectory sourceDirectory, UDirectory targetDirectory, string? exclude = null)
             {
                 var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
                 matcher.AddInclude("**/*.*");
@@ -114,7 +117,8 @@ namespace Stride.AssetCompiler.Tasks
                     try
                     {
                         var assetDirectory = asset.FilePath.GetFullDirectory();
-                        Directory.CreateDirectory(Path.GetDirectoryName(outputFile));
+                        // outputFile is always under assetOutputPath, so it always has a parent directory.
+                        Directory.CreateDirectory(Path.GetDirectoryName(outputFile)!);
 
                         var parsingEvents = new List<ParsingEvent>();
 
@@ -137,7 +141,7 @@ namespace Stride.AssetCompiler.Tasks
                                         if (!resourcesSourceToTarget.TryGetValue(sourceResourcePath, out var targetResourcePath))
                                         {
                                             // This file was not stored in resource, copy it manually
-                                            targetResourcePath = UPath.Combine(resourceOutputPath, (UFile)sourceResourcePath.GetFileName());
+                                            targetResourcePath = UPath.Combine(resourceOutputPath, (UFile)sourceResourcePath.GetFileName()!);
                                             TryCopyResource(sourceResourcePath, targetResourcePath);
                                         }
                                         var newValue = targetResourcePath.MakeRelative(outputFile.GetFullDirectory());
@@ -235,7 +239,7 @@ namespace Stride.AssetCompiler.Tasks
             if (assetAssemblies != null)
             {
                 // The TFM is the path segment right after "lib".
-                static string TargetFrameworkFromPath(string libRelativePath)
+                static string? TargetFrameworkFromPath(string libRelativePath)
                 {
                     var parts = libRelativePath.Split('/');
                     for (var i = 0; i < parts.Length - 1; i++)

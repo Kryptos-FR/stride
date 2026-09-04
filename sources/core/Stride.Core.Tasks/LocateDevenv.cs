@@ -15,7 +15,7 @@ namespace Stride.Core.Tasks
     public class LocateDevenv : Task
     {
         [Output]
-        public String DevenvPath { get; set; }
+        public String? DevenvPath { get; set; }
 
         public override bool Execute()
         {
@@ -23,7 +23,7 @@ namespace Stride.Core.Tasks
             return DevenvPath != null;
         }
 
-        internal static string FindDevenv(string msbuildPath)
+        internal static string? FindDevenv(string? msbuildPath)
         {
             var setupConfiguration = new SetupConfiguration() as ISetupConfiguration2;
 
@@ -35,12 +35,12 @@ namespace Stride.Core.Tasks
                 ?? EnumerateNewestDevenv(setupConfiguration);
         }
 
-        private static ISetupInstance TryGet(Func<ISetupInstance> get)
+        private static ISetupInstance? TryGet(Func<ISetupInstance> get)
         {
             try { return get(); } catch { return null; }
         }
 
-        private static string DevenvFrom(ISetupInstance instance)
+        private static string? DevenvFrom(ISetupInstance? instance)
         {
             if (instance == null) return null;
             try
@@ -51,20 +51,20 @@ namespace Stride.Core.Tasks
             catch { return null; }
         }
 
-        private static string EnumerateNewestDevenv(ISetupConfiguration2 setupConfiguration)
+        private static string? EnumerateNewestDevenv(ISetupConfiguration2 setupConfiguration)
         {
             try
             {
                 var e = setupConfiguration.EnumAllInstances();
                 var batch = new ISetupInstance[1];
-                string best = null, bestVersion = null;
+                string? best = null, bestVersion = null;
                 while (true)
                 {
                     e.Next(1, batch, out int fetched);
                     if (fetched == 0) break;
                     var path = DevenvFrom(batch[0]);
                     if (path == null) continue;
-                    string version = null;
+                    string? version = null;
                     try { version = batch[0].GetInstallationVersion(); } catch { }
                     if (bestVersion == null || string.CompareOrdinal(version, bestVersion) > 0)
                     {

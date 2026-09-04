@@ -47,9 +47,10 @@ namespace Stride.Core.Tasks
                 +
                 String.Format(
                     "{0}.{1}.{2}",
-                    typeof(Program).Assembly.GetName().Version.Major,
-                    typeof(Program).Assembly.GetName().Version.Minor,
-                    typeof(Program).Assembly.GetName().Version.Build) + string.Empty,
+                    // The executing assembly always carries version metadata.
+                    typeof(Program).Assembly.GetName().Version!.Major,
+                    typeof(Program).Assembly.GetName().Version!.Minor,
+                    typeof(Program).Assembly.GetName().Version!.Build) + string.Empty,
                 string.Format("Usage: {0} command [options]*", exeName),
                 string.Empty,
                 "=== Commands ===",

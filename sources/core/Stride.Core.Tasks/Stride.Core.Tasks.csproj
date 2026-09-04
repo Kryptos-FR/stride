@@ -6,6 +6,7 @@
     <TargetFramework>$(StrideXplatEditorTargetFramework)</TargetFramework>
     <StrideOutputPath>bin\$(Configuration)\</StrideOutputPath>
     <StartupObject />
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
