@@ -19,39 +19,39 @@ Branch: `feature/core-nullable-annotations`. Skill: `dotnet-upgrade:migrate-null
     `SequenceStart.cs`. Fixed, verified 0 warnings. Commit `17b58f1cf`.
     Pattern: `anchor`/`tag` are genuinely optional (ctors null-check for emptiness, not nullness);
     `DocumentStart.version`/`tags` optional for implicit documents.
-
-## In progress — Cluster 2 (Tokens/\* + small root files), NOT yet edited or committed
-
-Analyzed, fixes identified but not applied:
-
-- `Tokens/VersionDirective.cs` (2 warnings): `Equals(object obj)` → `Equals(object? obj)`
-  (CS8765); `VersionDirective other = obj as VersionDirective;` → `VersionDirective? other = ...`
-  (CS8600).
-- `Tokens/TagDirective.cs` (2 warnings): same two patterns (`Equals(object?)`, `as`-cast to
-  nullable local).
-- `YamlException.cs` (3 warnings): ctor defaults `string message = null, Exception inner = null`
-  → `string? message = null, Exception? inner = null`; second ctor's
-  `Exception innerException = null` → `Exception? innerException = null`. Third ctor
-  (`ParsingEvent node, Exception innerException`, no default) left non-null — never defaulted.
-- `Version.cs` (2 warnings): same `Equals(object?)` + `as`-cast-to-nullable-local pattern.
-- `MemoryParser.cs` (2 warnings): `current` field is genuinely nullable (`Position` setter
-  assigns `null` explicitly at line 33) → **open design question**: `IParser.Current` interface
-  property (`sources/core/Stride.Core.Yaml/IParser.cs:58`) is currently declared
-  `ParsingEvent Current { get; }` (non-nullable). Widening `MemoryParser.Current` to
-  `ParsingEvent?` without widening the interface causes CS8767 (implementation nullability
-  mismatch). Likely the interface itself needs `ParsingEvent? Current { get; }` — check how
-  `Parser.cs`, `Scanner.cs`-derived parsers, and `EventReader.cs` consume `Current` before
-  deciding (two-phase-init pattern: null before first `MoveNext()`).
-- `EventReader.cs` (2 warnings): not yet mapped to specific lines/fixes. `Allow<T>`/`Peek<T>`
-  (`T : Event`, unconstrained-ish generic) `return null;` when not accepted — per skill guidance
-  this wants `[return: MaybeNull] T` rather than `T?` (T is constrained to a reference type here
-  via `where T : Event`, so `T?` may actually be fine too — decide when fixing).
+  - **Cluster 2 (Tokens/\* + small root files)**: `Tokens/VersionDirective.cs`,
+    `Tokens/TagDirective.cs`, `YamlException.cs`, `Version.cs`, `MemoryParser.cs`,
+    `EventReader.cs`, `IParser.cs`. Fixed, verified 0 warnings in all 7 files. Not yet committed.
+    - `Equals(object obj)` → `Equals(object? obj)` + `as`-cast target to nullable local
+      (`VersionDirective`, `TagDirective`, `Version`).
+    - `YamlException`: optional ctor params (`message`, `inner`, `innerException`) → `?`. Third
+      ctor (`ParsingEvent node, Exception innerException`, no default) left non-null —
+      dereferences `node` unconditionally, never defaulted.
+    - **`IParser.Current` widened to `ParsingEvent?`** (user-confirmed public API change, logged
+      below) — both implementations (`Parser.current` field, `MemoryParser.current` field) are
+      genuinely null before the first `MoveNext()`/at end of stream. `MemoryParser.Current`
+      updated to match (`ParsingEvent?`). `Parser.cs` itself left untouched (deferred to its own
+      "big files" pass — a non-nullable override of a nullable interface member is valid C#, so
+      no warning forces the change yet).
+    - `EventReader.Allow<T>`/`Peek<T>` (`where T : Event`, so `T` is reference-type-constrained)
+      → return type widened to `T?`; cast from `parser.Current` uses `!` with a comment (`Accept<T>`
+      already confirmed the type/non-nullness, compiler can't see across the method boundary).
+      `Expect<T>` binds `parser.Current!` to a local once (pre-existing implicit assumption:
+      `EventReader` ctor calls `MoveNext()` once) instead of repeating `!` per access.
+      `ReadCurrent`'s `events.Add(Allow<Event>())` → `Allow<Event>()!` (null only possible at end
+      of stream, pre-existing behavior unchanged).
+    - **Ripple effect (expected, not fixed here):** widening `IParser.Current` surfaces a few new
+      warnings in not-yet-migrated consumers (`ObjectSerializer.cs:329`, `DictionarySerializer.cs:163`
+      CS8602; `ArraySerializer.cs:145`, `DefaultObjectSerializerBackend.cs:188`, `Serializer.cs:530`
+      CS8604 passing `node`/`currentEvent` into `YamlException`). All fall inside files already
+      slated for the Serialization/* and Serialization/Serializers/* passes below — left alone,
+      will be fixed when those files' turn comes.
 
 ## Not started (~330 warnings, ~45 files)
 
 Planned order (small/foundational → large):
 
-1. Finish Cluster 2 above.
+1. ~~Finish Cluster 2 above.~~ Done.
 2. **Schemas/\*** (~50 warnings): `SchemaBase.cs` (14), `ExtendedSchema.cs` (15), `CoreSchema.cs`
    (11), `JsonSchema.cs` (9), `FailsafeSchema.cs` (1).
 3. **Serialization/\* small types** (~57 warnings): `ObjectContext.cs`, `EventInfo.cs`,

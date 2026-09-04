@@ -86,9 +86,9 @@ namespace Stride.Core.Yaml.Tokens
         /// <returns>
         /// true if the specified System.Object is equal to the current System.Object; otherwise, false.
         /// </returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            VersionDirective other = obj as VersionDirective;
+            VersionDirective? other = obj as VersionDirective;
             return other != null && version.Equals(other.version);
         }
 

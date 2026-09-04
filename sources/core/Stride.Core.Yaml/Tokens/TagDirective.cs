@@ -118,9 +118,9 @@ namespace Stride.Core.Yaml.Tokens
         /// <returns>
         /// true if the specified System.Object is equal to the current System.Object; otherwise, false.
         /// </returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            TagDirective other = obj as TagDirective;
+            TagDirective? other = obj as TagDirective;
             return other != null && handle.Equals(other.handle) && prefix.Equals(other.prefix);
         }
 

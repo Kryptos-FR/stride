@@ -9,7 +9,7 @@ namespace Stride.Core.Yaml
     {
         private readonly IList<ParsingEvent> parsingEvents;
         private int position = -1;
-        private ParsingEvent current;
+        private ParsingEvent? current;
 
         public MemoryParser(IList<ParsingEvent> parsingEvents)
         {
@@ -19,7 +19,7 @@ namespace Stride.Core.Yaml
         public IList<ParsingEvent> ParsingEvents => parsingEvents;
 
         /// <inheritdoc/>
-        public ParsingEvent Current => current;
+        public ParsingEvent? Current => current;
 
         /// <inheritdoc/>
         public bool IsEndOfStream => position >= parsingEvents.Count;

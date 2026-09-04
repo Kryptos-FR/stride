@@ -65,7 +65,7 @@ namespace Stride.Core.Yaml
         /// <summary>
         /// Initializes a new instance of the <see cref="YamlException"/> class.
         /// </summary>
-        public YamlException(string message = null, Exception inner = null)
+        public YamlException(string? message = null, Exception? inner = null)
             : base(message, inner)
         {
         }
@@ -73,7 +73,7 @@ namespace Stride.Core.Yaml
         /// <summary>
         /// Initializes a new instance of the <see cref="YamlException"/> class.
         /// </summary>
-        public YamlException(Mark start, Mark end, string message, Exception innerException = null)
+        public YamlException(Mark start, Mark end, string message, Exception? innerException = null)
             : base($"{message} (({start.ToString()}) -> ({end.ToString()}))", innerException)
         {
             Start = start;

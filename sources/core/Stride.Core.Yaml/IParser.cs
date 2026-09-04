@@ -55,7 +55,7 @@ namespace Stride.Core.Yaml
         /// <summary>
         /// Gets the current event.
         /// </summary>
-        ParsingEvent Current { get; }
+        ParsingEvent? Current { get; }
 
         /// <summary>
         /// True if end of stream has been reached, false otherwise.

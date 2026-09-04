@@ -90,16 +90,19 @@ namespace Stride.Core.Yaml
             if (yamlEvent == null)
             {
                 // TODO: Throw a better exception
+                // parser.Current is assumed non-null here: EventReader always calls MoveNext() at least
+                // once (in its constructor) before Expect<T> can be reached.
+                var current = parser.Current!;
                 throw new YamlException(
-                    parser.Current.Start,
-                    parser.Current.End,
+                    current.Start,
+                    current.End,
                     string.Format(
                         CultureInfo.InvariantCulture,
                         "Expected '{0}', got '{1}' (at line {2}, character {3}).",
                         typeof(T).Name,
-                        parser.Current.GetType().Name,
-                        parser.Current.Start.Line,
-                        parser.Current.Start.Column
+                        current.GetType().Name,
+                        current.Start.Line,
+                        current.Start.Column
                         )
                     );
             }
@@ -135,13 +138,14 @@ namespace Stride.Core.Yaml
         /// </summary>
         /// <typeparam name="T">Type of the <see cref="Event"/>.</typeparam>
         /// <returns>Returns the current event if it is of type T; otherwise returns null.</returns>
-        public T Allow<T>() where T : Event
+        public T? Allow<T>() where T : Event
         {
             if (!Accept<T>())
             {
                 return null;
             }
-            T yamlEvent = (T) parser.Current;
+            // Accept<T> already confirmed parser.Current is a non-null T.
+            T yamlEvent = (T) parser.Current!;
             MoveNext();
             return yamlEvent;
         }
@@ -151,13 +155,14 @@ namespace Stride.Core.Yaml
         /// </summary>
         /// <typeparam name="T">Type of the <see cref="Event"/>.</typeparam>
         /// <returns>Returns the current event if it is of type T; otherwise returns null.</returns>
-        public T Peek<T>() where T : Event
+        public T? Peek<T>() where T : Event
         {
             if (!Accept<T>())
             {
                 return null;
             }
-            T yamlEvent = (T) parser.Current;
+            // Accept<T> already confirmed parser.Current is a non-null T.
+            T yamlEvent = (T) parser.Current!;
             return yamlEvent;
         }
 
@@ -176,7 +181,8 @@ namespace Stride.Core.Yaml
                     --depth;
                 }
 
-                events.Add(Allow<Event>());
+                // Allow<Event> only returns null at end of stream; events is never read past endOfStream.
+                events.Add(Allow<Event>()!);
             } while (depth > 0 && !endOfStream);
         }
 

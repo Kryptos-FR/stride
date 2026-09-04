@@ -82,9 +82,9 @@ namespace Stride.Core.Yaml
         /// <returns>
         /// true if the specified System.Object is equal to the current System.Object; otherwise, false.
         /// </returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            Version other = obj as Version;
+            Version? other = obj as Version;
             return other != null && major == other.major && minor == other.minor;
         }
 
