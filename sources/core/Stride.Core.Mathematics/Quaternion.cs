@@ -214,7 +214,7 @@ public struct Quaternion : IEquatable<Quaternion>, ISpanFormattable
             if (length < MathUtil.ZeroTolerance)
                 return Vector3.UnitX;
 
-            float inv = 1.0f / length;
+            float inv = 1.0f / MathF.Sqrt(length);
             return new Vector3(X * inv, Y * inv, Z * inv);
         }
     }

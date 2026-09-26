@@ -1013,9 +1013,9 @@ public class TestQuaternion
         Assert.False(float.IsNaN(axis.Y));
         Assert.False(float.IsNaN(axis.Z));
 
-        // Verify axis length is approximately 1 (allowing for non-normalized in some cases)
+        // The axis is a unit vector.
         var axisLength = axis.Length();
-        Assert.InRange(axisLength, 0.9f, 1.5f); // Allow some tolerance
+        Assert.Equal(1f, axisLength, 4);
     }
 
     [Fact]
@@ -1176,9 +1176,9 @@ public class TestQuaternion
 
         Assert.Equal(angle, q.Angle, 4);
 
-        // The Axis property is not guaranteed to return a unit vector, but its direction
-        // should still match the axis that was used to build the quaternion.
-        var extractedDirection = Vector3.Normalize(q.Axis);
+        // The Axis property returns a unit vector matching the axis used to build the quaternion.
+        var extractedDirection = q.Axis;
+        Assert.Equal(1f, extractedDirection.Length(), 4);
         Assert.Equal(axis.X, extractedDirection.X, 3);
         Assert.Equal(axis.Y, extractedDirection.Y, 3);
         Assert.Equal(axis.Z, extractedDirection.Z, 3);
