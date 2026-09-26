@@ -357,16 +357,17 @@ public class TestVector4
     {
         var value = new Vector4(5.0f, 5.0f, 5.0f, 5.0f);
         var min = new Vector4(10.0f, 10.0f, 10.0f, 10.0f);
-        var max = new Vector4(0.0f, 0.0f, 0.0f, 0.0f); // max < min (invalid)
+        var max = new Vector4(1.0f, 1.0f, 1.0f, 1.0f); // max < min (invalid)
 
         // Behavior with inverted min/max - implementation clamps to min first
         var result = Vector4.Clamp(value, min, max);
 
-        // Implementation clamps to min first, so result is min
-        Assert.Equal(10.0f, result.X);
-        Assert.Equal(10.0f, result.Y);
-        Assert.Equal(10.0f, result.Z);
-        Assert.Equal(10.0f, result.W);
+        // Implementation clamps to min first, so result is max
+        // note: follows HLSL convention
+        Assert.Equal(1.0f, result.X);
+        Assert.Equal(1.0f, result.Y);
+        Assert.Equal(1.0f, result.Z);
+        Assert.Equal(1.0f, result.W);
     }
 
     [Fact]
