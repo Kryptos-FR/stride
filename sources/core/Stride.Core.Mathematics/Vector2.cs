@@ -107,8 +107,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="values"/> contains more or less than two elements.</exception>
     public Vector2(float[] values)
     {
-        if (values == null)
-            throw new ArgumentNullException(nameof(values));
+        ArgumentNullException.ThrowIfNull(values);
         if (values.Length != 2)
             throw new ArgumentOutOfRangeException(nameof(values), "There must be two and only two input values for Vector2.");
 
@@ -119,10 +118,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <summary>
     /// Gets a value indicting whether this instance is normalized.
     /// </summary>
-    public bool IsNormalized
-    {
-        get { return MathF.Abs((X * X) + (Y * Y) - 1f) < MathUtil.ZeroTolerance; }
-    }
+    public readonly bool IsNormalized => float.Abs(LengthSquared() - 1f) < MathUtil.ZeroTolerance;
 
     /// <summary>
     /// Gets or sets the component at the specified index.
@@ -133,17 +129,15 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <exception cref="System.ArgumentOutOfRangeException">Thrown when the <paramref name="index"/> is out of the range [0, 1].</exception>
     public float this[int index]
     {
-        get
+        readonly get
         {
-            switch (index)
+            return index switch
             {
-                case 0: return X;
-                case 1: return Y;
-            }
-
-            throw new ArgumentOutOfRangeException(nameof(index), "Indices for Vector2 run from 0 to 1, inclusive.");
+                0 => X,
+                1 => Y,
+                _ => throw new ArgumentOutOfRangeException(nameof(index), "Indices for Vector2 run from 0 to 1, inclusive."),
+            };
         }
-
         set
         {
             switch (index)
@@ -159,19 +153,13 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// Casts from System.Numerics to Stride.Maths vectors
     /// </summary>
     /// <param name="v">Value to cast</param>
-    public static implicit operator Vector2(System.Numerics.Vector2 v)
-    {
-        return Unsafe.BitCast<System.Numerics.Vector2, Vector2>(v);
-    }
+    public static implicit operator Vector2(System.Numerics.Vector2 v) => Unsafe.BitCast<System.Numerics.Vector2, Vector2>(v);
 
     /// <summary>
     /// Casts from Stride.Maths to System.Numerics vectors
     /// </summary>
     /// <param name="v">Value to cast</param>
-    public static implicit operator System.Numerics.Vector2(Vector2 v)
-    {
-        return Unsafe.BitCast<Vector2, System.Numerics.Vector2>(v);
-    }
+    public static implicit operator System.Numerics.Vector2(Vector2 v) => Unsafe.BitCast<Vector2, System.Numerics.Vector2>(v);
 
     /// <summary>
     /// Calculates the length of the vector.
@@ -182,10 +170,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// and speed is of the essence.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public readonly float Length()
-    {
-        return MathF.Sqrt((X * X) + (Y * Y));
-    }
+    public readonly float Length() => ((System.Numerics.Vector2)this).Length();
 
     /// <summary>
     /// Calculates the squared length of the vector.
@@ -196,10 +181,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// and speed is of the essence.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public float LengthSquared()
-    {
-        return (X * X) + (Y * Y);
-    }
+    public readonly float LengthSquared() => ((System.Numerics.Vector2)this).LengthSquared();
 
     /// <summary>
     /// Converts the vector into a unit vector.
@@ -207,12 +189,10 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Normalize()
     {
-        float length = Length();
+        var length = Length();
         if (length > MathUtil.ZeroTolerance)
         {
-            float inv = 1.0f / length;
-            X *= inv;
-            Y *= inv;
+            this /= length;
         }
     }
 
@@ -220,10 +200,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// Creates an array containing the elements of the vector.
     /// </summary>
     /// <returns>A two-element array containing the components of the vector.</returns>
-    public float[] ToArray()
-    {
-        return [X, Y];
-    }
+    public readonly float[] ToArray() => [X, Y];
 
     /// <summary>
     /// Moves the first vector2 to the second one in a straight line.
@@ -244,16 +221,33 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     }
 
     /// <summary>
+    /// Computes an absolute value vector.
+    /// </summary>
+    /// <param name="value">A vector.</param>
+    /// <param name="result">When the method completes, contains an absolute value vector.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Abs(ref readonly Vector2 value, out Vector2 result) => result = System.Numerics.Vector2.Abs(value);
+
+    /// <summary>
+    /// Computes an absolute value vector.
+    /// </summary>
+    /// <param name="value">A vector.</param>
+    /// <returns>An absolute value vector.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector2 Abs(Vector2 value)
+    {
+        Abs(ref value, out var result);
+        return result;
+    }
+
+    /// <summary>
     /// Adds two vectors.
     /// </summary>
     /// <param name="left">The first vector to add.</param>
     /// <param name="right">The second vector to add.</param>
     /// <param name="result">When the method completes, contains the sum of the two vectors.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Add(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result)
-    {
-        result = new Vector2(left.X + right.X, left.Y + right.Y);
-    }
+    public static void Add(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result) => result = System.Numerics.Vector2.Add(left, right);
 
     /// <summary>
     /// Adds two vectors.
@@ -264,7 +258,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 Add(Vector2 left, Vector2 right)
     {
-        return new Vector2(left.X + right.X, left.Y + right.Y);
+        Add(ref left, ref right, out var result);
+        return result;
     }
 
     /// <summary>
@@ -274,10 +269,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="right">The second vector to subtract.</param>
     /// <param name="result">When the method completes, contains the difference of the two vectors.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Subtract(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result)
-    {
-        result = new Vector2(left.X - right.X, left.Y - right.Y);
-    }
+    public static void Subtract(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result) => result = System.Numerics.Vector2.Subtract(left, right);
 
     /// <summary>
     /// Subtracts two vectors.
@@ -288,7 +280,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 Subtract(in Vector2 left, in Vector2 right)
     {
-        return new Vector2(left.X - right.X, left.Y - right.Y);
+        Subtract(in left, in right, out var result);
+        return result;
     }
 
     /// <summary>
@@ -298,10 +291,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="scale">The amount by which to scale the vector.</param>
     /// <param name="result">When the method completes, contains the scaled vector.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Multiply(ref readonly Vector2 value, float scale, out Vector2 result)
-    {
-        result = new Vector2(value.X * scale, value.Y * scale);
-    }
+    public static void Multiply(ref readonly Vector2 value, float scale, out Vector2 result) => result = System.Numerics.Vector2.Multiply(value, scale);
 
     /// <summary>
     /// Scales a vector by the given value.
@@ -312,7 +302,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 Multiply(Vector2 value, float scale)
     {
-        return new Vector2(value.X * scale, value.Y * scale);
+        Multiply(ref value, scale, out var result);
+        return result;
     }
 
     /// <summary>
@@ -322,10 +313,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="right">The second vector to modulate.</param>
     /// <param name="result">When the method completes, contains the modulated vector.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Modulate(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result)
-    {
-        result = new Vector2(left.X * right.X, left.Y * right.Y);
-    }
+    public static void Modulate(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result) => result = System.Numerics.Vector2.Multiply(left, right);
 
     /// <summary>
     /// Modulates a vector with another by performing component-wise multiplication.
@@ -336,7 +324,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 Modulate(Vector2 left, Vector2 right)
     {
-        return new Vector2(left.X * right.X, left.Y * right.Y);
+        Modulate(ref left, ref right, out var result);
+        return result;
     }
 
     /// <summary>
@@ -346,10 +335,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="scale">The amount by which to scale the vector.</param>
     /// <param name="result">When the method completes, contains the scaled vector.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Divide(ref readonly Vector2 value, float scale, out Vector2 result)
-    {
-        result = new Vector2(value.X / scale, value.Y / scale);
-    }
+    public static void Divide(ref readonly Vector2 value, float scale, out Vector2 result) => result = System.Numerics.Vector2.Divide(value, scale);
 
     /// <summary>
     /// Scales a vector by the given value.
@@ -360,7 +346,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 Divide(Vector2 value, float scale)
     {
-        return new Vector2(value.X / scale, value.Y / scale);
+        Divide(ref value, scale, out var result);
+        return result;
     }
 
     /// <summary>
@@ -370,10 +357,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="right">The second vector to demodulate.</param>
     /// <param name="result">When the method completes, contains the demodulated vector.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Demodulate(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result)
-    {
-        result = new Vector2(left.X / right.X, left.Y / right.Y);
-    }
+    public static void Demodulate(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result) => result = System.Numerics.Vector2.Divide(left, right);
 
     /// <summary>
     /// Demodulates a vector with another by performing component-wise division.
@@ -384,7 +368,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 Demodulate(Vector2 left, Vector2 right)
     {
-        return new Vector2(left.X / right.X, left.Y / right.Y);
+        Demodulate(ref left, ref right, out var result);
+        return result;
     }
 
     /// <summary>
@@ -393,10 +378,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="value">The vector to negate.</param>
     /// <param name="result">When the method completes, contains a vector facing in the opposite direction.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Negate(ref readonly Vector2 value, out Vector2 result)
-    {
-        result = new Vector2(-value.X, -value.Y);
-    }
+    public static void Negate(ref readonly Vector2 value, out Vector2 result) => result = System.Numerics.Vector2.Negate(value);
 
     /// <summary>
     /// Reverses the direction of a given vector.
@@ -406,7 +388,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 Negate(Vector2 value)
     {
-        return new Vector2(-value.X, -value.Y);
+        Negate(ref value, out var result);
+        return result;
     }
 
     /// <summary>
@@ -420,9 +403,12 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="result">When the method completes, contains the 2D Cartesian coordinates of the specified point.</param>
     public static void Barycentric(ref readonly Vector2 value1, ref readonly Vector2 value2, ref readonly Vector2 value3, float amount1, float amount2, out Vector2 result)
     {
-        result = new Vector2(
-            (value1.X + (amount1 * (value2.X - value1.X))) + (amount2 * (value3.X - value1.X)),
-            (value1.Y + (amount1 * (value2.Y - value1.Y))) + (amount2 * (value3.Y - value1.Y)));
+        System.Numerics.Vector2 v1 = value1;
+        System.Numerics.Vector2 v2 = value2;
+        System.Numerics.Vector2 v3 = value3;
+        System.Numerics.Vector2 a1 = System.Numerics.Vector2.Create(amount1);
+        System.Numerics.Vector2 a2 = System.Numerics.Vector2.Create(amount2);
+        result = v1 + a1 * (v2 - v1) + a2 * (v3 - v1);
     }
 
     /// <summary>
@@ -447,18 +433,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="min">The minimum value.</param>
     /// <param name="max">The maximum value.</param>
     /// <param name="result">When the method completes, contains the clamped value.</param>
-    public static void Clamp(ref readonly Vector2 value, ref readonly Vector2 min, ref readonly Vector2 max, out Vector2 result)
-    {
-        float x = value.X;
-        x = (x > max.X) ? max.X : x;
-        x = (x < min.X) ? min.X : x;
-
-        float y = value.Y;
-        y = (y > max.Y) ? max.Y : y;
-        y = (y < min.Y) ? min.Y : y;
-
-        result = new Vector2(x, y);
-    }
+    public static void Clamp(ref readonly Vector2 value, ref readonly Vector2 min, ref readonly Vector2 max, out Vector2 result) => result = System.Numerics.Vector2.Clamp(value, min, max);
 
     /// <summary>
     /// Restricts a value to be within a specified range.
@@ -483,13 +458,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <see cref="Stride.Core.Mathematics.Vector2.DistanceSquared(ref readonly Vector2, ref readonly Vector2, out float)"/> may be preferred when only the relative distance is needed
     /// and speed is of the essence.
     /// </remarks>
-    public static void Distance(ref readonly Vector2 value1, ref readonly Vector2 value2, out float result)
-    {
-        float x = value1.X - value2.X;
-        float y = value1.Y - value2.Y;
-
-        result = MathF.Sqrt((x * x) + (y * y));
-    }
+    public static void Distance(ref readonly Vector2 value1, ref readonly Vector2 value2, out float result) => result = System.Numerics.Vector2.Distance(value1, value2);
 
     /// <summary>
     /// Calculates the distance between two vectors.
@@ -503,10 +472,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// </remarks>
     public static float Distance(Vector2 value1, Vector2 value2)
     {
-        float x = value1.X - value2.X;
-        float y = value1.Y - value2.Y;
-
-        return MathF.Sqrt((x * x) + (y * y));
+        Distance(ref value1, ref value2, out var result);
+        return result;
     }
 
     /// <summary>
@@ -522,13 +489,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// involves two square roots, which are computationally expensive. However, using distance squared 
     /// provides the same information and avoids calculating two square roots.
     /// </remarks>
-    public static void DistanceSquared(ref readonly Vector2 value1, ref readonly Vector2 value2, out float result)
-    {
-        float x = value1.X - value2.X;
-        float y = value1.Y - value2.Y;
-
-        result = (x * x) + (y * y);
-    }
+    public static void DistanceSquared(ref readonly Vector2 value1, ref readonly Vector2 value2, out float result) => result = System.Numerics.Vector2.DistanceSquared(value1, value2);
 
     /// <summary>
     /// Calculates the squared distance between two vectors.
@@ -545,10 +506,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// </remarks>
     public static float DistanceSquared(Vector2 value1, Vector2 value2)
     {
-        float x = value1.X - value2.X;
-        float y = value1.Y - value2.Y;
-
-        return (x * x) + (y * y);
+        DistanceSquared(ref value1, ref value2, out var result);
+        return result;
     }
 
     /// <summary>
@@ -558,10 +517,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="right">Second source vector.</param>
     /// <param name="result">When the method completes, contains the dot product of the two vectors.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Dot(ref readonly Vector2 left, ref readonly Vector2 right, out float result)
-    {
-        result = (left.X * right.X) + (left.Y * right.Y);
-    }
+    public static void Dot(ref readonly Vector2 left, ref readonly Vector2 right, out float result) => result = System.Numerics.Vector2.Dot(left, right);
 
     /// <summary>
     /// Calculates the dot product of two vectors.
@@ -572,7 +528,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float Dot(Vector2 left, Vector2 right)
     {
-        return (left.X * right.X) + (left.Y * right.Y);
+        Dot(ref left, ref right, out var result);
+        return result;
     }
 
     /// <summary>
@@ -595,8 +552,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 Normalize(Vector2 value)
     {
-        value.Normalize();
-        return value;
+        Normalize(ref value, out var result);
+        return result;
     }
 
     /// <summary>
@@ -611,11 +568,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <code>start + (end - start) * amount</code>
     /// Passing <paramref name="amount"/> a value of 0 will cause <paramref name="start"/> to be returned; a value of 1 will cause <paramref name="end"/> to be returned. 
     /// </remarks>
-    public static void Lerp(ref readonly Vector2 start, ref readonly Vector2 end, float amount, out Vector2 result)
-    {
-        result.X = start.X + ((end.X - start.X) * amount);
-        result.Y = start.Y + ((end.Y - start.Y) * amount);
-    }
+    public static void Lerp(ref readonly Vector2 start, ref readonly Vector2 end, float amount, out Vector2 result) => result = System.Numerics.Vector2.Lerp(start, end, amount);
 
     /// <summary>
     /// Performs a linear interpolation between two vectors.
@@ -675,15 +628,22 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="result">When the method completes, contains the result of the Hermite spline interpolation.</param>
     public static void Hermite(ref readonly Vector2 value1, ref readonly Vector2 tangent1, ref readonly Vector2 value2, ref readonly Vector2 tangent2, float amount, out Vector2 result)
     {
-        float squared = amount * amount;
-        float cubed = amount * squared;
-        float part1 = ((2.0f * cubed) - (3.0f * squared)) + 1.0f;
-        float part2 = (-2.0f * cubed) + (3.0f * squared);
-        float part3 = (cubed - (2.0f * squared)) + amount;
-        float part4 = cubed - squared;
+        float t = amount;
+        float t2 = t * t;
+        float t3 = t2 * t;
 
-        result.X = (((value1.X * part1) + (value2.X * part2)) + (tangent1.X * part3)) + (tangent2.X * part4);
-        result.Y = (((value1.Y * part1) + (value2.Y * part2)) + (tangent1.Y * part3)) + (tangent2.Y * part4);
+        // Hermite basis functions
+        float h00 = 2f * t3 - 3f * t2 + 1f;
+        float h10 = t3 - 2f * t2 + amount;
+        float h01 = -2f * t3 + 3f * t2;
+        float h11 = t3 - t2;
+
+        System.Numerics.Vector2 p0 = value1;
+        System.Numerics.Vector2 t0 = tangent1;
+        System.Numerics.Vector2 p1 = value2;
+        System.Numerics.Vector2 t1 = tangent2;
+
+        result = (h00 * p0) + (h10 * t0) + (h01 * p1) + (h11 * t1);
     }
 
     /// <summary>
@@ -712,16 +672,23 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="result">When the method completes, contains the result of the Catmull-Rom interpolation.</param>
     public static void CatmullRom(ref readonly Vector2 value1, ref readonly Vector2 value2, ref readonly Vector2 value3, ref readonly Vector2 value4, float amount, out Vector2 result)
     {
-        float squared = amount * amount;
-        float cubed = amount * squared;
+        float t = amount;
+        float t2 = t * t;
+        float t3 = t2 * t;
 
-        result.X = 0.5f * ((((2.0f * value2.X) + ((-value1.X + value3.X) * amount)) +
-        (((((2.0f * value1.X) - (5.0f * value2.X)) + (4.0f * value3.X)) - value4.X) * squared)) +
-        ((((-value1.X + (3.0f * value2.X)) - (3.0f * value3.X)) + value4.X) * cubed));
+        System.Numerics.Vector2 p0 = value1;
+        System.Numerics.Vector2 p1 = value2;
+        System.Numerics.Vector2 p2 = value3;
+        System.Numerics.Vector2 p3 = value4;
 
-        result.Y = 0.5f * ((((2.0f * value2.Y) + ((-value1.Y + value3.Y) * amount)) +
-            (((((2.0f * value1.Y) - (5.0f * value2.Y)) + (4.0f * value3.Y)) - value4.Y) * squared)) +
-            ((((-value1.Y + (3.0f * value2.Y)) - (3.0f * value3.Y)) + value4.Y) * cubed));
+        // Catmull-Rom formula:
+        // 0.5 * (2*p1 + (-p0 + p2)*t + (2*p0 - 5*p1 + 4*p2 - p3)*t^2 + (-p0 + 3*p1 - 3*p2 + p3)*t^3)
+        result = 0.5f * (
+            (2f * p1) +
+            (-p0 + p2) * t +
+            (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2 +
+            (-p0 + 3f * p1 - 3f * p2 + p3) * t3
+        );
     }
 
     /// <summary>
@@ -746,11 +713,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="right">The second source vector.</param>
     /// <param name="result">When the method completes, contains an new vector composed of the largest components of the source vectors.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Max(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result)
-    {
-        result.X = (left.X > right.X) ? left.X : right.X;
-        result.Y = (left.Y > right.Y) ? left.Y : right.Y;
-    }
+    public static void Max(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result) => result = System.Numerics.Vector2.Max(left, right);
 
     /// <summary>
     /// Returns a vector containing the largest components of the specified vectors.
@@ -772,11 +735,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="right">The second source vector.</param>
     /// <param name="result">When the method completes, contains an new vector composed of the smallest components of the source vectors.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Min(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result)
-    {
-        result.X = (left.X < right.X) ? left.X : right.X;
-        result.Y = (left.Y < right.Y) ? left.Y : right.Y;
-    }
+    public static void Min(ref readonly Vector2 left, ref readonly Vector2 right, out Vector2 result) => result = System.Numerics.Vector2.Min(left, right);
 
     /// <summary>
     /// Returns a vector containing the smallest components of the specified vectors.
@@ -799,13 +758,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="result">When the method completes, contains the reflected vector.</param>
     /// <remarks>Reflect only gives the direction of a reflection off a surface, it does not determine 
     /// whether the original vector was close enough to the surface to hit it.</remarks>
-    public static void Reflect(ref readonly Vector2 vector, ref readonly Vector2 normal, out Vector2 result)
-    {
-        float dot = (vector.X * normal.X) + (vector.Y * normal.Y);
-
-        result.X = vector.X - ((2.0f * dot) * normal.X);
-        result.Y = vector.Y - ((2.0f * dot) * normal.Y);
-    }
+    public static void Reflect(ref readonly Vector2 vector, ref readonly Vector2 normal, out Vector2 result) => result = System.Numerics.Vector2.Reflect(vector, normal);
 
     /// <summary>
     /// Returns the reflection of a vector off a surface that has the specified normal. 
@@ -839,19 +792,17 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="destination"/> is shorter in length than <paramref name="source"/>.</exception>
     public static void Orthogonalize(Vector2[] destination, params Vector2[] source)
     {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
+        if (destination.Length < source.Length)
+            throw new ArgumentOutOfRangeException(nameof(destination), "The destination array must be of same length or larger length than the source array.");
+
         //Uses the modified Gram-Schmidt process.
         //q1 = m1
         //q2 = m2 - ((q1 ⋅ m2) / (q1 ⋅ q1)) * q1
         //q3 = m3 - ((q1 ⋅ m3) / (q1 ⋅ q1)) * q1 - ((q2 ⋅ m3) / (q2 ⋅ q2)) * q2
         //q4 = m4 - ((q1 ⋅ m4) / (q1 ⋅ q1)) * q1 - ((q2 ⋅ m4) / (q2 ⋅ q2)) * q2 - ((q3 ⋅ m4) / (q3 ⋅ q3)) * q3
         //q5 = ...
-
-        if (source == null)
-            throw new ArgumentNullException(nameof(source));
-        if (destination == null)
-            throw new ArgumentNullException(nameof(destination));
-        if (destination.Length < source.Length)
-            throw new ArgumentOutOfRangeException(nameof(destination), "The destination array must be of same length or larger length than the source array.");
 
         for (int i = 0; i < source.Length; ++i)
         {
@@ -884,6 +835,11 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="destination"/> is shorter in length than <paramref name="source"/>.</exception>
     public static void Orthonormalize(Vector2[] destination, params Vector2[] source)
     {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
+        if (destination.Length < source.Length)
+            throw new ArgumentOutOfRangeException(nameof(destination), "The destination array must be of same length or larger length than the source array.");
+
         //Uses the modified Gram-Schmidt process.
         //Because we are making unit vectors, we can optimize the math for orthogonalization
         //and simplify the projection operation to remove the division.
@@ -892,13 +848,6 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
         //q3 = (m3 - (q1 ⋅ m3) * q1 - (q2 ⋅ m3) * q2) / |m3 - (q1 ⋅ m3) * q1 - (q2 ⋅ m3) * q2|
         //q4 = (m4 - (q1 ⋅ m4) * q1 - (q2 ⋅ m4) * q2 - (q3 ⋅ m4) * q3) / |m4 - (q1 ⋅ m4) * q1 - (q2 ⋅ m4) * q2 - (q3 ⋅ m4) * q3|
         //q5 = ...
-
-        if (source == null)
-            throw new ArgumentNullException(nameof(source));
-        if (destination == null)
-            throw new ArgumentNullException(nameof(destination));
-        if (destination.Length < source.Length)
-            throw new ArgumentOutOfRangeException(nameof(destination), "The destination array must be of same length or larger length than the source array.");
 
         for (int i = 0; i < source.Length; ++i)
         {
@@ -920,19 +869,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="vector">The vector to rotate.</param>
     /// <param name="rotation">The <see cref="Stride.Core.Mathematics.Quaternion"/> rotation to apply.</param>
     /// <param name="result">When the method completes, contains the transformed <see cref="Stride.Core.Mathematics.Vector4"/>.</param>
-    public static void Transform(ref readonly Vector2 vector, ref readonly Quaternion rotation, out Vector2 result)
-    {
-        float x = rotation.X + rotation.X;
-        float y = rotation.Y + rotation.Y;
-        float z = rotation.Z + rotation.Z;
-        float wz = rotation.W * z;
-        float xx = rotation.X * x;
-        float xy = rotation.X * y;
-        float yy = rotation.Y * y;
-        float zz = rotation.Z * z;
-
-        result = new Vector2((vector.X * (1.0f - yy - zz)) + (vector.Y * (xy - wz)), (vector.X * (xy + wz)) + (vector.Y * (1.0f - xx - zz)));
-    }
+    public static void Transform(ref readonly Vector2 vector, ref readonly Quaternion rotation, out Vector2 result) => result = System.Numerics.Vector2.Transform(vector, rotation);
 
     /// <summary>
     /// Transforms a 2D vector by the given <see cref="Stride.Core.Mathematics.Quaternion"/> rotation.
@@ -957,10 +894,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="destination"/> is shorter in length than <paramref name="source"/>.</exception>
     public static void Transform(Vector2[] source, ref readonly Quaternion rotation, Vector2[] destination)
     {
-        if (source == null)
-            throw new ArgumentNullException(nameof(source));
-        if (destination == null)
-            throw new ArgumentNullException(nameof(destination));
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
         if (destination.Length < source.Length)
             throw new ArgumentOutOfRangeException(nameof(destination), "The destination array must be of same length or larger length than the source array.");
 
@@ -1023,10 +958,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="destination"/> is shorter in length than <paramref name="source"/>.</exception>
     public static void Transform(Vector2[] source, ref readonly Matrix transform, Vector4[] destination)
     {
-        if (source == null)
-            throw new ArgumentNullException(nameof(source));
-        if (destination == null)
-            throw new ArgumentNullException(nameof(destination));
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
         if (destination.Length < source.Length)
             throw new ArgumentOutOfRangeException(nameof(destination), "The destination array must be of same length or larger length than the source array.");
 
@@ -1099,10 +1032,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// </remarks>
     public static void TransformCoordinate(Vector2[] source, ref readonly Matrix transform, Vector2[] destination)
     {
-        if (source == null)
-            throw new ArgumentNullException(nameof(source));
-        if (destination == null)
-            throw new ArgumentNullException(nameof(destination));
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
         if (destination.Length < source.Length)
             throw new ArgumentOutOfRangeException(nameof(destination), "The destination array must be of same length or larger length than the source array.");
 
@@ -1125,12 +1056,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// apply. This is often preferred for normal vectors as normals purely represent direction
     /// rather than location because normal vectors should not be translated.
     /// </remarks>
-    public static void TransformNormal(ref readonly Vector2 normal, ref readonly Matrix transform, out Vector2 result)
-    {
-        result = new Vector2(
-            (normal.X * transform.M11) + (normal.Y * transform.M21),
-            (normal.X * transform.M12) + (normal.Y * transform.M22));
-    }
+    public static void TransformNormal(ref readonly Vector2 normal, ref readonly Matrix transform, out Vector2 result) => result = System.Numerics.Vector2.TransformNormal(normal, transform);
 
     /// <summary>
     /// Performs a normal transformation using the given <see cref="Stride.Core.Mathematics.Matrix"/>.
@@ -1169,10 +1095,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// </remarks>
     public static void TransformNormal(Vector2[] source, ref readonly Matrix transform, Vector2[] destination)
     {
-        if (source == null)
-            throw new ArgumentNullException(nameof(source));
-        if (destination == null)
-            throw new ArgumentNullException(nameof(destination));
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
         if (destination.Length < source.Length)
             throw new ArgumentOutOfRangeException(nameof(destination), "The destination array must be of same length or larger length than the source array.");
 
@@ -1191,7 +1115,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 operator +(Vector2 left, Vector2 right)
     {
-        return new Vector2(left.X + right.X, left.Y + right.Y);
+        Add(ref left, ref right, out var result);
+        return result;
     }
 
     /// <summary>
@@ -1200,10 +1125,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="value">The vector to assert (unchanged).</param>
     /// <returns>The asserted (unchanged) vector.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector2 operator +(Vector2 value)
-    {
-        return value;
-    }
+    public static Vector2 operator +(Vector2 value) => value;
 
     /// <summary>
     /// Subtracts two vectors.
@@ -1214,7 +1136,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 operator -(Vector2 left, Vector2 right)
     {
-        return new Vector2(left.X - right.X, left.Y - right.Y);
+        Subtract(ref left, ref right, out var result);
+        return result;
     }
 
     /// <summary>
@@ -1225,7 +1148,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 operator -(Vector2 value)
     {
-        return new Vector2(-value.X, -value.Y);
+        Negate(ref value, out var result);
+        return result;
     }
 
     /// <summary>
@@ -1237,7 +1161,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 operator *(Vector2 left, Vector2 right)
     {
-        return new Vector2(left.X * right.X, left.Y * right.Y);
+        Modulate(ref left, ref right, out var result);
+        return result;
     }
 
     /// <summary>
@@ -1249,7 +1174,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 operator *(float scale, Vector2 value)
     {
-        return new Vector2(value.X * scale, value.Y * scale);
+        Multiply(ref value, scale, out var result);
+        return result;
     }
 
     /// <summary>
@@ -1261,7 +1187,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 operator *(Vector2 value, float scale)
     {
-        return new Vector2(value.X * scale, value.Y * scale);
+        Multiply(ref value, scale, out var result);
+        return result;
     }
 
     /// <summary>
@@ -1273,7 +1200,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 operator /(Vector2 value, float scale)
     {
-        return new Vector2(value.X / scale, value.Y / scale);
+        Divide(ref value, scale, out var result);
+        return result;
     }
 
     /// <summary>
@@ -1285,7 +1213,9 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 operator /(float numerator, Vector2 value)
     {
-        return new Vector2(numerator / value.X, numerator / value.Y);
+        var numVect = new Vector2(numerator);
+        Demodulate(ref numVect, ref value, out var result);
+        return result;
     }
 
     /// <summary>
@@ -1297,7 +1227,8 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 operator /(Vector2 value, Vector2 by)
     {
-        return new Vector2(value.X / by.X, value.Y / by.Y);
+        Demodulate(ref value, ref by, out var result);
+        return result;
     }
 
     /// <summary>
@@ -1307,10 +1238,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="left">The first value to compare.</param>
     /// <param name="right">The second value to compare.</param>
     /// <returns><c>true</c> if <paramref name="left"/> has the same value as <paramref name="right"/>; otherwise, <c>false</c>.</returns>
-    public static bool operator ==(Vector2 left, Vector2 right)
-    {
-        return left.Equals(right);
-    }
+    public static bool operator ==(Vector2 left, Vector2 right) => left.Equals(right);
 
     /// <summary>
     /// Tests for inequality between two objects.
@@ -1319,31 +1247,22 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <param name="left">The first value to compare.</param>
     /// <param name="right">The second value to compare.</param>
     /// <returns><c>true</c> if <paramref name="left"/> has a different value than <paramref name="right"/>; otherwise, <c>false</c>.</returns>
-    public static bool operator !=(Vector2 left, Vector2 right)
-    {
-        return !left.Equals(right);
-    }
+    public static bool operator !=(Vector2 left, Vector2 right) => !left.Equals(right);
 
     /// <summary>
     /// Performs an explicit conversion from <see cref="Stride.Core.Mathematics.Vector2"/> to <see cref="Stride.Core.Mathematics.Vector3"/>.
     /// </summary>
     /// <param name="value">The value.</param>
     /// <returns>The result of the conversion.</returns>
-    public static explicit operator Vector3(Vector2 value)
-    {
-        return new Vector3(value, 0.0f);
-    }
+    public static explicit operator Vector3(Vector2 value) => new(value, 0.0f);
 
     /// <summary>
     /// Performs an explicit conversion from <see cref="Stride.Core.Mathematics.Vector2"/> to <see cref="Stride.Core.Mathematics.Vector4"/>.
     /// </summary>
     /// <param name="value">The value.</param>
     /// <returns>The result of the conversion.</returns>
-    public static explicit operator Vector4(Vector2 value)
-    {
-        return new Vector4(value, 0.0f, 0.0f);
-    }
-    
+    public static explicit operator Vector4(Vector2 value) => new(value, 0.0f, 0.0f);
+
     /// <summary>
     /// Returns a <see cref="string"/> that represents this instance.
     /// </summary>
@@ -1370,7 +1289,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
         return handler.ToStringAndClear();
     }
 
-    bool ISpanFormattable.TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+    readonly bool ISpanFormattable.TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
     {
         var format1 = format.Length > 0 ? format.ToString() : null;
         var handler = new MemoryExtensions.TryWriteInterpolatedStringHandler(5, 2, destination, provider, out _);
@@ -1387,10 +1306,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <returns>
     /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
     /// </returns>
-    public override readonly int GetHashCode()
-    {
-        return HashCode.Combine(X, Y);
-    }
+    public override readonly int GetHashCode() => HashCode.Combine(X, Y);
 
     /// <summary>
     /// Determines whether the specified <see cref="Vector2"/> is exactly equal to this instance.
@@ -1399,10 +1315,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <returns>
     /// <c>true</c> if the specified <see cref="Vector2"/> is exactly equal to this instance; otherwise, <c>false</c>.
     /// </returns>
-    public bool EqualsStrict(Vector2 other)
-    {
-        return other.X == this.X && other.Y == this.Y;
-    }
+    public readonly bool EqualsStrict(Vector2 other) => System.Numerics.Vector2.EqualsAll(this, other);
 
     /// <summary>
     /// Determines whether the specified <see cref="Stride.Core.Mathematics.Vector2"/> is within <see cref="MathUtil.ZeroTolerance"/> for equality to this instance.
@@ -1413,8 +1326,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// </returns>
     public readonly bool Equals(Vector2 other)
     {
-        return MathF.Abs(other.X - X) < MathUtil.ZeroTolerance &&
-            MathF.Abs(other.Y - Y) < MathUtil.ZeroTolerance;
+        return System.Numerics.Vector2.LessThanAll(Abs(this - other), new System.Numerics.Vector2(MathUtil.ZeroTolerance));
     }
 
     /// <summary>
@@ -1424,10 +1336,7 @@ public struct Vector2 : IEquatable<Vector2>, ISpanFormattable
     /// <returns>
     /// <c>true</c> if the specified <see cref="object"/> is equal or almost equal to this instance; otherwise, <c>false</c>.
     /// </returns>
-    public override readonly bool Equals(object? value)
-    {
-        return value is Vector2 vector && Equals(vector);
-    }
+    public override readonly bool Equals(object? value) => value is Vector2 vector && Equals(vector);
 
     /// <summary>
     /// Deconstructs the vector's components into named variables.
