@@ -219,11 +219,34 @@ namespace Stride.Core.Assets
         public static (RestoreRequest, RestoreResult) Restore(ILogger logger, NuGetFramework nugetFramework, string runtimeIdentifier, string packageName, VersionRange versionRange, string settingsRoot = null)
         {
             var settings = NuGet.Configuration.Settings.LoadDefaultSettings(settingsRoot);
-
-            var assemblies = new List<string>();
-
-            var projectPath = Path.Combine("StrideNugetResolver.json");
             var packagesPath = SettingsUtility.GetGlobalPackagesFolder(settings);
+            var fallbackFolders = SettingsUtility.GetFallbackPackageFolders(settings).ToList();
+
+            // A build-only package's own runtime dependencies are only known from its nuspec. When the package is
+            // already in one of our package folders, read it now and restore once. Otherwise (first use, or the game
+            // restored it to a folder of its own) restore the package first, then read the nuspec where that restore
+            // put it and restore again with those dependencies.
+            var nuspecPath = versionRange.HasLowerAndUpperBounds && versionRange.MinVersion == versionRange.MaxVersion
+                ? FindManifest([packagesPath, .. fallbackFolders], packageName, versionRange.MinVersion)
+                : null;
+            var extraDependencies = nuspecPath != null ? GetRuntimeExcludedDependencies(nuspecPath, nugetFramework) : [];
+            var (request, result) = Restore(logger, settings, nugetFramework, runtimeIdentifier, packageName, versionRange, packagesPath, fallbackFolders, extraDependencies);
+
+            if (nuspecPath == null && result.Success
+                && result.LockFile.Libraries.FirstOrDefault(library => library.Type == "package" && string.Equals(library.Name, packageName, StringComparison.OrdinalIgnoreCase)) is { } restoredPackage
+                && FindManifest(result.LockFile.PackageFolders.Select(folder => folder.Path), restoredPackage.Name, restoredPackage.Version) is { } restoredNuspecPath)
+            {
+                extraDependencies = GetRuntimeExcludedDependencies(restoredNuspecPath, nugetFramework);
+                if (extraDependencies.Count > 0)
+                    (request, result) = Restore(logger, settings, nugetFramework, runtimeIdentifier, packageName, versionRange, packagesPath, fallbackFolders, extraDependencies);
+            }
+
+            return (request, result);
+        }
+
+        private static (RestoreRequest, RestoreResult) Restore(ILogger logger, ISettings settings, NuGetFramework nugetFramework, string runtimeIdentifier, string packageName, VersionRange versionRange, string packagesPath, List<string> fallbackFolders, List<LibraryDependency> extraDependencies)
+        {
+            var projectPath = Path.Combine("StrideNugetResolver.json");
             var spec = new PackageSpec()
             {
                 Name = Path.GetFileNameWithoutExtension(projectPath), // make sure this package never collides with a dependency
@@ -238,7 +261,7 @@ namespace Stride.Core.Assets
                             {
                                 LibraryRange = new LibraryRange(packageName, versionRange, LibraryDependencyTarget.Package),
                             },
-                            .. GetRuntimeExcludedDependencies(packagesPath, packageName, versionRange, nugetFramework),
+                            .. extraDependencies,
                         ],
                     }
                 },
@@ -254,7 +277,7 @@ namespace Stride.Core.Assets
                     ConfigFilePaths = settings.GetConfigFilePaths(),
                     PackagesPath = packagesPath,
                     Sources = SettingsUtility.GetEnabledSources(settings).ToList(),
-                    FallbackFolders = SettingsUtility.GetFallbackPackageFolders(settings).ToList()
+                    FallbackFolders = fallbackFolders
                 },
                 RuntimeGraph = new RuntimeGraph(new[] { new RuntimeDescription(runtimeIdentifier) }),
             };
@@ -327,19 +350,24 @@ namespace Stride.Core.Assets
         }
 
         /// <summary>
-        /// The dependencies a build-only package (no lib/, e.g. Stride.AssetCompiler, a tool that runs from its own
-        /// package) keeps out of its consumers' runtime, read from its nuspec in the global packages folder. They are
-        /// the package's own runtime dependencies, so they are restored as direct dependencies to get their runtime
-        /// assets. None for a package with a lib/ folder, one not in the global packages folder yet, or an inexact version.
+        /// The nuspec of the given package version in the first of <paramref name="packageFolders"/> that has it, or null.
         /// </summary>
-        private static IEnumerable<LibraryDependency> GetRuntimeExcludedDependencies(string packagesPath, string packageName, VersionRange versionRange, NuGetFramework nugetFramework)
+        private static string? FindManifest(IEnumerable<string> packageFolders, string packageName, NuGetVersion version)
         {
-            if (!versionRange.HasLowerAndUpperBounds || versionRange.MinVersion != versionRange.MaxVersion)
-                return [];
+            return packageFolders
+                .Select(folder => new VersionFolderPathResolver(folder).GetManifestFilePath(packageName, version))
+                .FirstOrDefault(File.Exists);
+        }
 
-            var pathResolver = new VersionFolderPathResolver(packagesPath);
-            var nuspecPath = pathResolver.GetManifestFilePath(packageName, versionRange.MinVersion);
-            if (!File.Exists(nuspecPath) || Directory.Exists(Path.Combine(pathResolver.GetInstallPath(packageName, versionRange.MinVersion), "lib")))
+        /// <summary>
+        /// The dependencies a build-only package (no lib/, e.g. Stride.AssetCompiler, a tool that runs from its own
+        /// package) keeps out of its consumers' runtime, read from its nuspec. They are the package's own runtime
+        /// dependencies, so they are restored as direct dependencies to get their runtime assets. None for a package
+        /// with a lib/ folder.
+        /// </summary>
+        private static List<LibraryDependency> GetRuntimeExcludedDependencies(string nuspecPath, NuGetFramework nugetFramework)
+        {
+            if (Directory.Exists(Path.Combine(Path.GetDirectoryName(nuspecPath)!, "lib")))
                 return [];
 
             var dependencyGroup = NuGetFrameworkUtility.GetNearest(new NuspecReader(nuspecPath).GetDependencyGroups(), nugetFramework);
