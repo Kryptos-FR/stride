@@ -44,7 +44,7 @@ That last one comes back later.
 
 The launcher wasn't where this started. I started with Game Studio.
 
-Every Stride WPF tool sits on a shared presentation layer, `Stride.Core.Presentation`: view-model base classes, commands, dialogs, converters, behaviours and markup extensions. So the first job was splitting it. In December 2023, on the `xplat-editor` branch, the WPF-specific half became `Stride.Core.Presentation.Wpf`. Everything that didn't depend on WPF stayed in a UI-agnostic `Stride.Core.Presentation`, and a new `Stride.Core.Presentation.Avalonia` began as its Avalonia twin. The UI-agnostic split landed on master in January 2024 as [#2082](https://github.com/stride3d/stride/pull/2082) ("Make Stride.Core.Presentation cross-platform", 521 files touched), so the WPF editor and the future Avalonia one could share their view models from then on.
+Every Stride WPF tool sits on a shared presentation layer, `Stride.Core.Presentation`: view-model base classes, commands, dialogs, converters, behaviours and markup extensions. So the first job was splitting it. In December 2023, on the `xplat-editor` branch, the WPF-specific half became `Stride.Core.Presentation.Wpf`. Everything that didn't depend on WPF stayed in a UI-agnostic `Stride.Core.Presentation`, and a new `Stride.Core.Presentation.Avalonia` began as its Avalonia twin. The UI-agnostic split landed on master in January 2024 as [#2082](https://github.com/stride3d/stride/pull/2082) ("Make Stride.Core.Presentation cross-platform", 521 files touched), so the WPF editor and the future Avalonia one could share their view models from then on. Not all of them yet: some WPF view models still carry Windows-specific code that needs refactoring. But sharing the view-model logic is one of the big advantages of this approach, and one of the reasons we chose Avalonia.
 
 On 8 January 2024 the launcher got its first Avalonia version on that branch: 156 files changed, 2,260 lines added and 9,525 removed. Then came more groundwork: modernising the code ([#2658](https://github.com/stride3d/stride/pull/2658)), moving to newer .NET versions, a [cross-platform editor prototype](https://github.com/stride3d/stride/pull/2034), and, in May 2025, a commit with a very satisfying title: "[Launcher] Make the build work on Linux".
 
@@ -101,8 +101,8 @@ The IPC is a good example of the approach. Nothing is rewritten for the sake of 
 
 - **A right-click that missed.** On Linux, right-clicking a recent project opened its context menu in the wrong place, because the event didn't reliably bubble from the row's button to the outer `Border` that owned the menu. Moving the `ContextMenu` onto the `Button` itself fixed it.
 - **A self-updater that tried to run an .exe on Linux.** The force-reinstall check downloaded `StrideSetup.exe` and then crashed at `Process.Start`. It now only runs on Windows.
-- **Animations as classes.** WPF storyboards became style classes: the release-notes and announcement panels toggle `Classes.visible` and slide in with a `TransformOperationsTransition`, inside a `ClipToBounds` root so they really are hidden while off screen.
-- **Versioning assumptions.** `Avalonia.Controls.DataGrid` doesn't always follow Avalonia's version numbers, so "same version as Avalonia" in central package management broke.
+- **Animations as classes.** Avalonia has no equivalent of WPF storyboards, so they became style classes: the release-notes and announcement panels toggle `Classes.visible` and slide in with a `TransformOperationsTransition`, inside a `ClipToBounds` root so they really are hidden while off screen.
+- **Versioning assumptions.** `Avalonia.Controls.DataGrid` doesn't follow Avalonia's main version numbers, so pinning it to "the same version as Avalonia" in central package management broke.
 - **Fewer dependencies.** The test runner dropped CommunityToolkit.Mvvm for Stride's own `ViewModelBase`, which meant renaming `SetProperty` to `SetValue`.
 
 ## Chapter 4: the missing page
@@ -119,7 +119,7 @@ Every launcher has a release-notes panel, and Stride's renders Markdown straight
 
 Behind `MarkdownTextBlock` was `XamlMarkdown.cs`: 1,037 lines of regular expressions turning Markdown into a WPF `FlowDocument`. Its licence header reads *"Modified version copyright (c) 2015 Nicolas Musset"*, on top of Bevan Arps's 2010 Markdown.XAML. I had forgotten I'd written it. Being regex-based, it choked on newer Markdown syntax, which is why the release notes sometimes rendered badly.
 
-Avalonia has no `FlowDocument`. The Avalonia 11 version of the launcher used an existing community control, Markdown.Avalonia.Tight. Then Avalonia 12 arrived, and I needed a renderer that was native to Avalonia 12, built on Markdig, and able to handle the rest of what Stride's documentation contains: code blocks, tables, Mermaid diagrams, SVG badges.
+Avalonia has no `FlowDocument`. The Avalonia 11 version of the launcher used an existing community control, Markdown.Avalonia.Tight. Avalonia 12 arrived when most of the launcher port was already done, and that control wasn't ready for it. It was also missing features, and it didn't use Markdig under the hood. I needed a renderer that was native to Avalonia 12, built on Markdig, and able to handle the rest of what Stride's documentation contains: code blocks, tables, Mermaid diagrams, SVG badges.
 
 I had been here before. In 2016 I started [Markdig.Wpf](https://github.com/Kryptos-FR/markdig.wpf), a Markdig renderer for WPF, meant for a future WPF launcher (and written partly for fun, because I liked Markdig). In June 2017 it got a big contribution from Steven Kirk ([@grokys](https://github.com/grokys)), the founder of Avalonia: four pull requests that fleshed out the WPF renderer (lists, emphasis, code, links, images, task lists), merged the projects, added tables, and added the `MarkdownViewer` control ([#3](https://github.com/Kryptos-FR/markdig.wpf/pull/3), [#4](https://github.com/Kryptos-FR/markdig.wpf/pull/4), [#5](https://github.com/Kryptos-FR/markdig.wpf/pull/5), [#6](https://github.com/Kryptos-FR/markdig.wpf/pull/6)). Once the launcher moved to Avalonia, Markdig.Wpf had no user left to serve, and I archived it in March 2024.
 
@@ -131,6 +131,12 @@ So in April 2026 I took the archived Markdig.Wpf off the shelf and used it as th
 ```
 
 There's no ordering comment any more, because the viewer resolves relative links and images against `BaseUri` whenever either property changes. The launcher also gained an outline button to jump between headings ([#3372](https://github.com/stride3d/stride/pull/3372)), and the 6.0.1 release notes describe the result as "a more modern renderer with support for new syntax that previously caused problems".
+
+The same section of the Stride 4.4 release notes in both launchers. The regex-based renderer runs the C# code block into the text and prints the `[!WARNING]` marker as is. MarkView renders the alert and the syntax-highlighted code block.
+
+| Launcher 5.0.6 (WPF, `XamlMarkdown`) | Launcher 6.0.1 (Avalonia, MarkView) |
+|---|---|
+| ![Release notes in the WPF launcher: the code block and the warning alert are rendered as plain text](screenshots/windows-5.0.6-wpf-release-notes.png) | ![Release notes in the Avalonia launcher: a warning alert box and a syntax-highlighted C# code block](screenshots/windows-6.0.1-release-notes.png) |
 
 ## Chapter 5: building MarkView without a FlowDocument
 
@@ -159,13 +165,7 @@ The launcher still ships MarkView 12.2.1. The library kept going after the launc
 - **Accessible and international.** Screen readers hear every block with its role, Tab walks through links in reading order, a high-contrast mode follows the system, and Hebrew and Arabic read right to left.
 - **GitHub-flavoured by default.** A viewer without a pipeline now renders Markdown the way GitHub does, including a safe subset of HTML mapped to native controls.
 
-Moving the launcher to 12.4.0 would bring find, folding and screen-reader support to its release notes.
-
-The same section of the Stride 4.4 release notes in both launchers. The regex-based renderer runs the C# code block into the text and prints the `[!WARNING]` marker as is. MarkView renders the alert and the syntax-highlighted code block.
-
-| Launcher 5.0.6 (WPF, `XamlMarkdown`) | Launcher 6.0.1 (Avalonia, MarkView) |
-|---|---|
-| ![Release notes in the WPF launcher: the code block and the warning alert are rendered as plain text](screenshots/windows-5.0.6-wpf-release-notes.png) | ![Release notes in the Avalonia launcher: a warning alert box and a syntax-highlighted C# code block](screenshots/windows-6.0.1-release-notes.png) |
+Moving the launcher to 12.4.0 would bring find, folding and screen-reader support to its release notes. It would also fix something you can see in the comparison in Chapter 4: in 12.2.1, links take the app's accent colour as is, so in the launcher they are Stride red on a dark panel and hard to read. 12.4.0 uses a lighter shade of the accent in dark themes, chosen to keep 4.5:1 contrast whatever the accent.
 
 ## Chapter 6: the long pull request
 
