@@ -102,3 +102,6 @@ deps/FFmpeg/*/ffmpeg filter=lfs diff=lfs merge=lfs -text
 
 # sprite studio
 *.ssae filter=lfs diff=lfs merge=lfs -text
+
+# Screenshots of the challenge write-up (README.md): stored in git, not LFS
+screenshots/*.png -filter -diff -merge binary

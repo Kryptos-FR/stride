@@ -15,7 +15,9 @@
 > | **Licence** | MIT (Stride and MarkView.Avalonia) |
 > | **Category** | Best Legacy Revival |
 
-<!-- TODO screenshots: hero before/after pair here (5.x WPF launcher vs 6.0.1 Avalonia launcher), same window size. -->
+| Launcher 5.0.6 (WPF) | Launcher 6.0.1 (Avalonia) |
+|---|---|
+| ![The WPF launcher 5.0.6: version list, projects and getting-started cards](screenshots/windows-5.0.6-wpf.png) | ![The Avalonia launcher 6.0.1 at the same window size: same layout with a settings gear, rounded cards and new icons](screenshots/windows-6.0.1-dark.png) |
 
 ## Prologue: the door everyone walks through
 
@@ -159,7 +161,11 @@ The launcher still ships MarkView 12.2.1. The library kept going after the launc
 
 Moving the launcher to 12.4.0 would bring find, folding and screen-reader support to its release notes.
 
-<!-- TODO screenshot: release-notes panel, WPF vs Avalonia, ideally on a page with a code block or table that the old renderer broke. -->
+The same section of the Stride 4.4 release notes in both launchers. The regex-based renderer runs the C# code block into the text and prints the `[!WARNING]` marker as is. MarkView renders the alert and the syntax-highlighted code block.
+
+| Launcher 5.0.6 (WPF, `XamlMarkdown`) | Launcher 6.0.1 (Avalonia, MarkView) |
+|---|---|
+| ![Release notes in the WPF launcher: the code block and the warning alert are rendered as plain text](screenshots/windows-5.0.6-wpf-release-notes.png) | ![Release notes in the Avalonia launcher: a warning alert box and a syntax-highlighted C# code block](screenshots/windows-6.0.1-release-notes.png) |
 
 ## Chapter 6: the long pull request
 
@@ -180,7 +186,9 @@ Shipping it took more than my port, and the release is better for it:
 
 This entry covers my part: the port itself ([#3276](https://github.com/stride3d/stride/pull/3276)), the release-notes improvements ([#3372](https://github.com/stride3d/stride/pull/3372)), the presentation-layer groundwork, and MarkView.Avalonia.
 
-<!-- TODO screenshots: 6.0.1 dark, 6.0.1 light, release notes with outline open. -->
+| Light theme | Release notes with the outline open |
+|---|---|
+| ![Launcher 6.0.1 in the light theme](screenshots/windows-6.0.1-light.png) | ![Launcher 6.0.1 with the release notes of Stride 4.4 and their outline open](screenshots/windows-6.0.1-release-notes-outline.png) |
 
 ## What it cost
 
@@ -213,11 +221,9 @@ The same goes for this write-up: I wrote it with AI assistance, from my notes, t
 
 ## Epilogue: the road to Linux
 
-The launcher builds on Windows, Linux and macOS today, from one codebase. On Linux it starts, lists the Stride versions from NuGet and runs the whole UI (screenshot below, taken on Linux from the 6.0.7 tag). Builds for each platform are attached to this entry. But I'd rather be honest about what that means:
+The launcher builds on Windows, Linux and macOS today, from one codebase. On Linux it starts, lists the Stride versions from NuGet and runs the whole UI (screenshot below, taken on Linux under WSL from the 6.0.7 tag). [Builds for each platform](https://github.com/Kryptos-FR/stride/releases/tag/challenge-2026-builds) are attached to this entry. But I'd rather be honest about what that means:
 
-<!-- TODO screenshot: screenshots/linux-6.0.7-main.png -->
-<!-- TODO builds: attach the Linux and macOS archives to a release on the fork -->
-
+![Launcher 6.0.7 running on Linux (Ubuntu 24.04 under WSL), with no Stride version installed](screenshots/linux-6.0.7-main.png)
 
 - **Windows** is the shipped, supported platform.
 - **Linux** runs the launcher, but installing Stride versions through it is untested there, and Game Studio itself is still WPF and Windows-only (it partly works under Wine/Proton). For now, Linux users have xen2's `stride` CLI, which does the same version management from a terminal.
@@ -242,4 +248,4 @@ The launcher was always the small door. Game Studio's Avalonia rewrite is the bi
 - Launcher docs: [docs/launcher/](https://github.com/stride3d/stride/tree/master/docs/launcher)
 - MarkView.Avalonia: [repository](https://github.com/Kryptos-FR/MarkView.Avalonia) · [NuGet](https://www.nuget.org/packages/MarkView.Avalonia)
 - Markdig.Wpf (archived): [repository](https://github.com/Kryptos-FR/markdig.wpf)
-- Builds: <!-- TODO: link the release on the fork with the Windows/Linux/macOS archives -->
+- Builds: [launcher 6.0.7 for Windows, Linux and macOS](https://github.com/Kryptos-FR/stride/releases/tag/challenge-2026-builds)
