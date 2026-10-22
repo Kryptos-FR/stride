@@ -1,253 +1,245 @@
-<p>
-<a href="https://www.stride3d.net/">
-<picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://media.githubusercontent.com/media/stride3d/stride/84092e8aa924e2039b3f8d968907b48fc699c6b3/sources/data/images/Logo/stride-logo-readme-white.png">
-      <source media="(prefers-color-scheme: light)" srcset="https://media.githubusercontent.com/media/stride3d/stride/84092e8aa924e2039b3f8d968907b48fc699c6b3/sources/data/images/Logo/stride-logo-readme-black.png">
-      <img alt="The stride logo, a geometrical 'S' in the form of a cube" src="https://media.githubusercontent.com/media/stride3d/stride/84092e8aa924e2039b3f8d968907b48fc699c6b3/sources/data/images/Logo/stride-logo-readme-black.png">
-</picture>
-</a>
-</p>
+# The Door, Rebuilt: porting the Stride Launcher from WPF to Avalonia
 
-[![Build](https://github.com/stride3d/stride/actions/workflows/main.yml/badge.svg)](https://github.com/stride3d/stride/actions/workflows/main.yml)
-[![Join the chat at https://discord.gg/f6aerfE](https://img.shields.io/discord/500285081265635328.svg?style=flat&logo=discord&label=discord&logoColor=f2f2f2)](https://discord.gg/f6aerfE)
-[![All Contributors](https://img.shields.io/github/all-contributors/stride3d/stride?color=ee8449)](#contributors)
-[![Financial sponsors](https://img.shields.io/opencollective/all/stride3d?logo=opencollective)](https://opencollective.com/stride3d)
-[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/stride3d/stride/blob/master/LICENSE.md)
-[![Contributor Covenant](https://img.shields.io/badge/contributor%20covenant-2.0-4baaaa.svg)](CODE_OF_CONDUCT.md)
+*An entry for the Avalonia Port Challenge, by Nicolas Musset ([@Kryptos-FR](https://github.com/Kryptos-FR)).*
 
-# Welcome to the Stride Game Engine
+> **At a glance**
+>
+> | | |
+> |---|---|
+> | **Application** | [Stride Launcher](https://github.com/stride3d/stride/tree/master/sources/launcher), the first window every user of the [Stride](https://stride3d.net) game engine sees. It installs engine versions, lists recent projects, shows release notes and news, and starts Game Studio. |
+> | **From → to** | WPF on .NET (`net10.0-windows`, `win-x64`) → Avalonia 12 (`net10.0`, `linux-x64` and `win-x64`) |
+> | **Shipped** | [Launcher 6.0.1](https://github.com/stride3d/stride/releases/tag/launcher%2F6.0.1), 4 October 2026, to every Stride user on Windows. The previous launcher release, 5.0.6, dates from July 2022. |
+> | **The port** | [stride3d/stride#3276](https://github.com/stride3d/stride/pull/3276): 57 commits, 159 files, +8,757 / −4,853 lines, merged 11 August 2026 |
+> | **Built along the way** | [MarkView.Avalonia](https://github.com/Kryptos-FR/MarkView.Avalonia), a native Markdown viewer for Avalonia 12, now on NuGet |
+> | **Platforms** | Windows (shipped). Linux and macOS builds below start the launcher (checked on Linux; the macOS build is untested), but managing a Stride install there is not supported yet (see [What's left](#epilogue-the-road-to-linux)). |
+> | **Licence** | MIT (Stride and MarkView.Avalonia) |
+> | **Category** | Best Legacy Revival |
 
-Stride is an open-source C# game engine designed for realistic rendering and VR. Highly modular, it aims to give game makers more flexibility in their development. Stride comes with an editor, [Game Studio](https://doc.stride3d.net/latest/en/manual/game-studio/index.html), which allows you to create and manage the content of your games or applications visually and intuitively. To learn more about Stride, visit [stride3d.net](https://stride3d.net/).
+<!-- TODO screenshots: hero before/after pair here (5.x WPF launcher vs 6.0.1 Avalonia launcher), same window size. -->
 
-![Stride Editor](https://stride3d.net/images/external/script-editor.png)
+## Prologue: the door everyone walks through
 
-This README is intended for users who want to build the Stride engine from source or contribute to its development. If your goal is to create games using Stride, we recommend visiting the [Get started with Stride](https://doc.stride3d.net/latest/en/manual/get-started/index.html) guide. There, you'll find detailed instructions on downloading, installing, and getting started with game development in Stride.
+Before you open a scene in Stride, before you write a line of game code, you meet the launcher. It is the door to the engine. From the Xenko days until this year, that door was built in WPF, so it only ever opened on Windows.
 
-## 🚀 Try Stride from the command line
+That was fine while the rest of the house was Windows-only too. Game Studio, Stride's editor, is a large WPF application. But WPF is in maintenance mode, Linux users keep knocking, and the Stride community has spent years debating what the editor should be rebuilt on (Avalonia, MAUI, Uno). In the end it chose Avalonia, and I took the lead on the editor rewrite.
 
-Create and manage Stride projects from the command line — no editor required.
+This is the story of the first piece of that rewrite to reach real users. It isn't the editor. It's the door.
 
-The **Stride CLI tool** installs and manages Stride engine versions, creates projects from templates, and opens Game Studio:
+## Chapter 1: an old house
 
-```bash
-dotnet tool install -g Stride.Cli
+The launcher has a long history. It was born at Silicon Studio, the Japanese company behind Xenko, where I worked alongside Virgile Bello (xen2), who still maintains Stride today, and Alexandre Mutel (xoofx), who would later write [Markdig](https://github.com/xoofx/markdig). Xenko went open source, was renamed Stride, and the launcher came along, collecting habits from every era:
 
-stride sdk install                   # install the latest Stride engine
-stride new fps -n MyShooter          # template: game, fps, platformer2d, topdownrpg, vrsandbox, ...
-cd MyShooter && dotnet run --project MyShooter.Windows
+- a Windows mutex and `Process.GetProcessesByName` to stop two instances running at once;
+- a Win32 window handle, passed on the command line so Game Studio could close the launcher with a `WM_CLOSE` message;
+- a registry check for .NET Framework 4.7.2 and a prerequisites installer;
+- a telemetry client wrapped around every download, with a privacy-policy consent dialog to go with it;
+- compatibility code for Xenko packages, Xenko executables and Stride ≤ 3.0 environment variables;
+- and, in the release-notes panel, a Markdown renderer I had written myself, back in 2015.
 
-stride studio                        # open Game Studio, the visual editor
+That last one comes back later.
+
+## Chapter 2: the editor that stalled, and the smaller door
+
+The launcher wasn't where this started. I started with Game Studio.
+
+Every Stride WPF tool sits on a shared presentation layer, `Stride.Core.Presentation`: view-model base classes, commands, dialogs, converters, behaviours and markup extensions. So the first job was splitting it. In December 2023, on the `xplat-editor` branch, the WPF-specific half became `Stride.Core.Presentation.Wpf`. Everything that didn't depend on WPF stayed in a UI-agnostic `Stride.Core.Presentation`, and a new `Stride.Core.Presentation.Avalonia` began as its Avalonia twin. The UI-agnostic split landed on master in January 2024 as [#2082](https://github.com/stride3d/stride/pull/2082) ("Make Stride.Core.Presentation cross-platform", 521 files touched), so the WPF editor and the future Avalonia one could share their view models from then on.
+
+On 8 January 2024 the launcher got its first Avalonia version on that branch: 156 files changed, 2,260 lines added and 9,525 removed. Then came more groundwork: modernising the code ([#2658](https://github.com/stride3d/stride/pull/2658)), moving to newer .NET versions, a [cross-platform editor prototype](https://github.com/stride3d/stride/pull/2034), and, in May 2025, a commit with a very satisfying title: "[Launcher] Make the build work on Linux".
+
+But Game Studio is huge, and the editor port started to stall. A rewrite that never ships helps nobody, so I narrowed the scope to something users could actually have: the launcher. In April 2026 I cherry-picked the Avalonia launcher off the editor branch onto master, together with the minimum of `Stride.Core.Presentation.Avalonia` it needed, and upgraded it to Avalonia 12 the same day. That branch became [#3276](https://github.com/stride3d/stride/pull/3276).
+
+## Chapter 3: what translated, and what didn't
+
+### Most of it carried over
+
+The view models came across almost unchanged. They already sat on the UI-agnostic presentation layer from [#2082](https://github.com/stride3d/stride/pull/2082), so `MainViewModel`, `StrideVersionViewModel` and their friends didn't care what was drawing them. NuGet-based version management (`NugetStore`) is plain .NET and came along as is. Most XAML was mechanical: `.xaml` became `.axaml`, `Visibility` became `IsVisible`, `ToolTip` became `ToolTip.Tip`, and bindings gained `x:DataType` so Avalonia's compiled bindings could check them at build time.
+
+### The markup extensions were the real work
+
+Stride's XAML leans heavily on inline markup extensions, especially inside bindings. This is the WPF update button from the 5.x launcher:
+
+```xml
+<Button Visibility="{sskk:MultiBinding {Binding CanBeDownloaded}, {Binding CanDelete},
+                     Converter={sskk:MultiChained {sskk:AndMultiConverter}, {sskk:VisibleOrCollapsed}}}" />
 ```
 
-`stride new` with no template lists what's available, `stride sdk` manages installed engine versions (`list`, `install`, `uninstall`, `update`), and `stride upgrade` moves a project to a newer engine. See [`sources/launcher/README.md`](sources/launcher/README.md).
+And this is the Avalonia version in 6.0.1:
 
-Prefer standard .NET templating? The same templates are available through `dotnet new`:
-
-```bash
-dotnet new install Stride.Templates.Games
-dotnet new stride-game -n MyGame
-cd MyGame && dotnet run --project MyGame.Windows
+```xml
+<Button IsVisible="{sd:MultiBinding {Binding CanBeDownloaded}, {Binding CanDelete}, Converter={sd:AndMulti}}" />
 ```
 
-See [`sources/templates/README.md`](sources/templates/README.md) for the full template catalog (genre starters, 18 feature demos, tutorials) and the local-development workflow.
+Avalonia's built-in `MultiBinding` is element syntax only, so writing it inline like this meant porting Stride's `MultiBinding` markup extension. The same goes for the chained converters, and for the small typed values that make converter parameters readable:
 
-## 🤝 Contributing
+```xml
+IsVisible="{Binding ActiveVersion?.AvailableEditors.Count,
+            Converter={sd:Chained {sd:IsGreater}, Parameter1={sd:Double 1}},
+            FallbackValue={x:False}, TargetNullValue={x:False}}"
+```
 
-Want to get involved? See our [Contributing section](.github/CONTRIBUTING.md) for how to ask questions, report bugs, submit pull requests (including good first issues), and how you can earn money by contributing via funded tasks/bug bounties.
+Some extensions disappeared along the way: Avalonia's `IsVisible` is a boolean, so the `VisibleOrCollapsed` converter wasn't needed any more. Others needed rethinking. In WPF, the `Localize` extension works both as a value and as a converter inside a binding. In Avalonia it had to be split into two, a `LocalizeString` markup extension for plain values and a `Localize` converter for bindings. The launcher doesn't use it, but Game Studio's Avalonia rewrite uses it everywhere.
 
-## 🗺️ Roadmap
+### Windows-only habits needed a cross-platform answer
 
-Our [Roadmap](https://doc.stride3d.net/latest/en/contributors/roadmap.html) communicates upcoming changes to the Stride engine.
+The table in the port's [`port-status.md`](https://github.com/stride3d/stride/blob/master/docs/launcher/port-status.md) exists so that reviewers wouldn't "fix" these back:
 
-## 🛠️ Building from Source
+| Area | WPF launcher | Avalonia launcher |
+|---|---|---|
+| Single instance | Windows mutex + process scan | `FileLock` in the user's temp path |
+| Entry point | `[STAThread] Main`, WPF `ShutdownMode` | Avalonia classic desktop lifetime |
+| Launcher ↔ Game Studio | Win32 `WM_CLOSE` to an HWND | HWND on Windows (via `TryGetPlatformHandle()`), a named pipe elsewhere |
+| *Show in Explorer* | `explorer.exe /select` | Explorer, `open -R` on macOS, DBus `FileManager1.ShowItems` on Linux with an `xdg-open` fallback |
+| Settings | Windows paths | `%LocalAppData%`, `$XDG_DATA_HOME`, `~/Library/Application Support` through one `EditorPath` helper |
+| Telemetry and consent | `Stride.Metrics` + privacy dialog | Removed, permanently. Stride no longer collects telemetry. |
+| Xenko compatibility | Xenko packages, executables, env vars | Removed: Xenko is end of life |
 
-### Prerequisites
+The IPC is a good example of the approach. Nothing is rewritten for the sake of it: Windows keeps the HWND message Game Studio already understands, and the other platforms get a `NamedPipeServerStream` that waits for Game Studio to connect and send one byte once its main window has loaded.
 
-1. **Latest [Git](https://git-scm.com/downloads)** — the Windows installer includes Git LFS by default; make sure it stays enabled. For convenience, you can also use a UI client like [GitExtensions](https://gitextensions.github.io/).
-2. **[Visual Studio 2026](https://visualstudio.microsoft.com/downloads/)** (Community edition is free), with these two workloads:
-   - **.NET desktop development** (bundles the .NET 10 SDK)
-   - **Desktop development with C++**
+### Small surprises
 
-> See [docs/build/README.md](docs/build/README.md) for detailed prerequisites (specific MSVC toolset versions, optional iOS/Android/ARM64/VSIX components, command-line builds without VS, and troubleshooting).
+- **A right-click that missed.** On Linux, right-clicking a recent project opened its context menu in the wrong place, because the event didn't reliably bubble from the row's button to the outer `Border` that owned the menu. Moving the `ContextMenu` onto the `Button` itself fixed it.
+- **A self-updater that tried to run an .exe on Linux.** The force-reinstall check downloaded `StrideSetup.exe` and then crashed at `Process.Start`. It now only runs on Windows.
+- **Animations as classes.** WPF storyboards became style classes: the release-notes and announcement panels toggle `Classes.visible` and slide in with a `TransformOperationsTransition`, inside a `ClipToBounds` root so they really are hidden while off screen.
+- **Versioning assumptions.** `Avalonia.Controls.DataGrid` doesn't always follow Avalonia's version numbers, so "same version as Avalonia" in central package management broke.
+- **Fewer dependencies.** The test runner dropped CommunityToolkit.Mvvm for Stride's own `ViewModelBase`, which meant renaming `SetProperty` to `SetValue`.
 
-### Build Stride
+## Chapter 4: the missing page
 
-1. `git clone https://github.com/stride3d/stride.git`
-2. Open `build\Stride.slnx` in Visual Studio 2026.
-3. Build the `Stride.GameStudio` project (default startup, in the `60-Editor` folder) or run it directly from the toolbar.
+Every launcher has a release-notes panel, and Stride's renders Markdown straight from the documentation site. In the WPF launcher, that panel looked like this:
 
-### Contribution Guidelines
+```xml
+<!-- BaseUrl must be set before Text so when ActiveReleaseNotes is updated, the binding of ImageBaseUrl
+     is updated first, then MarkdownContent is updated and the text converted,
+     we will have a valid path for relative urls -->
+<sskk:MarkdownTextBlock BaseUrl="{Binding ActiveReleaseNotes.BaseUrl, Mode=OneWay}"
+                        Text="{Binding ActiveReleaseNotes.MarkdownContent}" ... />
+```
 
-Please check our [Contributing Guidelines](https://doc.stride3d.net/latest/en/contributors/index.html).
+Behind `MarkdownTextBlock` was `XamlMarkdown.cs`: 1,037 lines of regular expressions turning Markdown into a WPF `FlowDocument`. Its licence header reads *"Modified version copyright (c) 2015 Nicolas Musset"*, on top of Bevan Arps's 2010 Markdown.XAML. I had forgotten I'd written it. Being regex-based, it choked on newer Markdown syntax, which is why the release notes sometimes rendered badly.
 
-## 🔬 Build Status
+Avalonia has no `FlowDocument`. The Avalonia 11 version of the launcher used an existing community control, Markdown.Avalonia.Tight. Then Avalonia 12 arrived, and I needed a renderer that was native to Avalonia 12, built on Markdig, and able to handle the rest of what Stride's documentation contains: code blocks, tables, Mermaid diagrams, SVG badges.
 
-| Build | Status |
-|:--|:--:|
-| Windows | [![](https://github.com/stride3d/stride/actions/workflows/build-windows-runtime.yml/badge.svg?branch=master)](https://github.com/stride3d/stride/actions/workflows/build-windows-runtime.yml) |
-| Linux Vulkan/OpenGL | [![](https://github.com/stride3d/stride/actions/workflows/build-linux-runtime.yml/badge.svg?branch=master)](https://github.com/stride3d/stride/actions/workflows/build-linux-runtime.yml) |
-| iOS | [![](https://github.com/stride3d/stride/actions/workflows/build-ios.yml/badge.svg?branch=master)](https://github.com/stride3d/stride/actions/workflows/build-ios.yml) |
-| Tests (Simple) | [![](https://github.com/stride3d/stride/actions/workflows/test-windows.yml/badge.svg?branch=master)](https://github.com/stride3d/stride/actions/workflows/test-windows.yml) |
-| Tests (Game/WARP) | [![](https://github.com/stride3d/stride/actions/workflows/test-windows.yml/badge.svg?branch=master)](https://github.com/stride3d/stride/actions/workflows/test-windows.yml) |
+I had been here before. In 2016 I started [Markdig.Wpf](https://github.com/Kryptos-FR/markdig.wpf), a Markdig renderer for WPF, meant for a future WPF launcher (and written partly for fun, because I liked Markdig). In June 2017 it got a big contribution from Steven Kirk ([@grokys](https://github.com/grokys)), the founder of Avalonia: four pull requests that fleshed out the WPF renderer (lists, emphasis, code, links, images, task lists), merged the projects, added tables, and added the `MarkdownViewer` control ([#3](https://github.com/Kryptos-FR/markdig.wpf/pull/3), [#4](https://github.com/Kryptos-FR/markdig.wpf/pull/4), [#5](https://github.com/Kryptos-FR/markdig.wpf/pull/5), [#6](https://github.com/Kryptos-FR/markdig.wpf/pull/6)). Once the launcher moved to Avalonia, Markdig.Wpf had no user left to serve, and I archived it in March 2024.
 
-## 📖 Stride Documentation Landscape
+So in April 2026 I took the archived Markdig.Wpf off the shelf and used it as the base for a native Avalonia renderer, keeping the name grokys had given the control nine years earlier. MarkView.Avalonia's `MarkdownViewer` replaced Markdown.Avalonia in the launcher on 17 May 2026, and today the release-notes panel reads:
 
-The Stride documentation is organized across different locations. Here's how it's structured:
+```xml
+<mv:MarkdownViewer Markdown="{Binding ActiveReleaseNotes?.MarkdownContent}"
+                   BaseUri="{Binding ActiveReleaseNotes?.BaseUrl}" />
+```
 
-1. [Stride Game Engine](https://github.com/stride3d/stride) - The main repository for Stride.
-   - [Contributing to Stride](https://doc.stride3d.net/latest/en/contributors/engine/index.html) - A guide for developers interested in contributing to or developing the Stride engine.
-1. [Stride Website](https://www.stride3d.net/) - The official site showcasing Stride, featuring:
-   - [Features](https://www.stride3d.net/features/) 
-   - [Blog](https://www.stride3d.net/blog/)
-   - [Community](https://www.stride3d.net/community/)
-   - [Download](https://www.stride3d.net/download/)
-   - [Sponsor](https://www.stride3d.net/sponsor/)
-   - [Contributing to the Website](https://doc.stride3d.net/latest/en/contributors/website/index.html) - Guide for contributing to the Stride website.
-2. [Stride Docs](https://doc.stride3d.net/) - The official documentation, including:
-   - [Manual](https://doc.stride3d.net/latest/en/manual/index.html)
-   - [Tutorials](https://doc.stride3d.net/latest/en/tutorials/index.html)
-   - [Release Notes](https://doc.stride3d.net/en/release-notes/index.html)
-   - [Ways to contribute](https://doc.stride3d.net/latest/en/contributors/index.html)
-   - [API Reference](https://doc.stride3d.net/latest/en/api/index.html)
-   - [Community Resources](https://doc.stride3d.net/latest/en/community-resources/index.html) - Demos, articles, shaders, physics examples, and more.
-   - [Contributing to the Docs](https://doc.stride3d.net/latest/en/contributors/documentation/index.html) - Guide for contributing to the Stride documentation.
-4. [Stride Community Toolkit](https://stride3d.github.io/stride-community-toolkit/index.html) - A set of C# helpers and extensions to enhance your experience with the Stride game engine.
-   - [Contributing to Toolkit](https://github.com/stride3d/stride-community-toolkit) - Contribute to or explore the toolkit's source code.
+There's no ordering comment any more, because the viewer resolves relative links and images against `BaseUri` whenever either property changes. The launcher also gained an outline button to jump between headings ([#3372](https://github.com/stride3d/stride/pull/3372)), and the 6.0.1 release notes describe the result as "a more modern renderer with support for new syntax that previously caused problems".
 
-## 🌐 .NET Foundation
+## Chapter 5: building MarkView without a FlowDocument
 
-This project is supported by the [.NET Foundation](http://www.dotnetfoundation.org).
+A WPF `FlowDocument` gives you a lot for free: one text flow, selection across paragraphs, find, printing. Avalonia gives you excellent building blocks (`TextBlock` with inlines, panels, styles, control themes) and asks you to assemble the rest. MarkView turns Markdig's syntax tree into ordinary Avalonia controls, so the parts that took longest were the ones a `FlowDocument` would have handled:
 
-## 🛡️ License
+- **Selection across a forest of `TextBlock`s.** Dragging from a heading through a table into a code block has to feel like one document. MarkView doesn't use each `TextBlock`'s own selection. A transparent overlay owns selection for the whole document, maps the pointer to text positions in every block, and copies a text equivalent for images, formulas and diagrams.
+- **Theme switches that keep your place.** Switching light and dark recolours syntax-highlighted code in place (each line is tokenised once with both palettes), re-renders Mermaid and LaTeX images, and doesn't reset the scroll position. On WebAssembly, profiling cut a theme switch from about 870 ms to about 150 ms.
+- **Mermaid and LaTeX without a browser.** Diagrams go through the pure .NET Mermaider library and formulas through CSharpMath on SkiaSharp, so nothing needs a WebView, and both work on Linux and in the browser.
+- **Lazy rendering.** Images, formulas, diagrams and code colours are only built when they get near the viewport. One lesson here for anyone doing the same: Avalonia clips the effective viewport to each clipping ancestor, and a `TextBlock` clips, so an inline image would never think it was visible until its whole paragraph was.
+- **Things Avalonia mirrors for you.** In right-to-left text Avalonia mirrors a visual with a render transform, so overlays must map bounds with `TransformToVisual`, never by adding `Bounds` offsets.
+- **Links that can take focus.** Links are `Span`s, which can't take keyboard focus or have automation peers, so a second overlay hosts one focusable target per link for Tab navigation and screen readers.
+- **Streaming.** For AI chat apps the viewer can append text and only re-render the blocks still open. On the 2,000-line README test, a full stream went from 31 s and 5.6 GB allocated to 2.5 s and 480 MB.
 
-Stride is covered by the [MIT License](LICENSE.md) unless stated otherwise (i.e. for some files that are copied from other projects). You can find the list of third-party projects [here](THIRD%20PARTY.md). Contributors need to sign the following [Contribution License Agreement](https://github.com/dotnet-foundation/.github/blob/main/CLA/dotnetfoundation.yml).
+Along the way I filed upstream issues where I hit framework bugs (for example [AvaloniaUI/Avalonia#22505](https://github.com/AvaloniaUI/Avalonia/issues/22505) on runtime style changes and [#22530](https://github.com/AvaloniaUI/Avalonia/issues/22530) on right-to-left hit testing), with workarounds in MarkView until they are fixed.
 
-## ✨ Contributors 
+MarkView now has about 17,600 lines of library code and 37,600 lines of tests (around 2,000 tests, most of them headless Avalonia tests, with mutation testing in CI), a [documentation site](https://kryptos-fr.github.io/MarkView.Avalonia/), and a browser demo built from the same code as the desktop one.
 
-Thanks to all these wonderful people who have contributed to Stride!
+### What came next: MarkView 12.4.0
 
-<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
-<!-- prettier-ignore-start -->
-<!-- markdownlint-disable -->
-<table>
-  <tbody>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://stride3d.net"><img src="https://avatars.githubusercontent.com/u/527565?v=4?s=100" width="100px;" alt="xen2"/><br /><sub><b>xen2</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=xen2" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Eideren"><img src="https://avatars.githubusercontent.com/u/5742236?v=4?s=100" width="100px;" alt="Eideren"/><br /><sub><b>Eideren</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Eideren" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://www.aggror.com"><img src="https://avatars.githubusercontent.com/u/3499539?v=4?s=100" width="100px;" alt="Jorn Theunissen"/><br /><sub><b>Jorn Theunissen</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Aggror" title="Documentation">📖</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/tebjan"><img src="https://avatars.githubusercontent.com/u/1094716?v=4?s=100" width="100px;" alt="Tebjan Halm"/><br /><sub><b>Tebjan Halm</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=tebjan" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/azeno"><img src="https://avatars.githubusercontent.com/u/573618?v=4?s=100" width="100px;" alt="Elias Holzer"/><br /><sub><b>Elias Holzer</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=azeno" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="http://www.tinyrocket.se"><img src="https://avatars.githubusercontent.com/u/204513?v=4?s=100" width="100px;" alt="Johan Gustafsson"/><br /><sub><b>Johan Gustafsson</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=johang88" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ykafia"><img src="https://avatars.githubusercontent.com/u/32330908?v=4?s=100" width="100px;" alt="Youness KAFIA"/><br /><sub><b>Youness KAFIA</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=ykafia" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="http://md-techblog.net.pl"><img src="https://avatars.githubusercontent.com/u/10709060?v=4?s=100" width="100px;" alt="Marian Dziubiak"/><br /><sub><b>Marian Dziubiak</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=manio143" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/AmbulantRex"><img src="https://avatars.githubusercontent.com/u/21176662?v=4?s=100" width="100px;" alt="AmbulantRex"/><br /><sub><b>AmbulantRex</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=AmbulantRex" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Basewq"><img src="https://avatars.githubusercontent.com/u/1356956?v=4?s=100" width="100px;" alt="Basewq"/><br /><sub><b>Basewq</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Basewq" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/herocrab"><img src="https://avatars.githubusercontent.com/u/35175947?v=4?s=100" width="100px;" alt="Jarmo"/><br /><sub><b>Jarmo</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=herocrab" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://junakovic.com"><img src="https://avatars.githubusercontent.com/u/60072552?v=4?s=100" width="100px;" alt="Antonio Junaković"/><br /><sub><b>Antonio Junaković</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=cstdbool" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Kryptos-FR"><img src="https://avatars.githubusercontent.com/u/3006525?v=4?s=100" width="100px;" alt="Nicolas Musset"/><br /><sub><b>Nicolas Musset</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Kryptos-FR" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/jasonswearingen"><img src="https://avatars.githubusercontent.com/u/814134?v=4?s=100" width="100px;" alt="Novaleaf"/><br /><sub><b>Novaleaf</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=jasonswearingen" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/salahchafai"><img src="https://avatars.githubusercontent.com/u/64394387?v=4?s=100" width="100px;" alt="salahchafai"/><br /><sub><b>salahchafai</b></sub></a><br /><a href="#design-salahchafai" title="Design">🎨</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://digitaltheory.biz/"><img src="https://avatars.githubusercontent.com/u/397608?v=4?s=100" width="100px;" alt="Mehar"/><br /><sub><b>Mehar</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=MeharDT" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="http://www.VaclavElias.com"><img src="https://avatars.githubusercontent.com/u/4528464?v=4?s=100" width="100px;" alt="Vaclav Elias"/><br /><sub><b>Vaclav Elias</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=VaclavElias" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/EternalTamago"><img src="https://avatars.githubusercontent.com/u/13661631?v=4?s=100" width="100px;" alt="EternalTamago"/><br /><sub><b>EternalTamago</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=EternalTamago" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/WhyPenguins"><img src="https://avatars.githubusercontent.com/u/42032199?v=4?s=100" width="100px;" alt="WhyPenguins"/><br /><sub><b>WhyPenguins</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=WhyPenguins" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/aunpyz"><img src="https://avatars.githubusercontent.com/u/14342782?v=4?s=100" width="100px;" alt="Aunnop Kattiyanet"/><br /><sub><b>Aunnop Kattiyanet</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=aunpyz" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/makotech222"><img src="https://avatars.githubusercontent.com/u/4389156?v=4?s=100" width="100px;" alt="Anon"/><br /><sub><b>Anon</b></sub></a><br /><a href="#design-makotech222" title="Design">🎨</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/D3ZAX"><img src="https://avatars.githubusercontent.com/u/15343372?v=4?s=100" width="100px;" alt="D3ZAX"/><br /><sub><b>D3ZAX</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=D3ZAX" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/phr00t"><img src="https://avatars.githubusercontent.com/u/5983470?v=4?s=100" width="100px;" alt="Phr00t"/><br /><sub><b>Phr00t</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=phr00t" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="http://schnellebuntebilder.de/"><img src="https://avatars.githubusercontent.com/u/646501?v=4?s=100" width="100px;" alt="sebl"/><br /><sub><b>sebl</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=sebllll" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Artromskiy"><img src="https://avatars.githubusercontent.com/u/47901401?v=4?s=100" width="100px;" alt="Artromskiy"/><br /><sub><b>Artromskiy</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Artromskiy" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/TheKeyblader"><img src="https://avatars.githubusercontent.com/u/30444673?v=4?s=100" width="100px;" alt="Jean-François Pustay"/><br /><sub><b>Jean-François Pustay</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=TheKeyblader" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Earthmark"><img src="https://avatars.githubusercontent.com/u/1251609?v=4?s=100" width="100px;" alt="Daniel Miller"/><br /><sub><b>Daniel Miller</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Earthmark" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="http://joreg.ath.cx"><img src="https://avatars.githubusercontent.com/u/1067952?v=4?s=100" width="100px;" alt="joreg"/><br /><sub><b>joreg</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=joreg" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/jrinker03"><img src="https://avatars.githubusercontent.com/u/49572939?v=4?s=100" width="100px;" alt="James Rinker"/><br /><sub><b>James Rinker</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=jrinker03" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/tristanmcpherson"><img src="https://avatars.githubusercontent.com/u/979937?v=4?s=100" width="100px;" alt="Tristan McPherson"/><br /><sub><b>Tristan McPherson</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=tristanmcpherson" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ericwj"><img src="https://avatars.githubusercontent.com/u/9473119?v=4?s=100" width="100px;" alt="Eric"/><br /><sub><b>Eric</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=ericwj" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/gregsn"><img src="https://avatars.githubusercontent.com/u/575557?v=4?s=100" width="100px;" alt="Sebastian Gregor"/><br /><sub><b>Sebastian Gregor</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=gregsn" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="http://insomnyawolf.github.io"><img src="https://avatars.githubusercontent.com/u/18150917?v=4?s=100" width="100px;" alt="insomnyawolf"/><br /><sub><b>insomnyawolf</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=insomnyawolf" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Doprez"><img src="https://avatars.githubusercontent.com/u/73259914?v=4?s=100" width="100px;" alt="Doprez"/><br /><sub><b>Doprez</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Doprez" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Jklawreszuk"><img src="https://avatars.githubusercontent.com/u/31008367?v=4?s=100" width="100px;" alt="Jakub Ławreszuk"/><br /><sub><b>Jakub Ławreszuk</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Jklawreszuk" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Ethereal77"><img src="https://avatars.githubusercontent.com/u/8967302?v=4?s=100" width="100px;" alt="Mario Guerra"/><br /><sub><b>Mario Guerra</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Ethereal77" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/tamamutu"><img src="https://avatars.githubusercontent.com/u/62577086?v=4?s=100" width="100px;" alt="tamamutu"/><br /><sub><b>tamamutu</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=tamamutu" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/IXLLEGACYIXL"><img src="https://avatars.githubusercontent.com/u/107197024?v=4?s=100" width="100px;" alt="IXLLEGACYIXL"/><br /><sub><b>IXLLEGACYIXL</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=IXLLEGACYIXL" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/arturoc"><img src="https://avatars.githubusercontent.com/u/48240?v=4?s=100" width="100px;" alt="arturo"/><br /><sub><b>arturo</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=arturoc" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/garychia"><img src="https://avatars.githubusercontent.com/u/88014292?v=4?s=100" width="100px;" alt="Chia-Hsiang Cheng"/><br /><sub><b>Chia-Hsiang Cheng</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=garychia" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://nicusorn5.github.io/"><img src="https://avatars.githubusercontent.com/u/20599225?v=4?s=100" width="100px;" alt="Nicolae Tugui"/><br /><sub><b>Nicolae Tugui</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=NicusorN5" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://mattiascibien.net"><img src="https://avatars.githubusercontent.com/u/1300681?v=4?s=100" width="100px;" alt="Mattias Cibien"/><br /><sub><b>Mattias Cibien</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=mattiascibien" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="http://cnonim.name"><img src="https://avatars.githubusercontent.com/u/523048?v=4?s=100" width="100px;" alt="Oleg Ageev"/><br /><sub><b>Oleg Ageev</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=cNoNim" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/SeleDreams"><img src="https://avatars.githubusercontent.com/u/16335601?v=4?s=100" width="100px;" alt="SeleDreams"/><br /><sub><b>SeleDreams</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=SeleDreams" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/acastrodev"><img src="https://avatars.githubusercontent.com/u/6575712?v=4?s=100" width="100px;" alt="Alexandre Castro"/><br /><sub><b>Alexandre Castro</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=acastrodev" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/SVNMLR"><img src="https://avatars.githubusercontent.com/u/44621949?v=4?s=100" width="100px;" alt="SVNMLR"/><br /><sub><b>SVNMLR</b></sub></a><br /><a href="#design-SVNMLR" title="Design">🎨</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://chroniclesofelyria.com"><img src="https://avatars.githubusercontent.com/u/17633767?v=4?s=100" width="100px;" alt="Jeromy Walsh"/><br /><sub><b>Jeromy Walsh</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=JeromyWalsh" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://pa.rh.am/"><img src="https://avatars.githubusercontent.com/u/7075456?v=4?s=100" width="100px;" alt="Parham Gholami"/><br /><sub><b>Parham Gholami</b></sub></a><br /><a href="#design-parhamgholami" title="Design">🎨</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/adrsch"><img src="https://avatars.githubusercontent.com/u/35346279?v=4?s=100" width="100px;" alt="adrsch"/><br /><sub><b>adrsch</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=adrsch" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/dotlogix"><img src="https://avatars.githubusercontent.com/u/16420200?v=4?s=100" width="100px;" alt="Alexander Schill"/><br /><sub><b>Alexander Schill</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=dotlogix" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/froce"><img src="https://avatars.githubusercontent.com/u/8515865?v=4?s=100" width="100px;" alt="froce"/><br /><sub><b>froce</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=froce" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://fydar.dev"><img src="https://avatars.githubusercontent.com/u/19309165?v=4?s=100" width="100px;" alt="Fydar"/><br /><sub><b>Fydar</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=fydar" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MaximilianEmel"><img src="https://avatars.githubusercontent.com/u/19846453?v=4?s=100" width="100px;" alt="MaximilianEmel"/><br /><sub><b>MaximilianEmel</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=MaximilianEmel" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Schossi"><img src="https://avatars.githubusercontent.com/u/8679168?v=4?s=100" width="100px;" alt="Schossi"/><br /><sub><b>Schossi</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Schossi" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ch3mbot"><img src="https://avatars.githubusercontent.com/u/110746303?v=4?s=100" width="100px;" alt="Dagan Hartmann"/><br /><sub><b>Dagan Hartmann</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=ch3mbot" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Nicogo1705"><img src="https://avatars.githubusercontent.com/u/20603105?v=4?s=100" width="100px;" alt="nicogo.eth"/><br /><sub><b>nicogo.eth</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Nicogo1705" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ourabigdev"><img src="https://avatars.githubusercontent.com/u/147079928?v=4?s=100" width="100px;" alt="hatim ourahou"/><br /><sub><b>hatim ourahou</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=ourabigdev" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/kopffarben"><img src="https://avatars.githubusercontent.com/u/1833690?v=4?s=100" width="100px;" alt="kopffarben"/><br /><sub><b>kopffarben</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=kopffarben" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Feralnex"><img src="https://avatars.githubusercontent.com/u/30673252?v=4?s=100" width="100px;" alt="Tomasz Czech"/><br /><sub><b>Tomasz Czech</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Feralnex" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/TranquilAbyss"><img src="https://avatars.githubusercontent.com/u/2864849?v=4?s=100" width="100px;" alt="Tranquil Abyss"/><br /><sub><b>Tranquil Abyss</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=TranquilAbyss" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/levifmorais"><img src="https://avatars.githubusercontent.com/u/102878183?v=4?s=100" width="100px;" alt="Levi Ferreira"/><br /><sub><b>Levi Ferreira</b></sub></a><br /><a href="#design-levifmorais" title="Design">🎨</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="http://tylerkvochick.com"><img src="https://avatars.githubusercontent.com/u/12144028?v=4?s=100" width="100px;" alt="Tyler Kvochick"/><br /><sub><b>Tyler Kvochick</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=tymokvo" title="Documentation">📖</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Arc-huangjingtong"><img src="https://avatars.githubusercontent.com/u/87562566?v=4?s=100" width="100px;" alt="Arc"/><br /><sub><b>Arc</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Arc-huangjingtong" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/minktusk"><img src="https://avatars.githubusercontent.com/u/121324712?v=4?s=100" width="100px;" alt="minktusk"/><br /><sub><b>minktusk</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=minktusk" title="Code">💻</a> <a href="#content-minktusk" title="Content">🖋</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://www.timcassell.net/"><img src="https://avatars.githubusercontent.com/u/35501420?v=4?s=100" width="100px;" alt="Tim Cassell"/><br /><sub><b>Tim Cassell</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=timcassell" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="http://www.linkedin.com/in/dylan-loe"><img src="https://avatars.githubusercontent.com/u/18317814?v=4?s=100" width="100px;" alt="Dylan Loe"/><br /><sub><b>Dylan Loe</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=dloe" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/wrshield"><img src="https://avatars.githubusercontent.com/u/145876802?v=4?s=100" width="100px;" alt="Will S"/><br /><sub><b>Will S</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=wrshield" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/soorMSWE"><img src="https://avatars.githubusercontent.com/u/147351572?v=4?s=100" width="100px;" alt="Ryan Soo"/><br /><sub><b>Ryan Soo</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=soorMSWE" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MechWarrior99"><img src="https://avatars.githubusercontent.com/u/8076495?v=4?s=100" width="100px;" alt="MechWarrior99"/><br /><sub><b>MechWarrior99</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=MechWarrior99" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/kristian15959"><img src="https://avatars.githubusercontent.com/u/8007327?v=4?s=100" width="100px;" alt="Proxid"/><br /><sub><b>Proxid</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=kristian15959" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="http://yerkoandrei.github.io"><img src="https://avatars.githubusercontent.com/u/19843418?v=4?s=100" width="100px;" alt="Yerko Andrei"/><br /><sub><b>Yerko Andrei</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=YerkoAndrei" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ComputerSmoke"><img src="https://avatars.githubusercontent.com/u/22194459?v=4?s=100" width="100px;" alt="Addison Schmidt"/><br /><sub><b>Addison Schmidt</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=ComputerSmoke" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/timconner"><img src="https://avatars.githubusercontent.com/u/22841670?v=4?s=100" width="100px;" alt="Tim Conner"/><br /><sub><b>Tim Conner</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=timconner" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://www.caleblamcodes.dev/"><img src="https://avatars.githubusercontent.com/u/67606076?v=4?s=100" width="100px;" alt="Caleb L."/><br /><sub><b>Caleb L.</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=ClamEater14" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/net2cn"><img src="https://avatars.githubusercontent.com/u/6072596?v=4?s=100" width="100px;" alt="net2cn"/><br /><sub><b>net2cn</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=net2cn" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/laske185"><img src="https://avatars.githubusercontent.com/u/37439758?v=4?s=100" width="100px;" alt="Peter Laske"/><br /><sub><b>Peter Laske</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=laske185" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MikhailArsentevTheSecond"><img src="https://avatars.githubusercontent.com/u/22962265?v=4?s=100" width="100px;" alt="Mikhail Arsentev"/><br /><sub><b>Mikhail Arsentev</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=MikhailArsentevTheSecond" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/hoelzl"><img src="https://avatars.githubusercontent.com/u/35998?v=4?s=100" width="100px;" alt="Matthias Hölzl"/><br /><sub><b>Matthias Hölzl</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=hoelzl" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/kutal10"><img src="https://avatars.githubusercontent.com/u/36085864?v=4?s=100" width="100px;" alt="Rahul Pai "/><br /><sub><b>Rahul Pai </b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=kutal10" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ModxVoldHunter"><img src="https://avatars.githubusercontent.com/u/65139923?v=4?s=100" width="100px;" alt="ModxVoldHunter"/><br /><sub><b>ModxVoldHunter</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=ModxVoldHunter" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="http://codingsteve.com/"><img src="https://avatars.githubusercontent.com/u/36681624?v=4?s=100" width="100px;" alt="Steve"/><br /><sub><b>Steve</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=C0dingSteve" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MEEMexe"><img src="https://avatars.githubusercontent.com/u/78092485?v=4?s=100" width="100px;" alt="Niklas Arndt"/><br /><sub><b>Niklas Arndt</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=MEEMexe" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ferafiks"><img src="https://avatars.githubusercontent.com/u/49789311?v=4?s=100" width="100px;" alt="Fera"/><br /><sub><b>Fera</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=ferafiks" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Kreblc3428"><img src="https://avatars.githubusercontent.com/u/197451419?v=4?s=100" width="100px;" alt="Kreblc3428"/><br /><sub><b>Kreblc3428</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Kreblc3428" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Acissathar"><img src="https://avatars.githubusercontent.com/u/10227954?v=4?s=100" width="100px;" alt="Will"/><br /><sub><b>Will</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Acissathar" title="Code">💻</a></td>
-    </tr>
-  </tbody>
-</table>
+The launcher still ships MarkView 12.2.1. The library kept going after the launcher shipped, and [12.4.0](https://github.com/Kryptos-FR/MarkView.Avalonia/releases/tag/v12.4.0), released on 21 October 2026, is the biggest update so far:
 
-<!-- markdownlint-restore -->
-<!-- prettier-ignore-end -->
+- **Streaming for AI chat.** `BeginStreaming()` appends text from any thread and re-renders only the blocks that can still change. Unfinished syntax such as `**bold` renders as it will once complete, and the scroll position, selection and focus survive every update.
+- **Faster long documents.** On a document of 100 sections, each with a code block and formulas, the first frame drops from about 3.7 s to 0.6 s, a theme switch from 1.3 s to 0.3 s, and memory from 270 MB to 85 MB.
+- **Three theme presets.** GitHub, Chat and Docs, each in light and dark, all switching live and meeting WCAG AA contrast.
+- **Reading tools.** A code block toolbar with copy buttons and line numbers, find in document, foldable alerts, headings and `<details>`, and a context menu that copies as Markdown or HTML and saves images and diagrams.
+- **Accessible and international.** Screen readers hear every block with its role, Tab walks through links in reading order, a high-contrast mode follows the system, and Hebrew and Arabic read right to left.
+- **GitHub-flavoured by default.** A viewer without a pipeline now renders Markdown the way GitHub does, including a safe subset of HTML mapped to native controls.
 
-<!-- ALL-CONTRIBUTORS-LIST:END -->
+Moving the launcher to 12.4.0 would bring find, folding and screen-reader support to its release notes.
 
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+<!-- TODO screenshot: release-notes panel, WPF vs Avalonia, ideally on a page with a code block or table that the old renderer broke. -->
+
+## Chapter 6: the long pull request
+
+[#3276](https://github.com/stride3d/stride/pull/3276) opened on 21 April 2026 and was itself a do-over: it recreated an earlier PR, [#3027](https://github.com/stride3d/stride/pull/3027), after a history rewrite. Within four days it had its own documentation set under [`docs/launcher/`](https://github.com/stride3d/stride/tree/master/docs/launcher), covering settings, localisation, packaging, lifecycle, views, view models and cross-platform notes. It also had a `port-status.md` roadmap whose phases got struck through as they closed: window lifecycle parity, cross-platform services, slide animations, view-model tests with Avalonia headless.
+
+Then it waited. The branch absorbed master four times between May and August, while the old WPF launcher stayed the release candidate in case an emergency fix was needed. xen2 merged it on 11 August, apologising for "dragging it so long". My merge comment left one issue to double-check ([#3290](https://github.com/stride3d/stride/issues/3290)) and "a few visual artifacts" to clean up afterwards.
+
+## Chapter 7: shipping day
+
+Launcher 6.0.1 went out on 4 October 2026. It looks familiar on purpose: dark by default again, with the red accent of the 5.x launcher. Underneath, everything is new.
+
+Shipping it took more than my port, and the release is better for it:
+
+- **xen2** (Virgile Bello) merged the port and built most of what went around it. For 6.0.1: the settings gear with theme switching and opt-in pre-release updates ([#3500](https://github.com/stride3d/stride/pull/3500)), version rows that open and remove local builds ([#3506](https://github.com/stride3d/stride/pull/3506)), real install and uninstall progress ([#3507](https://github.com/stride3d/stride/pull/3507)), recent projects that open with the right version ([#3509](https://github.com/stride3d/stride/pull/3509)), and the installer clean-up. After 6.0.1 he kept shipping, with six more releases (6.0.2 to 6.0.7) in under two weeks: nightly builds with their own badge, a quiet uninstall that works with winget, self-updates streamed to disk, and recent projects that read their Stride version from a `.csproj`.
+- **xen2** also wrote the `stride` command-line tool ([#3240](https://github.com/stride3d/stride/pull/3240), June 2026), which installs Stride versions, creates projects and updates itself from any terminal. It shares its version-management core with the launcher, and it's what makes Stride usable on Linux today while the launcher's Linux installs are still untested.
+- **Jklawreszuk** (Jakub Ławreszuk) did the Fluent 2 visual refresh ([#3383](https://github.com/stride3d/stride/pull/3383): custom title bar, new icons, accent buttons, unified status bar, rounded cards) and kept polishing the cards after the release ([#3527](https://github.com/stride3d/stride/pull/3527)). He also removed the telemetry system ([#3279](https://github.com/stride3d/stride/pull/3279)) and contributed groundwork along the way.
+- **ferafiks** polished the experimental light mode ([#3502](https://github.com/stride3d/stride/pull/3502)) and fixed the recent-projects context menu ([#3483](https://github.com/stride3d/stride/pull/3483)), and **minktusk** made the brand icons ([#2345](https://github.com/stride3d/stride/pull/2345)).
+
+This entry covers my part: the port itself ([#3276](https://github.com/stride3d/stride/pull/3276)), the release-notes improvements ([#3372](https://github.com/stride3d/stride/pull/3372)), the presentation-layer groundwork, and MarkView.Avalonia.
+
+<!-- TODO screenshots: 6.0.1 dark, 6.0.1 light, release notes with outline open. -->
+
+## What it cost
+
+The honest answer is that I don't know exactly, in hours. The cross-platform effort began with a single commit on 16 December 2023, and since then the rhythm has been anything but regular: some months I worked every evening and every weekend, others not at all. Added up, the whole cross-platform effort is likely several months of full-time work. The launcher's share of that is probably three to four months, most of it in the Avalonia 11 years on the editor branch.
+
+The final stretch is easier to measure. The [#3276](https://github.com/stride3d/stride/pull/3276) branch has commits on 14 separate days between 21 April and 10 August 2026. At two to three hours an evening, that's roughly 30 to 40 hours to take the launcher from the editor branch to a mergeable port on Avalonia 12. That figure is a floor: it leaves out the evenings spent testing and reading code that never produced a commit.
+
+The launcher port itself wasn't funded. In late 2025, Stride's [Open Collective](https://opencollective.com/stride3d/projects/editor-rewrite-avalonia) paid me $4,000 for the cross-platform effort as a whole, covering everything since that first commit. Set against several months of work, it was recognition rather than a salary.
+
+What I can measure:
+
+| | |
+|---|---|
+| First cross-platform commit | 16 December 2023 (`xplat-editor` branch) |
+| First Avalonia launcher | 8 January 2024 (`xplat-editor` branch) |
+| Presentation-layer split on master | [#2082](https://github.com/stride3d/stride/pull/2082), 17 January 2024, 521 files |
+| The port PR | [#3276](https://github.com/stride3d/stride/pull/3276): 57 commits over 16 weeks (21 April → 10 August 2026), 159 files, +8,757 / −4,853 |
+| Active days on [#3276](https://github.com/stride3d/stride/pull/3276) | 14 days with commits, about 30–40 hours at 2–3 hours a day |
+| Launcher files | 35 → 43 C# files, 4 XAML → 7 AXAML views, 24 → 3 PNG images |
+| MarkView.Avalonia | 199 commits from 8 April to 21 October 2026, 9 stable releases on NuGet (12.0.1 → 12.4.0), ~17.6k lines of code, ~37.6k lines of tests |
+| Contributors to 6.0.1 | 5 (see above) |
+
+**AI assistance.** The challenge says AI-assisted code is fine, but I'd rather say plainly where I used it than leave readers guessing. The two halves of this story were built in different eras.
+
+The launcher side mostly predates any AI tool: the split of `Stride.Core.Presentation`, the whole of `Stride.Core.Presentation.Avalonia`, and nearly all of the launcher port were written by hand. Some of the last commits on [#3276](https://github.com/stride3d/stride/pull/3276) probably had an assistant involved, though I couldn't say exactly which ones, and even then I kept working on them locally before pushing. So it's mixed at the very end, and nothing like the MarkView story that follows.
+
+MarkView.Avalonia is the other half, and it was made with a lot of help from AI. It didn't start from a blank page, though: Markdig.Wpf, itself written long before any AI was involved, gave it a solid base to port from. For 12.4.0 the way of working changed again. I worked with Claude through its Projects feature: I wrote the specs, prepared the plans and set the direction, the agent wrote the code, and I did the final review, challenging the implementation until it was right. The repository's `CLAUDE.md` is part of that story, and it's there for anyone to read.
+
+The same goes for this write-up: I wrote it with AI assistance, from my notes, the git history and the pull requests.
+
+## Epilogue: the road to Linux
+
+The launcher builds on Windows, Linux and macOS today, from one codebase. On Linux it starts, lists the Stride versions from NuGet and runs the whole UI (screenshot below, taken on Linux from the 6.0.7 tag). Builds for each platform are attached to this entry. But I'd rather be honest about what that means:
+
+<!-- TODO screenshot: screenshots/linux-6.0.7-main.png -->
+<!-- TODO builds: attach the Linux and macOS archives to a release on the fork -->
+
+
+- **Windows** is the shipped, supported platform.
+- **Linux** runs the launcher, but installing Stride versions through it is untested there, and Game Studio itself is still WPF and Windows-only (it partly works under Wine/Proton). For now, Linux users have xen2's `stride` CLI, which does the same version management from a terminal.
+- **macOS** needs a RID, an `.app` bundle, codesigning and notarisation, and a review of the window chrome before it's more than a demo.
+- Moving to MarkView 12.4.0 is the next easy win for the release-notes panel (see [What came next](#what-came-next-markview-1240)).
+- Still open from `port-status.md`: a friendly message when the .NET runtime is missing on Windows, a Linux path for reinstall-based self-updates, headless integration tests of the real window, and remembering the selected patch version.
+
+The launcher was always the small door. Game Studio's Avalonia rewrite is the big one, and it now builds on everything the launcher proved out: the presentation layer, the markup extensions, the per-OS IPC, and a Markdown viewer the whole Avalonia ecosystem can use.
+
+### If you're porting a WPF app with rich content
+
+1. **Split the UI-agnostic layer first, on master.** Getting the view models off WPF while the WPF app kept shipping was the single most useful step. It made the port a UI rewrite, not an application rewrite.
+2. **Port your markup extensions early.** If your XAML is full of inline converters and multi-bindings, that vocabulary is the real migration surface. Plan to split extensions that WPF lets you use both as a value and as a converter.
+3. **Shrink the scope until it ships.** A smaller application that reaches users teaches more than a large one stuck on a branch.
+4. **Write down the deliberate differences.** A `port-status.md` with a "don't revert this" table saved review time and a few accidental regressions.
+5. **There's no `FlowDocument`, and that's fine.** Rich text in Avalonia is a tree of real controls. You can do more with it (lazy rendering, live theming, accessibility overlays), but selection, find and focus become your job.
+
+## Links
+
+- Port: [stride3d/stride#3276](https://github.com/stride3d/stride/pull/3276) · enhancements [#3372](https://github.com/stride3d/stride/pull/3372) · groundwork [#2082](https://github.com/stride3d/stride/pull/2082), [#2658](https://github.com/stride3d/stride/pull/2658), [#2783](https://github.com/stride3d/stride/pull/2783)
+- Release: [launcher 6.0.1](https://github.com/stride3d/stride/releases/tag/launcher%2F6.0.1)
+- Launcher docs: [docs/launcher/](https://github.com/stride3d/stride/tree/master/docs/launcher)
+- MarkView.Avalonia: [repository](https://github.com/Kryptos-FR/MarkView.Avalonia) · [NuGet](https://www.nuget.org/packages/MarkView.Avalonia)
+- Markdig.Wpf (archived): [repository](https://github.com/Kryptos-FR/markdig.wpf)
+- Builds: <!-- TODO: link the release on the fork with the Windows/Linux/macOS archives -->
