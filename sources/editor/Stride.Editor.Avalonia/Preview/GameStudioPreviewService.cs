@@ -47,7 +47,14 @@ namespace Stride.Editor.Avalonia.Preview
         private readonly IEditorDebugService? debugService;
 
         private readonly AutoResetEvent initializationSignal = new AutoResetEvent(false);
-        private readonly GameEngineHost host;
+        // The control the game shows in: a GameEngineHost (option A) or an OffscreenGameView (options B and B')
+        private readonly Control host;
+        private readonly Control viewportControl;
+        private readonly ViewportMode viewportMode = ViewportModeSelector.Current;
+        private readonly ViewportStats viewportStats;
+        private readonly OffscreenGameView? offscreenView;
+        private OffscreenFrameExporter? frameExporter;
+        private readonly AvaloniaInputBridge? inputBridge;
         private readonly IDebugPage? loggerDebugPage;
         private IAssetPreview? currentPreview;
         private IntPtr windowHandle;
@@ -94,6 +101,15 @@ namespace Stride.Editor.Avalonia.Preview
             previewCompileContext.SetGameSettingsAsset(previewGameSettings);
             previewCompileContext.CompilationContext = typeof(PreviewCompilationContext);
 
+            viewportStats = new ViewportStats(viewportMode.ToString());
+            Logger.Info($"Preview viewport: {viewportMode}");
+            Console.WriteLine($"[viewport] preview viewport mode {viewportMode}");
+            if (viewportMode != ViewportMode.NativeWindow)
+            {
+                offscreenView = Dispatcher.Invoke(() => new OffscreenGameView(viewportStats));
+                inputBridge = Dispatcher.Invoke(() => new AvaloniaInputBridge(offscreenView));
+            }
+
             previewGameThread = new Thread(SafeAction.Wrap(StrideUIThread)) { IsBackground = true, Name = "PreviewGame Thread" };
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 previewGameThread.SetApartmentState(ApartmentState.STA);
@@ -101,10 +117,55 @@ namespace Stride.Editor.Avalonia.Preview
 
             // Wait for the window handle to be generated on the proper thread; the host is a control, created on the UI thread
             initializationSignal.WaitOne();
-            host = Dispatcher.Invoke(() => new GameEngineHost(windowHandle));
+            if (offscreenView != null)
+            {
+                viewportControl = offscreenView;
+            }
+            else
+            {
+                viewportControl = Dispatcher.Invoke(() =>
+                {
+                    var nativeHost = new GameEngineHost(windowHandle);
+                    // The size the layout gives the window, for the resize latency of the viewport stats
+                    nativeHost.SizeChanged += (_, e) =>
+                    {
+                        var scaling = TopLevel.GetTopLevel(nativeHost)?.RenderScaling ?? 1.0;
+                        var size = global::Avalonia.PixelSize.FromSize(e.NewSize, scaling);
+                        viewportStats.SizeRequested(size.Width, size.Height);
+                    };
+                    return nativeHost;
+                });
+            }
+            host = Dispatcher.Invoke(() => CreateOverlayProbe(viewportControl));
 
             session.AssetPropertiesChanged += OnAssetPropertyChanged;
             gameSettingsProvider.GameSettingsChanged += OnGameSettingsChanged;
+        }
+
+        /// <summary>
+        /// Viewport spike: puts an Avalonia label over the viewport, to show which modes let the editor draw over the game
+        /// (the native window of option A covers it: the airspace limit).
+        /// </summary>
+        private Control CreateOverlayProbe(Control viewport)
+        {
+            var label = new global::Avalonia.Controls.Border
+            {
+                Background = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(160, 0, 0, 0)),
+                Padding = new global::Avalonia.Thickness(6, 2),
+                Margin = new global::Avalonia.Thickness(6),
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
+                VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Top,
+                IsHitTestVisible = false,
+                Child = new global::Avalonia.Controls.TextBlock
+                {
+                    Text = $"Avalonia overlay: {viewportMode}",
+                    Foreground = global::Avalonia.Media.Brushes.Yellow,
+                },
+            };
+            var grid = new Grid();
+            grid.Children.Add(viewport);
+            grid.Children.Add(label);
+            return grid;
         }
 
         /// <summary>
@@ -147,7 +208,8 @@ namespace Stride.Editor.Avalonia.Preview
 
 
                 //Game = null;
-                host.Dispose();
+                (viewportControl as IDisposable)?.Dispose();
+                frameExporter?.Dispose();
                 //host = null;
                 //gameForm = null;
                 //windowHandle = IntPtr.Zero;
@@ -161,13 +223,27 @@ namespace Stride.Editor.Avalonia.Preview
 
         private void StrideUIThread()
         {
-            gameForm = new EmbeddedGameForm { Visible = false };
-            windowHandle = gameForm.Handle;
+            GameContext context;
+            if (offscreenView != null)
+            {
+                // Options B and B': no window, the game renders into an offscreen back buffer that the view shows
+                initializationSignal.Set();
+                frameExporter = new OffscreenFrameExporter(offscreenView, viewportStats);
+                if (viewportMode == ViewportMode.GpuInterop)
+                    frameExporter.GpuPresenter = GpuFramePresenter.TryCreate(offscreenView, viewportStats, Logger);
+                PreviewGame = new EmbeddedPreviewGame(AssetBuilderService.EffectCompiler, viewportStats, frameExporter, inputBridge);
+                context = new GameContextHeadless(64, 64) { InitializeDatabase = false };
+            }
+            else
+            {
+                gameForm = new EmbeddedGameForm { Visible = false };
+                windowHandle = gameForm.Handle;
 
-            initializationSignal.Set();
+                initializationSignal.Set();
 
-            PreviewGame = new EmbeddedPreviewGame(AssetBuilderService.EffectCompiler);
-            var context = new GameContextSDL(gameForm) { InitializeDatabase = false };
+                PreviewGame = new EmbeddedPreviewGame(AssetBuilderService.EffectCompiler, viewportStats, null, null);
+                context = new GameContextSDL(gameForm) { InitializeDatabase = false };
+            }
 
             // Wait for shaders to be loaded
             AssetBuilderService.WaitForShaders();
@@ -430,9 +506,18 @@ namespace Stride.Editor.Avalonia.Preview
         /// </summary>
         private sealed class EmbeddedPreviewGame : PreviewGame
         {
-            public EmbeddedPreviewGame(IEffectCompiler effectCompiler)
+            private readonly ViewportStats stats;
+            private readonly OffscreenFrameExporter? exporter;
+            private readonly AvaloniaInputBridge? inputBridge;
+            private long frameStart;
+            private long lastInputLog;
+
+            public EmbeddedPreviewGame(IEffectCompiler effectCompiler, ViewportStats stats, OffscreenFrameExporter? exporter, AvaloniaInputBridge? inputBridge)
                 : base(effectCompiler)
             {
+                this.stats = stats;
+                this.exporter = exporter;
+                this.inputBridge = inputBridge;
                 // A running game shows its window, which is a top-level window until the host reparents it (an empty
                 // square on the desktop): the host shows the window once it is embedded
                 MakeWindowVisibleOnRun = false;
@@ -450,6 +535,39 @@ namespace Stride.Editor.Avalonia.Preview
                 // The host gives the window its size: a borderless SDL window must stay resizable to follow it (on Windows,
                 // SDL keeps the client area of a non-resizable borderless window at the 64x64 of the first back buffer)
                 Window.AllowUserResizing = true;
+                // A window-less game counts as hidden, and a hidden game renders 15 frames a second: the view shows it
+                if (exporter != null)
+                    Window.Visible = true;
+            }
+
+            protected override bool BeginDraw()
+            {
+                frameStart = stats.Now;
+                // The input the view received since the last frame, before the input manager updates
+                inputBridge?.Apply(Input);
+                if (inputBridge != null && frameStart - lastInputLog > System.Diagnostics.Stopwatch.Frequency)
+                {
+                    lastInputLog = frameStart;
+                    Console.WriteLine($"[viewport] {inputBridge.Describe(Input)}");
+                }
+                // Between two frames: the back buffer follows the view
+                if (!IsEditorHidden)
+                    exporter?.ApplyRequestedSize(GraphicsDeviceManager);
+                return base.BeginDraw();
+            }
+
+            protected override void EndDraw(bool present)
+            {
+                var backBuffer = GraphicsDevice?.Presenter?.BackBuffer;
+                // Only a frame that was drawn is shown (present is false when the game skipped the draw)
+                if (exporter != null && backBuffer != null && present)
+                    exporter.EndFrame(GraphicsContext.CommandList, backBuffer);
+                base.EndDraw(present);
+                if (backBuffer != null && present)
+                {
+                    exporter?.AfterSubmit();
+                    stats.FrameDrawn(frameStart, backBuffer.Width, backBuffer.Height);
+                }
             }
         }
     }
