@@ -36,5 +36,16 @@ public interface IEditorDialogService : IDialogService
     /// <param name="initialAsset">The asset selected when the picker opens, or <c>null</c>.</param>
     /// <param name="initialLocation">The folder selected when the picker opens and there is no initial asset, or <c>null</c>.</param>
     /// <returns>The picked asset, or <c>null</c> when the user cancelled.</returns>
+    /// <summary>
+    /// Shows the new project window of a session (see <see cref="Components.TemplateDescriptions.NewProjectTemplateCollectionViewModel"/>)
+    /// and waits for the user to pick a template. A host without the window returns <c>null</c>.
+    /// </summary>
+    /// <param name="session">The session the project is added to.</param>
+    /// <returns>The template and the name and location of the project, or <c>null</c> when the user cancelled.</returns>
+    Task<NewPackageParameters?> ShowNewProjectDialogAsync(SessionViewModel session)
+    {
+        return Task.FromResult<NewPackageParameters?>(null);
+    }
+
     Task<AssetViewModel?> OpenAssetPickerAsync(SessionViewModel session, IEnumerable<Type> acceptedTypes, Func<AssetViewModel, bool>? filter = null, AssetViewModel? initialAsset = null, DirectoryBaseViewModel? initialLocation = null);
 }
