@@ -97,6 +97,47 @@ internal sealed class GpuFramePresenter : IDisposable
     }
 
     /// <summary>
+    /// Gets the identifier (LUID) of the GPU the editor's compositor renders with, or <c>null</c> when it has no GPU interop
+    /// or doesn't say (game thread, before the game creates its device).
+    /// </summary>
+    /// <remarks>
+    /// A shared texture only opens on the GPU that created it. Stride prefers the high-performance GPU while Avalonia
+    /// (ANGLE) uses the default one: on a machine with two GPUs (integrated and discrete), the game must render on the
+    /// compositor's GPU, or the compositor loses its context at the first update.
+    /// </remarks>
+    public static long? GetCompositorAdapterLuid(Logger logger)
+    {
+        try
+        {
+            var task = Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var lifetime = global::Avalonia.Application.Current?.ApplicationLifetime as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+                var window = lifetime?.MainWindow;
+                var compositor = window != null ? ElementComposition.GetElementVisual(window)?.Compositor : null;
+                var interop = compositor != null ? await compositor.TryGetCompositionGpuInterop() : null;
+                return interop?.DeviceLuid;
+            });
+            if (!task.Wait(TimeSpan.FromSeconds(5)))
+            {
+                Console.WriteLine("[viewport] compositor adapter: no answer from the UI thread");
+                return null;
+            }
+            var luid = task.Result;
+            if (luid is not { Length: 8 })
+            {
+                Console.WriteLine("[viewport] compositor adapter: unknown (no GPU interop, or no LUID)");
+                return null;
+            }
+            return BitConverter.ToInt64(luid, 0);
+        }
+        catch (Exception ex)
+        {
+            logger.Warning("Preview viewport: could not get the compositor's GPU", ex);
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Copies the back buffer into the shared texture (game thread, before the command list of the frame is closed).
     /// </summary>
     /// <returns><c>false</c> when the compositor still uses the previous frame and this one is dropped.</returns>

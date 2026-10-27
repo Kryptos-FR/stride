@@ -233,6 +233,8 @@ namespace Stride.Editor.Avalonia.Preview
                     frameExporter.GpuPresenter = GpuFramePresenter.TryCreate(offscreenView, viewportStats, Logger);
                 PreviewGame = new EmbeddedPreviewGame(AssetBuilderService.EffectCompiler, viewportStats, frameExporter, inputBridge);
                 context = new GameContextHeadless(64, 64) { InitializeDatabase = false };
+                if (viewportMode == ViewportMode.GpuInterop)
+                    UseCompositorAdapter();
             }
             else
             {
@@ -292,8 +294,22 @@ namespace Stride.Editor.Avalonia.Preview
             }
         }
 
+        /// <summary>
+        /// Makes the preview game render on the GPU of the editor's compositor, so that it can share its frames (viewport spike).
+        /// </summary>
+        private void UseCompositorAdapter()
+        {
+            var luid = GpuFramePresenter.GetCompositorAdapterLuid(Logger);
+            var adapters = string.Join(", ", GraphicsAdapterFactory.Adapters.ToArray().Select(x => $"{x.Description} ({x.AdapterUid})"));
+            Console.WriteLine($"[viewport] compositor adapter {luid?.ToString() ?? "unknown"}; Stride adapters: {adapters}");
+            if (luid is { } uid && GraphicsAdapterFactory.Adapters.ToArray().Any(x => x.AdapterUid == uid))
+                PreviewGame.GraphicsDeviceManager.RequiredAdapterUid = uid.ToString();
+        }
+
         private void GraphicsDeviceManagerDeviceCreated(object? sender, EventArgs e)
         {
+            var adapter = PreviewGame.GraphicsDeviceManager.GraphicsDevice.Adapter;
+            Console.WriteLine($"[viewport] preview game device on {adapter.Description} ({adapter.AdapterUid})");
             // Transmit actual GraphicsProfile to preview and thumbnail builder context
             var graphicsProfile = PreviewGame.GraphicsDeviceManager.GraphicsDevice.Features.CurrentProfile;
             //ThumbnailService.ThumbnailBuilderContext.GetGameSettingsAsset().Get<RenderingSettings>().DefaultGraphicsProfile = graphicsProfile;
