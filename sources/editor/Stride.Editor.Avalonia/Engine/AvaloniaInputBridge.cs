@@ -27,6 +27,10 @@ internal sealed class AvaloniaInputBridge
     private MouseSimulated? mouse;
     private KeyboardSimulated? keyboard;
     private int applied;
+    private Vector2 deltaSum;
+    private float wheelSum;
+    private int updates;
+    private Vector2? lastPosition;
 
     public AvaloniaInputBridge(OffscreenGameView view)
     {
@@ -85,9 +89,24 @@ internal sealed class AvaloniaInputBridge
     /// </summary>
     public string Describe(InputManager input)
     {
-        var description = $"input: applied={applied} stride-mouse=({input.MousePosition.X:F2},{input.MousePosition.Y:F2}) left-down={input.IsMouseButtonDown(MouseButton.Left)} keys-down={input.DownKeys.Count}";
+        var description = $"input: applied={applied} stride-mouse=({input.MousePosition.X:F2},{input.MousePosition.Y:F2}) left-down={input.IsMouseButtonDown(MouseButton.Left)} keys-down={input.DownKeys.Count}"
+            + $" mouse-delta-sum=({deltaSum.X:F3},{deltaSum.Y:F3}) wheel-sum={wheelSum:F2} updates={updates}";
         applied = 0;
+        updates = 0;
+        deltaSum = Vector2.Zero;
+        wheelSum = 0;
         return description;
+    }
+
+    /// <summary>
+    /// Accumulates the mouse delta and wheel the game saw in an update, for <see cref="Describe"/> (game thread, after the
+    /// update of the input manager).
+    /// </summary>
+    public void Observe(InputManager input)
+    {
+        updates++;
+        deltaSum += input.MouseDelta;
+        wheelSum += input.MouseWheelDelta;
     }
 
     private void QueuePosition(OffscreenGameView view, PointerEventArgs e)
@@ -98,7 +117,19 @@ internal sealed class AvaloniaInputBridge
         if (size.Width <= 0 || size.Height <= 0)
             return;
         var position = new Vector2((float)(point.X / size.Width), (float)(point.Y / size.Height));
-        pending.Enqueue((m, _) => m.SetPosition(position));
+        pending.Enqueue((m, _) => MoveTo(m, position));
+    }
+
+    private void MoveTo(MouseSimulated mouse, Vector2 position)
+    {
+        // A locked mouse (the camera controls lock it while a button is down) measures each move from the lock position:
+        // a real locked cursor is warped back to it after each move, but the editor's cursor keeps moving, so the move is
+        // the change since the previous event, applied from the lock position
+        if (mouse.IsPositionLocked && lastPosition is { } last)
+            mouse.SetPosition(mouse.Position + (position - last));
+        else
+            mouse.SetPosition(position);
+        lastPosition = position;
     }
 
     private static MouseButton ToMouseButton(PointerUpdateKind kind)

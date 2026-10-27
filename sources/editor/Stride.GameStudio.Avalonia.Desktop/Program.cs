@@ -151,10 +151,49 @@ internal sealed class Program
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+        => WithViewportSpikeOptions(AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
-            .LogToTrace();
+            .LogToTrace());
+
+    /// <summary>
+    /// Viewport spike: <c>STRIDE_EDITOR_AVALONIA_RENDERING</c> forces Avalonia's renderer, with no software fallback, so that a
+    /// renderer that can't start fails with its reason (Windows: <c>angle</c>, <c>wgl</c>, <c>vulkan</c>; Linux: <c>glx</c>,
+    /// <c>egl</c>, <c>vulkan</c>; both: <c>software</c>). With <c>STRIDE_EDITOR_VIEWPORT</c> set, Avalonia's warnings go to the
+    /// console too.
+    /// </summary>
+    private static AppBuilder WithViewportSpikeOptions(AppBuilder builder)
+    {
+        if (Environment.GetEnvironmentVariable("STRIDE_EDITOR_VIEWPORT") != null)
+            System.Diagnostics.Trace.Listeners.Add(new System.Diagnostics.TextWriterTraceListener(Console.Out) { TraceOutputOptions = System.Diagnostics.TraceOptions.None });
+
+        var rendering = Environment.GetEnvironmentVariable("STRIDE_EDITOR_AVALONIA_RENDERING")?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(rendering))
+            return builder;
+
+        Win32RenderingMode? win32Mode = rendering switch
+        {
+            "angle" => Win32RenderingMode.AngleEgl,
+            "wgl" => Win32RenderingMode.Wgl,
+            "vulkan" => Win32RenderingMode.Vulkan,
+            "software" => Win32RenderingMode.Software,
+            _ => null,
+        };
+        X11RenderingMode? x11Mode = rendering switch
+        {
+            "glx" => X11RenderingMode.Glx,
+            "egl" => X11RenderingMode.Egl,
+            "vulkan" => X11RenderingMode.Vulkan,
+            "software" => X11RenderingMode.Software,
+            _ => null,
+        };
+        Console.WriteLine($"[viewport] Avalonia rendering forced to {rendering} (Win32: {win32Mode?.ToString() ?? "default"}, X11: {x11Mode?.ToString() ?? "default"})");
+        if (win32Mode is { } win32)
+            builder = builder.With(new Win32PlatformOptions { RenderingMode = [win32] });
+        if (x11Mode is { } x11)
+            builder = builder.With(new X11PlatformOptions { RenderingMode = [x11] });
+        return builder;
+    }
 
     private static void CrashReport(CrashReportArgs args)
     {

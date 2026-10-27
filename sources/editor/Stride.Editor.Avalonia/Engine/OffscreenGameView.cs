@@ -33,6 +33,8 @@ public sealed class OffscreenGameView : Control
     private WriteableBitmap? pending;
     private WriteableBitmap? free;
     private bool invalidatePosted;
+    private TopLevel? topLevel;
+    private bool animationFrameRequested;
 
     private CompositionSurfaceVisual? surfaceVisual;
 
@@ -97,7 +99,8 @@ public sealed class OffscreenGameView : Control
                 stats.FrameSkipped();
             }
             pending = bitmap;
-            if (invalidatePosted)
+            // By default, the view picks the frame up at its next animation frame (OnAnimationFrame)
+            if (!ViewportModeSelector.PumpByPost || invalidatePosted)
                 return;
             invalidatePosted = true;
         }
@@ -136,11 +139,13 @@ public sealed class OffscreenGameView : Control
     {
         var start = stats.Now;
         WriteableBitmap? bitmap;
+        var isNewFrame = false;
         lock (bitmapLock)
         {
             invalidatePosted = false;
             if (pending != null)
             {
+                isNewFrame = true;
                 if (front != null)
                 {
                     free?.Dispose();
@@ -157,7 +162,7 @@ public sealed class OffscreenGameView : Control
         if (bitmap != null)
         {
             context.DrawImage(bitmap, new Rect(bitmap.Size), new Rect(Bounds.Size));
-            stats.FrameShown(start);
+            stats.FrameShown(start, isNewFrame);
         }
     }
 
@@ -174,7 +179,42 @@ public sealed class OffscreenGameView : Control
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        topLevel = TopLevel.GetTopLevel(this);
+        RequestAnimationFrame();
         UpdatePixelSize();
+    }
+
+    /// <inheritdoc />
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        topLevel = null;
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void RequestAnimationFrame()
+    {
+        if (topLevel == null || animationFrameRequested)
+            return;
+        animationFrameRequested = true;
+        topLevel.RequestAnimationFrame(OnAnimationFrame);
+    }
+
+    private void OnAnimationFrame(TimeSpan time)
+    {
+        animationFrameRequested = false;
+        // A detached view stops asking for animation frames: its next attachment asks again
+        if (topLevel == null)
+            return;
+        stats.UiTick();
+        if (!ViewportModeSelector.PumpByPost)
+        {
+            bool hasPending;
+            lock (bitmapLock)
+                hasPending = pending != null;
+            if (hasPending)
+                InvalidateVisual();
+        }
+        RequestAnimationFrame();
     }
 
     private void UpdatePixelSize()

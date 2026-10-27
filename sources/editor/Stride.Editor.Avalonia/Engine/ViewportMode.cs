@@ -32,12 +32,14 @@ public enum ViewportMode
 /// <remarks>
 /// The environment variable <c>STRIDE_EDITOR_VIEWPORT</c> selects it: <c>native</c> (the default), <c>readback</c> or
 /// <c>gpu</c>. <c>STRIDE_EDITOR_VIEWPORT_SIZE</c> (for example <c>1920x1080</c>) renders the offscreen modes at a fixed
-/// size, scaled into the control, to measure their cost at a size the panel doesn't have.
+/// size, scaled into the control, to measure their cost at a size the panel doesn't have. <c>STRIDE_EDITOR_VIEWPORT_PUMP</c>
+/// (<c>frame</c> or <c>post</c>) selects how the readback view asks for its renders.
 /// </remarks>
 public static class ViewportModeSelector
 {
     private const string ModeVariable = "STRIDE_EDITOR_VIEWPORT";
     private const string SizeVariable = "STRIDE_EDITOR_VIEWPORT_SIZE";
+    private const string PumpVariable = "STRIDE_EDITOR_VIEWPORT_PUMP";
 
     /// <summary>
     /// Gets the mode selected for this process.
@@ -48,6 +50,13 @@ public static class ViewportModeSelector
     /// Gets the fixed back buffer size of the offscreen modes, or <c>null</c> to follow the control.
     /// </summary>
     public static (int Width, int Height)? ForcedSize { get; } = ParseSize(Environment.GetEnvironmentVariable(SizeVariable));
+
+    /// <summary>
+    /// Gets a value indicating whether the readback view asks for a render by posting to the dispatcher for each frame
+    /// (<c>STRIDE_EDITOR_VIEWPORT_PUMP=post</c>) instead of checking for a new frame at each animation frame of its
+    /// top level (<c>frame</c>, the default).
+    /// </summary>
+    public static bool PumpByPost { get; } = string.Equals(Environment.GetEnvironmentVariable(PumpVariable)?.Trim(), "post", StringComparison.OrdinalIgnoreCase);
 
     private static ViewportMode Parse(string? value)
     {

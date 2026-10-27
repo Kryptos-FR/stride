@@ -22,7 +22,9 @@ internal sealed class ViewportStats
     private int framesExported;
     private double exportMs;
     private int framesShown;
+    private int newFramesShown;
     private double showMs;
+    private int uiTicks;
     private int framesSkipped;
 
     private (int Width, int Height) requestedSize;
@@ -99,15 +101,27 @@ internal sealed class ViewportStats
     }
 
     /// <summary>
-    /// Records a frame shown by the editor (UI thread): bitmap upload or compositor update.
+    /// Records a render of the view (UI thread): bitmap draw or compositor update. <paramref name="isNewFrame"/> tells
+    /// whether it shows a frame the view hadn't shown yet (a render for a layout change redraws the same frame).
     /// </summary>
-    public void FrameShown(long startTicks)
+    public void FrameShown(long startTicks, bool isNewFrame = true)
     {
         lock (sync)
         {
             framesShown++;
+            if (isNewFrame)
+                newFramesShown++;
             showMs += ToMs(clock.ElapsedTicks - startTicks);
         }
+    }
+
+    /// <summary>
+    /// Records an animation frame of the editor's top level (UI thread): the rate the editor can render at.
+    /// </summary>
+    public void UiTick()
+    {
+        lock (sync)
+            uiTicks++;
     }
 
     private void Flush()
@@ -121,13 +135,14 @@ internal sealed class ViewportStats
         var line = $"[viewport] mode={mode} size={lastBackBufferSize.Width}x{lastBackBufferSize.Height}"
             + $" drawn={framesDrawn / seconds:F1}/s draw={Average(drawMs, framesDrawn):F2}ms"
             + $" exported={framesExported / seconds:F1}/s export={Average(exportMs, framesExported):F2}ms"
-            + $" shown={framesShown / seconds:F1}/s show={Average(showMs, framesShown):F2}ms skipped={framesSkipped}";
+            + $" shown={framesShown / seconds:F1}/s new={newFramesShown / seconds:F1}/s show={Average(showMs, framesShown):F2}ms skipped={framesSkipped}"
+            + $" ui-ticks={uiTicks / seconds:F1}/s";
         if (resizeLatencies.Count > 0)
             line += $" resize-latency(ms)=[{string.Join(",", resizeLatencies.Select(x => x.ToString("F1")))}]";
         Console.WriteLine(line);
 
         windowStart = now;
-        framesDrawn = framesExported = framesShown = framesSkipped = 0;
+        framesDrawn = framesExported = framesShown = newFramesShown = framesSkipped = uiTicks = 0;
         drawMs = exportMs = showMs = 0;
         resizeLatencies.Clear();
     }

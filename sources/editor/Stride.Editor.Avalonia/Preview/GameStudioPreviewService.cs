@@ -540,6 +540,13 @@ namespace Stride.Editor.Avalonia.Preview
                     Window.Visible = true;
             }
 
+            protected override void Update(GameTime gameTime)
+            {
+                base.Update(gameTime);
+                // The mouse delta the scripts of this update saw
+                inputBridge?.Observe(Input);
+            }
+
             protected override bool BeginDraw()
             {
                 frameStart = stats.Now;
