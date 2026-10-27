@@ -25,7 +25,8 @@ namespace Stride.Editor.Avalonia.Engine;
 ///   or on Vulkan: an <see cref="ExportableTexture"/>, synchronized by a pair of binary semaphores.</item>
 /// </list>
 /// <para>
-/// One frame is in flight at a time: the game skips the frames it renders while the compositor still uses the texture.
+/// Direct3D 11 shares two textures: the game copies a frame into one while the compositor draws the other, and skips a
+/// frame only when both are in use. Vulkan shares one: one frame is in flight at a time.
 /// When the compositor has no interop, or none of these pairs, the view falls back to the readback of option B'.
 /// </para>
 /// </remarks>
@@ -54,8 +55,12 @@ internal sealed class GpuFramePresenter : IDisposable
     private volatile bool frameInFlight;
     private string? handleType;
 
+    // Direct3D 11: the shared textures, used in turn
+    private readonly D3DSlot[] d3dSlots = [new D3DSlot(), new D3DSlot()];
+
     // Game thread
-    private Texture? sharedTexture;
+    private int nextD3DSlot;
+    private D3DSlot? pendingD3DSlot;
     private ExportableTexture? exportableTexture;
     private int textureVersion;
     private bool firstFrame;
@@ -148,14 +153,13 @@ internal sealed class GpuFramePresenter : IDisposable
     /// <returns><c>false</c> when the compositor still uses the previous frame and this one is dropped.</returns>
     public bool CopyFrame(CommandList commandList, Texture backBuffer)
     {
-        if (frameInFlight)
-            return false;
-
         try
         {
-            return handleType is D3D11NtHandle or D3D11GlobalHandle
-                ? CopyFrameD3D11(commandList, backBuffer)
-                : CopyFrameVulkan(commandList, backBuffer);
+            if (handleType is D3D11NtHandle or D3D11GlobalHandle)
+                return CopyFrameD3D11(commandList, backBuffer);
+            if (frameInFlight)
+                return false;
+            return CopyFrameVulkan(commandList, backBuffer);
         }
         catch (Exception e)
         {
@@ -175,37 +179,46 @@ internal sealed class GpuFramePresenter : IDisposable
         exportableTexture?.SignalReady();
         firstFrame = false;
 
-        var version = textureVersion;
-        var d3dTexture = sharedTexture;
+        var d3dSlot = pendingD3DSlot;
+        pendingD3DSlot = null;
+        var version = d3dSlot?.Version ?? textureVersion;
         var vkTexture = exportableTexture;
         var start = stats.Now;
-        Dispatcher.UIThread.Post(() => Present(version, d3dTexture, vkTexture, start), DispatcherPriority.Render);
+        Dispatcher.UIThread.Post(() => Present(version, d3dSlot, vkTexture, start), DispatcherPriority.Render);
     }
 
     public void Dispose()
     {
-        sharedTexture?.Dispose();
+        foreach (var slot in d3dSlots)
+            slot.Texture?.Dispose();
         exportableTexture?.Dispose();
     }
 
     private bool CopyFrameD3D11(CommandList commandList, Texture backBuffer)
     {
-        if (sharedTexture == null || sharedTexture.Width != backBuffer.Width || sharedTexture.Height != backBuffer.Height)
+        // The textures are used in turn: the next one must be done with (the compositor drew it and released its mutex)
+        var slot = d3dSlots[nextD3DSlot];
+        if (slot.InFlight)
+            return false;
+
+        if (slot.Texture == null || slot.Texture.Width != backBuffer.Width || slot.Texture.Height != backBuffer.Height)
         {
             // The compositor opened its own reference to the texture: this one can go
-            sharedTexture?.Dispose();
-            sharedTexture = Texture.New2D(commandList.GraphicsDevice, backBuffer.Width, backBuffer.Height, Stride.Graphics.PixelFormat.R8G8B8A8_UNorm,
+            slot.Texture?.Dispose();
+            slot.Texture = Texture.New2D(commandList.GraphicsDevice, backBuffer.Width, backBuffer.Height, Stride.Graphics.PixelFormat.R8G8B8A8_UNorm,
                 TextureFlags.RenderTarget | TextureFlags.ShaderResource, options: handleType == D3D11GlobalHandle ? SharedKeyedMutexGlobalHandle : SharedKeyedMutexNtHandle);
-            textureVersion++;
+            slot.Version++;
         }
 
         // A new keyed mutex is free for key 0; afterwards the compositor releases it with key 0
-        if (!sharedTexture.AcquireSync(0, 0))
+        if (!slot.Texture.AcquireSync(0, 0))
             return false;
         // The sRGB back buffer and the UNorm texture are in the same typeless group: a plain copy keeps the bytes
-        commandList.Copy(backBuffer, sharedTexture);
-        sharedTexture.ReleaseSync(1);
-        frameInFlight = true;
+        commandList.Copy(backBuffer, slot.Texture);
+        slot.Texture.ReleaseSync(1);
+        slot.InFlight = true;
+        pendingD3DSlot = slot;
+        nextD3DSlot = (nextD3DSlot + 1) % d3dSlots.Length;
         signalPending = true;
         return true;
     }
@@ -294,23 +307,40 @@ internal sealed class GpuFramePresenter : IDisposable
         }
     }
 
-    private void Present(int version, Texture? d3dTexture, ExportableTexture? vkTexture, long start)
+    private void Present(int version, D3DSlot? d3dSlot, ExportableTexture? vkTexture, long start)
     {
+        void Release()
+        {
+            if (d3dSlot != null)
+                d3dSlot.InFlight = false;
+            else
+                frameInFlight = false;
+        }
+
         if (state != StateActive || surface == null || interop == null)
         {
-            frameInFlight = false;
+            Release();
             return;
         }
 
         try
         {
-            if (importedVersion != version)
-                Import(version, d3dTexture, vkTexture);
-
-            var update = handleType is D3D11NtHandle or D3D11GlobalHandle
-                ? surface.UpdateWithKeyedMutexAsync(importedImage!, 1, 0)
-                : surface.UpdateWithSemaphoresAsync(importedImage!, readySemaphore!, releasedSemaphore!);
-            var image = importedImage!;
+            ICompositionImportedGpuImage image;
+            Task update;
+            if (d3dSlot != null)
+            {
+                if (d3dSlot.ImportedVersion != version)
+                    ImportD3D11(d3dSlot, version);
+                image = d3dSlot.Image!;
+                update = surface.UpdateWithKeyedMutexAsync(image, 1, 0);
+            }
+            else
+            {
+                if (importedVersion != version)
+                    Import(version, vkTexture);
+                image = importedImage!;
+                update = surface.UpdateWithSemaphoresAsync(image, readySemaphore!, releasedSemaphore!);
+            }
             update.ContinueWith(task =>
             {
                 if (task.IsFaulted)
@@ -322,17 +352,32 @@ internal sealed class GpuFramePresenter : IDisposable
                 }
                 else
                     stats.FrameShown(start);
-                frameInFlight = false;
+                Release();
             }, TaskScheduler.Default);
         }
         catch (Exception e)
         {
             Fail($"The compositor could not import the frame: {e.Message}");
-            frameInFlight = false;
+            Release();
         }
     }
 
-    private void Import(int version, Texture? d3dTexture, ExportableTexture? vkTexture)
+    private void ImportD3D11(D3DSlot slot, int version)
+    {
+        _ = slot.Image?.DisposeAsync();
+        slot.Image = null;
+        var texture = slot.Texture ?? throw new InvalidOperationException("No shared texture");
+        slot.Image = interop!.ImportImage(new PlatformHandle(texture.SharedHandle, handleType!), new PlatformGraphicsExternalImageProperties
+        {
+            Width = texture.Width,
+            Height = texture.Height,
+            Format = PlatformGraphicsExternalImageFormat.R8G8B8A8UNorm,
+        });
+        slot.ImportedVersion = version;
+        Console.WriteLine($"[viewport] imported D3D11 texture {texture.Width}x{texture.Height} {texture.Format} handle 0x{texture.SharedHandle:X}");
+    }
+
+    private void Import(int version, ExportableTexture? vkTexture)
     {
         _ = importedImage?.DisposeAsync();
         _ = readySemaphore?.DisposeAsync();
@@ -340,30 +385,16 @@ internal sealed class GpuFramePresenter : IDisposable
         importedImage = null;
         readySemaphore = releasedSemaphore = null;
 
-        if (handleType is D3D11NtHandle or D3D11GlobalHandle)
+        var texture = vkTexture ?? throw new InvalidOperationException("No exportable texture");
+        importedImage = interop!.ImportImage(new PlatformHandle(texture.ExportMemory(), VulkanFd), new PlatformGraphicsExternalImageProperties
         {
-            var texture = d3dTexture ?? throw new InvalidOperationException("No shared texture");
-            importedImage = interop!.ImportImage(new PlatformHandle(texture.SharedHandle, handleType), new PlatformGraphicsExternalImageProperties
-            {
-                Width = texture.Width,
-                Height = texture.Height,
-                Format = PlatformGraphicsExternalImageFormat.R8G8B8A8UNorm,
-            });
-            Console.WriteLine($"[viewport] imported D3D11 texture {texture.Width}x{texture.Height} {texture.Format} handle 0x{texture.SharedHandle:X}");
-        }
-        else
-        {
-            var texture = vkTexture ?? throw new InvalidOperationException("No exportable texture");
-            importedImage = interop!.ImportImage(new PlatformHandle(texture.ExportMemory(), VulkanFd), new PlatformGraphicsExternalImageProperties
-            {
-                Width = texture.Texture.Width,
-                Height = texture.Texture.Height,
-                Format = PlatformGraphicsExternalImageFormat.R8G8B8A8UNorm,
-                MemorySize = texture.MemorySize,
-            });
-            readySemaphore = interop.ImportSemaphore(new PlatformHandle(texture.ExportReadySemaphore(), VulkanSemaphoreFd));
-            releasedSemaphore = interop.ImportSemaphore(new PlatformHandle(texture.ExportReleasedSemaphore(), VulkanSemaphoreFd));
-        }
+            Width = texture.Texture.Width,
+            Height = texture.Texture.Height,
+            Format = PlatformGraphicsExternalImageFormat.R8G8B8A8UNorm,
+            MemorySize = texture.MemorySize,
+        });
+        readySemaphore = interop.ImportSemaphore(new PlatformHandle(texture.ExportReadySemaphore(), VulkanSemaphoreFd));
+        releasedSemaphore = interop.ImportSemaphore(new PlatformHandle(texture.ExportReleasedSemaphore(), VulkanSemaphoreFd));
         importedVersion = version;
     }
 
@@ -375,5 +406,22 @@ internal sealed class GpuFramePresenter : IDisposable
         Dispatcher.UIThread.Post(view.RemoveDrawingSurface);
         Console.WriteLine($"[viewport] GPU interop unavailable, falling back to readback: {reason}");
         logger.Warning($"Preview viewport: GPU interop unavailable, falling back to readback. {reason}");
+    }
+
+    /// <summary>
+    /// A Direct3D 11 texture shared with the compositor, and its imported image.
+    /// </summary>
+    private sealed class D3DSlot
+    {
+        // Game thread (and the UI thread while the slot is in flight)
+        public Texture? Texture;
+        public int Version;
+
+        // Set by the game thread when it hands the frame over, cleared once the compositor drew it
+        public volatile bool InFlight;
+
+        // UI thread
+        public int ImportedVersion = -1;
+        public ICompositionImportedGpuImage? Image;
     }
 }
