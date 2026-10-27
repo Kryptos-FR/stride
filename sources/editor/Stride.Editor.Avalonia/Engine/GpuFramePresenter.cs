@@ -37,6 +37,11 @@ internal sealed class GpuFramePresenter : IDisposable
 
     // Direct3D 11's TextureOptions.SharedKeyedMutex | SharedNtHandle, which only exist in the Direct3D 11 build of Stride.Graphics
     private const TextureOptions SharedKeyedMutexNtHandle = (TextureOptions)(256 | 2048);
+    private const TextureOptions SharedKeyedMutexGlobalHandle = (TextureOptions)256;
+    private const string D3D11GlobalHandle = KnownPlatformGraphicsExternalImageHandleTypes.D3D11TextureGlobalSharedHandle;
+
+    // STRIDE_EDITOR_VIEWPORT_D3D_HANDLE=global shares the texture with a legacy (global) handle instead of an NT handle
+    private static readonly bool UseGlobalD3D11Handle = string.Equals(Environment.GetEnvironmentVariable("STRIDE_EDITOR_VIEWPORT_D3D_HANDLE")?.Trim(), "global", StringComparison.OrdinalIgnoreCase);
 
     private const int StatePending = 0;
     private const int StateActive = 1;
@@ -148,7 +153,7 @@ internal sealed class GpuFramePresenter : IDisposable
 
         try
         {
-            return handleType == D3D11NtHandle
+            return handleType is D3D11NtHandle or D3D11GlobalHandle
                 ? CopyFrameD3D11(commandList, backBuffer)
                 : CopyFrameVulkan(commandList, backBuffer);
         }
@@ -190,7 +195,7 @@ internal sealed class GpuFramePresenter : IDisposable
             // The compositor opened its own reference to the texture: this one can go
             sharedTexture?.Dispose();
             sharedTexture = Texture.New2D(commandList.GraphicsDevice, backBuffer.Width, backBuffer.Height, Stride.Graphics.PixelFormat.R8G8B8A8_UNorm,
-                TextureFlags.RenderTarget | TextureFlags.ShaderResource, options: SharedKeyedMutexNtHandle);
+                TextureFlags.RenderTarget | TextureFlags.ShaderResource, options: handleType == D3D11GlobalHandle ? SharedKeyedMutexGlobalHandle : SharedKeyedMutexNtHandle);
             textureVersion++;
         }
 
@@ -255,10 +260,10 @@ internal sealed class GpuFramePresenter : IDisposable
             Console.WriteLine($"[viewport] compositor interop: images [{imageTypes}], semaphores [{semaphoreTypes}], graphics API {GraphicsDevice.Platform}");
 
             if (GraphicsDevice.Platform == GraphicsPlatform.Direct3D11
-                && interop.SupportedImageHandleTypes.Contains(D3D11NtHandle)
-                && interop.GetSynchronizationCapabilities(D3D11NtHandle).HasFlag(CompositionGpuImportedImageSynchronizationCapabilities.KeyedMutex))
+                && interop.SupportedImageHandleTypes.Contains(UseGlobalD3D11Handle ? D3D11GlobalHandle : D3D11NtHandle)
+                && interop.GetSynchronizationCapabilities(UseGlobalD3D11Handle ? D3D11GlobalHandle : D3D11NtHandle).HasFlag(CompositionGpuImportedImageSynchronizationCapabilities.KeyedMutex))
             {
-                handleType = D3D11NtHandle;
+                handleType = UseGlobalD3D11Handle ? D3D11GlobalHandle : D3D11NtHandle;
             }
             else if (GraphicsDevice.Platform == GraphicsPlatform.Vulkan
                 && interop.SupportedImageHandleTypes.Contains(VulkanFd)
@@ -302,13 +307,19 @@ internal sealed class GpuFramePresenter : IDisposable
             if (importedVersion != version)
                 Import(version, d3dTexture, vkTexture);
 
-            var update = handleType == D3D11NtHandle
+            var update = handleType is D3D11NtHandle or D3D11GlobalHandle
                 ? surface.UpdateWithKeyedMutexAsync(importedImage!, 1, 0)
                 : surface.UpdateWithSemaphoresAsync(importedImage!, readySemaphore!, releasedSemaphore!);
+            var image = importedImage!;
             update.ContinueWith(task =>
             {
                 if (task.IsFaulted)
-                    Fail($"The compositor could not update the surface: {task.Exception?.GetBaseException().Message}");
+                {
+                    // An image whose import failed makes every update throw "context lost": the import says why
+                    var importError = image.ImportCompleted.IsFaulted ? image.ImportCompleted.Exception?.GetBaseException() : null;
+                    var reason = importError != null ? $"the import failed: {importError}" : task.Exception?.GetBaseException().ToString();
+                    Fail($"The compositor could not update the surface (image lost: {image.IsLost}): {reason}");
+                }
                 else
                     stats.FrameShown(start);
                 frameInFlight = false;
@@ -329,15 +340,16 @@ internal sealed class GpuFramePresenter : IDisposable
         importedImage = null;
         readySemaphore = releasedSemaphore = null;
 
-        if (handleType == D3D11NtHandle)
+        if (handleType is D3D11NtHandle or D3D11GlobalHandle)
         {
             var texture = d3dTexture ?? throw new InvalidOperationException("No shared texture");
-            importedImage = interop!.ImportImage(new PlatformHandle(texture.SharedHandle, D3D11NtHandle), new PlatformGraphicsExternalImageProperties
+            importedImage = interop!.ImportImage(new PlatformHandle(texture.SharedHandle, handleType), new PlatformGraphicsExternalImageProperties
             {
                 Width = texture.Width,
                 Height = texture.Height,
                 Format = PlatformGraphicsExternalImageFormat.R8G8B8A8UNorm,
             });
+            Console.WriteLine($"[viewport] imported D3D11 texture {texture.Width}x{texture.Height} {texture.Format} handle 0x{texture.SharedHandle:X}");
         }
         else
         {
