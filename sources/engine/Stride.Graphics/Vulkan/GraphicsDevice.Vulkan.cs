@@ -51,6 +51,11 @@ namespace Stride.Graphics
         private VkDevice nativeDevice;
         private VkDeviceApi nativeDeviceApi;
         internal VkQueue NativeCommandQueue;
+
+        /// <summary>
+        ///   Whether the device can export memory and semaphores as POSIX file descriptors (<see cref="ExportableTexture"/>).
+        /// </summary>
+        internal bool HasExternalObjectsSupport;
         internal object QueueLock = new object();
 
         internal ThreadLocal<CommandBufferPool> NativeCopyCommandPools;
@@ -507,6 +512,9 @@ namespace Stride.Graphics
             {
                 VK_KHR_SWAPCHAIN_EXTENSION_NAME,
                 VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
+                // Textures shared with another device or API (ExportableTexture, opt-in)
+                VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
+                VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
 #if STRIDE_PLATFORM_IOS || STRIDE_PLATFORM_MACOS
                 // IOSurface-backed VkImage import (zero-copy CVPixelBuffer upload on Apple platforms).
                 VK_EXT_METAL_OBJECTS_EXTENSION_NAME,
@@ -570,6 +578,16 @@ namespace Stride.Graphics
                 desiredExtensionProperties.Add(VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME);
             }
 #endif
+
+            // Only a host that opts in gets the extensions: the runtime's devices stay as they were
+            HasExternalObjectsSupport = ExportableTexture.EnableExternalObjects
+                && availableExtensionProperties.Contains(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME)
+                && availableExtensionProperties.Contains(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
+            if (HasExternalObjectsSupport)
+            {
+                desiredExtensionProperties.Add(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
+                desiredExtensionProperties.Add(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
+            }
 
             // Profiling labels travel through VK_EXT_debug_utils (instance-level, enabled at factory init).
             // Replaces the deprecated VK_EXT_debug_marker which required a separate device extension and
