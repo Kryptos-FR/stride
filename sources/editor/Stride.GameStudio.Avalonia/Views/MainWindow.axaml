@@ -9,6 +9,7 @@
         x:DataType="vm:MainViewModel"
         Icon="/Assets/GameStudio.ico"
         Title="{Binding Title}"
+        IsEnabled="{Binding !IsOpeningSession}"
         Width="1280" Height="900">
   <gsvw:MainView />
 </Window>

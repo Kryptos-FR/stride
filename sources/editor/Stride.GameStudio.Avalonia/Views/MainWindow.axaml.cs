@@ -52,6 +52,9 @@ public partial class MainWindow : Window
             default:
                 // We need to run async stuff before closing, so let's always cancel the close at first.
                 e.Cancel = true;
+                // The window takes no input while a session opens, its close button included (the progress window can cancel)
+                if (!e.IsProgrammatic && DataContext is ViewModels.MainViewModel { IsOpeningSession: true })
+                    break;
                 // This method will shutdown the application if the session has been successfully closed.
                 SaveAndClose().Forget();
                 break;

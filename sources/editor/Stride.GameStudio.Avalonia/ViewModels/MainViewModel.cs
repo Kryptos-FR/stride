@@ -28,6 +28,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
     private const int RecentFilesCount = 10;
     private static readonly string baseTitle = StrideGameStudio.EditorTitle;
     private static bool msBuildFound;
+    private int openingSessions;
     private SessionViewModel? session;
     private string title = baseTitle;
 
@@ -160,6 +161,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
     /// <returns><c>true</c> when the session is open, <c>false</c> when it failed or no file was chosen, <c>null</c> when the user cancelled the loading.</returns>
     public async Task<bool?> OpenSession(UFile? filePath, CancellationToken token = default)
     {
+        using var opening = BeginOpeningSession();
         if (filePath is not null && !File.Exists(filePath.ToOSPath()))
         {
             RemoveRecentFile(filePath);
@@ -247,6 +249,26 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
             await ServiceProvider.Get<IDialogService>().MessageBoxAsync(message, MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Whether a session is being opened. The main window takes no input meanwhile: its menu, toolbar and shortcuts would act on
+    /// an editor whose session is not there yet (the WPF editor shows its main window only once the session is open).
+    /// </summary>
+    public bool IsOpeningSession => openingSessions > 0;
+
+    /// <summary>
+    /// Marks a session as being opened until the returned object is disposed (see <see cref="IsOpeningSession"/>).
+    /// </summary>
+    private Core.AnonymousDisposable BeginOpeningSession()
+    {
+        if (openingSessions++ == 0)
+            OnPropertyChanged(nameof(IsOpeningSession));
+        return new Core.AnonymousDisposable(() =>
+        {
+            if (--openingSessions == 0)
+                OnPropertyChanged(nameof(IsOpeningSession));
+        });
     }
 
     private void UpdateRecentFiles()
