@@ -85,6 +85,13 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
         MRU = GameStudioInternalSettings.CreateMostRecentlyUsedFiles();
         MRU.MostRecentlyUsedFiles.CollectionChanged += (_, _) => UpdateRecentFiles();
         UpdateRecentFiles();
+
+        // The key bindings of the main window run even while it is disabled: Ctrl+N waits for the session to open
+        PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(IsOpeningSession))
+                NewSessionCommand.IsEnabled = !IsOpeningSession;
+        };
     }
 
     public SessionViewModel? Session
@@ -300,6 +307,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
         if (session is not null)
             throw new InvalidOperationException("A session is open already.");
 
+        using var opening = BeginOpeningSession();
         // The generator loads the projects it creates
         if (!await EnsureMSBuildAsync())
             return false;
