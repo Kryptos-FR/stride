@@ -105,6 +105,8 @@ public sealed class FakeSession : ISessionViewModel
 
     public ISessionObjectPropertiesViewModel AssetViewProperties => null!;
 
+    public SessionObjectPropertiesViewModel ActiveProperties { get; set; } = null!;
+
     public IAssetSourceTrackerViewModel SourceTracker => null!;
 
     public IAssetLogViewModel AssetLog => Log;
