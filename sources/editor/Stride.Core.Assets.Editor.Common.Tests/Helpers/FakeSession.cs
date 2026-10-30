@@ -126,6 +126,16 @@ public sealed class FakeSession : ISessionViewModel
 
     public void NotifyAssetPropertiesChanged(IReadOnlyCollection<AssetViewModel> assets) => NotifiedAssetChanges.Add(assets);
 
+    public Task NotifyAssetPropertiesChangedAsync(IReadOnlyCollection<AssetViewModel> assets)
+    {
+        NotifyAssetPropertiesChanged(assets);
+        return Task.CompletedTask;
+    }
+
+    public void UpdateHasUnsavedChanges()
+    {
+    }
+
     public void CheckConsistency() => throw new NotSupportedException();
 
     public void CheckAssetReplacements(AssetViewModel? changedAsset = null)
