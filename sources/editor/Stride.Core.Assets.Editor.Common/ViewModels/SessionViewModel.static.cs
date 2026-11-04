@@ -168,7 +168,9 @@ partial class SessionViewModel
         token = cancellationSource.Token;
         var workProgress = new WorkProgressViewModel(serviceProvider, sessionResult)
         {
-            Title = Tr._p("Title", "Opening session..."),
+            Title = EditorPath.EditorEnvironment != null
+                ? $"{Tr._p("Title", "Opening session...")} ({EditorPath.EditorEnvironment})"
+                : Tr._p("Title", "Opening session..."),
             KeepOpen = KeepOpen.OnWarningsOrErrors,
             IsIndeterminate = true,
             IsCancellable = true,
