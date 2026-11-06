@@ -60,8 +60,10 @@ public sealed class EditorCollectionViewModel : DispatcherViewModel, IAssetEdito
              return;
         }
 
-        var editorType = ServiceProvider.TryGet<IAssetsPluginService>()?.GetEditorViewModelType(asset.GetType());
-        if (editorType is not null)
+        // An editor whose view this editor doesn't have is not opened: it would show nothing, and could start work (a game)
+        var plugins = ServiceProvider.TryGet<IAssetsPluginService>();
+        var editorType = plugins?.GetEditorViewModelType(asset.GetType());
+        if (editorType is not null && plugins!.GetEditorViewType(editorType) is not null)
         {
             editor = (AssetEditorViewModel)Activator.CreateInstance(editorType, asset)!;
             openedAssets.Add(asset, editor);
