@@ -95,6 +95,8 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel
         // panels of a plugin that leaves); their layouts are kept per session
         var registry = (serviceProvider.TryGet<IAssetsPluginService>() as EditorPluginHost)?.Panels ?? new PanelRegistry();
         Panels = new DockPanelService(serviceProvider, registry, GameStudioInternalSettings.CreateSessionPanelLayouts());
+        // The plugins show their panels through it (the curve editor's "Edit curve")
+        serviceProvider.RegisterService(Panels);
         RegisterBuiltInPanels(registry);
         ViewMenu = new ViewMenuViewModel(serviceProvider, Panels);
 
