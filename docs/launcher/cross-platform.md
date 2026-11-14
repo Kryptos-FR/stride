@@ -25,7 +25,7 @@ Searching for `OperatingSystem.IsWindows()` in the launcher shows the remaining 
 
 ### Installers
 
-Advanced Installer projects ([Prerequisites/](../../sources/launcher/Prerequisites/), [Setup/](../../sources/launcher/Setup/)) are Windows-only by construction. The MSBuild `PackageInstaller` target silently skips when `AdvancedInstaller.com` is not on `PATH`. On Linux/macOS, distribute the launcher via `dotnet publish -r {rid} --self-contained`. See [packaging.md](packaging.md).
+The Advanced Installer project ([Setup/](../../sources/launcher/Setup/)) is Windows-only by construction. The MSBuild `PackageInstaller` target silently skips when `AdvancedInstaller.com` is not on `PATH`. On Linux/macOS, distribute the launcher via `dotnet publish -r {rid} --self-contained`. See [packaging.md](packaging.md).
 
 ## Telemetry and privacy policy
 

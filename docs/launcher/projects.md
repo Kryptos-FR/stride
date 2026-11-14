@@ -27,8 +27,6 @@ sources/launcher/
 │   ├── Properties/PublishProfiles/ dotnet publish profiles
 │   ├── Stride.Launcher.csproj      net10.0, linux-x64 + win-x64
 │   └── Stride.Launcher.nuspec      NuGet package definition (single source of truth for version)
-├── Prerequisites/
-│   └── launcher-prerequisites.aip  Advanced Installer project → launcher-prerequisites.exe
 └── Setup/
     ├── setup.aip                   Advanced Installer project → StrideSetup.exe
     ├── Launcher.ico

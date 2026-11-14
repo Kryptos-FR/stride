@@ -76,6 +76,8 @@ Our [Roadmap](https://doc.stride3d.net/latest/en/contributors/roadmap.html) comm
 2. Open `Stride.slnx` in Visual Studio 2026.
 3. Build the `Stride.GameStudio` project (default startup, in the `60-Editor` folder) or run it directly from the toolbar.
 
+The cross-platform Game Studio (Avalonia, Windows and Linux) builds from `sources/Stride.Editor.Avalonia.slnf`; see [docs/build/README.md](docs/build/README.md#building-the-cross-platform-game-studio).
+
 ### Repository layout
 
 | Folder | What it holds |

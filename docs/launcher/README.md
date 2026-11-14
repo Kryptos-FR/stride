@@ -10,7 +10,6 @@ The launcher's sources live in [sources/launcher/](../../sources/launcher/). The
 flowchart TD
     User["User"]
     Setup["StrideSetup.exe<br/>Advanced Installer bundle<br/>sources/launcher/Setup/"]
-    Prereq["launcher-prerequisites.exe<br/>sources/launcher/Prerequisites/"]
     Exe["Stride.Launcher.exe<br/>Avalonia MVVM app<br/>sources/launcher/Stride.Launcher/"]
     NuGet["NuGet feed<br/>(nuget.org)"]
     Store["NugetStore<br/>sources/assets/Stride.Core.Packages/"]
@@ -18,7 +17,6 @@ flowchart TD
 
     User -- "runs" --> Setup
     Setup -- "installs" --> Exe
-    Setup -- "installs" --> Prereq
     Exe -- "uses" --> Store
     Store -- "fetches packages" --> NuGet
     Exe -- "starts" --> GS
@@ -38,7 +36,6 @@ The launcher codebase is small and self-contained under [sources/launcher/](../.
 | Directory | Role |
 |---|---|
 | [Stride.Launcher/](../../sources/launcher/Stride.Launcher/) | Avalonia MVVM application (`Stride.Launcher.exe`) |
-| [Prerequisites/](../../sources/launcher/Prerequisites/) | Advanced Installer project producing `launcher-prerequisites.exe` (Windows only) |
 | [Setup/](../../sources/launcher/Setup/) | Advanced Installer project producing the user-facing `StrideSetup.exe` bundle (Windows only) |
 
 The launcher depends on two Stride libraries:
@@ -76,8 +73,8 @@ See [projects.md](projects.md) for the full layout and each file's role.
 > - Adding a new localized string or URL?
 >   → **`Assets/Localization/Strings.resx` / `Urls.resx`** (+ `.ja-JP` variants). See [localization.md](localization.md).
 >
-> - Working on the Windows installer or prerequisites bundle?
->   → **Advanced Installer projects under `Prerequisites/` and `Setup/`.** See [packaging.md](packaging.md).
+> - Working on the Windows installer?
+>   → **Advanced Installer project under `Setup/`.** See [packaging.md](packaging.md).
 >
 > - Running/debugging on Linux and something behaves differently?
 >   → **Platform-specific code paths.** See [cross-platform.md](cross-platform.md).
@@ -96,4 +93,4 @@ See [projects.md](projects.md) for the full layout and each file's role.
 | [localization.md](localization.md) | `Strings.resx` / `Urls.resx`, designer classes, adding a new language |
 | [packaging.md](packaging.md) | `Stride.Launcher.nuspec`, Advanced Installer projects, `StrideSetup.exe`, versioning |
 | [cross-platform.md](cross-platform.md) | Windows-only code paths, Registry usage, Linux/macOS porting status (xplat-launcher) |
-| [port-status.md](port-status.md) | Full delta vs the WPF launcher on `master` — including silent regressions — and a phased roadmap to close the gap |
+| [port-status.md](port-status.md) | Full delta vs the former WPF launcher — deliberate changes and the items left open after the port |

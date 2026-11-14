@@ -1,8 +1,8 @@
-# Port status: Avalonia branch vs `master` (WPF)
+# Port status: the Avalonia launcher vs the former WPF launcher
 
-The Avalonia port is functionally complete and ready for review. This page captures what a reviewer needs to know: what changed deliberately (so nothing gets reverted by mistake), and what is still open post-merge.
+The launcher was ported from WPF to Avalonia and the port is merged. This page records what changed deliberately (so nothing gets reverted by mistake) and what was left open after the merge.
 
-> **Scope.** "Current" = this branch. "Master" = the WPF launcher on `master` at the time of the cherry-pick.
+> **Scope.** "Current" = the Avalonia launcher in `sources/launcher/`. "Master" = the WPF launcher as it was on `master` before the port.
 
 ## What's ported
 

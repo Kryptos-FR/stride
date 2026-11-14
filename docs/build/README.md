@@ -70,7 +70,7 @@ dotnet run --project sources/editor/Stride.GameStudio.Avalonia.Desktop      # st
 ```
 
 * On Linux, install `lld` (native code of the filter) and the Vulkan loader (`libvulkan1`) for the editor's viewports and the tests that open a graphics device. Pull the Git LFS files first (`git lfs pull`): the `deps/` binaries and some editor images are stored in LFS.
-* It takes the WPF Game Studio's command line (a session path, `/NewProject`, `/DisableThumbnails`, `/DisablePreview`...) plus `--project <path>` and `--viewport-readback`, which reads the viewport frames back through the CPU instead of sharing them with the compositor on the GPU (for a driver that misbehaves).
+* It takes the WPF Game Studio's command line (a session path, `/NewProject`, `/DisableThumbnails`, `/DisablePreview`...) plus `--project <path>`, `--safe-mode` (only the plugins of Stride load, see [plugins.md](plugins.md#switching-a-plugin-off-and-safe-mode)) and `--viewport-readback`, which reads the viewport frames back through the CPU instead of sharing them with the compositor on the GPU (for a driver that misbehaves).
 * The `Test Editor (Avalonia)` workflow (`.github/workflows/test-editor-avalonia.yml`) builds and tests the filter on Linux and Windows.
 * A new toolkit-neutral or Avalonia editor project goes in both `Stride.slnx` and the filter.
 
@@ -124,4 +124,4 @@ See also [sources/templates/README.md](../../sources/templates/README.md) for it
 - [aot.md](aot.md) — NativeAOT &amp; trimming: publishing games, feature switches for optional subsystems, keeping the engine AOT-clean
 - [plugins.md](plugins.md) — plugins: runtime, Assets and Editor packages, how the tools find them, plugins inside a game's solution, the `stride-plugin` template
 - [../../sources/templates/README.md](../../sources/templates/README.md) — `dotnet new` template packages (Stride.Templates.Games / .Games.Starters / .Samples): end-user usage, local dev workflow, adding a new sample
-- [../../sources/launcher/README.md](../../sources/launcher/README.md) — the `stride` CLI tool and the WPF launcher: usage, building (`PackageCli`), and the independent CLI release flow
+- [../../sources/launcher/README.md](../../sources/launcher/README.md) — the `stride` CLI tool and the launcher: usage, building (`PackageCli`), and the independent CLI release flow

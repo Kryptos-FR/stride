@@ -2,7 +2,7 @@
 
 ## Overview
 
-The editor view models live in the toolkit-neutral `Stride.Assets.Editor` (`sources/editor/Stride.Assets.Editor/ViewModels/`), shared by both Game Studios. Each toolkit adds its views: `Stride.Assets.Editor.Wpf` (`AssetEditors/<EditorName>/Views/`) and `Stride.Assets.Editor.Avalonia` (`Views/`). The editors of plugin assets live in the plugin's `Editor` package: the UI page and library editors are in `Stride.UI.Editor` (view models, still built for WPF) and `Stride.UI.Editor.Wpf` (views), under `sources/plugins/UI/`. A few editors are still WPF only, view models included: the Roslyn script editor, the visual script editor and the curve editor, in `Stride.Assets.Editor.Wpf/AssetEditors/` and `CurveEditor/`. The table below is the entry point for locating any existing editor.
+The editor view models live in the toolkit-neutral `Stride.Assets.Editor` (`sources/editor/Stride.Assets.Editor/ViewModels/`), shared by both Game Studios. Each toolkit adds its views: `Stride.Assets.Editor.Wpf` (`AssetEditors/<EditorName>/Views/`) and `Stride.Assets.Editor.Avalonia` (`Views/`). The editors of plugin assets live in the plugin's `Editor` package: the UI page and library editors are in `Stride.UI.Editor` (view models), `Stride.UI.Editor.Wpf` and `Stride.UI.Editor.Avalonia` (views), under `sources/plugins/UI/`. Two editors are still WPF only, view models included: the Roslyn script editor and the visual script editor, in `Stride.Assets.Editor.Wpf/AssetEditors/`; the cross-platform editor has its own script editor and a placeholder for visual scripts. The table below is the entry point for locating any existing editor.
 
 ## Editors
 
@@ -11,12 +11,14 @@ The editor view models live in the toolkit-neutral `Stride.Assets.Editor` (`sour
 | `SpriteSheetEditorViewModel` | `SpriteSheetAsset` | `AssetEditorViewModel<SpriteSheetViewModel>` | No | `Stride.Assets.Editor` | WPF, Avalonia |
 | `SceneEditorViewModel` | `SceneAsset` | `EntityHierarchyEditorViewModel` | Yes | `Stride.Assets.Editor` | WPF, Avalonia |
 | `PrefabEditorViewModel` | `PrefabAsset` | `EntityHierarchyEditorViewModel` | Yes | `Stride.Assets.Editor` | WPF, Avalonia |
-| `UIPageEditorViewModel` | `UIPageAsset` | `UIEditorBaseViewModel` | Yes | `Stride.UI.Editor` | WPF |
-| `UILibraryEditorViewModel` | `UILibraryAsset` | `UIEditorBaseViewModel` | Yes | `Stride.UI.Editor` | WPF |
-| `GraphicsCompositorEditorViewModel` | `GraphicsCompositorAsset` | `AssetEditorViewModel<GraphicsCompositorViewModel>` | No | `Stride.Assets.Editor` | WPF; Avalonia: placeholder (the property grid edits the asset) |
+| `UIPageEditorViewModel` | `UIPageAsset` | `UIEditorBaseViewModel` | Yes | `Stride.UI.Editor` | WPF, Avalonia |
+| `UILibraryEditorViewModel` | `UILibraryAsset` | `UIEditorBaseViewModel` | Yes | `Stride.UI.Editor` | WPF, Avalonia |
+| `GraphicsCompositorEditorViewModel` | `GraphicsCompositorAsset` | `AssetEditorViewModel<GraphicsCompositorViewModel>` | No | `Stride.Assets.Editor` | WPF, Avalonia |
 | `ScriptEditorViewModel` | Script assets | `AssetEditorViewModel` | No | `Stride.Assets.Editor.Wpf` (Roslyn) | WPF |
 | `ScriptSourceFileEditorViewModel` | Script assets | `AssetEditorViewModel<ScriptSourceFileViewModel>` | No | `Stride.Assets.Editor` | Avalonia (text editor with C# highlighting, no Roslyn features) |
-| `VisualScriptEditorViewModel` | `VisualScriptAsset` | `AssetEditorViewModel` | No | `Stride.Assets.Editor.Wpf` | WPF; Avalonia: placeholder (visual scripting is not ported) |
+| `VisualScriptEditorViewModel` | `VisualScriptAsset` | `AssetEditorViewModel` | No | `Stride.Assets.Editor.Wpf` | WPF; Avalonia: placeholder that says visual scripts are not supported |
+
+The curve editor is not an asset editor but a panel that edits the curves of a property (`EditCurveCommand` in the property grid): its view models are in `Stride.Assets.Editor/ViewModels/CurveEditor/` (`CurveEditorViewModel`), its views in `Stride.Assets.Editor.Wpf/CurveEditor/Views/` and `Stride.Assets.Editor.Avalonia/Views/CurveEditor/`.
 
 ### SpriteSheetEditorViewModel
 
@@ -47,15 +49,17 @@ The editor view models live in the toolkit-neutral `Stride.Assets.Editor` (`sour
 | `PrefabEditorViewModel` | Thin subclass for prefabs |
 | `EntityViewModel` | Part ViewModel for each entity in the hierarchy (`Stride.Assets.Presentation/ViewModels/`) |
 | `EditorGameHost` | The editor game of the view (`Stride.Assets.Editor/EditorGame/`), exposed as `IGameEditorViewModel.GameHost` |
-| `EditorViewToolbarViewModel`, `EditorViewGizmosViewModel`, `EditorViewOverlaysViewModel` | The scene view's toolbar, gizmo and overlay options of the cross-platform editor |
-| `EditorCameraViewModel`, `EntityGizmosViewModel` | The WPF camera options and gizmo overlay (`Stride.Assets.Editor.Wpf/AssetEditors/`), not ported yet |
+| `EditorViewToolbarViewModel`, `EditorViewGizmosViewModel`, `EditorViewOverlaysViewModel`, `SceneViewWidgetsViewModel` | The scene view's toolbar, gizmo, overlay and widget options of the cross-platform editor |
+| `EditorViewLayoutViewModel` | The layout of the scene view's viewports (one or several views of the same game, saved per scene in `SceneViewsSettingsData`) |
+| `EditorCameraViewModel` | Camera options (`Stride.Assets.Editor/AssetEditors/GameEditor/ViewModels/`) |
+| `EntityPickerViewModel` | The entity and component picker of the property grid's Pick buttons (`IEntityPickerService`) |
+| `EntityGizmosViewModel` | The WPF gizmo overlay (`Stride.Assets.Editor.Wpf/AssetEditors/`) |
 | `EntityHierarchyEditorView` | Base view: WPF (abstract, with `SceneEditorView` / `PrefabEditorView`) and Avalonia (one view for both) |
 
 **Notable:**
 - Most logic is in `EntityHierarchyEditorViewModel`; the concrete subclasses are thin.
 - Scene and prefab differ primarily in which hierarchy root they load and whether archetype (prefab base) linking is active.
-- The WPF view code-behind injects the game host into the XAML panel: `SceneView.Content = hierarchyEditor.Controller.EditorHost`. The Avalonia view binds a `ContentControl` to `GameHost.GameView`, an offscreen game view (`Stride.Editor.Avalonia/Engine/`).
-- The scene view options of WPF (camera menu, grid, render mode, light probes, cubemap capture) are not in the cross-platform editor yet.
+- The WPF view code-behind injects the game host into the XAML panel: `SceneView.Content = hierarchyEditor.Controller.EditorHost`. The Avalonia view shows `GameHost.GameView`, an offscreen game view (`Stride.Editor.Avalonia/Engine/`), in an `EditorViewLayoutPanel`, which can split it into several views of the same game (`IEditorGameMultiViewport`, `Stride.Editor/Engine/`).
 
 ### UIPageEditorViewModel / UILibraryEditorViewModel
 
@@ -69,11 +73,11 @@ The editor view models live in the toolkit-neutral `Stride.Assets.Editor` (`sour
 | `UIPageEditorViewModel` | Subclass for UI pages |
 | `UILibraryEditorViewModel` | Subclass for UI libraries |
 | `UIElementViewModel` | Part ViewModel for each UI element |
-| `UIEditorView` | Abstract base view (`Stride.UI.Editor.Wpf/Views/`) |
-| `UIPageEditorView` / `UILibraryEditorView` | Concrete views (`Stride.UI.Editor.Wpf/Views/`) |
+| `UIEditorView` | Abstract base view (`Views/` of `Stride.UI.Editor.Wpf` and of `Stride.UI.Editor.Avalonia`) |
+| `UIPageEditorView` / `UILibraryEditorView` | Concrete views, one per toolkit |
 
 **Notable:**
-- The adorner overlay (guidelines, resize handles) is rendered as a WPF layer on top of the game viewport — one of the few places where WPF and game rendering are explicitly composited.
+- The adorners (guidelines, resize handles) are drawn in the game (`Stride.UI.Editor/Adorners/`), not by the toolkit, so both views share them.
 - `UIEditorBaseViewModel` handles element factories, zoom/pan state, and selection; subclasses add only asset-type-specific root handling.
 
 ### GraphicsCompositorEditorViewModel
@@ -90,7 +94,7 @@ The editor view models live in the toolkit-neutral `Stride.Assets.Editor` (`sour
 | `RenderStageViewModel` | Node ViewModel for render stages |
 
 **Notable:**
-- The WPF view uses `Stride.Core.Presentation.Wpf.Graph` (GraphX) for the node-graph canvas. The Avalonia view is a placeholder until the editor has an Avalonia graph control; the property grid edits the asset meanwhile.
+- The WPF view uses `Stride.Core.Presentation.Wpf.Graph` (GraphX) for the node-graph canvas. The Avalonia view uses the node graph control of `Stride.Core.Presentation.Avalonia` (`Controls/NodeGraph/`, with a tree layout), fed by `GraphicsCompositorGraph`.
 - Does **not** use `IEditorGameController` — no live game instance; the compositor is a pure data-structure editor.
 
 ### ScriptEditorViewModel
@@ -125,7 +129,7 @@ The editor view models live in the toolkit-neutral `Stride.Assets.Editor` (`sour
 **Notable:**
 - Similar to `GraphicsCompositorEditorViewModel` in structure: a pure data-structure editor with no game instance.
 - ViewModel files sit at the folder root (no `ViewModels/` subdir); views are in `Views/` as usual.
-- WPF only. Visual scripting is not planned for the cross-platform editor: `Stride.Assets.Editor` has an empty `VisualScriptEditorViewModel` with a placeholder Avalonia view, so the asset still opens.
+- WPF only. Visual scripting is not planned for the cross-platform editor: `Stride.Assets.Editor` has an empty `VisualScriptEditorViewModel` with an Avalonia view that says visual scripts are not supported, so the asset still opens.
 
 ## Shared Game Editor Infrastructure
 

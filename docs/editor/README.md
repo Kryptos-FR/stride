@@ -52,3 +52,4 @@ The editor codebase spans `sources/presentation/` (MVVM framework, Quantum-to-UI
 | [projects.md](projects.md) | Project inventory, layering and toolkit rules, assembly map, where to put new code |
 | [custom-editor.md](custom-editor.md) | Custom asset editor: base class, registration, lifecycle, WPF and Avalonia views, services, MVVM patterns |
 | [editors.md](editors.md) | Existing editors catalogue (SpriteSheet, Scene, Prefab, UIPage, UILibrary, GraphicsCompositor, Script, VisualScript) and which Game Studio has a view for each |
+| [../build/plugins.md](../build/plugins.md) | Plugins: packages, plugin context, services and their scopes, commands, menus, toolbars and shortcuts, panels, experimental API |

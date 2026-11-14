@@ -10,7 +10,7 @@ A custom editor is a ViewModel + View pair registered against an `AssetViewModel
 |---|---|---|
 | `AssetEditorViewModel` (or `AssetEditorViewModel<TAssetViewModel>`, which types `Asset`) | Simple editor with no game viewport and no hierarchical parts (e.g. sprite sheet, graphics compositor, script) | Asset ownership, `Initialize`/`Destroy` lifecycle, `IUndoRedoService`, `SessionViewModel` |
 | `IGameEditorViewModel` (interface, with an `EditorGameController<TEditorGame>`) | Editor that needs a live game instance for rendering | `GameHost` (the game the views show), `IEditorGameController` integration, game startup/shutdown, error recovery |
-| `AssetCompositeHierarchyEditorViewModel<TAssetPartDesign, TAssetPart, TItemViewModel>` | Asset that contains a tree of selectable parts (scenes, prefabs, UI pages) | Selection tracking, copy/cut/paste/delete/duplicate for hierarchy parts, part ViewModel factory |
+| `AssetCompositeHierarchyEditorViewModel<TAssetPartDesign, TAssetPart, TAssetViewModel, TItemViewModel>` | Asset that contains a tree of selectable parts (scenes, prefabs, UI pages) | Selection tracking, copy/cut/paste/delete/duplicate for hierarchy parts, part ViewModel factory |
 
 ## Registration
 
@@ -39,7 +39,7 @@ The ViewModel lives in `Stride.Assets.Editor` (or a plugin's neutral `Editor` pa
 
 ## Lifecycle
 
-**1. Construction** — synchronous; `base(asset)` is the only required call; do not perform async work here.
+**1. Construction** — synchronous; do not perform async work here. Both Game Studios create the editor with `AssetEditorViewModel.Create`, which gives it a scope of services for its tab (a child of the session's services, disposed when the editor is destroyed) and calls the longest constructor it can fill: the asset, any registered service, and the tab's services for a parameter of type `IViewModelServiceProvider` or `IServiceProvider`. Pass that provider to `base(asset, serviceProvider)` to register services of the editor's own in the tab (with a `ViewModelServiceLifetime`); `base(asset)` uses the session's services. The scoped constructor and `Create` are experimental API (`STREXP006`, see [plugins.md](../build/plugins.md#editor-versions-and-experimental-api)). Keep one public constructor, so the choice is not ambiguous.
 
 **2. `Initialize()`** — the WPF view calls it from `InitializeEditor` (below); in the cross-platform editor, the open editors (`EditorCollectionViewModel`) call it right after creating the ViewModel, and an editor that returns `false` stays open with what works.
 
@@ -135,7 +135,7 @@ Access services via `ServiceProvider` (available on `AssetEditorViewModel`):
 | `SelectionService` | `ServiceProvider.Get<SelectionService>()` | Register selection scope for back/forward navigation — see [navigation.md](navigation.md) |
 | `IAssetEditorsManager` | `ServiceProvider.TryGet<IAssetEditorsManager>()` | Open or close other asset editors programmatically |
 
-Use `TryGet<T>()` for optional services; `Get<T>()` throws if the service is not registered.
+Use `TryGet<T>()` for optional services; `Get<T>()` throws if the service is not registered. A plugin registers its own services, commands, menus and toolbar entries through its plugin context; see [plugins.md](../build/plugins.md#services) and [Commands, menus and toolbars](../build/plugins.md#commands-menus-and-toolbars).
 
 `UndoRedoService` is also available as a shorthand property on `AssetEditorViewModel` (equivalent to `ServiceProvider.Get<IUndoRedoService>()`).
 
