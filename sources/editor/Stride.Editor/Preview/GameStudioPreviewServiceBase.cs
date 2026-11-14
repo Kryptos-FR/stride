@@ -138,6 +138,14 @@ public abstract class GameStudioPreviewServiceBase : IAssetPreviewService, IPrev
     }
 
     /// <summary>
+    /// Prepares what the view needs before the preview game is created, first thing on the game thread: an editor whose
+    /// constructor waits for its view (a window handle) is then released even when the creation of the game fails.
+    /// </summary>
+    protected virtual void PrepareView()
+    {
+    }
+
+    /// <summary>
     /// Creates the view the preview game renders in and the game context that runs the game in it. Called on the game thread,
     /// before the game runs.
     /// </summary>
@@ -201,6 +209,7 @@ public abstract class GameStudioPreviewServiceBase : IAssetPreviewService, IPrev
 
     private void PreviewGameThread()
     {
+        PrepareView();
         var previewGame = new PreviewGame(AssetBuilderService.EffectCompiler);
         lock (previewLock)
         {
