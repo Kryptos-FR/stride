@@ -19,11 +19,12 @@
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="Padding" Value="4,2"/>
     </Style>
-    <!-- The open level, last in the breadcrumb -->
-    <Style Selector="ContentPresenter:nth-last-child(1) Button.crumb">
+    <!-- The open level, last in the breadcrumb, and no separator before the first level. The item containers are the logical
+         children of the breadcrumb: without the child combinator, a presenter further up would match too -->
+    <Style Selector="ItemsControl.breadcrumb > ContentPresenter:nth-last-child(1) Button.crumb">
       <Setter Property="FontWeight" Value="Bold"/>
     </Style>
-    <Style Selector="ContentPresenter:nth-child(1) TextBlock.separator">
+    <Style Selector="ItemsControl.breadcrumb > ContentPresenter:nth-child(1) TextBlock.separator">
       <Setter Property="IsVisible" Value="False"/>
     </Style>
   </UserControl.Styles>
@@ -46,7 +47,7 @@
                 IsVisible="{Binding $self.IsEffectivelyEnabled}"
                 ToolTip.Tip="{sd:LocalizeString Create a dialogue next to the story for this scenario or quest, Context=ToolTip}"/>
       </StackPanel>
-      <ItemsControl ItemsSource="{Binding Breadcrumb}" VerticalAlignment="Center">
+      <ItemsControl Classes="breadcrumb" ItemsSource="{Binding Breadcrumb}" VerticalAlignment="Center">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
             <StackPanel Orientation="Horizontal"/>

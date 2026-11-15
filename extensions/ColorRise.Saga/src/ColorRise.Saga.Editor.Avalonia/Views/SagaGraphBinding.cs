@@ -162,7 +162,9 @@ public sealed class SagaGraphBinding<TAssetViewModel> : INodeGraphLinkResolver, 
 
     private void OnDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (open is null || (e.Source as Visual)?.GetSelfAndVisualAncestors().OfType<NodeGraphNode>().FirstOrDefault() is not { Node: SagaGraphNodeViewModel node })
+        // The graph captures the pointer when a node is pressed, so the double tap comes from the graph itself: the node is the one
+        // under the pointer (docs/plugin-findings.md, finding 9)
+        if (open is null || (graph.InputHitTest(e.GetPosition(graph)) as Visual)?.GetSelfAndVisualAncestors().OfType<NodeGraphNode>().FirstOrDefault() is not { Node: SagaGraphNodeViewModel node })
             return;
         open(node);
         e.Handled = true;
