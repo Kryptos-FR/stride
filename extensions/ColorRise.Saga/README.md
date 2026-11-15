@@ -113,6 +113,7 @@ It doesn't (yet):
 
 - Sub-plots running in parallel with their own timelines, localization and voice-over, barks and ambient lines, typed names or attributes from game code.
 - A dialogue UI for the game: the game shows the lines and choices itself.
+- Saving in the middle of a dialogue: the saved state holds no dialogue position, and a dialogue played once is used up as soon as it starts. A game saves between dialogues.
 - Editors in the WPF Game Studio.
 - Published packages: everything builds against a local engine build of this branch.
 
