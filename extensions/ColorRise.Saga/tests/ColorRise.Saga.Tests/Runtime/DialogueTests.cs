@@ -144,6 +144,37 @@ public sealed class DialogueTests
     }
 
     [Fact]
+    public void SessionKnowsItsNodeAndThePathItTook()
+    {
+        var dialogue = Dialogue("mara", nodes:
+        [
+            new LineNode { Id = "hello", SpeakerId = "mara", Text = "You came back.", NextId = "check" },
+            new BranchNode { Id = "check", Links = { new DialogueLink { When = C("day > 1"), TargetId = "late" }, new DialogueLink { TargetId = "early" } } },
+            new LineNode { Id = "late", SpeakerId = "mara", Text = "You're late." },
+            new LineNode { Id = "early", SpeakerId = "mara", Text = "You're early.", NextId = "hub" },
+            new ChoicesNode { Id = "hub", Choices = { new DialogueChoice { Text = "Bye", TargetId = "bye" } } },
+            new EndNode { Id = "bye" },
+        ]);
+        var runtime = Started(Story(new ActDefinition { Id = "act_1", Scenarios = { new ScenarioDefinition { Id = "s", Dialogues = { dialogue } } } }));
+
+        var session = Assert.IsType<DialogueSession>(runtime.Talk("mara"));
+        Assert.Equal("hello", session.CurrentNodeId);
+        Assert.Equal(["hello"], session.Path);
+
+        session.Continue();
+        Assert.Equal("early", session.CurrentNodeId);
+        Assert.Equal(["hello", "check", "early"], session.Path);
+
+        session.Continue();
+        Assert.Equal("hub", session.CurrentNodeId);
+
+        session.Choose(0);
+        Assert.True(session.IsEnded);
+        Assert.Null(session.CurrentNodeId);
+        Assert.Equal(["hello", "check", "early", "hub", "bye"], session.Path);
+    }
+
+    [Fact]
     public void HubLoopsAndOnceChoiceDisappears()
     {
         var dialogue = Dialogue("mara", nodes:

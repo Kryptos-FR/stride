@@ -23,8 +23,8 @@ public sealed partial class DialogueSession
     private readonly SagaRuntime runtime;
     private readonly ILogger logger;
     private readonly Dictionary<string, DialogueNode> nodes;
+    private readonly List<string> path = [];
     private ChoicesNode? choicesNode;
-    private string? currentNodeId;
 
     internal DialogueSession(SagaRuntime runtime, ILogger logger, DialogueDefinition dialogue)
     {
@@ -48,6 +48,17 @@ public sealed partial class DialogueSession
 
     public bool IsEnded { get; private set; }
 
+    /// <summary>
+    /// The id of the node the dialogue is at: the line it shows or the choices it offers; null once it ended.
+    /// </summary>
+    public string? CurrentNodeId { get; private set; }
+
+    /// <summary>
+    /// The ids of the nodes the dialogue went through, in order: the lines, choices and branches, and the end node when it
+    /// reached one.
+    /// </summary>
+    public IReadOnlyList<string> Path => path;
+
     private string Card => $"dialogue {Dialogue.Name}";
 
     /// <summary>
@@ -60,7 +71,7 @@ public sealed partial class DialogueSession
             throw new InvalidOperationException("The dialogue has ended.");
         if (choicesNode is not null)
             throw new InvalidOperationException("The dialogue waits for a choice.");
-        var line = nodes.GetValueOrDefault(currentNodeId!) as LineNode;
+        var line = nodes.GetValueOrDefault(CurrentNodeId!) as LineNode;
         MoveTo(line?.NextId);
     }
 
@@ -109,15 +120,21 @@ public sealed partial class DialogueSession
         {
             if (step == MaxSilentSteps)
                 throw new SagaException($"The dialogue {Dialogue.Name} loops through branches without showing anything (at node {nodeId}).");
-            if (nodeId is null || !nodes.TryGetValue(nodeId, out var node) || node is EndNode)
+            if (nodeId is null || !nodes.TryGetValue(nodeId, out var node))
             {
-                if (nodeId is not null && !nodes.ContainsKey(nodeId))
+                if (nodeId is not null)
                     logger.Warning($"Saga: the dialogue {Dialogue.Name} leads to a node '{nodeId}' it does not have; it ends there.");
                 End();
                 return;
             }
+            path.Add(node.Id);
+            if (node is EndNode)
+            {
+                End();
+                return;
+            }
 
-            currentNodeId = node.Id;
+            CurrentNodeId = node.Id;
             switch (node)
             {
                 case LineNode line:
@@ -173,7 +190,7 @@ public sealed partial class DialogueSession
         CurrentLine = null;
         Choices = [];
         choicesNode = null;
-        currentNodeId = null;
+        CurrentNodeId = null;
     }
 
     private void VisitNode(DialogueNode node)
