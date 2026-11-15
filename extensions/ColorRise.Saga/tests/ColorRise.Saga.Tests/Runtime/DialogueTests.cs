@@ -205,6 +205,29 @@ public sealed class DialogueTests
     }
 
     [Fact]
+    public void AllChoicesDisabledEndsDialogue()
+    {
+        var dialogue = Dialogue("mara", nodes:
+        [
+            new LineNode { Id = "hello", SpeakerId = "mara", Text = "Well?", NextId = "hub" },
+            new ChoicesNode { Id = "hub", Choices = { new DialogueChoice { Text = "Bribe", When = C("day > 3"), HideWhenFalse = false, TargetId = "hello" } } },
+        ]);
+        var logger = new LoggerResult();
+        var runtime = new SagaRuntime(Story(new ActDefinition { Id = "act_1", Scenarios = { new ScenarioDefinition { Id = "s", Dialogues = { dialogue } } } }), logger: logger);
+        runtime.Start();
+        var session = Assert.IsType<DialogueSession>(runtime.Talk("mara"));
+
+        session.Continue();
+
+        // Nothing could be chosen: the dialogue would wait forever
+        Assert.True(session.IsEnded);
+        Assert.Empty(session.Choices);
+        var warning = Assert.Single(logger.Messages);
+        Assert.Equal(LogMessageType.Warning, warning.Type);
+        Assert.Contains("hub", warning.Text);
+    }
+
+    [Fact]
     public void BranchTakesFirstTrueLink()
     {
         var dialogue = Dialogue("mara", nodes:

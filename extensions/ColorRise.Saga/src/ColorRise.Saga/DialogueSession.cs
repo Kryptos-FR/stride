@@ -141,9 +141,10 @@ public sealed partial class DialogueSession
                         if (enabled || !choice.HideWhenFalse)
                             views.Add(new DialogueChoiceView(i, Substitute(choice.Text), enabled));
                     }
-                    if (views.Count == 0)
+                    // Nothing to choose (every choice hidden or disabled): the dialogue would wait forever
+                    if (!views.Any(x => x.IsEnabled))
                     {
-                        logger.Warning($"Saga: the dialogue {Dialogue.Name} has no choice to show at node {choices.Id}; it ends there.");
+                        logger.Warning($"Saga: the dialogue {Dialogue.Name} has no choice to take at node {choices.Id}; it ends there.");
                         End();
                         return;
                     }
