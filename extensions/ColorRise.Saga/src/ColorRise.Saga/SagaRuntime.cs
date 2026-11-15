@@ -22,6 +22,7 @@ public sealed partial class SagaRuntime
     private readonly HashSet<string> unregisteredFunctionsReported = [];
     private readonly HashSet<string> events;
     private readonly HashSet<string> signals;
+    private readonly HashSet<string> characters;
     private readonly Dictionary<string, List<Action<SagaSignal>>> handlers = [];
     private readonly Queue<object> notifications = new();
     private readonly Context context;
@@ -44,6 +45,7 @@ public sealed partial class SagaRuntime
         functionDeclarations = declarations.Functions.GroupBy(x => x.Name).ToDictionary(x => x.Key, x => x.First());
         events = [.. declarations.Events.Select(x => x.Name)];
         signals = [.. declarations.Signals.Select(x => x.Name)];
+        characters = [.. declarations.Characters.Select(x => x.Id)];
         IndexPlot();
         context = new Context(this);
         State = state ?? new SagaState();
@@ -162,9 +164,41 @@ public sealed partial class SagaRuntime
     };
 
     /// <summary>
-    /// Runs actions of a card outside settling (a dialogue line or choice), then settles.
+    /// Starts talking to a character: the dialogue attached to it with the highest priority whose condition holds, that is not
+    /// used up, and whose owner is live (a running scenario, or a quest from available to its outcome) unless it opted out.
+    /// Ties go to the dialogue declared first.
     /// </summary>
-    internal void RunActions(SagaActions actions, string card, string what) => Change(() => Run(actions, card, what));
+    /// <returns>The session, or null when no dialogue of the character can play.</returns>
+    /// <exception cref="ArgumentException">The story does not declare the character.</exception>
+    public DialogueSession? Talk(string characterId)
+    {
+        if (!characters.Contains(characterId))
+            throw new ArgumentException($"The story declares no character '{characterId}'.", nameof(characterId));
+
+        DialogueDefinition? best = null;
+        foreach (var (dialogue, isOwnerLive) in DialoguesOf(characterId))
+        {
+            if (best is not null && dialogue.Priority <= best.Priority)
+                continue;
+            if (dialogue.Once && State.UsedOnce.Contains(dialogue.Name))
+                continue;
+            if (dialogue.OnlyWhileOwnerLive && !isOwnerLive())
+                continue;
+            if (Holds(dialogue.When, $"dialogue {dialogue.Name}", "activation"))
+                best = dialogue;
+        }
+        if (best is null)
+            return null;
+
+        var session = new DialogueSession(this, logger, best);
+        session.Begin();
+        return session;
+    }
+
+    /// <summary>
+    /// Runs actions of a card inside a change (a dialogue line or choice); the change settles afterwards.
+    /// </summary>
+    internal void RunActionsUnsettled(SagaActions actions, string card, string what) => Run(actions, card, what);
 
     /// <summary>
     /// Evaluates a condition of a card outside settling (a dialogue's activation, a choice).

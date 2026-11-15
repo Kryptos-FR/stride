@@ -230,6 +230,26 @@ public sealed partial class SagaRuntime
         Notify(SagaChangeKind.ActEntered, id);
     }
 
+    /// <summary>
+    /// The dialogues of a character in declaration order (act by act, scenarios then quests), each with whether its owner is live.
+    /// </summary>
+    private IEnumerable<(DialogueDefinition Dialogue, Func<bool> IsOwnerLive)> DialoguesOf(string characterId)
+    {
+        foreach (var act in Story.Plot.Acts)
+        {
+            foreach (var scenario in act.Scenarios)
+            {
+                foreach (var dialogue in scenario.Dialogues.Where(x => x.CharacterId == characterId))
+                    yield return (dialogue, () => State.Scenarios[scenario.Id].State == ScenarioState.Running);
+            }
+            foreach (var quest in act.Quests)
+            {
+                foreach (var dialogue in quest.Dialogues.Where(x => x.CharacterId == characterId))
+                    yield return (dialogue, () => State.Quests[quest.Id].State is QuestState.Available or QuestState.Active);
+            }
+        }
+    }
+
     private void MarkChanged(string card) => changedCards.Add(card);
 
     private bool Holds(SagaCondition condition, string card, string what)
