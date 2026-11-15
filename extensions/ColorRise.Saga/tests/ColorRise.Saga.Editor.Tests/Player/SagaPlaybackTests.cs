@@ -65,6 +65,20 @@ public sealed class SagaPlaybackTests
         Assert.Contains(DialogueUrl, missing.Message);
     }
 
+    [Fact]
+    public void PlaybackStartsWithWarnings()
+    {
+        var (story, dialogue) = CreateStory();
+        story.Acts.Add(new ActCard { Id = "nowhere" });
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        var playback = SagaPlayback.Create(story, StoryUrl, x => Resolve(x, dialogue), diagnostics);
+
+        Assert.NotNull(playback);
+        var warning = Assert.Single(diagnostics);
+        Assert.Equal(("act nowhere", SagaDiagnosticSeverity.Warning), (warning.Card, warning.Severity));
+    }
+
     private static (DialogueAsset Asset, string Url)? Resolve(DialogueDefinition reference, DialogueAsset dialogue)
         => AttachedReferenceManager.GetAttachedReference(reference)?.Url == DialogueUrl ? (dialogue, DialogueUrl) : null;
 

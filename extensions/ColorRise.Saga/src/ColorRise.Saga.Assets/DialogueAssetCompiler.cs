@@ -49,7 +49,7 @@ public sealed class DialogueAssetCompiler : AssetCompilerBase
         {
             var diagnostics = new List<SagaBuildDiagnostic>();
             var dialogue = SagaContentBuilder.BuildDialogue(Parameters, Url, story, diagnostics);
-            if (SagaCompilation.Report(diagnostics, commandContext))
+            if (SagaCompilation.Report(diagnostics, commandContext.Logger))
                 return Task.FromResult(ResultStatus.Failed);
 
             var contentManager = new ContentManager(MicrothreadLocalDatabases.ProviderService);

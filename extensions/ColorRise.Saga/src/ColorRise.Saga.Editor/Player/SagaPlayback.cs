@@ -28,9 +28,10 @@ public sealed class SagaPlayback
     /// <param name="url">The URL of the story asset; its last segment names the story.</param>
     /// <param name="resolveDialogue">Gives the asset and the URL of a dialogue that a scenario or quest references, or null when
     /// the session doesn't have it.</param>
-    /// <param name="diagnostics">Receives what is wrong with the story or its dialogues, as the compiler would report it.</param>
+    /// <param name="diagnostics">Receives what is wrong with the story or its dialogues, errors and warnings, as the compiler would
+    /// report it.</param>
     /// <param name="logger">Where the runtime reports the problems the story can live with.</param>
-    /// <returns>The playback, or null when the story or one of its dialogues has a problem.</returns>
+    /// <returns>The playback, or null when the story or one of its dialogues has an error.</returns>
     public static SagaPlayback? Create(StoryAsset story, string url, Func<DialogueDefinition, (DialogueAsset Asset, string Url)?> resolveDialogue,
         ICollection<SagaBuildDiagnostic> diagnostics, ILogger? logger = null)
     {
@@ -68,6 +69,6 @@ public sealed class SagaPlayback
 
         foreach (var diagnostic in found)
             diagnostics.Add(diagnostic);
-        return found.Count == 0 ? new SagaPlayback(new SagaRuntime(definition, null, logger)) : null;
+        return found.Any(x => x.Severity == SagaDiagnosticSeverity.Error) ? null : new SagaPlayback(new SagaRuntime(definition, null, logger));
     }
 }

@@ -1,13 +1,14 @@
 using Stride.Core.Assets;
 using Stride.Core.Assets.Compiler;
 using Stride.Core.BuildEngine;
+using Stride.Core.Diagnostics;
 using Stride.Core.Serialization.Contents;
 
 namespace ColorRise.Saga.Assets;
 
 /// <summary>
-/// Compiles a story asset to a <see cref="Content.StoryDefinition"/>. Each problem in the story fails the build step with its
-/// asset, card and position.
+/// Compiles a story asset to a <see cref="Content.StoryDefinition"/>. Each error in the story fails the build step with its
+/// asset, card and position; warnings are logged.
 /// </summary>
 [AssetCompiler(typeof(StoryAsset), typeof(AssetCompilationContext))]
 public sealed class StoryAssetCompiler : AssetCompilerBase
@@ -34,7 +35,7 @@ public sealed class StoryAssetCompiler : AssetCompilerBase
         {
             var diagnostics = new List<SagaBuildDiagnostic>();
             var story = SagaContentBuilder.BuildStory(Parameters, Url, diagnostics);
-            if (SagaCompilation.Report(diagnostics, commandContext))
+            if (SagaCompilation.Report(diagnostics, commandContext.Logger))
                 return Task.FromResult(ResultStatus.Failed);
 
             var contentManager = new ContentManager(MicrothreadLocalDatabases.ProviderService);
@@ -47,16 +48,29 @@ public sealed class StoryAssetCompiler : AssetCompilerBase
 /// <summary>
 /// What the compilers share.
 /// </summary>
-internal static class SagaCompilation
+public static class SagaCompilation
 {
     /// <summary>
-    /// Logs the diagnostics as errors of the build step.
+    /// Logs the diagnostics of a build step: the errors as errors, the warnings as warnings.
     /// </summary>
-    /// <returns>Whether there was any.</returns>
-    public static bool Report(IReadOnlyCollection<SagaBuildDiagnostic> diagnostics, ICommandContext commandContext)
+    /// <returns>Whether there was an error, which fails the step.</returns>
+    public static bool Report(IReadOnlyCollection<SagaBuildDiagnostic> diagnostics, ILogger logger)
     {
+        ArgumentNullException.ThrowIfNull(diagnostics);
+        ArgumentNullException.ThrowIfNull(logger);
+        var failed = false;
         foreach (var diagnostic in diagnostics)
-            commandContext.Logger.Error(diagnostic.ToString());
-        return diagnostics.Count > 0;
+        {
+            if (diagnostic.Severity == SagaDiagnosticSeverity.Warning)
+            {
+                logger.Warning(diagnostic.ToString());
+            }
+            else
+            {
+                logger.Error(diagnostic.ToString());
+                failed = true;
+            }
+        }
+        return failed;
     }
 }

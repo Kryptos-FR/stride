@@ -119,6 +119,8 @@ public static partial class SagaContentBuilder
             builder.Report("Acts", "The story has no act.");
         else if (!actIds.Contains(story.FirstActId))
             builder.Report("FirstActId", story.FirstActId.Length == 0 ? "The story has no first act." : $"The story has no act '{story.FirstActId}'.");
+        else
+            CheckActsReached(story, builder);
 
         return new StoryDefinition { Name = NameOf(assetUrl), Declarations = story.Declarations, Plot = plot };
     }
@@ -147,6 +149,31 @@ public static partial class SagaContentBuilder
             if (!done.Contains(act.Id))
                 Visit(act);
         }
+    }
+
+    // An act no link leads to from the first act never plays
+    private static void CheckActsReached(StoryAsset story, Builder builder)
+    {
+        var acts = story.Acts.GroupBy(x => x.Id).ToDictionary(x => x.Key, x => x.First());
+        var reached = Reach(story.FirstActId, id => acts.TryGetValue(id, out var act) ? act.Next.Select(x => x.TargetActId) : []);
+        foreach (var act in story.Acts.Where(x => x.Id.Length > 0 && !reached.Contains(x.Id)))
+            builder.Warn($"act {act.Id}", "No act leads here from the first act: the story never plays it.");
+    }
+
+    // The ids reached from a start by following the links
+    private static HashSet<string> Reach(string start, Func<string, IEnumerable<string>> links)
+    {
+        var reached = new HashSet<string> { start };
+        var pending = new Stack<string>([start]);
+        while (pending.TryPop(out var id))
+        {
+            foreach (var next in links(id))
+            {
+                if (next.Length > 0 && reached.Add(next))
+                    pending.Push(next);
+            }
+        }
+        return reached;
     }
 
     // A dialogue's name keys its visits and its once: two dialogues of a story must not share one
@@ -189,6 +216,9 @@ public static partial class SagaContentBuilder
         else if (!nodeIds.Contains(dialogue.EntryNodeId))
             builder.Report("EntryNodeId", dialogue.EntryNodeId.Length == 0 ? "The dialogue has no entry node." : $"The dialogue has no node '{dialogue.EntryNodeId}'.");
 
+        if (nodeIds.Contains(dialogue.EntryNodeId))
+            CheckNodesReached(dialogue, builder);
+
         var seenNodes = new HashSet<string>();
         var nodes = new List<DialogueNode>();
         foreach (var node in dialogue.Nodes)
@@ -214,6 +244,8 @@ public static partial class SagaContentBuilder
                 case ChoicesNodeCard choices:
                     if (choices.Choices.Count == 0)
                         builder.Report(card, "A choices node needs at least one choice.");
+                    else if (choices.Choices.All(x => x.When.Trim().Length > 0 || x.Once))
+                        builder.Warn(card, "Every choice has a condition or can be taken once: when none is left, the dialogue ends here.");
                     built = new ChoicesNode
                     {
                         Choices = [.. choices.Choices.Select((x, i) =>
@@ -236,6 +268,8 @@ public static partial class SagaContentBuilder
                 case BranchNodeCard branch:
                     if (branch.Links.Count == 0)
                         builder.Report(card, "A branch needs at least one link.");
+                    else if (branch.Links.All(x => x.When.Trim().Length > 0))
+                        builder.Warn(card, "Every link has a condition: when none holds, the dialogue ends here. Leave the last link's condition empty to catch the rest.");
                     built = new BranchNode
                     {
                         Links = [.. branch.Links.Select((x, i) =>
@@ -277,6 +311,26 @@ public static partial class SagaContentBuilder
         }
     }
 
+    // A node no way out leads to from the entry never shows
+    private static void CheckNodesReached(DialogueAsset dialogue, Builder builder)
+    {
+        var nodes = dialogue.Nodes.GroupBy(x => x.Id).ToDictionary(x => x.Key, x => x.First());
+        var reached = Reach(dialogue.EntryNodeId, id => nodes.TryGetValue(id, out var node) ? WaysOut(node) : []);
+        foreach (var node in dialogue.Nodes.Where(x => x.Id.Length > 0 && !reached.Contains(x.Id)))
+            builder.Warn($"node {node.Id}", "Nothing leads to this node from the entry: the dialogue never shows it.");
+    }
+
+    /// <summary>
+    /// The ids of the nodes a node of a dialogue leads to: the next line, the choices' targets, the branch's targets.
+    /// </summary>
+    internal static IEnumerable<string> WaysOut(DialogueNodeCard node) => node switch
+    {
+        LineNodeCard line => [line.NextId],
+        ChoicesNodeCard choices => choices.Choices.Select(x => x.TargetId),
+        BranchNodeCard branch => branch.Links.Select(x => x.TargetId),
+        _ => [],
+    };
+
     /// <summary>
     /// The name of the content an asset URL gives (its last segment): the story's name, the dialogue's name for visits.
     /// </summary>
@@ -295,6 +349,8 @@ public static partial class SagaContentBuilder
         private readonly SagaTypeChecker checker = new(new StoryAssetScope(story));
 
         public void Report(string card, string message, int position = 0) => diagnostics.Add(new SagaBuildDiagnostic(assetUrl, card, position, message));
+
+        public void Warn(string card, string message, int position = 0) => diagnostics.Add(new SagaBuildDiagnostic(assetUrl, card, position, message, SagaDiagnosticSeverity.Warning));
 
         public SagaCondition Condition(string source, string card)
         {

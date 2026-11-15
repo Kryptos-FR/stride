@@ -64,7 +64,9 @@ public sealed class SagaContentBuilderTests
 
         SagaContentBuilder.BuildStory(asset, "Story/Main", diagnostics);
 
-        Assert.Equal(3, diagnostics.Count);
+        // With its link moved away, nothing leads to act_2 any more: a warning besides the errors
+        Assert.Equal(3, diagnostics.Count(x => x.Severity == SagaDiagnosticSeverity.Error));
+        Assert.Contains(diagnostics, x => x.Card == "act act_2" && x.Severity == SagaDiagnosticSeverity.Warning);
         Assert.Contains(diagnostics, x => x.Card == "act act_1 / quest mine / stage dig / OnDone" && x.Position == 6);
         Assert.Contains(diagnostics, x => x.Card == "act act_1 / link to act_9" && x.Message.Contains("act_9"));
         Assert.Contains(diagnostics, x => x.Card == "act act_1 / quest mine / attribute reward" && x.Message.Contains("many"));
