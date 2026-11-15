@@ -44,11 +44,20 @@ To build against another Stride version, copy `Directory.Build.local.props.examp
 
 This section follows the work: it says what can be tried at the current commit.
 
-- The five packages build and pack. They hold nothing to try yet.
+- The five packages build and pack.
+- A `.yarn` file of an asset folder is an asset, "Yarn script": the asset view shows it, *Add asset > Dialogue > Yarn script* makes one, and saving, renaming and moving it in Game Studio keep it a plain Yarn file (UTF-8, no byte order mark unless the file came with one). Nothing opens it yet.
+- The sample game "Brinemoor" is an empty scene with one script, to open in Game Studio:
+
+  ```sh
+  cd sources/editor/Stride.GameStudio.Avalonia.Desktop/bin/Debug/net10.0
+  dotnet Stride.GameStudio.Avalonia.Desktop.dll <checkout>/extensions/ColorRise.Skein/sample/Brinemoor/Brinemoor.slnx
+  ```
+
+  *View > Plugins* lists `ColorRise.Skein.Editor` and `ColorRise.Skein.Editor.Avalonia` under "Plugins of the project". After a rebuild of Skein while Game Studio is open, Game Studio offers to reload.
 
 ### Not yet
 
-Everything else of the design: the Yarn assets, the runtime, the editor, the dialogue player, the sample game "Brinemoor".
+Everything else of the design: the Yarn project asset and its compiler, the runtime, the editor, the dialogue player, the story of the sample game.
 
 ## Tied to the fork
 

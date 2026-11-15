@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Brinemoor</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Engine" Version="$(SkeinStrideVersion)" />
+    <PackageReference Include="Stride.UI" Version="$(SkeinStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SkeinStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <!-- The game references Skein's runtime, and its UI package for the provided presenters; the asset compiler and Game Studio
+         find the companions -->
+    <ProjectReference Include="..\..\..\src\ColorRise.Skein\ColorRise.Skein.csproj" />
+    <ProjectReference Include="..\..\..\src\ColorRise.Skein.UI\ColorRise.Skein.UI.csproj" />
+  </ItemGroup>
+</Project>

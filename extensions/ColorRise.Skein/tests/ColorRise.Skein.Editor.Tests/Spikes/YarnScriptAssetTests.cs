@@ -2,6 +2,7 @@ using ColorRise.Skein.Assets;
 using ColorRise.Skein.Editor.ViewModels;
 using Stride.Assets.Editor.Testing;
 using Stride.Core.Assets;
+using Stride.Core.Assets.Editor.Testing;
 using Stride.Core.Presentation.Dirtiables;
 using Stride.Core.Presentation.Services;
 
@@ -90,5 +91,46 @@ public sealed class YarnScriptAssetTests
         Assert.True(File.Exists(Path.Combine(folder, "Arrival.yarn")));
         Assert.False(File.Exists(Path.Combine(folder, "Hello.yarn")));
         Assert.Equal(Hello, File.ReadAllText(Path.Combine(folder, "Arrival.yarn")));
+    }
+
+    [Fact]
+    public async Task A_saved_script_has_no_byte_order_mark()
+    {
+        await using var session = await StrideEditorTestSession.OpenAsync(Options, ("Dialogue/Hello", new YarnScriptAsset { Text = Hello }));
+        var path = Path.Combine(session.Directory, session.PackageName, "Assets", "Dialogue", "Hello.yarn");
+        var script = session.Asset<YarnScriptViewModel>("Dialogue/Hello");
+        Assert.Equal((byte)'t', File.ReadAllBytes(path)[0]);
+
+        Change(session, script, "title: Start\n---\nOdile: Été.\n===\n");
+        var log = session.Session.SaveSessionWithoutUI();
+
+        Assert.False(log.HasErrors, log.ToText());
+        Assert.Equal("title: Start\n---\nOdile: Été.\n===\n"u8.ToArray(), File.ReadAllBytes(path));
+    }
+
+    [Fact]
+    public async Task A_script_that_came_with_a_byte_order_mark_keeps_it()
+    {
+        await using var session = await StrideEditorTestSession.OpenAsync(Options, ("Dialogue/Hello", new YarnScriptAsset { Text = Hello, HasByteOrderMark = true }));
+        var path = Path.Combine(session.Directory, session.PackageName, "Assets", "Dialogue", "Hello.yarn");
+        var script = session.Asset<YarnScriptViewModel>("Dialogue/Hello");
+        Assert.Equal<byte>([0xEF, 0xBB, 0xBF, (byte)'t'], File.ReadAllBytes(path)[..4]);
+        Assert.Equal(Hello, script.Asset.Text);
+
+        Change(session, script, "title: Start\n---\nOdile: Été.\n===\n");
+        var log = session.Session.SaveSessionWithoutUI();
+
+        Assert.False(log.HasErrors, log.ToText());
+        Assert.Equal<byte>([0xEF, 0xBB, 0xBF, .. "title: Start\n---\nOdile: Été.\n===\n"u8], File.ReadAllBytes(path));
+    }
+
+    private static void Change(EditorTestSession session, YarnScriptViewModel script, string text)
+    {
+        var undoRedo = session.Session.ServiceProvider.Get<IUndoRedoService>();
+        var before = script.Asset.Text;
+        using var transaction = undoRedo.CreateTransaction();
+        script.Asset.Text = text;
+        undoRedo.PushOperation(new AnonymousDirtyingOperation(script.Dirtiables, () => script.Asset.Text = before, () => script.Asset.Text = text));
+        undoRedo.SetName(transaction, "Typing");
     }
 }

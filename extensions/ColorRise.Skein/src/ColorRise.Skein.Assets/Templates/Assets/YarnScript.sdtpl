@@ -5,5 +5,5 @@ Name: Yarn script
 Scope: Asset
 Description: A Yarn Spinner script (.yarn) of dialogue nodes
 Group: Dialogue
-DefaultOutputName: Dialogue
+DefaultOutputName: YarnScript
 FactoryTypeName: YarnScriptAssetFactory

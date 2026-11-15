@@ -1,0 +1,23 @@
+!GameSettingsAsset
+Id: 4e9b2c11-5a7d-4c3e-8f21-0b6a9d3e7c54
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+DefaultScene: 8f3a6d85-0a4b-4c6b-adbe-4a5b6c7d8e94:MainScene
+GraphicsCompositor: a94b7e96-1b5c-4d7c-becf-5b6c7d8e9fa5:GraphicsCompositor
+Defaults:
+    - !Stride.Assets.EditorSettings,Stride.Assets
+        RenderingMode: HDR
+    - !Stride.Graphics.RenderingSettings,Stride.Graphics
+        DefaultBackBufferWidth: 1280
+        DefaultBackBufferHeight: 720
+        AdaptBackBufferToScreen: false
+        DefaultGraphicsProfile: Level_10_0
+        ColorSpace: Linear
+        DisplayOrientation: Default
+    - !Stride.Streaming.StreamingSettings,Stride.Rendering
+        ManagerUpdatesInterval: 0:00:00:00.0330000
+        ResourceLiveTimeout: 0:00:00:08.0000000
+    - !Stride.Assets.Textures.TextureSettings,Stride.Assets
+        TextureQuality: Fast
+SplashScreenTexture: d26edb11-10bd-403c-b3c2-9c7fcccf25e5:/Stride.Engine/StrideDefaultSplashScreen
+SplashScreenColor: {R: 0, G: 0, B: 0, A: 255}

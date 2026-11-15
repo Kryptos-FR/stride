@@ -44,11 +44,11 @@
 
 **Files:** none in git.
 
-- [ ] **Step 1:** Install a .NET 10 SDK with no approval prompt: read `https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json`, download the latest `dotnet-sdk-<v>-linux-x64.tar.gz` to the scratchpad, check its sha512 against the json, extract to `/root/.dotnet`, use `PATH=/root/.dotnet:$PATH DOTNET_ROOT=/root/.dotnet`. If that host is blocked, `apt-get install -y dotnet-sdk-10.0` and the Roslyn 5.3 toolset from nuget.org (project memory `linux-build-setup`).
-- [ ] **Step 2:** `git fetch origin feature/xplat/plugin-follow-ups`, create `feature/colorrise-skein` on its tip, set the git identity.
-- [ ] **Step 3:** Pull LFS from the fork: `git -c lfs.url=https://github.com/Kryptos-FR/stride.git/info/lfs lfs pull --include='deps/**'`, then the include list of project memory `container-lfs-setup`.
-- [ ] **Step 4:** `dotnet build sources/Stride.Editor.Avalonia.slnf`, then `dotnet build sources/assets/Stride.AssetCompiler/Stride.AssetCompiler.csproj` (Debug).
-- [ ] **Step 5:** Check `bin/packages` holds `Stride.Engine`, `Stride.UI`, `Stride.Core.Assets`, `Stride.AssetCompiler`, `Stride.Assets.Editor`, `Stride.Assets.Editor.Avalonia`, `Stride.Core.Assets.Editor.Testing`, `Stride.Assets.Editor.Testing` at `4.5.3-dev`. A missing one is the first finding.
+- [x] **Step 1:** Install a .NET 10 SDK with no approval prompt: read `https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json`, download the latest `dotnet-sdk-<v>-linux-x64.tar.gz` to the scratchpad, check its sha512 against the json, extract to `/root/.dotnet`, use `PATH=/root/.dotnet:$PATH DOTNET_ROOT=/root/.dotnet`. If that host is blocked, `apt-get install -y dotnet-sdk-10.0` and the Roslyn 5.3 toolset from nuget.org (project memory `linux-build-setup`).
+- [x] **Step 2:** `git fetch origin feature/xplat/plugin-follow-ups`, create `feature/colorrise-skein` on its tip, set the git identity.
+- [x] **Step 3:** Pull LFS from the fork: `git -c lfs.url=https://github.com/Kryptos-FR/stride.git/info/lfs lfs pull --include='deps/**'`, then the include list of project memory `container-lfs-setup`.
+- [x] **Step 4:** `dotnet build sources/Stride.Editor.Avalonia.slnf`, then `dotnet build sources/assets/Stride.AssetCompiler/Stride.AssetCompiler.csproj` (Debug).
+- [x] **Step 5:** Check `bin/packages` holds `Stride.Engine`, `Stride.UI`, `Stride.Core.Assets`, `Stride.AssetCompiler`, `Stride.Assets.Editor`, `Stride.Assets.Editor.Avalonia`, `Stride.Core.Assets.Editor.Testing`, `Stride.Assets.Editor.Testing` at `4.5.3-dev`. A missing one is the first finding.
 
 ### Task 1: Scaffold the extension
 
@@ -60,9 +60,9 @@
 **Interfaces:**
 - Produces: `public sealed class SkeinEditorPlugin : StrideAssetsPlugin` (`ColorRise.Skein.Editor`), `public sealed class SkeinEditorAvaloniaPlugin : StrideAssetsAvaloniaPlugin` (`ColorRise.Skein.Editor.Avalonia`), both overriding `Initialize(IEditorPluginContext)` and calling the base. Project shapes follow Saga's on `origin/feature/colorrise-saga-writers-loop` (read with `git show`, never check out), without its read of `sources/shared/SharedAssemblyInfo.cs`.
 
-- [ ] **Step 1:** Write the files. `dotnet build extensions/ColorRise.Skein/ColorRise.Skein.slnx` → 0 errors, 0 warnings from Skein's projects.
-- [ ] **Step 2:** `dotnet pack` → five `.nupkg` in `extensions/ColorRise.Skein/bin/packages`; the Editor package records a neutral toolkit, `.Avalonia` records Avalonia; the runtime's packed `.sdpkg` lists both companions.
-- [ ] **Step 3:** `grep -rn "sources/\|build/" --include=*.props --include=*.targets --include=*.csproj extensions/ColorRise.Skein` → no hit. Commit `feat(skein): scaffold the ColorRise.Skein extension`, push.
+- [x] **Step 1:** Write the files. `dotnet build extensions/ColorRise.Skein/ColorRise.Skein.slnx` → 0 errors, 0 warnings from Skein's projects.
+- [x] **Step 2:** `dotnet pack` → five `.nupkg` in `extensions/ColorRise.Skein/bin/packages`; the Editor package records a neutral toolkit, `.Avalonia` records Avalonia; the runtime's packed `.sdpkg` lists both companions.
+- [x] **Step 3:** `grep -rn "sources/\|build/" --include=*.props --include=*.targets --include=*.csproj extensions/ColorRise.Skein` → no hit. Commit `feat(skein): scaffold the ColorRise.Skein extension`, push.
 
 ### Task 2: Spike R4 and R1 — Yarn Spinner's packages and a `.yarn` asset
 
@@ -74,10 +74,10 @@ Settles whether Yarn's dependencies load beside Stride's (tests, asset compiler,
 **Interfaces:**
 - Produces: `[DataContract("YarnScriptAsset")] [AssetDescription(".yarn")] public sealed class YarnScriptAsset : SourceCodeAsset` with `public const string FileExtension = ".yarn"`.
 
-- [ ] **Step 1:** Test `Compiles_and_runs_with_the_nuget_packages`: compile `title: Start\n---\nOdile: Hello.\n===\n` with `Yarn.Compiler.Compiler.Compile`, run it with `Yarn.Dialogue`, assert one line whose text in the string table is `Odile: Hello.` and no diagnostics.
-- [ ] **Step 2:** Tests in a kit session (`StrideEditorTestSession.OpenAsync`) with `Hello.yarn` on disk in the package's asset folder: the asset loads as `YarnScriptAsset` with the file's text; its id equals `SourceCodeAsset.GenerateIdFromLocation(package, location)`; changing `Text` marks it dirty and saving writes exactly the text (no YAML); renaming the asset moves the file and the session still finds it.
-- [ ] **Step 3:** Game Studio under Xvfb on `sample/Brinemoor`: the script shows in the asset view, *Add asset* offers "Yarn script", the Plugins panel lists Skein as joined, no load error. Then a game build with a throwaway compiler that only logs the script's text length, to see Yarn's assemblies and the asset load in the asset compiler's process.
-- [ ] **Step 4:** Decide R1 and R4. If `SourceCodeAsset` fails one of: load, save, create, rename, build dependency → fallback (a normal `YarnScriptAsset : Asset` with `Source` pointing at the `.yarn`), which costs the goal "the file is the asset" and so goes to Nicolas as a decision before going on. Record findings. Commit `feat(skein): the Yarn script asset`, push.
+- [x] **Step 1:** Test `Compiles_and_runs_with_the_nuget_packages`: compile `title: Start\n---\nOdile: Hello.\n===\n` with `Yarn.Compiler.Compiler.Compile`, run it with `Yarn.Dialogue`, assert one line whose text in the string table is `Odile: Hello.` and no diagnostics.
+- [x] **Step 2:** Tests in a kit session (`StrideEditorTestSession.OpenAsync`) with `Hello.yarn` on disk in the package's asset folder: the asset loads as `YarnScriptAsset` with the file's text; its id equals `SourceCodeAsset.GenerateIdFromLocation(package, location)`; changing `Text` marks it dirty and saving writes exactly the text (no YAML); renaming the asset moves the file and the session still finds it.
+- [x] **Step 3:** Game Studio under Xvfb on `sample/Brinemoor`: the script shows in the asset view, *Add asset* offers "Yarn script", the Plugins panel lists Skein as joined, no load error. Then a game build with a throwaway compiler that only logs the script's text length, to see Yarn's assemblies and the asset load in the asset compiler's process.
+- [x] **Step 4:** Decide R1 and R4. If `SourceCodeAsset` fails one of: load, save, create, rename, build dependency → fallback (a normal `YarnScriptAsset : Asset` with `Source` pointing at the `.yarn`), which costs the goal "the file is the asset" and so goes to Nicolas as a decision before going on. Record findings. Commit `feat(skein): the Yarn script asset`, push.
 
 ### Task 3: Spike R2 — the property grid on something that is not an asset
 
@@ -382,3 +382,17 @@ Settles whether Yarn's dependencies load beside Stride's (tests, asset compiler,
 ## Spike results
 
 Filled in by Tasks 2 to 4: for each of R1 to R4, what was tried, the result, and whether the design's fallback was needed (a fallback that loses a goal is a decision for Nicolas before the work goes on).
+
+### R4: Yarn Spinner's packages beside Stride's (Task 2): holds, no fallback
+
+- Tried: compile and run a script with `YarnSpinner.Compiler` and `YarnSpinner` 3.2.2 in the test host; a throwaway asset compiler in `ColorRise.Skein.Assets` that compiled a script during a game build; Game Studio on the sample with the plugin loaded.
+- Result: Yarn's compiler, Google.Protobuf 3.25.2 and Antlr4.Runtime.Standard 4.13.1 load and run in the test host and inside Stride's asset compiler process (loaded as the game's companion); a Yarn warning came out of MSBuild with the `.yarn` file's path. Game Studio loads the two editor assemblies (the Plugins panel lists them, no asset error) and offers to reload after a rebuild. Yarn's compiler running inside Game Studio itself is seen with the analysis service (Task 15).
+- Learned for Task 8: in 3.2.2, `Dialogue.Continue()` called from inside a handler does nothing; the adapter calls it again once the handler has returned.
+
+### R1: a `.yarn` file as a third party's `SourceCodeAsset` (Task 2): holds, no fallback
+
+- Tried: load, text, id, change with undo, save, rename, create from a template, in a test session and in Game Studio; a game build with the script in the asset folder.
+- Result: all work. The file is the asset and stays plain Yarn text.
+- Facts later tasks rely on: the id comes from the location (`SourceCodeAsset.GenerateIdFromLocation(package, "/<namespace>/<location>")`), so a rename changes it and nothing may refer to a script by id (the Yarn project includes scripts by pattern); a text change is undoable and dirties the asset when it is pushed as an `AnonymousDirtyingOperation` on the script's `Dirtiables` in a transaction of `IUndoRedoService`.
+- Two problems met and kept inside Skein (findings 3 and 4 of `plugin-findings.md`): Stride's save added a byte order mark (now `YarnScriptAsset.Save` writes UTF-8 with a mark only when the file had one), and a new asset whose default name starts with the folder's name lands at the root (the template's default name is now `YarnScript`).
+

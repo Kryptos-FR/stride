@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Brinemoor.Linux</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <OutputPath>..\Bin\Linux\$(Configuration)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <StrideCurrentPackagePath>$(MSBuildThisFileDirectory)..\Brinemoor.Game\Brinemoor.Game.sdpkg</StrideCurrentPackagePath>
+    <StridePlatform>Linux</StridePlatform>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Brinemoor.Game\Brinemoor.Game.csproj" />
+  </ItemGroup>
+</Project>

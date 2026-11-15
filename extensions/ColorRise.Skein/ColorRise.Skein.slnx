@@ -6,6 +6,10 @@
     <Project Path="src/ColorRise.Skein.Editor/ColorRise.Skein.Editor.csproj" />
     <Project Path="src/ColorRise.Skein.Editor.Avalonia/ColorRise.Skein.Editor.Avalonia.csproj" />
   </Folder>
+  <Folder Name="/sample/">
+    <Project Path="sample/Brinemoor/Brinemoor.Game/Brinemoor.Game.csproj" />
+    <Project Path="sample/Brinemoor/Brinemoor.Linux/Brinemoor.Linux.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ColorRise.Skein.Tests/ColorRise.Skein.Tests.csproj" />
     <Project Path="tests/ColorRise.Skein.Editor.Tests/ColorRise.Skein.Editor.Tests.csproj" />

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Skein/">
+    <Project Path="../../src/ColorRise.Skein.Assets/ColorRise.Skein.Assets.csproj" />
+    <Project Path="../../src/ColorRise.Skein.Editor.Avalonia/ColorRise.Skein.Editor.Avalonia.csproj" />
+    <Project Path="../../src/ColorRise.Skein.Editor/ColorRise.Skein.Editor.csproj" />
+    <Project Path="../../src/ColorRise.Skein.UI/ColorRise.Skein.UI.csproj" />
+    <Project Path="../../src/ColorRise.Skein/ColorRise.Skein.csproj" />
+  </Folder>
+  <Project Path="Brinemoor.Game/Brinemoor.Game.csproj" />
+  <Project Path="Brinemoor.Linux/Brinemoor.Linux.csproj" DefaultStartup="true" />
+  <Project Path="Brinemoor.Windows/Brinemoor.Windows.csproj" />
+</Solution>

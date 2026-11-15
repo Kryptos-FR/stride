@@ -1,0 +1,98 @@
+!SceneAsset
+Id: 8f3a6d85-0a4b-4c6b-adbe-4a5b6c7d8e94
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 0.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! dd6d2dcc-679d-12b9-430a-9787bab45b33
+        - ref!! 58b9525b-e7ae-7864-c617-b6a50861e524
+        - ref!! 156b0cba-a396-4455-72fb-4d2451118ae4
+        - ref!! 17f2894b-bf3c-ac0a-31e2-b1fa10422cb1
+        - ref!! c7c4e523-7cef-8fb5-2cac-6b8e09794339
+    Parts:
+        -   Entity:
+                Id: dd6d2dcc-679d-12b9-430a-9787bab45b33
+                Name: Camera
+                Components:
+                    de3c4d6eaa68ff05d528af463132556d: !TransformComponent
+                        Id: d9b94663-f762-835d-26c4-a8f11e8cfd40
+                        Position: {X: 0.0, Y: 11.0, Z: 13.0}
+                        Rotation: {X: -0.34202015, Y: 0.0, Z: 0.0, W: 0.9396926}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ca6f8ffdb228b282a739fe18575ae68b: !CameraComponent
+                        Id: ae38d6c5-c918-1c55-207e-c2fa0ca74da0
+                        Name: null
+                        Projection: Perspective
+                        Slot: d0a6bf72-b3cd-4bd4-94ca-69952999d537
+        -   Entity:
+                Id: 58b9525b-e7ae-7864-c617-b6a50861e524
+                Name: Sun
+                Components:
+                    ccec50e3204b158187be425d0454af60: !TransformComponent
+                        Id: f56726c3-ebaf-05cd-3ab1-fe8843f83f41
+                        Position: {X: 0.0, Y: 5.0, Z: 0.0}
+                        Rotation: {X: -0.45080333, Y: -0.19198428, Z: -0.09994069, W: 0.86598513}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    341e4c083aea19db3e2a5d908002c716: !LightComponent
+                        Id: 8cd0bc77-d06c-0075-98b9-aa4da30fb8b9
+                        Type: !LightDirectional
+                            Color: !ColorRgbProvider
+                                Value: {R: 1.0, G: 0.97, B: 0.9}
+                            Shadow:
+                                Enabled: true
+                                Filter: !LightShadowMapFilterTypePcf
+                                    FilterSize: Filter5x5
+                                Size: Large
+                                DepthRange: {}
+                                PartitionMode: !LightDirectionalShadowMap.PartitionLogarithmic {}
+                                ComputeTransmittance: false
+                                BiasParameters: {}
+                        Intensity: 4.0
+        -   Entity:
+                Id: 156b0cba-a396-4455-72fb-4d2451118ae4
+                Name: Ambient
+                Components:
+                    61c48e45f38a6a5952f97334b922c12a: !TransformComponent
+                        Id: c7eb3429-fc4d-f165-ee6a-f37afdba4343
+                        Position: {X: 0.0, Y: 5.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    683aaa4cfa87ab064212691e71d96e6c: !LightComponent
+                        Id: 75b4fa04-8a72-09fc-a819-30a9a7ce01b6
+                        Type: !LightAmbient
+                            Color: !ColorRgbProvider
+                                Value: {R: 0.8, G: 0.85, B: 1.0}
+                        Intensity: 0.8
+        -   Entity:
+                Id: 17f2894b-bf3c-ac0a-31e2-b1fa10422cb1
+                Name: Ground
+                Components:
+                    66257f5403608d7a50d831cbc9a6a621: !TransformComponent
+                        Id: 601d3355-4eb2-2475-4d75-cca6ca043a2e
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    bc72f2444bc7a3fbee6ff13f32fe1c12: !ModelComponent
+                        Id: 624a8a2d-c12f-b856-e9a1-fc7c7179cc9a
+                        Model: b57d637d-8827-a1a0-8bae-f80e29e1f188:World/Models/Ground
+                        Materials: {}
+        -   Entity:
+                Id: c7c4e523-7cef-8fb5-2cac-6b8e09794339
+                Name: Player
+                Components:
+                    0c4dd0ea9c461809b711e79918009780: !TransformComponent
+                        Id: aa2314eb-7826-9189-2aa0-1bce3703b45e
+                        Position: {X: 0.0, Y: 0.0, Z: 4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    8352eda69862d177654e3aafff88da69: !ModelComponent
+                        Id: 792328d6-71ce-12c6-6d24-0fd389f6b2a6
+                        Model: fdc64b52-7b2d-38cc-de24-423884bf120c:World/Models/Player
+                        Materials: {}

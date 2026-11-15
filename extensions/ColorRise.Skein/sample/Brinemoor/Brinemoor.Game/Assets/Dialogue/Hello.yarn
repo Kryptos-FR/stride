@@ -1,0 +1,15 @@
+title: Start
+position: 0,0
+---
+Odile: The lamp's out again.
+-> I'll look.
+    Odile: Mind the stairs.
+    <<jump Lighthouse>>
+-> Not my problem.
+    Odile: It will be, come nightfall.
+===
+title: Lighthouse
+position: 320,0
+---
+Narrator: The stairs wind up into the dark.
+===
