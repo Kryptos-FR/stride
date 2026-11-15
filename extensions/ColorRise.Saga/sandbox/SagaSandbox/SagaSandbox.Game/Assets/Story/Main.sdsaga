@@ -27,8 +27,6 @@ Declarations:
             Name: rubble_cleared
         9ab3d7c38be7eafa7ab462441393e010:
             Name: rescue_done
-        e059d32a6f1db1ec02c4dcc5320f05fe:
-            Name: night_fell
     Functions:
         ff0e62b76bb17e76b713ced6d04e78c6:
             Name: has_item

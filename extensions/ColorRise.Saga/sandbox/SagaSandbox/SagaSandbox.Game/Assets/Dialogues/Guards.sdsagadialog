@@ -33,6 +33,9 @@ Nodes:
         Id: who_pays
         Name: 
         Links:
+            b2e519ced3ed14e951040f9f86ef496a:
+                When: has_item("lamp")
+                TargetId: lamp
             96ae50c4f71b6cd24e595fdbee6da8bc:
                 When: sided_with == "guild"
                 TargetId: guild
@@ -40,6 +43,14 @@ Nodes:
                 When: 
                 TargetId: crown
         Position: {X: 0.0, Y: 240.0}
+    9f19a397659e3e02c2f096fc017bd428: !SagaLineNodeCard
+        Id: lamp
+        Name:
+        SpeakerId: guard_captain
+        Text: The foreman's lamp? Then go down, and be quick.
+        Actions:
+        NextId:
+        Position: {X: -360.0, Y: 360.0}
     b4af04ae86a61ef0927a98e2a31e9a37: !SagaLineNodeCard
         Id: guild
         Name: 

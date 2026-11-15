@@ -134,7 +134,6 @@ public sealed class DemoGame : SyncScript
             var day = runtime.Get("day").AsInt() + 1;
             Write($"Night falls. Day {day}.");
             runtime.Set("day", SagaValue.Int(day));
-            runtime.Raise("night_fell");
         }
     }
 
