@@ -6,3 +6,8 @@ Meta:
     Authors: []
     Owners: []
     Dependencies: null
+TemplateFolders:
+    - Path: !dir Templates/Assets
+      Group: Assets
+      Files:
+        - !file Templates/Assets/YarnScript.sdtpl

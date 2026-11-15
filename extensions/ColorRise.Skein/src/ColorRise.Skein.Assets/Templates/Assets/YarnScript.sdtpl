@@ -1,0 +1,9 @@
+!TemplateAssetFactory
+Id: 5b0e2c61-7a3f-4d92-8e15-3c9a6f4d2b70
+AssetTypeName: YarnScriptAsset
+Name: Yarn script
+Scope: Asset
+Description: A Yarn Spinner script (.yarn) of dialogue nodes
+Group: Dialogue
+DefaultOutputName: Dialogue
+FactoryTypeName: YarnScriptAssetFactory
