@@ -6,8 +6,8 @@ namespace ColorRise.Saga.Editor;
 
 /// <summary>
 /// Saga's entry point into the Game Studio: what the assembly declares with attributes (asset view models and editors) is
-/// found through it, and it registers the story player panel and Saga's commands. The views come from the toolkit companion
-/// (<c>ColorRise.Saga.Editor.Avalonia</c>).
+/// found through it, and it registers the story player panel and Saga's commands, and the playback service of each session
+/// (<see cref="SagaPlaybackService"/>). The views come from the toolkit companion (<c>ColorRise.Saga.Editor.Avalonia</c>).
 /// </summary>
 public sealed class SagaEditorPlugin : StrideAssetsPlugin
 {
@@ -18,5 +18,15 @@ public sealed class SagaEditorPlugin : StrideAssetsPlugin
         context.Panels.Register(StoryPlayerViewModel.Panel);
         foreach (var command in SagaCommands.Create())
             context.Commands.Register(command);
+    }
+
+    /// <inheritdoc />
+    public override void InitializeSession(ISessionPluginContext context)
+    {
+        base.InitializeSession(context);
+        // The story played in the session, which the player drives and the timeline and editors follow
+        var playback = new SagaPlaybackService(context.Session);
+        context.Services.Register(playback);
+        context.OnClose(playback.Dispose);
     }
 }

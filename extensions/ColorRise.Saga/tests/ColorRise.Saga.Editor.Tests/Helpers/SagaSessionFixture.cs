@@ -111,6 +111,8 @@ public sealed class SagaSessionFixture
                 var session = await SessionViewModel.OpenSessionAsync(fixture.PackagePath, loadParameters => LoadWithoutMSBuild(fixture.PackagePath, fixture.Result, loadParameters),
                     fixture.Result, new FakeMainViewModel(serviceProvider), serviceProvider);
                 fixture.Session = session ?? throw new InvalidOperationException("The session could not be opened:" + Environment.NewLine + fixture.Log);
+                // As the editor does once the session is open: the plugins add their services, commands and the like to it
+                plugins.InitializeSession(session);
                 await test(fixture);
             }
             finally
