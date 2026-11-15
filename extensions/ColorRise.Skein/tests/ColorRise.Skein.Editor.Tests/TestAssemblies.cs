@@ -2,6 +2,10 @@ using System.Runtime.CompilerServices;
 using ColorRise.Skein.Assets;
 using Stride.Core.Reflection;
 
+// The sessions of the editor test kit share one dispatcher and process-wide registries: two test classes that run at the same
+// time block each other
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace ColorRise.Skein.Editor.Tests;
 
 internal static class TestAssemblies
