@@ -38,6 +38,7 @@ public sealed class StoryPlayerViewModel : PanelViewModel
         StartCommand = new AnonymousCommand(ServiceProvider, () => Service.Start());
         ResetCommand = new AnonymousCommand(ServiceProvider, Service.Reset);
         ContinueCommand = new AnonymousCommand(ServiceProvider, () => Service.Do(SagaStep.Continue()));
+        ShowTimelineCommand = new AnonymousCommand(ServiceProvider, () => ServiceProvider.TryGet<IPanelService>()?.Show(StoryTimelineViewModel.PanelId));
         Service.Changed += OnPlaybackChanged;
         RefreshStories();
         Update();
@@ -127,6 +128,11 @@ public sealed class StoryPlayerViewModel : PanelViewModel
     /// Goes on after a line of the dialogue being played.
     /// </summary>
     public ICommandBase ContinueCommand { get; }
+
+    /// <summary>
+    /// Shows the timeline of the run, to go back and forth through its steps.
+    /// </summary>
+    public ICommandBase ShowTimelineCommand { get; }
 
     /// <summary>
     /// Plays a story from its start: picks it, checks it, and starts it unless it has errors.

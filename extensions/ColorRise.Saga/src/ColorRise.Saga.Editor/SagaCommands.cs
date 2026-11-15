@@ -19,7 +19,7 @@ namespace ColorRise.Saga.Editor;
 public static class SagaCommands
 {
     /// <summary>
-    /// Shows the story player with the selected story, started.
+    /// Shows the story player with the selected story, started, and the story timeline beside it.
     /// </summary>
     public const string PlayStory = "ColorRise.Saga.PlayStory";
 
@@ -87,6 +87,8 @@ public static class SagaCommands
         // An editor that shows no panels has no player
         if (StoryOf(context) is not { } story || context.Session.ServiceProvider.TryGet<IPanelService>() is not { } panels)
             return Task.CompletedTask;
+        // The timeline beside the player, which comes forward
+        panels.Show(StoryTimelineViewModel.PanelId, activate: false);
         panels.Show(StoryPlayerViewModel.PanelId);
         if (panels.GetPanel(StoryPlayerViewModel.PanelId) is StoryPlayerViewModel player)
             player.Play(story);

@@ -83,6 +83,25 @@ public sealed class SagaCommandsTests
     });
 
     [Fact]
+    public Task PlayStoryShowsTheTimelineAndBringsThePlayerForward() => RunAsync(async fixture =>
+    {
+        var panels = new RecordingPanelService();
+        var services = (Stride.Core.Presentation.ViewModels.ViewModelServiceProvider)fixture.Session.ServiceProvider;
+        services.RegisterService(panels);
+        try
+        {
+            var playStory = SagaCommands.Create().Single(x => x.Id == SagaCommands.PlayStory);
+            await playStory.ExecuteAsync(new CommandContext { Session = (SessionViewModel)fixture.Session, Location = CommandLocations.AssetViewContext, Selection = [fixture.Asset<StoryViewModel>("Story/Main")] });
+
+            Assert.Equal([(StoryTimelineViewModel.PanelId, false), (StoryPlayerViewModel.PanelId, true)], panels.Shown);
+        }
+        finally
+        {
+            services.UnregisterService(panels);
+        }
+    });
+
+    [Fact]
     public Task PlayingAStoryStartsItInThePlayer() => RunAsync(fixture =>
     {
         var context = new PanelContext { Descriptor = StoryPlayerViewModel.Panel, Session = fixture.Session, ServiceProvider = fixture.Session.ServiceProvider };

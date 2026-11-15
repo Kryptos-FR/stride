@@ -143,6 +143,24 @@ public sealed class StoryPlayerTests
         return Task.CompletedTask;
     });
 
+    [Fact]
+    public Task PlayerShowsTheTimeline() => RunAsync((fixture, player) =>
+    {
+        var panels = new RecordingPanelService();
+        var services = (Stride.Core.Presentation.ViewModels.ViewModelServiceProvider)fixture.Session.ServiceProvider;
+        services.RegisterService(panels);
+        try
+        {
+            player.ShowTimelineCommand.Execute(null);
+            Assert.Equal([(StoryTimelineViewModel.PanelId, true)], panels.Shown);
+        }
+        finally
+        {
+            services.UnregisterService(panels);
+        }
+        return Task.CompletedTask;
+    });
+
     private static IEnumerable<string> Errors(StoryPlayerViewModel player) => player.Diagnostics.Where(x => x.Severity == SagaDiagnosticSeverity.Error).Select(x => x.ToString());
 
     /// <summary>
