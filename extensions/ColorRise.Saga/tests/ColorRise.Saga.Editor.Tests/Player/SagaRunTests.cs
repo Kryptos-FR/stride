@@ -111,6 +111,18 @@ public sealed class SagaRunTests
     }
 
     [Fact]
+    public void SymbolOutsideItsSetIsNotSet()
+    {
+        var (story, dialogue) = MaraStory.Create();
+        story.Declarations.Variables.Add(new VariableDeclaration { Name = "next_act", Type = SagaTypeKind.Act });
+        using var run = new SagaRun(MaraStory.Build(story, dialogue));
+        run.Apply(SagaStep.Start());
+
+        Assert.Equal("'nowhere' is not an act.", run.CanApply(SagaStep.Set("next_act", "nowhere")));
+        Assert.Null(run.CanApply(SagaStep.Set("next_act", "the_mine")));
+    }
+
+    [Fact]
     public void AnswersAreSteps()
     {
         using var run = new SagaRun(MaraStory.Build());

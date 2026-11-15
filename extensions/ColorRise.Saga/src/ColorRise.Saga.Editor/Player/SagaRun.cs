@@ -74,7 +74,7 @@ public sealed class SagaRun : IDisposable
                 return declarations.Events.Any(x => x.Name == step.Name) ? null : $"The story declares no event '{step.Name}'.";
             case SagaStepKind.Set:
                 return declarations.Variables.FirstOrDefault(x => x.Name == step.Name) is { } variable
-                    ? SagaLiterals.TryParse(step.Value, variable.Type, out _)
+                    ? SagaLiterals.TryParse(step.Value, variable.Type, out var value) ?? Runtime.CanSet(step.Name, value)
                     : $"The story declares no variable '{step.Name}'.";
             case SagaStepKind.Answer:
                 return declarations.Functions.FirstOrDefault(x => x.Name == step.Name) is { } function

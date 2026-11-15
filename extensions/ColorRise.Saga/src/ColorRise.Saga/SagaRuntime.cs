@@ -104,12 +104,29 @@ public sealed partial class SagaRuntime
     /// <exception cref="ArgumentException">The story does not declare the variable, or the value is not of its type.</exception>
     public void Set(string variable, SagaValue value)
     {
-        var declaration = FindVariable(variable);
-        var converted = SagaLiterals.Convert(value, declaration.Type)
-            ?? throw new ArgumentException($"'{variable}' is {SagaTypeChecker.Describe(declaration.Type)}; {value} is not.", nameof(value));
-        if (SagaSymbolSets.ForType(declaration.Type) is { } symbolSet && !scope.GetSymbols(symbolSet).Contains(converted.AsSymbol()))
-            throw new ArgumentException($"'{converted.AsSymbol()}' is not {SagaTypeChecker.Describe(declaration.Type)}.", nameof(value));
+        FindVariable(variable);
+        if (CanSet(variable, value, out var converted) is { } reason)
+            throw new ArgumentException(reason, nameof(value));
         Change(() => State.Variables[variable] = converted);
+    }
+
+    /// <summary>
+    /// Says why <see cref="Set"/> would refuse a value, without setting it.
+    /// </summary>
+    /// <returns>Why the variable can't take the value, or null when it can.</returns>
+    public string? CanSet(string variable, SagaValue value) => CanSet(variable, value, out _);
+
+    private string? CanSet(string variable, SagaValue value, out SagaValue converted)
+    {
+        converted = value;
+        if (!variables.TryGetValue(variable, out var declaration))
+            return $"The story declares no variable '{variable}'.";
+        if (SagaLiterals.Convert(value, declaration.Type) is not { } found)
+            return $"'{variable}' is {SagaTypeChecker.Describe(declaration.Type)}; {value} is not.";
+        converted = found;
+        if (SagaSymbolSets.ForType(declaration.Type) is { } symbolSet && !scope.GetSymbols(symbolSet).Contains(found.AsSymbol()))
+            return $"'{found.AsSymbol()}' is not {SagaTypeChecker.Describe(declaration.Type)}.";
+        return null;
     }
 
     /// <summary>
