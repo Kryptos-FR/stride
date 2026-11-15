@@ -202,14 +202,20 @@ As built (2026-11-15).
 ### Task 10: The UI presenters
 
 **Files:**
-- Create in `src/ColorRise.Skein.UI/`: `LinePresenter.cs`, `OptionsPresenter.cs`, `LineAdvancer.cs`, `Typewriter.cs`, `DefaultDialogueLook.cs`
-- Test: `tests/ColorRise.Skein.Tests/UI/TypewriterTests.cs`
+- Create in `src/ColorRise.Skein.UI/`: `LinePresenter.cs`, `OptionsPresenter.cs`, `LineAdvancer.cs`, `Typewriter.cs`, `DefaultDialogueLook.cs`, `DialoguePage.cs`
+- Test: `tests/ColorRise.Skein.Tests/UI/TypewriterTests.cs`, `PresenterTests.cs`; the game harness gets an input manager with a simulated keyboard (`GameHarness.Input`, `Keyboard`, `Press(key)`)
 
-**Interfaces:**
-- Produces: `public sealed class Typewriter(Yarn.Markup.MarkupParseResult text, TypewriterMode mode, float unitsPerSecond)`: `string Advance(TimeSpan elapsed)` (visible text), `bool IsComplete`, `void Complete()`; honours `[pause=ms/]` attributes; `enum TypewriterMode { Instant, Letter, Word }`. `LinePresenter`, `OptionsPresenter : DialoguePresenter` with `UIComponent? Page` and element names `SkeinSpeaker`, `SkeinText`, `SkeinContinue`, `SkeinOptions`; with no page they build `DefaultDialogueLook`. `LinePresenter` has `event Action<Yarn.Markup.MarkupAttribute>? MarkerReached`, raised when the typewriter passes an attribute other than `pause`, for a game's own inline events. `OptionsPresenter.UnavailableOptions`: `Hidden` or `Disabled`. `LineAdvancer : SyncScript` with `Keys AdvanceKey = Keys.Space`, `GamePadButton AdvanceButton = GamePadButton.A`, `DialogueRunnerComponent Runner`: first press hurry up, second next line.
+**Interfaces (as built):**
+- Produces: `public sealed class Typewriter(Yarn.Markup.MarkupParseResult text, TypewriterMode mode, float unitsPerSecond)`: `string Advance(TimeSpan elapsed)` (visible text), `VisibleText`, `VisibleLength`, `bool IsComplete`, `void Complete()`, `event Action<MarkupAttribute>? MarkerReached`; honours `[pause=ms/]` (`Typewriter.PauseMarker`); `enum TypewriterMode { Instant, Letter, Word }`. A letter is a text element (an emoji or a letter with its accents comes whole); a word ends at whitespace.
+- Produces: `DefaultDialogueLook` (public static): the element names `SkeinLine` (the box, shown and hidden with the dialogue), `SkeinSpeaker`, `SkeinText`, `SkeinContinue` (the mark of a line that waits), `SkeinOptions` (a panel whose buttons take the options in order); `CreateLine(SpriteFont)`, `CreateOptions()`, `CreateOption(SpriteFont)`.
+- Produces: `LinePresenter : DialoguePresenter` (`UIComponent? Page`, `SpriteFont? Font`, `TypewriterMode Typewriter = Letter`, `float Speed = 40`, `bool AutoAdvance`, `float HoldTime = 1.5f`, `event Action<MarkupAttribute>? MarkerReached` for the markers other than `pause` and `character`). A hurry-up completes the typing; a hurry-up that comes once the text is all shown asks to go on.
+- Produces: `OptionsPresenter : DialoguePresenter` (`Page`, `Font`, `UnavailableOptions Unavailable = Hidden` or `Disabled`, `Keys PreviousKey = Up`, `NextKey = Down`, `ChooseKey = Enter`, `GamePadButton ChooseButton = A`): click, keyboard and gamepad; more options than buttons is one error unless a font lets it make buttons; returns null when no option can be chosen.
+- Produces: `LineAdvancer : DialoguePresenter` (not a `SyncScript` with a runner: as a presenter it has its runner and knows when a line starts) with `Keys AdvanceKey = Space`, `GamePadButton AdvanceButton = A`, `bool AdvanceWithPointer = true`, `void Advance()`: the first press of a line asks to hurry up, the next ones ask for the next line.
+- A page without its `SkeinText` (or `SkeinOptions`) gets the default look when the presenter has a `Font` or the page shows one; Stride has no default font at run time, so with neither the presenter logs one error and holds nothing. The font asset of the default look comes with the sample (Task 22).
+- The runner reports `No presenter … answered the options` only when an option could be chosen.
 
-- [ ] **Step 1:** Tests: `"Hello"` by letter at 10 per second shows `"He"` after 0.2 s and is complete after 0.5 s; `"Wait[pause=500/] now"` shows `"Wait"` from 0.4 s to 0.9 s; by word, `"one two"` at 2 per second shows `"one"` after 0.5 s; `Complete()` shows all.
-- [ ] **Step 2:** Implement the three presenters; they are checked in the sample (Task 22). Commit `feat(skein): UI presenters`, push.
+- [x] **Step 1:** Typewriter tests (12): `"Hello"` by letter at 10 per second shows `"He"` after 0.2 s and is complete after 0.5 s; `"Wait [pause=500/] now"` holds at the pause for half a second (Yarn's markup removes the one whitespace after a self-closing marker, so the plan's `"Wait[pause=500/] now"` reads `Waitnow`); by word, `"one two"` at 2 per second shows `"one"` after 0.5 s; `Complete()` shows all; markers are told once, in order; text elements come whole.
+- [x] **Step 2:** The three presenters, tested on a windowless game with a page made in code (10 tests: typing under the speaker, the waiting mark, hurry-up then next line, a held key is one press, auto-advance, markers, nothing to show in, buttons and clicks, keys past unavailable options, too few buttons, stop hides the options). Their look is checked in the sample (Task 22). Commit `feat(skein): UI presenters`, push.
 
 ### Task 11: The project asset and its compiler
 

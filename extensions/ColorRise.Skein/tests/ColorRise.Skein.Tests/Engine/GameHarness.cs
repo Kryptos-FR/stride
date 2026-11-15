@@ -5,6 +5,7 @@ using Google.Protobuf;
 using Stride.Core.Diagnostics;
 using Stride.Engine;
 using Stride.Games;
+using Stride.Input;
 
 namespace ColorRise.Skein.Tests.Engine;
 
@@ -33,6 +34,13 @@ internal sealed class GameHarness : IDisposable
         GlobalLogger.GlobalMessageLogged += OnMessage;
         Game = new Game();
         Game.SceneSystem.SceneInstance = new SceneInstance(Game.Services, Scene);
+
+        // A game that runs has an input manager; this one reads a keyboard the test presses
+        Input.Initialize(new GameContextHeadless());
+        var devices = new InputSourceSimulated();
+        Input.Sources.Add(devices);
+        Keyboard = devices.AddKeyboard();
+        Game.Services.AddService(Input);
     }
 
     public Game Game { get; }
@@ -40,6 +48,10 @@ internal sealed class GameHarness : IDisposable
     public Scene Scene { get; } = new();
 
     public DialogueSystem Dialogues => Game.Services.GetService<DialogueSystem>()!;
+
+    public InputManager Input { get; } = new();
+
+    public KeyboardSimulated Keyboard { get; }
 
     /// <summary>
     /// What Skein logged at a level, since the game was made.
@@ -84,13 +96,25 @@ internal sealed class GameHarness : IDisposable
         {
             var elapsed = TimeSpan.FromSeconds(seconds);
             UpdateTime.Invoke(Game.UpdateTime, [Game.UpdateTime.Total + elapsed, elapsed, true]);
+            Input.Update(Game.UpdateTime);
             Game.Script.Update(Game.UpdateTime);
         }
+    }
+
+    /// <summary>
+    /// Runs a frame in which the player presses a key, and lets the key go.
+    /// </summary>
+    public void Press(Keys key)
+    {
+        Keyboard.SimulateDown(key);
+        Step();
+        Keyboard.SimulateUp(key);
     }
 
     public void Dispose()
     {
         Game.Dispose();
+        Input.Dispose();
         GlobalLogger.GlobalMessageLogged -= OnMessage;
     }
 

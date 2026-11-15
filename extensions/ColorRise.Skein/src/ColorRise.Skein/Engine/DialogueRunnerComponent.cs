@@ -322,7 +322,8 @@ public sealed class DialogueRunnerComponent : StartupScript
             }
         }
 
-        if (choice is null && !cancellation.IsCancellationRequested && !reportedNoAnswer)
+        // Options nobody can choose have no answer to give: only a choice that was there to make is missed
+        if (choice is null && !cancellation.IsCancellationRequested && !reportedNoAnswer && options.Any(o => o.IsAvailable))
         {
             reportedNoAnswer = true;
             Log.Error($"No presenter of the dialogue runner of '{Entity?.Name}' answered the options of the node '{CurrentNode}': the dialogue goes on as if no choice was made. Add a presenter that shows options.");

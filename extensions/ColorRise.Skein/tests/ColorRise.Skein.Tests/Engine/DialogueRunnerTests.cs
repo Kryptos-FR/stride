@@ -282,13 +282,44 @@ public sealed class DialogueRunnerTests
         }
         else
         {
-            // Shown, and nobody chose: the dialogue goes on, and the log says so once
+            // Shown, and there was nothing to choose: the dialogue goes on
             Assert.Equal(
                 ["options: Bribe the guard [disabled]", "line: Guard: Move along.", "options: Bribe him twice [disabled]", "line: Guard: Still here?"],
                 presenter.Seen.Where(s => s.StartsWith("line", StringComparison.Ordinal) || s.StartsWith("options", StringComparison.Ordinal)));
-            var error = Assert.Single(harness.Logged(LogMessageType.Error));
-            Assert.Contains("No presenter", error);
+            Assert.Empty(harness.Logged(LogMessageType.Error));
         }
+    }
+
+    [Fact]
+    public void Options_no_presenter_answers_are_an_error_once_and_the_dialogue_goes_on()
+    {
+        using var harness = new GameHarness();
+        var presenter = new RecordingPresenter();
+        var runner = harness.AddRunner(
+            """
+            title: Start
+            ---
+            -> Bribe the guard
+                Guard: Thank you.
+            Guard: Move along.
+            -> Bribe him twice
+                Guard: Thank you, thank you.
+            Guard: Still here?
+            ===
+            """,
+            "Runner",
+            presenter);
+        harness.Step();
+
+        var dialogue = runner.StartDialogue("Start");
+        harness.Step();
+
+        Assert.True(dialogue.IsCompletedSuccessfully);
+        Assert.Equal(
+            ["options: Bribe the guard", "line: Guard: Move along.", "options: Bribe him twice", "line: Guard: Still here?"],
+            presenter.Seen.Where(s => s.StartsWith("line", StringComparison.Ordinal) || s.StartsWith("options", StringComparison.Ordinal)));
+        var error = Assert.Single(harness.Logged(LogMessageType.Error));
+        Assert.Contains("No presenter", error);
     }
 
     [Fact]
