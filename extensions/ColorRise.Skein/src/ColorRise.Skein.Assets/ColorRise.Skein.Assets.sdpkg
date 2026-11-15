@@ -11,3 +11,4 @@ TemplateFolders:
       Group: Assets
       Files:
         - !file Templates/Assets/YarnScript.sdtpl
+        - !file Templates/Assets/YarnProject.sdtpl

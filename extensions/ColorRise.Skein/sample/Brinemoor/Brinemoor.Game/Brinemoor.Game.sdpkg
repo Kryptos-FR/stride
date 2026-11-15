@@ -10,3 +10,5 @@ AssetFolders:
     -   Path: !dir Assets
 ResourceFolders:
     - !dir Resources
+RootAssets:
+    - 0a14ed8f-ca2c-47d7-8492-670d7098e66a:Dialogue/Brinemoor

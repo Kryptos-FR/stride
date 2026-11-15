@@ -1,0 +1,9 @@
+!TemplateAssetFactory
+Id: 8d1f4a37-2c6e-4b59-a0d3-6e7b9c1f5a24
+AssetTypeName: YarnProjectAsset
+Name: Yarn project
+Scope: Asset
+Description: The Yarn scripts of a folder, compiled together into the project a dialogue runner plays
+Group: Dialogue
+DefaultOutputName: YarnProject
+FactoryTypeName: YarnProjectAssetFactory

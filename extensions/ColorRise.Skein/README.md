@@ -47,7 +47,9 @@ This section follows the work: it says what can be tried at the current commit.
 - The five packages build and pack.
 - A `.yarn` file of an asset folder is an asset, "Yarn script": the asset view shows it, *Add asset > Dialogue > Yarn script* makes one, and saving, renaming and moving it in Game Studio keep it a plain Yarn file (UTF-8, no byte order mark unless the file came with one).
 - A double click on a script opens it in a text pane, the first piece of the script editor. Typing is part of Game Studio's own undo history: the Edit history panel lists "Typing" steps, Ctrl+Z, Ctrl+Y and the Edit menu undo and redo them, and File > Save writes the file. No colours, graph or checks yet.
-- The sample game "Brinemoor" is an empty scene with one script, to open in Game Studio:
+- A Yarn project is an asset too (`.sdyarn`): *Add asset > Dialogue > Yarn project* makes one, and the property grid edits it: the scripts it includes (glob patterns from its folder, `**/*.yarn` by default), its base language, its saliency strategy, and the severity of the compiler's messages by code. Building the game compiles the project: its data holds the compiled program and the lines of the base language. An error in a script fails the build with the script's file, line, column and Yarn Spinner's code (in a new project, a jump to a node that does not exist is an error; Yarn Spinner makes it a warning). A script that no project includes is a warning of the build.
+- Not visible in Game Studio yet, covered by tests: the runtime (the dialogue system, the dialogue runner component, presenters, actors, commands and functions in C#, variable storage) and the UI presenters. Yarn Spinner's own 32 test plans pass against Skein's dialogue session.
+- The sample game "Brinemoor" is an empty scene with one script and one project, to open in Game Studio:
 
   ```sh
   cd sources/editor/Stride.GameStudio.Avalonia.Desktop/bin/Debug/net10.0
@@ -58,7 +60,7 @@ This section follows the work: it says what can be tried at the current commit.
 
 ### Not yet
 
-Everything else of the design: the Yarn project asset and its compiler, the runtime, the editor, the dialogue player, the story of the sample game.
+Everything else of the design: the other languages of a project, the graph of the script editor, the project overview, the dialogue player, and the story of the sample game.
 
 ## Tied to the fork
 
