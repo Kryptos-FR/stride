@@ -98,9 +98,12 @@ public sealed class SagaPlaybackServiceTests
         Assert.Equal("The choice \"Leave\" is no longer offered.", playback.Divergence);
         Assert.Equal(4, playback.Steps.Count);
 
-        // Going forward stops there again; a new step drops the divergence
+        // Going back keeps where the run stops; going forward stops there again; a new step drops the divergence
+        playback.GoTo(1);
+        Assert.Equal((1, 3), (playback.Cursor, playback.DivergedAt));
+        Assert.Equal("The choice \"Leave\" is no longer offered.", playback.Divergence);
         playback.GoTo(3);
-        Assert.Equal(2, playback.Cursor);
+        Assert.Equal((2, 3), (playback.Cursor, playback.DivergedAt));
         Assert.Null(playback.Do(SagaStep.Raise("met_mara")));
         Assert.Null(playback.DivergedAt);
         Assert.Equal(string.Empty, playback.Divergence);

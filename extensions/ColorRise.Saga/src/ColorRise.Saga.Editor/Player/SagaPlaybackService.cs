@@ -91,7 +91,8 @@ public sealed class SagaPlaybackService : IDisposable
     public bool IsStale { get; private set; }
 
     /// <summary>
-    /// The first step that no longer applies since the last replay or the last step forward, or null.
+    /// The first recorded step that no longer applies on the run's build, as the last replay or step forward found it, or null. Going
+    /// back keeps it; a new step drops it with the steps after the cursor.
     /// </summary>
     public int? DivergedAt { get; private set; }
 
@@ -197,6 +198,8 @@ public sealed class SagaPlaybackService : IDisposable
         }
         definition = built;
         IsStale = false;
+        DivergedAt = null;
+        Divergence = string.Empty;
         foreach (var step in steps)
             step.PlaysDifferently = false;
         var target = Cursor;
@@ -238,8 +241,6 @@ public sealed class SagaPlaybackService : IDisposable
     // Plays the recorded steps after the cursor up to an index, each result replacing the recorded one
     private void PlayTo(int index)
     {
-        DivergedAt = null;
-        Divergence = string.Empty;
         for (var i = Cursor + 1; i <= index; ++i)
         {
             var recorded = steps[i];
