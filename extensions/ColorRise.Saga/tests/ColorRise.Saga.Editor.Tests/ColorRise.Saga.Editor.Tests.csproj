@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Saga.Editor.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- The editor's experimental plugin API, as in the editor packages -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- The session evaluates projects with the MSBuild it locates; the copy Roslyn's workspace packages bring must not load first,
+         as in Stride's own editor projects (see docs/plugin-findings.md, finding 5) -->
+    <PackageReference Include="Microsoft.Build.Framework" Version="17.11.48" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ColorRise.Saga.Editor\ColorRise.Saga.Editor.csproj" />
+  </ItemGroup>
+</Project>

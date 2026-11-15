@@ -11,5 +11,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ColorRise.Saga.Tests/ColorRise.Saga.Tests.csproj" />
+    <Project Path="tests/ColorRise.Saga.Editor.Tests/ColorRise.Saga.Editor.Tests.csproj" />
   </Folder>
 </Solution>
