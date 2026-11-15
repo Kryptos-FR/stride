@@ -5,6 +5,7 @@
              xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
              xmlns:vm="using:ColorRise.Saga.Editor.ViewModels"
              xmlns:player="using:ColorRise.Saga.Editor.Player"
+             xmlns:assets="using:ColorRise.Saga.Assets"
              mc:Ignorable="d" d:DesignWidth="320" d:DesignHeight="600"
              x:Class="ColorRise.Saga.Editor.Avalonia.Views.StoryPlayerView"
              x:DataType="player:StoryPlayerViewModel">
@@ -19,6 +20,9 @@
     <Style Selector="TextBlock.error">
       <Setter Property="Foreground" Value="#FFE57373"/>
       <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.error.warning">
+      <Setter Property="Foreground" Value="#FFFFB74D"/>
     </Style>
     <Style Selector="Button.small">
       <Setter Property="Padding" Value="6,1"/>
@@ -41,14 +45,21 @@
               ToolTip.Tip="{sd:LocalizeString Stop the story and check it again, Context=ToolTip}"/>
     </Grid>
 
-    <!-- What keeps the story from starting, as the compiler reports it -->
-    <ItemsControl DockPanel.Dock="Top" Margin="0,6,0,0" ItemsSource="{Binding Diagnostics}">
-      <ItemsControl.ItemTemplate>
-        <DataTemplate x:DataType="x:String">
-          <TextBlock Classes="error" Text="{Binding}"/>
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
+    <!-- What the compiler would report: the errors keep the story from starting, the warnings don't -->
+    <ScrollViewer DockPanel.Dock="Top" Margin="0,6,0,0" MaxHeight="160" HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding Diagnostics}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="assets:SagaBuildDiagnostic">
+            <TextBlock Classes="error" Margin="0,1"
+                       Classes.warning="{Binding Severity, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static assets:SagaDiagnosticSeverity.Warning}}">
+              <Run Text="{Binding Asset}" Foreground="Gray"/>
+              <Run Text="{Binding Card}" FontWeight="Bold"/>
+              <Run Text="{Binding Message}"/>
+            </TextBlock>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
 
     <!-- The dialogue being played: its choices, or Continue after a line -->
     <StackPanel DockPanel.Dock="Bottom" Margin="0,6,0,0" IsVisible="{Binding IsPlaying}">

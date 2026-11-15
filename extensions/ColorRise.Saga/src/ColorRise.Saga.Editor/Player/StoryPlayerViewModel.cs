@@ -68,7 +68,7 @@ public sealed class StoryPlayerViewModel : PanelViewModel
     public StoryViewModel? SelectedStory { get => selectedStory; set => SetValue(ref selectedStory, value, Reset); }
 
     /// <summary>
-    /// Builds the story and starts it, unless it has problems (<see cref="Diagnostics"/>).
+    /// Builds the story and starts it, unless it has errors (<see cref="Diagnostics"/>).
     /// </summary>
     public ICommandBase StartCommand { get; }
 
@@ -78,9 +78,12 @@ public sealed class StoryPlayerViewModel : PanelViewModel
     public ICommandBase ResetCommand { get; }
 
     /// <summary>
-    /// What is wrong with the story or its dialogues, as the compiler would report it.
+    /// What is wrong with the story or its dialogues, as the compiler would report it: errors, which keep the story from starting,
+    /// and warnings.
     /// </summary>
-    public ObservableList<string> Diagnostics { get; } = [];
+    public ObservableList<SagaBuildDiagnostic> Diagnostics { get; } = [];
+
+    private bool HasErrors => Diagnostics.Any(x => x.Severity == SagaDiagnosticSeverity.Error);
 
     /// <summary>
     /// The story being played, if any.
@@ -167,7 +170,11 @@ public sealed class StoryPlayerViewModel : PanelViewModel
     private void Start()
     {
         Reset();
-        if (SelectedStory is null || Diagnostics.Count > 0 || Build(log) is not { } built)
+        if (SelectedStory is null || HasErrors)
+            return;
+        // Built again for the runtime, with its logger: the problems are the same
+        Diagnostics.Clear();
+        if (Build(log) is not { } built)
             return;
 
         playback = built;
@@ -202,7 +209,7 @@ public sealed class StoryPlayerViewModel : PanelViewModel
         var story = SelectedStory!;
         var diagnostics = new List<SagaBuildDiagnostic>();
         var built = SagaPlayback.Create(story.Asset, story.Url, ResolveDialogue, diagnostics, logger);
-        Diagnostics.AddRange(diagnostics.Select(x => x.ToString()));
+        Diagnostics.AddRange(diagnostics);
         return built;
     }
 
@@ -338,7 +345,7 @@ public sealed class StoryPlayerViewModel : PanelViewModel
 
     private void UpdateCommands()
     {
-        StartCommand.IsEnabled = SelectedStory is not null && playback is null && Diagnostics.Count == 0;
+        StartCommand.IsEnabled = SelectedStory is not null && playback is null && !HasErrors;
         ResetCommand.IsEnabled = SelectedStory is not null;
         ContinueCommand.IsEnabled = dialogue is { IsEnded: false, CurrentLine: not null } && dialogue.Choices.Count == 0;
     }

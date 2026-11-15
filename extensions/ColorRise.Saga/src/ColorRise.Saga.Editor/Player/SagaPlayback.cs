@@ -43,6 +43,7 @@ public sealed class SagaPlayback
         var definition = SagaContentBuilder.BuildStory(story, url, found);
         // Each dialogue is built once, against the story, whatever references it
         var built = new Dictionary<string, DialogueDefinition>();
+        var assets = new List<(DialogueAsset Asset, string Url)>();
         void Resolve(List<DialogueDefinition> dialogues, string card)
         {
             for (var i = 0; i < dialogues.Count; ++i)
@@ -55,7 +56,10 @@ public sealed class SagaPlayback
                     continue;
                 }
                 if (!built.TryGetValue(dialogueUrl, out var dialogue))
+                {
                     built[dialogueUrl] = dialogue = SagaContentBuilder.BuildDialogue(asset, dialogueUrl, story, found);
+                    assets.Add((asset, dialogueUrl));
+                }
                 dialogues[i] = dialogue;
             }
         }
@@ -67,6 +71,9 @@ public sealed class SagaPlayback
                 Resolve(quest.Dialogues, $"act {act.Id} / quest {quest.Id}");
         }
 
+        // The checks across the story and its dialogues need them all
+        if (!found.Any(x => x.Severity == SagaDiagnosticSeverity.Error))
+            SagaContentBuilder.CheckStory(story, url, assets, found);
         foreach (var diagnostic in found)
             diagnostics.Add(diagnostic);
         return found.Any(x => x.Severity == SagaDiagnosticSeverity.Error) ? null : new SagaPlayback(new SagaRuntime(definition, null, logger));

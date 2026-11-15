@@ -2,6 +2,7 @@ using Stride.Core.Assets;
 using Stride.Core.Assets.Compiler;
 using Stride.Core.BuildEngine;
 using Stride.Core.Diagnostics;
+using Stride.Core.Serialization;
 using Stride.Core.Serialization.Contents;
 
 namespace ColorRise.Saga.Assets;
@@ -25,16 +26,44 @@ public sealed class StoryAssetCompiler : AssetCompilerBase
 
     protected override void Prepare(AssetCompilerContext context, AssetItem assetItem, string targetUrlInStorage, AssetCompilerResult result)
     {
+        var story = (StoryAsset)assetItem.Asset;
+        // The checks across the story and its dialogues read the dialogues it references (each once); one that can't be found is
+        // reported when the story's content is loaded, as before
+        var dialogues = new List<(DialogueAsset Asset, string Url)>();
+        foreach (var reference in story.Acts.SelectMany(x => x.Scenarios.SelectMany(s => s.Dialogues).Concat(x.Quests.SelectMany(q => q.Dialogues))))
+        {
+            if (AttachedReferenceManager.GetAttachedReference(reference) is { } target
+                && (assetItem.Package?.FindAsset(target.Id) ?? assetItem.Package?.Session?.FindAsset(target.Id)) is { Asset: DialogueAsset dialogue } item
+                && dialogues.All(x => x.Asset != dialogue))
+            {
+                dialogues.Add((dialogue, item.Location.ToString()));
+            }
+        }
         result.BuildSteps = new AssetBuildStep(assetItem);
-        result.BuildSteps.Add(new StoryCommand(targetUrlInStorage, (StoryAsset)assetItem.Asset, assetItem.Package!));
+        result.BuildSteps.Add(new StoryCommand(targetUrlInStorage, story, dialogues, assetItem.Package!));
     }
 
-    private sealed class StoryCommand(string url, StoryAsset parameters, IAssetFinder assetFinder) : AssetCommand<StoryAsset>(url, parameters, assetFinder)
+    private sealed class StoryCommand(string url, StoryAsset parameters, List<(DialogueAsset Asset, string Url)> dialogues, IAssetFinder assetFinder)
+        : AssetCommand<StoryAsset>(url, parameters, assetFinder)
     {
+        protected override void ComputeParameterHash(BinarySerializationWriter writer)
+        {
+            base.ComputeParameterHash(writer);
+            // The warnings depend on the dialogues: a change to one checks the story again
+            foreach (var (asset, dialogueUrl) in dialogues)
+            {
+                var name = dialogueUrl;
+                var dialogue = asset;
+                writer.Serialize(ref name, ArchiveMode.Serialize);
+                writer.SerializeExtended(ref dialogue, ArchiveMode.Serialize);
+            }
+        }
+
         protected override Task<ResultStatus> DoCommandOverride(ICommandContext commandContext)
         {
             var diagnostics = new List<SagaBuildDiagnostic>();
             var story = SagaContentBuilder.BuildStory(Parameters, Url, diagnostics);
+            SagaContentBuilder.CheckStory(Parameters, Url, dialogues, diagnostics);
             if (SagaCompilation.Report(diagnostics, commandContext.Logger))
                 return Task.FromResult(ResultStatus.Failed);
 

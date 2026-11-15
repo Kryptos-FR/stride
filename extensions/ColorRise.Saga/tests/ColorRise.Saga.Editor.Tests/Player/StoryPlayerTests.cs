@@ -20,7 +20,7 @@ public sealed class StoryPlayerTests
     {
         Assert.Equal(["Main"], player.Stories.Select(x => x.Name));
         player.SelectedStory = player.Stories[0];
-        Assert.Empty(player.Diagnostics);
+        Assert.Empty(Errors(player));
         Assert.True(player.StartCommand.CanExecute(null));
 
         player.StartCommand.Execute(null);
@@ -99,16 +99,18 @@ public sealed class StoryPlayerTests
         player.SelectedStory = player.Stories[0];
 
         // As the compiler reports it, with the URL of the asset in its package
-        Assert.Equal(["/SagaTest/Story/Main: act the_mine / scenario cave_in / StartWhen (at 5): Expected an expression, but the text ends here."], player.Diagnostics);
+        Assert.Equal(["/SagaTest/Story/Main: act the_mine / scenario cave_in / StartWhen (at 5): Expected an expression, but the text ends here."], Errors(player));
         Assert.False(player.StartCommand.CanExecute(null));
 
         // Fixed, the story is checked again when it is reset
         story.Asset.Acts[0].Scenarios[0].StartWhen = string.Empty;
         player.ResetCommand.Execute(null);
-        Assert.Empty(player.Diagnostics);
+        Assert.Empty(Errors(player));
         Assert.True(player.StartCommand.CanExecute(null));
         return Task.CompletedTask;
     });
+
+    private static IEnumerable<string> Errors(StoryPlayerViewModel player) => player.Diagnostics.Where(x => x.Severity == SagaDiagnosticSeverity.Error).Select(x => x.ToString());
 
     /// <summary>
     /// Opens the story player on a session with a story (a day counter, an event, a function, Mara) and Mara's dialogue: a line,

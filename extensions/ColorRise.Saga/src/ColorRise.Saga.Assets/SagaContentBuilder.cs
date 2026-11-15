@@ -21,8 +21,11 @@ public static partial class SagaContentBuilder
     /// Builds a story. Its dialogues stay as given: content references when compiling, built definitions for the player.
     /// </summary>
     public static StoryDefinition BuildStory(StoryAsset story, string assetUrl, ICollection<SagaBuildDiagnostic> diagnostics)
+        => BuildStory(story, assetUrl, diagnostics, null);
+
+    private static StoryDefinition BuildStory(StoryAsset story, string assetUrl, ICollection<SagaBuildDiagnostic> diagnostics, SagaUsage? usage)
     {
-        var builder = new Builder(assetUrl, story, diagnostics);
+        var builder = new Builder(assetUrl, story, diagnostics, usage);
         builder.CheckDeclarations(story.Declarations);
 
         var actIds = new HashSet<string>();
@@ -199,11 +202,91 @@ public static partial class SagaContentBuilder
     }
 
     /// <summary>
+    /// Checks a story with its dialogues for what builds but is likely a mistake, across them: declared names nothing uses,
+    /// <c>visited</c> keys that name nothing, quests nothing starts. Adds warnings only, and none when the story or a dialogue has
+    /// an error (a condition that doesn't parse would make its names look unused); the errors themselves come from
+    /// <see cref="BuildStory"/> and <see cref="BuildDialogue"/>.
+    /// </summary>
+    /// <param name="story">The story asset.</param>
+    /// <param name="assetUrl">The URL of the story asset.</param>
+    /// <param name="dialogues">The dialogues of the story, with their URLs.</param>
+    /// <param name="diagnostics">Receives the warnings.</param>
+    public static void CheckStory(StoryAsset story, string assetUrl, IReadOnlyList<(DialogueAsset Asset, string Url)> dialogues, ICollection<SagaBuildDiagnostic> diagnostics)
+    {
+        ArgumentNullException.ThrowIfNull(story);
+        ArgumentNullException.ThrowIfNull(dialogues);
+        ArgumentNullException.ThrowIfNull(diagnostics);
+
+        var usage = new SagaUsage();
+        var found = new List<SagaBuildDiagnostic>();
+        BuildStory(story, assetUrl, found, usage);
+        foreach (var (asset, url) in dialogues)
+            BuildDialogue(asset, url, story, found, usage);
+        if (found.Any(x => x.Severity == SagaDiagnosticSeverity.Error))
+            return;
+
+        var builder = new Builder(assetUrl, story, diagnostics);
+
+        // The keys visits count: a dialogue's name, and its name with a named node's
+        var keys = new HashSet<string>();
+        foreach (var (asset, url) in dialogues)
+        {
+            var name = NameOf(url);
+            keys.Add(name);
+            keys.UnionWith(asset.Nodes.Where(x => x.Name.Length > 0).Select(x => $"{name}.{x.Name}"));
+        }
+        foreach (var key in usage.VisitedKeys.Where(x => !keys.Contains(x.Key)))
+        {
+            diagnostics.Add(new SagaBuildDiagnostic(key.Asset, key.Card, key.Position,
+                $"'{key.Key}' names no dialogue of the story, nor a named node of one (dialogue.node): {key.Function}(\"{key.Key}\") never counts anything.", SagaDiagnosticSeverity.Warning));
+        }
+
+        var declarations = story.Declarations;
+        foreach (var variable in declarations.Variables.Where(x => !usage.Paths.Contains(x.Name) && !usage.Assigned.Contains(x.Name) && !usage.Shown.Contains(x.Name)))
+            builder.Warn($"declarations / variable {variable.Name}", "Nothing in the story or its dialogues reads, sets or shows this variable.");
+        foreach (var raised in declarations.Events.Where(x => !usage.EventsChecked.Contains(x.Name)))
+            builder.Warn($"declarations / event {raised.Name}", $"No condition checks this event (raised(\"{raised.Name}\")): raising it changes nothing.");
+        foreach (var function in declarations.Functions.Where(x => !usage.Calls.Contains(x.Name)))
+            builder.Warn($"declarations / function {function.Name}", "Nothing in the story or its dialogues calls this function.");
+        foreach (var signal in declarations.Signals.Where(x => !usage.Signals.Contains(x.Name)))
+            builder.Warn($"declarations / signal {signal.Name}", "Nothing in the story or its dialogues emits this signal.");
+        foreach (var character in declarations.Characters.Where(x => !usage.Characters.Contains(x.Id)))
+            builder.Warn($"declarations / character {character.Id}", "No dialogue belongs to this character, has it as a participant, or gives it a line.");
+
+        foreach (var act in story.Acts)
+        {
+            foreach (var quest in act.Quests.Where(x => !x.StartsAutomatically && !usage.QuestsStarted.Contains(x.Id)))
+                builder.Warn($"act {act.Id} / quest {quest.Id}", $"The quest doesn't start by itself and no action sets quest.{quest.Id}.state = active: it never becomes active.");
+        }
+    }
+
+    /// <summary>
     /// Builds a dialogue, checking it against the names its story declares.
     /// </summary>
     public static DialogueDefinition BuildDialogue(DialogueAsset dialogue, string assetUrl, StoryAsset story, ICollection<SagaBuildDiagnostic> diagnostics)
+        => BuildDialogue(dialogue, assetUrl, story, diagnostics, null);
+
+    private static DialogueDefinition BuildDialogue(DialogueAsset dialogue, string assetUrl, StoryAsset story, ICollection<SagaBuildDiagnostic> diagnostics, SagaUsage? usage)
     {
-        var builder = new Builder(assetUrl, story, diagnostics);
+        var builder = new Builder(assetUrl, story, diagnostics, usage);
+        if (usage is not null)
+        {
+            usage.Characters.Add(dialogue.CharacterId);
+            usage.Characters.UnionWith(dialogue.Participants);
+            foreach (var node in dialogue.Nodes)
+            {
+                if (node is LineNodeCard line)
+                {
+                    usage.Characters.Add(line.SpeakerId);
+                    usage.AddText(line.Text);
+                }
+                else if (node is ChoicesNodeCard choices)
+                {
+                    foreach (var choice in choices.Choices)
+                        usage.AddText(choice.Text);
+                }
+            }
+        }
         var characters = story.Declarations.Characters.Select(x => x.Id).Append(PlayerId).ToHashSet();
         if (!characters.Contains(dialogue.CharacterId) || dialogue.CharacterId == PlayerId)
             builder.Report("CharacterId", dialogue.CharacterId.Length == 0 ? "The dialogue is attached to no character." : $"The story declares no character '{dialogue.CharacterId}'.");
@@ -344,7 +427,7 @@ public static partial class SagaContentBuilder
     [GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")]
     private static partial Regex DottedIdentifierPattern();
 
-    private sealed class Builder(string assetUrl, StoryAsset story, ICollection<SagaBuildDiagnostic> diagnostics)
+    private sealed class Builder(string assetUrl, StoryAsset story, ICollection<SagaBuildDiagnostic> diagnostics, SagaUsage? usage = null)
     {
         private readonly SagaTypeChecker checker = new(new StoryAssetScope(story));
 
@@ -358,6 +441,8 @@ public static partial class SagaContentBuilder
             var found = parsed.Succeeded ? checker.CheckCondition(parsed.Value) : parsed.Diagnostics;
             foreach (var diagnostic in found)
                 Report(card, diagnostic.Message, diagnostic.Position);
+            if (found.Count == 0)
+                usage?.AddCondition(parsed.Value, assetUrl, card);
             return new SagaCondition { Source = source, Tree = found.Count == 0 ? parsed.Value : null };
         }
 
@@ -367,6 +452,8 @@ public static partial class SagaContentBuilder
             var found = parsed.Succeeded ? checker.CheckActions(parsed.Value) : parsed.Diagnostics;
             foreach (var diagnostic in found)
                 Report(card, diagnostic.Message, diagnostic.Position);
+            if (found.Count == 0)
+                usage?.AddActions(parsed.Value, assetUrl, card);
             return new SagaActions { Source = source, Statements = found.Count == 0 ? parsed.Value : [] };
         }
 

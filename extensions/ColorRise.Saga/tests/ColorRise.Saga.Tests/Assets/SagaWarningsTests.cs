@@ -111,6 +111,131 @@ public sealed class SagaWarningsTests
         Assert.Equal([LogMessageType.Warning, LogMessageType.Error], logger.Messages.Select(x => x.Type));
     }
 
+    [Fact]
+    public void VisitedKeyThatNamesNothingIsAWarning()
+    {
+        var (story, dialogue) = StoryWithDialogue();
+        story.Acts[0].Scenarios[0].StartWhen = "visited(\"Mara.gretting\")";
+        story.Acts[0].Scenarios[0].EndWhen = "visited(\"Mara\") && visits(\"Mara.greeting\") > 1";
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        SagaContentBuilder.CheckStory(story, "Story/Main", [(dialogue, "Dialogues/Mara")], diagnostics);
+
+        var warning = Assert.Single(diagnostics, x => x.Message.Contains("gretting"));
+        Assert.Equal(("Story/Main", "act a / scenario s / StartWhen", 8, SagaDiagnosticSeverity.Warning), (warning.Asset, warning.Card, warning.Position, warning.Severity));
+        Assert.Equal("'Mara.gretting' names no dialogue of the story, nor a named node of one (dialogue.node): visited(\"Mara.gretting\") never counts anything.", warning.Message);
+        Assert.DoesNotContain(diagnostics, x => x.Card.Contains("EndWhen"));
+    }
+
+    [Fact]
+    public void UnusedDeclarationsAreWarnings()
+    {
+        var (story, dialogue) = StoryWithDialogue();
+        var declarations = story.Declarations;
+        declarations.Variables.Add(new VariableDeclaration { Name = "unused", Type = SagaTypeKind.Bool });
+        declarations.Events.Add(new EventDeclaration { Name = "never_checked" });
+        declarations.Functions.Add(new FunctionDeclaration { Name = "uncalled", ReturnType = SagaTypeKind.Bool });
+        declarations.Signals.Add(new SignalDeclaration { Name = "never_emitted" });
+        declarations.Characters.Add(new CharacterDeclaration { Id = "ghost" });
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        SagaContentBuilder.CheckStory(story, "Story/Main", [(dialogue, "Dialogues/Mara")], diagnostics);
+
+        Assert.All(diagnostics, x => Assert.Equal(("Story/Main", SagaDiagnosticSeverity.Warning), (x.Asset, x.Severity)));
+        Assert.Equal(
+        [
+            ("declarations / variable unused", "Nothing in the story or its dialogues reads, sets or shows this variable."),
+            ("declarations / event never_checked", "No condition checks this event (raised(\"never_checked\")): raising it changes nothing."),
+            ("declarations / function uncalled", "Nothing in the story or its dialogues calls this function."),
+            ("declarations / signal never_emitted", "Nothing in the story or its dialogues emits this signal."),
+            ("declarations / character ghost", "No dialogue belongs to this character, has it as a participant, or gives it a line."),
+        ], diagnostics.Select(x => (x.Card, x.Message)));
+    }
+
+    [Fact]
+    public void QuestNothingStartsIsAWarning()
+    {
+        var (story, dialogue) = StoryWithDialogue();
+        story.Acts[0].Quests.Add(new QuestCard { Id = "lonely" });
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        SagaContentBuilder.CheckStory(story, "Story/Main", [(dialogue, "Dialogues/Mara")], diagnostics);
+
+        var warning = Assert.Single(diagnostics);
+        Assert.Equal(("act a / quest lonely", SagaDiagnosticSeverity.Warning), (warning.Card, warning.Severity));
+        Assert.Equal("The quest doesn't start by itself and no action sets quest.lonely.state = active: it never becomes active.", warning.Message);
+
+        // A choice that takes it on, or a quest that starts by itself, is enough
+        ((ChoicesNodeCard)dialogue.Nodes[1]).Choices[0].Actions = "quest.lonely.state = active";
+        diagnostics.Clear();
+        SagaContentBuilder.CheckStory(story, "Story/Main", [(dialogue, "Dialogues/Mara")], diagnostics);
+        Assert.Contains(diagnostics, x => x.Card == "declarations / signal ring");
+        Assert.DoesNotContain(diagnostics, x => x.Card.Contains("lonely"));
+    }
+
+    [Fact]
+    public void NoCrossChecksOnABrokenStory()
+    {
+        var (story, dialogue) = StoryWithDialogue();
+        story.Declarations.Events.Add(new EventDeclaration { Name = "never_checked" });
+        story.Acts[0].Scenarios[0].StartWhen = "day >";
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        SagaContentBuilder.CheckStory(story, "Story/Main", [(dialogue, "Dialogues/Mara")], diagnostics);
+
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    /// A story that uses everything it declares: a day shown in a line, an event that offers a quest, a function and a signal of a
+    /// choice that takes the quest, Mara's dialogue in which Bram also speaks, a named greeting node.
+    /// </summary>
+    private static (StoryAsset Story, DialogueAsset Dialogue) StoryWithDialogue()
+    {
+        var dialogue = new DialogueAsset
+        {
+            CharacterId = "mara",
+            Participants = { "player", "mara" },
+            EntryNodeId = "hello",
+            Nodes =
+            {
+                new LineNodeCard { Id = "hello", Name = "greeting", SpeakerId = "bram", Text = "Day {day}.", NextId = "offer" },
+                new ChoicesNodeCard
+                {
+                    Id = "offer",
+                    Choices =
+                    {
+                        new DialogueChoiceCard { Text = "Yes", When = "has_lamp()", Actions = "quest.mine.state = active; emit ring()", TargetId = "end" },
+                        new DialogueChoiceCard { Text = "No", TargetId = "end" },
+                    },
+                },
+                new EndNodeCard { Id = "end" },
+            },
+        };
+        var story = new StoryAsset
+        {
+            Declarations =
+            {
+                Variables = { new VariableDeclaration { Name = "day", Type = SagaTypeKind.Int, Default = "1" } },
+                Events = { new EventDeclaration { Name = "offer" } },
+                Functions = { new FunctionDeclaration { Name = "has_lamp", ReturnType = SagaTypeKind.Bool } },
+                Signals = { new SignalDeclaration { Name = "ring" } },
+                Characters = { new CharacterDeclaration { Id = "mara" }, new CharacterDeclaration { Id = "bram" } },
+            },
+            FirstActId = "a",
+            Acts =
+            {
+                new ActCard
+                {
+                    Id = "a",
+                    Scenarios = { new ScenarioCard { Id = "s" } },
+                    Quests = { new QuestCard { Id = "mine", ScenarioId = "s", OfferWhen = "raised(\"offer\")" } },
+                },
+            },
+        };
+        return (story, dialogue);
+    }
+
     private static StoryAsset Story() => new()
     {
         Declarations =

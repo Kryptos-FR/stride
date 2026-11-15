@@ -79,6 +79,19 @@ public sealed class SagaPlaybackTests
         Assert.Equal(("act nowhere", SagaDiagnosticSeverity.Warning), (warning.Card, warning.Severity));
     }
 
+    [Fact]
+    public void PlaybackReportsWarningsAcrossDialogues()
+    {
+        var (story, dialogue) = CreateStory();
+        story.Declarations.Events.Add(new EventDeclaration { Name = "never_checked" });
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        Assert.NotNull(SagaPlayback.Create(story, StoryUrl, x => Resolve(x, dialogue), diagnostics));
+
+        var warning = Assert.Single(diagnostics);
+        Assert.Equal((StoryUrl, "declarations / event never_checked", SagaDiagnosticSeverity.Warning), (warning.Asset, warning.Card, warning.Severity));
+    }
+
     private static (DialogueAsset Asset, string Url)? Resolve(DialogueDefinition reference, DialogueAsset dialogue)
         => AttachedReferenceManager.GetAttachedReference(reference)?.Url == DialogueUrl ? (dialogue, DialogueUrl) : null;
 
