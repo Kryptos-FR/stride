@@ -215,9 +215,20 @@ public sealed class SagaTypeChecker(ISagaScope scope)
         /// </summary>
         private (CheckedType? Left, CheckedType? Right) CheckComparedSides(BinaryExpression binary)
         {
+            if (IsUnresolvedName(binary.Right) && IsUnresolvedName(binary.Left))
+            {
+                // Either could be a symbol of the other: report the dotted names, which can't be symbols, or both
+                var names = new[] { (PathExpression)binary.Left, (PathExpression)binary.Right };
+                var dotted = names.Where(x => x.Path.Contains('.')).ToList();
+                foreach (var name in dotted.Count > 0 ? dotted : [.. names])
+                    Report(name, $"Unknown name '{name.Path}'.");
+                return (null, null);
+            }
             if (IsUnresolvedName(binary.Right))
             {
                 var left = Check(binary.Left);
+                if (left is null)
+                    return (null, null);
                 if (left is { } l && IsSymbol(l.Kind))
                 {
                     binary.Right = BindSymbol((PathExpression)binary.Right, l, out var bound);
@@ -228,6 +239,8 @@ public sealed class SagaTypeChecker(ISagaScope scope)
             if (IsUnresolvedName(binary.Left))
             {
                 var right = Check(binary.Right);
+                if (right is null)
+                    return (null, null);
                 if (right is { } r && IsSymbol(r.Kind))
                 {
                     binary.Left = BindSymbol((PathExpression)binary.Left, r, out var bound);

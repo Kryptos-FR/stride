@@ -123,6 +123,8 @@ public sealed class SagaTypeCheckerTests
     public void ErrorsDoNotCascade()
     {
         Assert.Single(CheckCondition("!(gold > 3) && day > 1"));
+        Assert.Contains("quest.nothing.state", Assert.Single(CheckCondition("quest.nothing.state == available")).Message);
+        Assert.Contains("quest.nothing.state", Assert.Single(CheckCondition("available != quest.nothing.state")).Message);
     }
 
     [Fact]
