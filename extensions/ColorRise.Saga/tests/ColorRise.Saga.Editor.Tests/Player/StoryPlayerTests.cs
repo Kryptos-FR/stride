@@ -21,6 +21,8 @@ public sealed class StoryPlayerTests
         Assert.Equal(["Main"], player.Stories.Select(x => x.Name));
         player.SelectedStory = player.Stories[0];
         Assert.Empty(Errors(player));
+        // Warnings don't keep the story from starting: nothing checks the event, nothing makes the quest active
+        Assert.Contains(player.Diagnostics, x => x.Card == "declarations / event met_mara" && x.Severity == SagaDiagnosticSeverity.Warning);
         Assert.True(player.StartCommand.CanExecute(null));
 
         player.StartCommand.Execute(null);
@@ -65,7 +67,7 @@ public sealed class StoryPlayerTests
         Assert.NotEmpty(day.Error);
         day.Value = "4";
         Assert.Empty(day.Error);
-        Assert.Equal(SagaValue.Int(4), player.Playback!.Runtime.Get("day"));
+        Assert.Equal(SagaValue.Int(4), player.Service.Run!.Runtime.Get("day"));
 
         var met = Assert.Single(player.Events);
         met.RaiseCommand.Execute(null);
@@ -87,6 +89,37 @@ public sealed class StoryPlayerTests
         Assert.Empty(player.Transcript);
         Assert.Empty(player.Characters);
         Assert.True(player.StartCommand.CanExecute(null));
+        return Task.CompletedTask;
+    });
+
+    [Fact]
+    public Task RewindingShowsTheDialogueAtThatStep() => RunAsync((_, player) =>
+    {
+        player.SelectedStory = player.Stories[0];
+        player.StartCommand.Execute(null);
+        player.Characters[0].TalkCommand.Execute(null);
+        player.ContinueCommand.Execute(null);
+        player.Choices[0].ChooseCommand.Execute(null);
+        Assert.Equal("available", player.Quests[0].State);
+
+        player.Service.GoTo(2);
+
+        Assert.Equal(["Leave"], player.Choices.Select(x => x.Text));
+        Assert.Equal(["Talking to Mara", "Mara: You came back."], player.Transcript);
+        Assert.Equal("not_started", player.Quests[0].State);
+        Assert.Equal("false", player.Variables.Single(x => x.Name == "lamp_asked").Value);
+
+        // Taking the choice again from there plays as before
+        player.Choices[0].ChooseCommand.Execute(null);
+        Assert.Equal("available", player.Quests[0].State);
+        Assert.Equal(4, player.Service.Steps.Count);
+
+        // The answers of the functions follow the cursor too
+        var pickaxe = player.Functions[0];
+        pickaxe.Answer = "true";
+        Assert.Equal(5, player.Service.Steps.Count);
+        player.Service.GoTo(3);
+        Assert.Equal("false", pickaxe.Answer);
         return Task.CompletedTask;
     });
 
