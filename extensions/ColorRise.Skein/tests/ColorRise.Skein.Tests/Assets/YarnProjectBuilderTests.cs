@@ -1,5 +1,6 @@
 using ColorRise.Skein.Assets;
 using ColorRise.Skein.Assets.Compilation;
+using ColorRise.Skein.Assets.Localisation;
 
 namespace ColorRise.Skein.Tests.Assets;
 
@@ -109,12 +110,58 @@ public sealed class YarnProjectBuilderTests
 
         Assert.False(build.HasErrors);
         Assert.Equal(["en", "fr", "de"], build.Project!.Languages);
-        var warning = Assert.Single(build.Warnings);
+        // Then one warning for each language without a strings file
+        Assert.Equal(3, build.Warnings.Count);
+        var warning = build.Warnings[0];
         Assert.StartsWith("Dialogue/Story: 6 lines have no line id", warning);
         Assert.Contains("Dialogue/Chatter/Pier.yarn(3), Dialogue/Docks.yarn(3), Dialogue/Docks.yarn(5) and 3 more", warning);
 
         // Without another language, lines need no id
         Assert.Empty(Build(Project(), ("Dialogue/Docks.yarn", untagged)).Warnings);
+    }
+
+    [Fact]
+    public void The_strings_file_of_a_language_makes_its_lines_and_what_it_lacks_is_one_warning()
+    {
+        var script = "title: Start\n---\nOne. #line:one\nTwo. #line:two\nThree. #line:three\nFour. #line:four\n===\n";
+        (string, string)[] scripts = [("Dialogue/Act1.yarn", script)];
+        var source = YarnStringsCsv.RowsOf(Build(Project(), scripts).Compilation, "en");
+        YarnStringRow[] french =
+        [
+            source[0] with { Language = "fr", Text = "Un." },
+            source[1] with { Language = "fr", Text = "(NEEDS UPDATE) Deux." },
+            source[2] with { Language = "fr", Text = "" },
+            new() { Language = "fr", Id = "line:gone", Text = "Parti." },
+            source[3] with { Language = "fr", Text = "Quatre.", Lock = "00000000" },
+        ];
+
+        var build = YarnProjectBuilder.Build(Project("fr", "de"), "Dialogue/Story", scripts, [], new Dictionary<string, IReadOnlyList<YarnStringRow>> { ["fr"] = french });
+
+        Assert.False(build.HasErrors);
+        var table = Assert.Single(build.Translations);
+        Assert.Equal("fr", table.Language);
+
+        // A line without a translation is left out, for the game to show it in the base language; the translator's mark is not shown
+        Assert.Equal(new Dictionary<string, string> { ["line:one"] = "Un.", ["line:two"] = "Deux.", ["line:four"] = "Quatre." }, table.Strings);
+        Assert.Equal(4, build.BaseStrings!.Strings.Count);
+        Assert.Equal(
+            [
+                "Dialogue/Story: in 'fr', 1 line has no translation and shows in en, 2 translations were made from a text that changed since, 1 row is of lines the scripts no longer have. Update the strings files of the project.",
+                "Dialogue/Story: the language 'de' has no strings file, so its lines show in en. Export the strings of the project and set the file in its localisations.",
+            ],
+            build.Warnings);
+    }
+
+    [Fact]
+    public void A_strings_file_that_is_up_to_date_gives_no_warning()
+    {
+        (string, string)[] scripts = [("Dialogue/Act1.yarn", "title: Start\n---\nOne. #line:one\n===\n")];
+        var source = YarnStringsCsv.RowsOf(Build(Project(), scripts).Compilation, "en");
+
+        var build = YarnProjectBuilder.Build(Project("fr"), "Dialogue/Story", scripts, [], new Dictionary<string, IReadOnlyList<YarnStringRow>> { ["fr"] = [source[0] with { Language = "fr", Text = "Un." }] });
+
+        Assert.Empty(build.Warnings);
+        Assert.Equal("Un.", Assert.Single(build.Translations).Strings["line:one"]);
     }
 
     [Fact]

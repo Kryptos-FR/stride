@@ -1,3 +1,4 @@
+using ColorRise.Skein.Assets.Localisation;
 using Google.Protobuf;
 
 namespace ColorRise.Skein.Assets.Compilation;
@@ -28,6 +29,11 @@ public sealed record YarnProjectBuild
     public YarnStringTable? BaseStrings { get; init; }
 
     /// <summary>
+    /// The lines of the project in each of its other languages that has a strings file; empty when the scripts have an error.
+    /// </summary>
+    public IReadOnlyList<YarnStringTable> Translations { get; init; } = [];
+
+    /// <summary>
     /// Whether the build failed.
     /// </summary>
     public bool HasErrors => Project is null;
@@ -47,12 +53,14 @@ public static class YarnProjectBuilder
     /// <param name="projectName">The name of the project in the messages about it.</param>
     /// <param name="scripts">The scripts the project includes, with the names the messages give them.</param>
     /// <param name="functions">The functions of the game.</param>
+    /// <param name="translations">The rows of the strings file of each other language of the project, by language; a language without a strings file is not in it.</param>
     /// <param name="cancellation">Stops the compilation.</param>
     public static YarnProjectBuild Build(
         YarnProjectAsset project,
         string projectName,
         IReadOnlyList<(string FileName, string Text)> scripts,
         IReadOnlyList<YarnFunctionDeclaration> functions,
+        IReadOnlyDictionary<string, IReadOnlyList<YarnStringRow>>? translations = null,
         CancellationToken cancellation = default)
     {
         ArgumentNullException.ThrowIfNull(project);
@@ -110,8 +118,74 @@ public static class YarnProjectBuilder
                 content.LineMetadata[id] = [.. line.Metadata];
         }
 
-        return new YarnProjectBuild { Compilation = compilation, Warnings = warnings, Project = content, BaseStrings = strings };
+        var tables = new List<YarnStringTable>();
+        var baseRows = YarnStringsCsv.RowsOf(compilation, project.BaseLanguage);
+        foreach (var language in content.Languages.Skip(1))
+        {
+            if (translations is null || !translations.TryGetValue(language, out var rows))
+            {
+                warnings.Add($"{projectName}: the language '{language}' has no strings file, so its lines show in {project.BaseLanguage}. Export the strings of the project and set the file in its localisations.");
+                continue;
+            }
+
+            tables.Add(Translate(projectName, project.BaseLanguage, language, baseRows, rows, warnings));
+        }
+
+        return new YarnProjectBuild { Compilation = compilation, Warnings = warnings, Project = content, BaseStrings = strings, Translations = tables };
     }
+
+    /// <summary>
+    /// The lines of a language from the rows of its strings file, with one warning for what the file lacks.
+    /// </summary>
+    private static YarnStringTable Translate(string projectName, string baseLanguage, string language, IReadOnlyList<YarnStringRow> source, IReadOnlyList<YarnStringRow> rows, List<string> warnings)
+    {
+        var table = new YarnStringTable { Language = language };
+        var translated = new Dictionary<string, YarnStringRow>();
+        foreach (var row in rows)
+        {
+            translated.TryAdd(row.Id, row);
+        }
+
+        var missing = 0;
+        var outdated = 0;
+        foreach (var line in source)
+        {
+            if (!translated.TryGetValue(line.Id, out var row))
+            {
+                missing++;
+                continue;
+            }
+
+            // The mark of a translation to update is for the translator, not for the player
+            var marked = row.Text.StartsWith(YarnStringsCsv.NeedsUpdate, StringComparison.Ordinal);
+            var text = marked ? row.Text[YarnStringsCsv.NeedsUpdate.Length..] : row.Text;
+            if (text.Length == 0)
+            {
+                missing++;
+                continue;
+            }
+
+            if (marked || (row.Lock.Length > 0 && row.Lock != line.Lock))
+                outdated++;
+            table.Strings[line.Id] = text;
+        }
+
+        var known = source.Select(l => l.Id).ToHashSet();
+        var dead = translated.Keys.Count(id => !known.Contains(id));
+        var notes = new List<string>();
+        if (missing > 0)
+            notes.Add($"{Count(missing, "line has", "lines have")} no translation and {(missing == 1 ? "shows" : "show")} in {baseLanguage}");
+        if (outdated > 0)
+            notes.Add($"{Count(outdated, "translation was", "translations were")} made from a text that changed since");
+        if (dead > 0)
+            notes.Add($"{Count(dead, "row is", "rows are")} of lines the scripts no longer have");
+        if (notes.Count > 0)
+            warnings.Add($"{projectName}: in '{language}', {string.Join(", ", notes)}. Update the strings files of the project.");
+
+        return table;
+    }
+
+    private static string Count(int count, string one, string many) => $"{count} {(count == 1 ? one : many)}";
 
     // A shadow line shows the text of the line it repeats: it needs no id of its own
     private static List<YarnLineData> UntaggedLines(YarnCompilation compilation)

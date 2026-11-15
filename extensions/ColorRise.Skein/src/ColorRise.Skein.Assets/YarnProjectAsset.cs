@@ -62,7 +62,7 @@ public sealed class YarnProjectAsset : Asset
     /// <summary>
     /// How "Add line ids" names the ids it adds.
     /// </summary>
-    /// <userdoc>How "Add line ids" names the ids it adds to the lines: random (line:0a1b2c3) or descriptive (line:Tavern_Odile_1).</userdoc>
+    /// <userdoc>How "Add line ids" names the ids it adds to the lines: random (line:0a1b2c3) or descriptive (line:Tavern_0100_Odile).</userdoc>
     [DataMember(50)]
     [Display("Line id style")]
     public YarnLineIdStyle LineIdStyle { get; set; }
@@ -107,11 +107,14 @@ public sealed class YarnLocalisation
     public string Language { get; set; } = "";
 
     /// <summary>
-    /// The strings file of the language: a CSV file in Yarn Spinner's format.
+    /// The strings file of the language: a CSV file in Yarn Spinner's format; null until the strings are exported.
     /// </summary>
+    /// <remarks>
+    /// It is not declared as a source file of the asset (<c>SourceFileMember</c>): Stride refuses to build an asset
+    /// with a source file that is not set, and a language is added before its strings are exported.
+    /// </remarks>
     /// <userdoc>The strings file of the language: a CSV file in Yarn Spinner's format, made by "Export strings".</userdoc>
     [DataMember(20)]
-    [SourceFileMember(false)]
     [Display("Strings file")]
     public UFile? Strings { get; set; }
 }
@@ -128,7 +131,7 @@ public enum YarnLineIdStyle
     Random,
 
     /// <summary>
-    /// Ids made of the node, the speaker and a number (<c>line:Tavern_Odile_1</c>).
+    /// Ids made of the node, a number and the speaker (<c>line:Tavern_0100_Odile</c>).
     /// </summary>
     Descriptive,
 }

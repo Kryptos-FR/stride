@@ -1,4 +1,5 @@
 using ColorRise.Skein.Assets;
+using ColorRise.Skein.Assets.Localisation;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Compiler;
 using Stride.Core.BuildEngine;
@@ -145,6 +146,69 @@ public sealed class AssetCompilationTests : IDisposable
 
         Assert.Equal(ResultStatus.Successful, status);
         Assert.Contains(log, m => m.StartsWith("Warning: ", StringComparison.Ordinal) && m.Contains("Act1.yarn(3,", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void The_strings_file_of_a_language_builds_its_lines_and_a_change_to_it_builds_again()
+    {
+        var file = Path.Combine(buildPath, "Game", "Assets", "Dialogue", "Strings", "fr.csv");
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        YarnStringRow[] french = [new() { Language = "fr", Id = "line:post", Text = "Odile : Le courrier est en retard." }, new() { Language = "fr", Id = "line:nets", Text = "Pêcheur : Gare aux filets." }];
+        File.WriteAllText(file, YarnStringsCsv.Write(french));
+        ((YarnProjectAsset)project.Asset).Localisations.Add(new YarnLocalisation { Language = "fr", Strings = new UFile(file) });
+
+        var (prepared, status, log, builder) = Build();
+        using (builder)
+        {
+            Assert.False(prepared.HasErrors);
+            Assert.Equal(ResultStatus.Successful, status);
+            Assert.Empty(log);
+
+            MicrothreadLocalDatabases.MountDatabase([builder.Root.OutputObjects]);
+            try
+            {
+                var content = new ContentManager(MicrothreadLocalDatabases.ProviderService);
+                Assert.Equal(["en", "fr"], content.Load<YarnProject>("Dialogue/Story").Languages);
+                var strings = content.Load<YarnStringTable>(YarnProject.StringTableUrl("Dialogue/Story", "fr"));
+                Assert.Equal("fr", strings.Language);
+                Assert.Equal("Pêcheur : Gare aux filets.", strings.Strings["line:nets"]);
+            }
+            finally
+            {
+                MicrothreadLocalDatabases.UnmountDatabase();
+            }
+        }
+
+        var (_, same, _, builder2) = Build();
+        builder2.Dispose();
+        Assert.Equal(ResultStatus.NotTriggeredWasSuccessful, same);
+
+        File.WriteAllText(file, YarnStringsCsv.Write(french.Take(1)));
+        var (_, changed, warned, builder3) = Build();
+        builder3.Dispose();
+        Assert.Equal(ResultStatus.Successful, changed);
+        Assert.Contains(warned, m => m.StartsWith("Warning: Dialogue/Story: in 'fr', 1 line has no translation", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_strings_file_that_is_not_there_or_is_no_strings_file_fails_the_build_with_its_path()
+    {
+        var file = Path.Combine(buildPath, "Game", "Assets", "Dialogue", "fr.csv");
+        ((YarnProjectAsset)project.Asset).Localisations.Add(new YarnLocalisation { Language = "fr", Strings = new UFile(file) });
+
+        var (_, missing, said, builder0) = Build();
+        builder0.Dispose();
+
+        Assert.Equal(ResultStatus.Failed, missing);
+        Assert.Contains(said, m => m == $"Error: Dialogue/Story: the strings file of 'fr' is not there: {file}");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        File.WriteAllText(file, "name,value\nline:post,Bonjour\n");
+        var (_, status, log, builder) = Build();
+        builder.Dispose();
+
+        Assert.Equal(ResultStatus.Failed, status);
+        Assert.Contains(log, m => m.StartsWith($"Error: {file}: The strings file has no 'id' column", StringComparison.Ordinal));
     }
 
     [Fact]
