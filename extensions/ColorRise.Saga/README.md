@@ -140,7 +140,20 @@ It doesn't (yet):
 - Editors in the WPF Game Studio.
 - Published packages: everything builds against a local engine build of this branch.
 
+## What v2 adds: the writer's loop
+
+Version 2 makes the story player a tool to try branches before the game exists.
+
+- **A story timeline.** "Play story" also opens the Story timeline panel at the bottom (or the player's Timeline button does). Each column is a step of the run (start, raise, set, answer, talk, continue, choose) with a glyph and a tooltip. The lanes show the acts, each scenario and quest (offered, active with its stages, succeeded or failed), the dialogues with their choices, what the game did and the signals. The right side says in words what the step at the cursor did.
+- **Rewind.** Click a column, or use ◀ and ▶, the arrow keys, Home and End, to move the run to any step. The steps after the cursor stay, faded, until you take another step from there, which drops them.
+- **Replay after edits.** An edit of the story or one of its dialogues marks the run as changed. Replay builds the story again and plays the same steps on it: a dot marks a step that now does something else, and the run stops before the first step that no longer applies, in red, with the reason.
+- **Where the play is, in the editors.** The story editor outlines the current act, the running and ended scenarios, the quests (offered, active at stage n of m, succeeded, failed) and the dialogue playing or played; the dialogue editor outlines the node the dialogue is at and the way it came. Each mark follows the cursor and clears when the player resets.
+- **Warnings.** The build and the player report what builds but is likely a mistake: an act or a dialogue node nothing leads to, a branch or a choices node that can leave nothing to take, a `visited` key that names nothing, a declared name nothing uses, a quest nothing starts. Warnings don't stop the build or the player. The checks across the story and its dialogues run only once nothing has an error.
+
+It doesn't: save runs, keep a tree of the branches tried, follow a running game, check scenes, show warnings on the graph nodes, or show any of this in the WPF Game Studio.
+
 ## Documents
 
 - [Design](docs/design.md) and [implementation plan](docs/plan.md) of the first version.
+- [Design](docs/design-writers-loop.md) and [implementation plan](docs/plan-writers-loop.md) of the writer's loop (version 2).
 - [Plugin model findings](docs/plugin-findings.md): what Saga met in Stride's plugin model.

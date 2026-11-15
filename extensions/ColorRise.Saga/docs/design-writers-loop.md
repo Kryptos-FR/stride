@@ -1,5 +1,7 @@
 # ColorRise.Saga: design of the writer's loop (version 2)
 
+Status: built, 2026-11-15. The README's "What v2 adds" section says what it does.
+
 2026-11-15. Nicolas picked group A, "the writer's loop", from the candidates in /mnt/project-files/dialogue-extension/saga-next-steps.md (section 4), then said "go ahead with your own calls". Every choice below that he did not make is marked **(C)**, Claude's call, open to correction; **(N)** marks his decisions.
 
 ## 1. Intent
