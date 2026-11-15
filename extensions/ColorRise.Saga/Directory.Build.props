@@ -1,0 +1,31 @@
+<Project>
+  <!--
+    ColorRise.Saga builds against Stride through packages only, as any third party would.
+
+    SagaStrideVersion is the Stride version to use. It is never committed: set it in Directory.Build.local.props (copy
+    Directory.Build.local.props.example), or leave it empty to use the version of the Stride checkout this folder sits
+    in (MajorMinor.Patch-dev, what a local engine build puts in bin/packages).
+  -->
+  <Import Project="Directory.Build.local.props" Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.local.props')" />
+
+  <PropertyGroup Condition="'$(SagaStrideVersion)' == '' And Exists('$(MSBuildThisFileDirectory)../../sources/shared/SharedAssemblyInfo.cs')">
+    <_SagaStrideVersionSource>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../../sources/shared/SharedAssemblyInfo.cs'))</_SagaStrideVersionSource>
+    <_SagaStrideMajorMinor>$([System.Text.RegularExpressions.Regex]::Replace($(_SagaStrideVersionSource), '(?s)^.*?MajorMinor = "([^"]+)".*$', '$1'))</_SagaStrideMajorMinor>
+    <_SagaStridePatch>$([System.Text.RegularExpressions.Regex]::Replace($(_SagaStrideVersionSource), '(?s)^.*?Patch = "([^"]+)".*$', '$1'))</_SagaStridePatch>
+    <SagaStrideVersion>$(_SagaStrideMajorMinor).$(_SagaStridePatch)-dev</SagaStrideVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.1.0</Version>
+    <Authors>Color-Rise</Authors>
+    <Company>Color-Rise</Company>
+    <Copyright>Copyright (c) Color-Rise</Copyright>
+    <PackageProjectUrl>https://github.com/Kryptos-FR/stride/tree/feature/colorrise-saga/extensions/ColorRise.Saga</PackageProjectUrl>
+    <!-- The avalonia version must be the one the Game Studio ships with -->
+    <SagaAvaloniaVersion Condition="'$(SagaAvaloniaVersion)' == ''">12.1.1</SagaAvaloniaVersion>
+  </PropertyGroup>
+</Project>

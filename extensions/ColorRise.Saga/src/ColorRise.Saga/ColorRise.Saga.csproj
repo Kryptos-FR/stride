@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Saga</RootNamespace>
+    <PackageTags>stride-plugin;story;dialogue;quest</PackageTags>
+    <Description>Saga: a story system for Stride games (plot, acts, scenarios, quests and dialogues).</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The companions a host loads on behalf of this package: the asset compiler takes the Assets one, the Game Studio both.
+         A game references this project (or its package) only. -->
+    <StrideCompanionProject Include="..\ColorRise.Saga.Assets\ColorRise.Saga.Assets.csproj" />
+    <StrideCompanionProject Include="..\ColorRise.Saga.Editor\ColorRise.Saga.Editor.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Engine" Version="$(SagaStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SagaStrideVersion)" IncludeAssets="build;buildTransitive" />
+  </ItemGroup>
+</Project>

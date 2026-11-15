@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Saga.Editor</RootNamespace>
+    <Description>Saga's Game Studio extensions: editors, story player and commands (toolkit-neutral).</Description>
+    <!-- What this companion carries: Game Studio extensions; only the Game Studio loads it -->
+    <StridePackageKind>Editor</StridePackageKind>
+    <!-- Experimental plugin API: panels and views, commands, services -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The views of the cross-platform Game Studio -->
+    <StrideCompanionProject Include="..\ColorRise.Saga.Editor.Avalonia\ColorRise.Saga.Editor.Avalonia.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Assets.Editor" Version="$(SagaStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SagaStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <ProjectReference Include="..\ColorRise.Saga\ColorRise.Saga.csproj" />
+    <ProjectReference Include="..\ColorRise.Saga.Assets\ColorRise.Saga.Assets.csproj" />
+  </ItemGroup>
+</Project>

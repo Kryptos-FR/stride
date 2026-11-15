@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Saga.Assets</RootNamespace>
+    <Description>Saga's asset types, compilers and templates.</Description>
+    <!-- What this companion carries: asset types, compilers, templates and icons, loaded by the asset compiler and the Game Studio -->
+    <StridePackageKind>Assets</StridePackageKind>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Core.Assets" Version="$(SagaStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SagaStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <ProjectReference Include="..\ColorRise.Saga\ColorRise.Saga.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Templates\**" />
+    <None Remove="Resources\*.png" />
+    <EmbeddedResource Include="Resources\*.png" />
+  </ItemGroup>
+</Project>

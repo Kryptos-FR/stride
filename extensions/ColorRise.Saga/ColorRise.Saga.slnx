@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ColorRise.Saga/ColorRise.Saga.csproj" />
+    <Project Path="src/ColorRise.Saga.Assets/ColorRise.Saga.Assets.csproj" />
+    <Project Path="src/ColorRise.Saga.Editor/ColorRise.Saga.Editor.csproj" />
+    <Project Path="src/ColorRise.Saga.Editor.Avalonia/ColorRise.Saga.Editor.Avalonia.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ColorRise.Saga.Tests/ColorRise.Saga.Tests.csproj" />
+  </Folder>
+</Solution>

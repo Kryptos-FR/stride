@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Saga.Editor.Avalonia</RootNamespace>
+    <Description>Saga's views for the cross-platform Game Studio.</Description>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <StridePackageKind>Editor</StridePackageKind>
+    <!-- The views of the cross-platform Game Studio; ColorRise.Saga.Editor (toolkit-neutral) declares this package as its companion.
+         The toolkit (Avalonia) is inferred from the Avalonia references. -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="$(SagaAvaloniaVersion)" />
+    <PackageReference Include="Stride.Assets.Editor.Avalonia" Version="$(SagaStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SagaStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <ProjectReference Include="..\ColorRise.Saga.Editor\ColorRise.Saga.Editor.csproj" />
+  </ItemGroup>
+</Project>

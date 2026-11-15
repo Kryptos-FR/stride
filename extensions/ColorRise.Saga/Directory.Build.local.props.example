@@ -1,0 +1,6 @@
+<Project>
+  <!-- Copy to Directory.Build.local.props (git-ignored) to build against another Stride version than the checkout's -->
+  <PropertyGroup>
+    <SagaStrideVersion>4.5.3-dev</SagaStrideVersion>
+  </PropertyGroup>
+</Project>
