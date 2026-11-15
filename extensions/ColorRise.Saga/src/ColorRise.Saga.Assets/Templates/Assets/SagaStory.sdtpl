@@ -1,0 +1,9 @@
+!TemplateAssetFactory
+Id: 3f6b1c2e-8d4a-4f1b-9a7e-5c2d0e9b4a11
+AssetTypeName: StoryAsset
+Name: Story
+Scope: Asset
+Description: A story of acts, scenarios and quests, with the names it shares with the game
+Group: Saga
+DefaultOutputName: Story
+FactoryTypeName: StoryAssetFactory

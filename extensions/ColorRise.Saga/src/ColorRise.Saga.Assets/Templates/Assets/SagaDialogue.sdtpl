@@ -1,0 +1,13 @@
+!TemplateAssetFactory
+Id: 8a2d5e7f-1c3b-4e6a-b9d0-7f4e2a1c6b33
+AssetTypeName: DialogueAsset
+Name: Dialogue
+Scope: Asset
+Description: A dialogue attached to a character of a story
+Group: Saga
+DefaultOutputName: Dialogue
+Prompts:
+    - !AssetReferencePrompt
+      Member: Story
+      Message: Select the story this dialogue belongs to - _cancel to pick it later_
+      AssetTypes: [StoryAsset]

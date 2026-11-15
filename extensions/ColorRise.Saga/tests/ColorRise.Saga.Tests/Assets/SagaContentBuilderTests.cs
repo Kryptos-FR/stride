@@ -126,6 +126,17 @@ public sealed class SagaContentBuilderTests
         Assert.Contains(diagnostics, x => x.Card == "node offer / choice 2 / TargetId" && x.Message.Contains("nowhere"));
     }
 
+    [Fact]
+    public void NewStoryBuildsWithoutErrors()
+    {
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        var story = SagaContentBuilder.BuildStory(new StoryAssetFactory().New(), "Story", diagnostics);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal("act_1", Assert.Single(story.Plot.Acts).Id);
+    }
+
     private static StoryAsset Story() => new()
     {
         Declarations = new StoryDeclarations
