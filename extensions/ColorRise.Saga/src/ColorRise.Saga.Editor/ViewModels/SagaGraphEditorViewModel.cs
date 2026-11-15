@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using ColorRise.Saga.Editor.Player;
 using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Assets.Quantum;
 using Stride.Core.Assets.Presentation.ViewModels;
@@ -26,6 +27,7 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
     private bool refreshing;
     private bool changingSelection;
     private bool propertiesStale;
+    private SagaPlaybackService? playback;
 
     protected SagaGraphEditorViewModel(TAssetViewModel asset)
         : base(asset)
@@ -87,6 +89,10 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
         UndoRedoService.Done += ChangeCompleted;
         UndoRedoService.Undone += ChangeCompleted;
         UndoRedoService.Redone += ChangeCompleted;
+        // The story played in the session, which the nodes show
+        playback = ServiceProvider.TryGet<SagaPlaybackService>();
+        if (playback is not null)
+            playback.Changed += PlaybackChanged;
         Refresh();
         return Task.FromResult(true);
     }
@@ -101,6 +107,9 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
         UndoRedoService.Done -= ChangeCompleted;
         UndoRedoService.Undone -= ChangeCompleted;
         UndoRedoService.Redone -= ChangeCompleted;
+        if (playback is not null)
+            playback.Changed -= PlaybackChanged;
+        playback = null;
         base.Destroy();
     }
 
@@ -170,6 +179,13 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
     /// Deletes a node and what leads to it; the caller opens the transaction.
     /// </summary>
     protected abstract void Delete(SagaGraphNodeViewModel node);
+
+    /// <summary>
+    /// Shows on the nodes where the story played in the session is (<see cref="SagaGraphNodeViewModel.PlayMark"/>), after each
+    /// rebuild of the graph and each change of the playback.
+    /// </summary>
+    /// <param name="playback">The playback of the session, or null in an editor without one.</param>
+    protected abstract void UpdatePlayMarks(SagaPlaybackService? playback);
 
     /// <summary>
     /// Makes what refers to a card by its id follow a new id; the transaction of the change is open.
@@ -282,6 +298,7 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
                 previousLinks.TryAdd((link.Source, link.Target), link);
             var links = BuildLinks(byCard).Select(x => previousLinks.TryGetValue((x.Source, x.Target), out var kept) && kept.Card == x.Card ? kept : x).ToList();
             Update(Links, links);
+            UpdatePlayMarks(playback);
 
             foreach (var gone in SelectedNodes.Where(x => !Nodes.Contains(x)).ToList())
                 SelectedNodes.Remove(gone);
@@ -360,6 +377,8 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
     }
 
     private void AssetChanged(object? sender, EventArgs e) => Refresh();
+
+    private void PlaybackChanged(object? sender, EventArgs e) => UpdatePlayMarks(playback);
 
     private void AssetMemberChanged(object? sender, AssetMemberNodeChangeEventArgs e)
     {

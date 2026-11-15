@@ -24,10 +24,47 @@ public enum SagaGraphNodeKind
 /// <summary>
 /// A node of a Saga graph: a card of the story (act, scenario, quest), a dialogue of a scenario or quest, or a node of a dialogue.
 /// </summary>
+/// <summary>
+/// Where the story played in the session is, on a node of a Saga graph.
+/// </summary>
+public enum SagaPlayMark
+{
+    None,
+
+    /// <summary>
+    /// The current act, the dialogue playing, the node a dialogue is at.
+    /// </summary>
+    Current,
+
+    /// <summary>
+    /// A dialogue played before, a node the dialogue went through.
+    /// </summary>
+    Visited,
+
+    /// <summary>
+    /// A scenario running, a quest active.
+    /// </summary>
+    Running,
+
+    /// <summary>
+    /// A quest offered, not yet taken on.
+    /// </summary>
+    Offered,
+
+    /// <summary>
+    /// An act over, a scenario ended, a quest succeeded.
+    /// </summary>
+    Done,
+
+    Failed,
+}
+
 public sealed class SagaGraphNodeViewModel : SagaGraphItemViewModel
 {
     private readonly List<SagaGraphSlot> outputs = [];
     private bool isEntry;
+    private SagaPlayMark playMark;
+    private string playNote = string.Empty;
 
     internal SagaGraphNodeViewModel(IViewModelServiceProvider serviceProvider, SagaGraphNodeKind kind, AssetViewModel relatedAsset, object card, Func<GraphNodePath>? path)
         : base(serviceProvider, relatedAsset, card, path)
@@ -98,6 +135,16 @@ public sealed class SagaGraphNodeViewModel : SagaGraphItemViewModel
     /// <summary>
     /// The dialogue a node of a scenario or quest stands for.
     /// </summary>
+    /// <summary>
+    /// Where the story played in the session is on this node, at the cursor of its run.
+    /// </summary>
+    public SagaPlayMark PlayMark { get => playMark; internal set => SetValue(ref playMark, value); }
+
+    /// <summary>
+    /// A word on the play: the stage of a quest, the outcome of a scenario, how many times a dialogue played.
+    /// </summary>
+    public string PlayNote { get => playNote; internal set => SetValue(ref playNote, value); }
+
     public DialogueViewModel? Dialogue { get; internal init; }
 
     internal string? DialogueName { get; init; }

@@ -1,5 +1,6 @@
 using ColorRise.Saga.Assets;
 using ColorRise.Saga.Content;
+using ColorRise.Saga.Editor.Player;
 using Stride.Core;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Annotations;
@@ -254,6 +255,60 @@ public sealed class StoryEditorViewModel : SagaGraphEditorViewModel<StoryViewMod
                 }
                 break;
         }
+    }
+
+    /// <inheritdoc />
+    protected override void UpdatePlayMarks(SagaPlaybackService? playback)
+    {
+        // Only the run of this story, at its cursor
+        var run = playback?.Story == Asset ? playback.Run : null;
+        foreach (var node in Nodes)
+        {
+            var (mark, note) = run is null ? (SagaPlayMark.None, "") : PlayOf(node, run);
+            node.PlayMark = mark;
+            node.PlayNote = note;
+        }
+    }
+
+    private static (SagaPlayMark Mark, string Note) PlayOf(SagaGraphNodeViewModel node, SagaRun run)
+    {
+        var state = run.Runtime.State;
+        switch (node.Card)
+        {
+            case ActCard act:
+                return state.CurrentActId == act.Id ? (SagaPlayMark.Current, "")
+                    : state.CompletedActs.Contains(act.Id) ? (SagaPlayMark.Done, "")
+                    : (SagaPlayMark.None, "");
+            case ScenarioCard scenario:
+                return state.Scenarios.GetValueOrDefault(scenario.Id) switch
+                {
+                    { State: ScenarioState.Running } => (SagaPlayMark.Running, ""),
+                    { State: ScenarioState.Done } done => (SagaPlayMark.Done, done.Outcome ?? ""),
+                    _ => (SagaPlayMark.None, ""),
+                };
+            case QuestCard quest:
+                return state.Quests.GetValueOrDefault(quest.Id) switch
+                {
+                    { State: QuestState.Available } => (SagaPlayMark.Offered, ""),
+                    { State: QuestState.Active } active => (SagaPlayMark.Running, StageNote(run, quest.Id, active.Stage)),
+                    { State: QuestState.Succeeded } => (SagaPlayMark.Done, "succeeded"),
+                    { State: QuestState.Failed } => (SagaPlayMark.Failed, "failed"),
+                    _ => (SagaPlayMark.None, ""),
+                };
+            case DialogueDefinition when node.DialogueName is { } name:
+                if (run.Dialogue?.Dialogue.Name == name)
+                    return (SagaPlayMark.Current, "");
+                return state.Visits.GetValueOrDefault(name) is > 0 and var plays ? (SagaPlayMark.Visited, $"played ×{plays}") : (SagaPlayMark.None, "");
+            default:
+                return (SagaPlayMark.None, "");
+        }
+    }
+
+    // The stage an active quest is at, out of the stages of the quest as the run was built
+    private static string StageNote(SagaRun run, string questId, int stage)
+    {
+        var count = run.Runtime.Story.Plot.Acts.SelectMany(x => x.Quests).FirstOrDefault(x => x.Id == questId)?.Stages.Count ?? 0;
+        return count == 0 ? "" : stage < count ? $"stage {stage + 1}/{count}" : $"{count}/{count} stages done";
     }
 
     /// <inheritdoc />

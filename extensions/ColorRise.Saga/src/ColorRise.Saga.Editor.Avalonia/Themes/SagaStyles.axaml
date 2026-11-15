@@ -13,6 +13,12 @@
                          Default="#FF595656"/>
   <SolidColorBrush x:Key="SagaEntryBrush" Color="#FFFFD54F"/>
 
+  <!-- Where the story played in the session is, on a node: an outline and a badge. The node the play is at blue (the timeline's
+       cursor), the way it came pale blue, a scenario running or a quest active green, a quest offered amber, what is over grey,
+       a quest failed red. -->
+  <views:SagaPlayBrushes x:Key="SagaPlayBrushes"
+                         Current="#FF42A5F5" Visited="#FF90CAF9" Running="#FF66BB6A" Offered="#FFFFCA28" Done="#FF9E9E9E" Failed="#FFEF5350"/>
+
   <!-- The story timeline: the acts indigo, the scenarios and quests teal (offered paler, the stages light, success green,
        failure red), the dialogues orange, what the game did yellow, slate and purple, the signals blue; the cursor blue, the
        steps after it dimmed, a step that no longer applies red, a step that plays differently since the replay an orange dot. -->
@@ -26,30 +32,39 @@
 
   <!-- A node of a Saga graph: what it is and its title in the header, its input on the left, its ways out on the right -->
   <DataTemplate x:Key="SagaNodeTemplate" x:DataType="vm:SagaGraphNodeViewModel">
-    <StackPanel MinWidth="140" MaxWidth="260">
-      <Border Background="{Binding Kind, Converter={StaticResource SagaNodeBrushes}}" CornerRadius="2,2,0,0" Padding="8,3">
-        <StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBlock FontSize="10" Foreground="#C0FFFFFF" Text="{Binding Kind}"/>
-            <TextBlock FontSize="10" FontWeight="Bold" Foreground="{StaticResource SagaEntryBrush}" Text="ENTRY" IsVisible="{Binding IsEntry}"/>
+    <Border BorderThickness="2" CornerRadius="4" BorderBrush="{Binding PlayMark, Converter={StaticResource SagaPlayBrushes}}">
+      <StackPanel MinWidth="140" MaxWidth="260">
+        <Border Background="{Binding Kind, Converter={StaticResource SagaNodeBrushes}}" CornerRadius="2,2,0,0" Padding="8,3">
+          <StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock FontSize="10" Foreground="#C0FFFFFF" Text="{Binding Kind}"/>
+              <TextBlock FontSize="10" FontWeight="Bold" Foreground="{StaticResource SagaEntryBrush}" Text="ENTRY" IsVisible="{Binding IsEntry}"/>
+              <Border CornerRadius="2" Padding="4,0" Background="{Binding PlayMark, Converter={StaticResource SagaPlayBrushes}}"
+                      IsVisible="{Binding PlayMark, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter={x:Static vm:SagaPlayMark.None}}">
+                <TextBlock FontSize="10" FontWeight="Bold" Foreground="#FF1E1E1E">
+                  <Run Text="{Binding PlayMark}"/>
+                  <Run Text="{Binding PlayNote}"/>
+                </TextBlock>
+              </Border>
+            </StackPanel>
+            <TextBlock FontWeight="Bold" Foreground="#FFEBEBEB" TextTrimming="CharacterEllipsis" Text="{Binding Title}" ToolTip.Tip="{Binding Id}"/>
           </StackPanel>
-          <TextBlock FontWeight="Bold" Foreground="#FFEBEBEB" TextTrimming="CharacterEllipsis" Text="{Binding Title}" ToolTip.Tip="{Binding Id}"/>
-        </StackPanel>
-      </Border>
-      <Grid ColumnDefinitions="Auto, *" Margin="0,3">
-        <sd:NodeGraphConnector Grid.Column="0" Margin="3,1" VerticalAlignment="Top" Slot="{Binding Input}" Direction="Input"/>
-        <ItemsControl Grid.Column="1" ItemsSource="{Binding Outputs}" HorizontalAlignment="Right">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:SagaGraphSlot">
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <TextBlock Foreground="#FFEBEBEB" VerticalAlignment="Center" Margin="10,0,2,0" MaxWidth="200"
-                           TextTrimming="CharacterEllipsis" Text="{Binding Name}"/>
-                <sd:NodeGraphConnector Margin="3,1" Slot="{Binding}" Direction="Output"/>
-              </StackPanel>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </Grid>
-    </StackPanel>
+        </Border>
+        <Grid ColumnDefinitions="Auto, *" Margin="0,3">
+          <sd:NodeGraphConnector Grid.Column="0" Margin="3,1" VerticalAlignment="Top" Slot="{Binding Input}" Direction="Input"/>
+          <ItemsControl Grid.Column="1" ItemsSource="{Binding Outputs}" HorizontalAlignment="Right">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SagaGraphSlot">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                  <TextBlock Foreground="#FFEBEBEB" VerticalAlignment="Center" Margin="10,0,2,0" MaxWidth="200"
+                             TextTrimming="CharacterEllipsis" Text="{Binding Name}"/>
+                  <sd:NodeGraphConnector Margin="3,1" Slot="{Binding}" Direction="Output"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Grid>
+      </StackPanel>
+    </Border>
   </DataTemplate>
 </ResourceDictionary>

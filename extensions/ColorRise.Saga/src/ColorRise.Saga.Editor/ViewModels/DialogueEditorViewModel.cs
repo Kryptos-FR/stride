@@ -1,4 +1,5 @@
 using ColorRise.Saga.Assets;
+using ColorRise.Saga.Editor.Player;
 using Stride.Core.Assets.Editor.Annotations;
 using Stride.Core.Presentation.Commands;
 
@@ -85,6 +86,22 @@ public sealed class DialogueEditorViewModel : SagaGraphEditorViewModel<DialogueV
             }
             node.IsEntry = card.Id == Dialogue.EntryNodeId;
             yield return node;
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void UpdatePlayMarks(SagaPlaybackService? playback)
+    {
+        // The way the dialogue went in its last play up to the cursor: the node it is at, if it is still open, and those it went
+        // through, with how many times when more than once
+        var path = playback is not null && playback.Plays(Asset.Id) && playback.DialoguePath(Asset.Name) is { } played ? played : default;
+        var current = path.IsOpen && path.Path is [.., var last] ? last : null;
+        var visits = (path.Path ?? []).CountBy(x => x).ToDictionary(x => x.Key, x => x.Value);
+        foreach (var node in Nodes)
+        {
+            var count = visits.GetValueOrDefault(node.Id);
+            node.PlayMark = node.Id == current ? SagaPlayMark.Current : count > 0 ? SagaPlayMark.Visited : SagaPlayMark.None;
+            node.PlayNote = count > 1 ? $"×{count}" : "";
         }
     }
 
