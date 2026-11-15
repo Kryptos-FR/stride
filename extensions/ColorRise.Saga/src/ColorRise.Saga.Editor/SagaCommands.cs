@@ -1,6 +1,7 @@
 using ColorRise.Saga.Editor.Player;
 using ColorRise.Saga.Editor.ViewModels;
 using Stride.Assets.Editor.Commands;
+using Stride.Assets.Editor.ViewModels;
 using Stride.Assets.Presentation.ViewModels;
 using Stride.Core.Assets.Editor.Commands;
 using Stride.Core.Assets.Editor.Panels;
@@ -70,8 +71,15 @@ public static class SagaCommands
     private static StoryViewModel? StoryOf(CommandContext context) => context.Selection is [StoryViewModel story] ? story : null;
 
     private static string? CharacterOf(CommandContext context)
-        => context.Selection is [EntityViewModel entity] && entity.Components.OfType<SagaCharacterComponent>().FirstOrDefault() is { CharacterId.Length: > 0 } character
+        => EntityOf(context)?.Components.OfType<SagaCharacterComponent>().FirstOrDefault() is { CharacterId.Length: > 0 } character
             ? character.CharacterId
+            : null;
+
+    // The entity tree gives its selection. The palette gives the selection of the asset view, and the editor it was opened from,
+    // whose selection is then the entity
+    private static EntityViewModel? EntityOf(CommandContext context)
+        => context.Selection is [EntityViewModel entity] ? entity
+            : context.Editor is EntityHierarchyEditorViewModel { SelectedContent.Count: 1 } editor ? editor.SelectedContent.First() as EntityViewModel
             : null;
 
     private static Task PlayAsync(CommandContext context)
