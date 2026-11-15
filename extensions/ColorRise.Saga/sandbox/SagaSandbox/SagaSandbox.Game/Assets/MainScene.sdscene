@@ -8,18 +8,27 @@ Hierarchy:
     RootParts:
         - ref!! dd6d2dcc-679d-12b9-430a-9787bab45b33
         - ref!! bec670e5-a554-24d8-40db-8636ecc28828
+        - ref!! 58b9525b-e7ae-7864-c617-b6a50861e524
+        - ref!! 156b0cba-a396-4455-72fb-4d2451118ae4
+        - ref!! 17f2894b-bf3c-ac0a-31e2-b1fa10422cb1
+        - ref!! c7c4e523-7cef-8fb5-2cac-6b8e09794339
         - ref!! a0cc2b32-2ea1-b3be-caa2-24bf4041a43e
         - ref!! ab334fee-b31c-0512-4cb7-3fa12571c2f6
         - ref!! df4ad9d5-c22e-cabc-a116-e2b8dd0c140c
+        - ref!! fef12b49-d701-024d-dd1c-e5c475b0ce13
+        - ref!! 3be3d487-4ba3-9564-6183-b217d1729116
+        - ref!! 22cd5e80-32b0-96ef-76fd-39078e33603f
+        - ref!! aa363882-727a-b575-9790-da78e3fe4ee0
+        - ref!! 5b5131db-d99a-e99c-a285-715cd5192d92
     Parts:
         -   Entity:
                 Id: dd6d2dcc-679d-12b9-430a-9787bab45b33
                 Name: Camera
                 Components:
-                    5f95cd9623b136d3a2068fcd0b5cd3a0: !TransformComponent
+                    de3c4d6eaa68ff05d528af463132556d: !TransformComponent
                         Id: d9b94663-f762-835d-26c4-a8f11e8cfd40
-                        Position: {X: 0.0, Y: 1.6, Z: 6.0}
-                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Position: {X: 0.0, Y: 11.0, Z: 13.0}
+                        Rotation: {X: -0.34202015, Y: 0.0, Z: 0.0, W: 0.9396926}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
                     ca6f8ffdb228b282a739fe18575ae68b: !CameraComponent
@@ -31,51 +40,240 @@ Hierarchy:
                 Id: bec670e5-a554-24d8-40db-8636ecc28828
                 Name: Story
                 Components:
-                    9a7ee0b8858bc55ed568ed0e73232b38: !TransformComponent
+                    27263d26ec7c07947b6136c43807d3d0: !TransformComponent
                         Id: 35e20852-6b5c-0434-1a0b-eaf0e1876454
                         Position: {X: 0.0, Y: 0.0, Z: 0.0}
                         Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
-                    70333b5a24da151d59cfea1a187af0b0: !SagaSandbox.StoryRunner,SagaSandbox.Game
+                    70333b5a24da151d59cfea1a187af0b0: !SagaSandbox.DemoGame,SagaSandbox.Game
                         Id: 8a19fdd1-ad27-ce72-963c-3425a05b2722
                         Story: 5b0e3a52-7c1d-4f3e-9a8b-1d2c3e4f5a61:Story/Main
+                        Font: c90f3988-0544-4cbe-993f-13af7d9c23c6:/Stride.Engine/StrideDefaultFont
+                        Player: ref!! c7c4e523-7cef-8fb5-2cac-6b8e09794339
+                        Camera: ref!! dd6d2dcc-679d-12b9-430a-9787bab45b33
+        -   Entity:
+                Id: 58b9525b-e7ae-7864-c617-b6a50861e524
+                Name: Sun
+                Components:
+                    ccec50e3204b158187be425d0454af60: !TransformComponent
+                        Id: f56726c3-ebaf-05cd-3ab1-fe8843f83f41
+                        Position: {X: 0.0, Y: 5.0, Z: 0.0}
+                        Rotation: {X: -0.45080333, Y: -0.19198428, Z: -0.09994069, W: 0.86598513}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    341e4c083aea19db3e2a5d908002c716: !LightComponent
+                        Id: 8cd0bc77-d06c-0075-98b9-aa4da30fb8b9
+                        Type: !LightDirectional
+                            Color: !ColorRgbProvider
+                                Value: {R: 1.0, G: 0.97, B: 0.9}
+                            Shadow:
+                                Enabled: true
+                                Filter: !LightShadowMapFilterTypePcf
+                                    FilterSize: Filter5x5
+                                Size: Large
+                                DepthRange: {}
+                                PartitionMode: !LightDirectionalShadowMap.PartitionLogarithmic {}
+                                ComputeTransmittance: false
+                                BiasParameters: {}
+                        Intensity: 4.0
+        -   Entity:
+                Id: 156b0cba-a396-4455-72fb-4d2451118ae4
+                Name: Ambient
+                Components:
+                    61c48e45f38a6a5952f97334b922c12a: !TransformComponent
+                        Id: c7eb3429-fc4d-f165-ee6a-f37afdba4343
+                        Position: {X: 0.0, Y: 5.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    683aaa4cfa87ab064212691e71d96e6c: !LightComponent
+                        Id: 75b4fa04-8a72-09fc-a819-30a9a7ce01b6
+                        Type: !LightAmbient
+                            Color: !ColorRgbProvider
+                                Value: {R: 0.8, G: 0.85, B: 1.0}
+                        Intensity: 0.8
+        -   Entity:
+                Id: 17f2894b-bf3c-ac0a-31e2-b1fa10422cb1
+                Name: Ground
+                Components:
+                    66257f5403608d7a50d831cbc9a6a621: !TransformComponent
+                        Id: 601d3355-4eb2-2475-4d75-cca6ca043a2e
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    bc72f2444bc7a3fbee6ff13f32fe1c12: !ModelComponent
+                        Id: 624a8a2d-c12f-b856-e9a1-fc7c7179cc9a
+                        Model: b57d637d-8827-a1a0-8bae-f80e29e1f188:Demo/Models/Ground
+                        Materials: {}
+        -   Entity:
+                Id: c7c4e523-7cef-8fb5-2cac-6b8e09794339
+                Name: Player
+                Components:
+                    0c4dd0ea9c461809b711e79918009780: !TransformComponent
+                        Id: aa2314eb-7826-9189-2aa0-1bce3703b45e
+                        Position: {X: 0.0, Y: 0.0, Z: 4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    8352eda69862d177654e3aafff88da69: !ModelComponent
+                        Id: 792328d6-71ce-12c6-6d24-0fd389f6b2a6
+                        Model: fdc64b52-7b2d-38cc-de24-423884bf120c:Demo/Models/Player
+                        Materials: {}
+                    cdbecab7b341d7fd16e8620f2ca5d5fa: !SagaSandbox.PlayerController,SagaSandbox.Game
+                        Id: 210dfe4f-4131-2a3c-5835-d9c02e3e062c
+                        Speed: 4.0
         -   Entity:
                 Id: a0cc2b32-2ea1-b3be-caa2-24bf4041a43e
                 Name: Foreman
                 Components:
-                    c3f38e335946943fe1309adad5800980: !TransformComponent
+                    5a3258e5138b608c757176e14946bb1f: !TransformComponent
                         Id: 0c5a8039-bb0e-a092-5e2b-ef01d57c2c84
-                        Position: {X: -2.0, Y: 0.0, Z: 0.0}
+                        Position: {X: -3.0, Y: 0.0, Z: 0.0}
                         Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
                     fea79dc3ade52b0aed339192cf83a848: !SagaCharacterComponent
                         Id: 963767ba-c028-7b2b-f369-53bbdff78479
                         CharacterId: foreman
+                    696137e46284b45304ead749c4a849b2: !ModelComponent
+                        Id: 0585a2cd-787f-1631-ed8d-d6840aaeebb8
+                        Model: 2bb91b1a-a2c3-5d9e-f194-8fdb4c314451:Demo/Models/Foreman
+                        Materials: {}
         -   Entity:
                 Id: ab334fee-b31c-0512-4cb7-3fa12571c2f6
                 Name: Captain
                 Components:
-                    d268a03ab3f32ad2d0ee34b36758ad31: !TransformComponent
+                    f5512f0e166bda62ff675459506acaa7: !TransformComponent
                         Id: 265bc701-66fc-39ec-8282-4d594749f8c4
-                        Position: {X: 2.0, Y: 0.0, Z: 0.0}
+                        Position: {X: 3.0, Y: 0.0, Z: -1.0}
                         Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
                     33082490fe018e98bc32ec3bf4115578: !SagaCharacterComponent
                         Id: 23d313ab-7f04-b811-735c-beebc036cb63
                         CharacterId: guard_captain
+                    0290552fb15a4a698a2db13589c119d8: !ModelComponent
+                        Id: 75413ad5-7262-d145-b040-5c31f6351987
+                        Model: 844423b8-2dd2-eb28-6b74-834cbb7d5a0e:Demo/Models/Captain
+                        Materials: {}
         -   Entity:
                 Id: df4ad9d5-c22e-cabc-a116-e2b8dd0c140c
                 Name: Guard
                 Components:
-                    a7dd476ff5a2120989ae9fe83209b134: !TransformComponent
+                    ae715593e528b1b86bcf6644938ea23b: !TransformComponent
                         Id: 54565b01-6c11-74ac-750c-4ecac097dc43
-                        Position: {X: 3.0, Y: 0.0, Z: 0.0}
+                        Position: {X: 5.2, Y: 0.0, Z: -0.2}
                         Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
                     ce425d97cf3f6e277dba33e8916a86cb: !SagaCharacterComponent
                         Id: 8d990f1a-79c7-9a98-757e-bcc7795d26e0
                         CharacterId: guard
+                    23d717657f1211df09f6fbc966306ec5: !ModelComponent
+                        Id: 3a914a9a-32be-6d8e-e788-49098a29d13d
+                        Model: 72feff14-e6fd-f187-0add-5a9c5c7a542a:Demo/Models/Guard
+                        Materials: {}
+        -   Entity:
+                Id: fef12b49-d701-024d-dd1c-e5c475b0ce13
+                Name: Mine
+                Components:
+                    15eb8cfd539abbe3b751b92ac6119a1a: !TransformComponent
+                        Id: e9bb1b5b-eff9-24cf-21e3-4b76229a8f04
+                        Position: {X: 0.0, Y: 0.0, Z: -8.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    bdc55972aeaf60a527898e201ec7269c: !ModelComponent
+                        Id: 55c49055-b13f-fcf0-3e8e-c77e839da0dd
+                        Model: 6ebb7a6e-a878-1e45-a838-ea05822681b7:Demo/Models/Mine
+                        Materials: {}
+        -   Entity:
+                Id: 3be3d487-4ba3-9564-6183-b217d1729116
+                Name: Rubble
+                Components:
+                    dda0309ef5dd7383c8b11d41520d2077: !TransformComponent
+                        Id: a22cb617-006c-7967-4ae5-4f7636b0518e
+                        Position: {X: 0.0, Y: 0.0, Z: -7.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.8, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    18b5def956974ebee20e2dbf2cddcd7c: !ModelComponent
+                        Id: 5528a5c2-7ec3-30ad-0479-ba79897205b7
+                        Model: b7c712fb-9277-74fb-dd49-8921ab11ba52:Demo/Models/Rubble
+                        Materials: {}
+                    0194722187a4c06ae0982ed348aed747: !StoryUsable
+                        Id: 27b90bea-ae9a-8ef6-4d2b-5f5ceda26cd0
+                        Label: Clear the rubble
+                        RaiseEvent: rubble_cleared
+                        QuestId: rescue
+                        AtStage: 0
+                        HideBefore: false
+                        HideAfter: true
+        -   Entity:
+                Id: 22cd5e80-32b0-96ef-76fd-39078e33603f
+                Name: Digger 1
+                Components:
+                    4e59e569e17814e6e4c777337808db26: !TransformComponent
+                        Id: 7b61b000-c6d5-9aca-2903-a9a8164abd7b
+                        Position: {X: -0.8, Y: 0.0, Z: -6.359999999999999}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    9fcbad2a1337799f4ee98296384b7d4d: !ModelComponent
+                        Id: d6613052-db51-cb5e-1b81-c75b637b9c3c
+                        Model: 7493f7ff-5d07-328c-ca38-ccfdd8ebb59b:Demo/Models/Digger
+                        Materials: {}
+                    44f66a5a98d701d7293bb2e861eabae3: !StoryUsable
+                        Id: b25373ad-cbe4-217d-2295-3bfca0b77511
+                        Label: Bring the diggers out
+                        RaiseEvent: rescue_done
+                        QuestId: rescue
+                        AtStage: 1
+                        HideBefore: true
+                        HideAfter: false
+        -   Entity:
+                Id: aa363882-727a-b575-9790-da78e3fe4ee0
+                Name: Digger 2
+                Components:
+                    7b947ddd2797fb5e3b4e6634b735fc11: !TransformComponent
+                        Id: 71bffd21-ae70-2ef2-ceca-4bd9d52b2759
+                        Position: {X: 0.0, Y: 0.0, Z: -6.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    9e2f455db8f0ddfca5064952e33bd72f: !ModelComponent
+                        Id: f6ccd4be-a2d0-4caa-4c12-da4a29b678b2
+                        Model: 7493f7ff-5d07-328c-ca38-ccfdd8ebb59b:Demo/Models/Digger
+                        Materials: {}
+                    fd05f22683059347d0f6f0de71a43552: !StoryUsable
+                        Id: 9fc8c3dc-9d90-b4c1-fab8-e09628d65875
+                        Label: Bring the diggers out
+                        RaiseEvent: rescue_done
+                        QuestId: rescue
+                        AtStage: 1
+                        HideBefore: true
+                        HideAfter: false
+        -   Entity:
+                Id: 5b5131db-d99a-e99c-a285-715cd5192d92
+                Name: Digger 3
+                Components:
+                    d6ae6d023a1d2027cd66746f06fde1fe: !TransformComponent
+                        Id: 6901cc6d-f284-9e77-bda8-9e800cd484b3
+                        Position: {X: 0.8, Y: 0.0, Z: -6.359999999999999}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ee0d49eec1f4240ae1bc6d277b545825: !ModelComponent
+                        Id: 6cd24617-98ce-dbed-c236-62d450efddec
+                        Model: 7493f7ff-5d07-328c-ca38-ccfdd8ebb59b:Demo/Models/Digger
+                        Materials: {}
+                    5694d19ac20e2f6794288ce2a38a4649: !StoryUsable
+                        Id: 2ecebbf8-7777-2357-c440-382693feb55a
+                        Label: Bring the diggers out
+                        RaiseEvent: rescue_done
+                        QuestId: rescue
+                        AtStage: 1
+                        HideBefore: true
+                        HideAfter: false

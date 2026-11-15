@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: 844423b8-2dd2-eb28-6b74-834cbb7d5a0e
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !ConeProceduralModel
+    Height: 1.9
+    Radius: 0.5
+    Tessellation: 24
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.95, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 456af62b-d8c0-cbda-e782-d3a3563f54aa:Demo/Materials/Captain

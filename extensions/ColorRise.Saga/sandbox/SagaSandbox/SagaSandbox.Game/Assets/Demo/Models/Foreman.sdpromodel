@@ -1,0 +1,13 @@
+!ProceduralModelAsset
+Id: 2bb91b1a-a2c3-5d9e-f194-8fdb4c314451
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CylinderProceduralModel
+    Height: 1.7
+    Radius: 0.45
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.85, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 1aa49d72-d28c-c750-21a7-2375c57d3a3f:Demo/Materials/Foreman

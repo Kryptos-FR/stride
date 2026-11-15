@@ -51,6 +51,29 @@ The game projects alone are not enough: the game references the runtime project,
 
 The WPF Game Studio gets no Saga editors: by design it opens the sandbox and shows Saga's assets in its property grid (not checked yet).
 
+### Play the sandbox
+
+The sandbox's scene is a small playable demo of the story: the player (the blue capsule) walks among the characters, talks to them and uses things, and the screen shows the story's state, a log of what happened and the dialogues.
+
+```sh
+dotnet build extensions/ColorRise.Saga/sandbox/SagaSandbox/SagaSandbox.Linux/SagaSandbox.Linux.csproj
+dotnet extensions/ColorRise.Saga/sandbox/SagaSandbox/Bin/Linux/Debug/SagaSandbox.Linux.dll
+```
+
+(On Windows, build and start `SagaSandbox.Windows`, or press Play in Game Studio.)
+
+| Key | Does |
+|---|---|
+| WASD or the arrows | Move |
+| T | Talk to the character next to you, when the tag over it shows `(...)` or `(!)` (a quest to offer) |
+| Space | Go on to the next line |
+| 1 to 9 | Pick a choice (greyed choices can't be picked) |
+| E | Use what is next to you: the rubble, then the diggers, once the foreman's quest is taken |
+| N | Let a day pass: after day 3 the cave-in is over, and lost if nobody dug the diggers out |
+| Esc | Quit |
+
+The cave-in starts three seconds in, as gameplay would raise it. Everything on screen is game code in `SagaSandbox.Game` (`DemoGame`, `DemoHud`, `PlayerController`, `StoryUsable`), the part Saga leaves to the game.
+
 ## 4. Pack
 
 ```sh

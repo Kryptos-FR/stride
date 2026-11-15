@@ -1,0 +1,13 @@
+!ProceduralModelAsset
+Id: b7c712fb-9277-74fb-dd49-8921ab11ba52
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !SphereProceduralModel
+    Radius: 0.8
+    Tessellation: 12
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.3, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 159aeaad-d71f-0dd9-0c46-2bfe648d3330:Demo/Materials/Rubble
