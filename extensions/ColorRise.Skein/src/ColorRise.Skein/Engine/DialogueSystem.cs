@@ -160,13 +160,9 @@ public sealed class DialogueSystem : GameSystemBase
             if (!scanned.Add(assembly) || !assembly.GetReferencedAssemblies().Any(r => r.Name == SkeinName))
                 continue;
 
-            try
+            foreach (var problem in actions.RegisterWhatFits(assembly))
             {
-                actions.RegisterAssembly(assembly);
-            }
-            catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
-            {
-                Log.Error($"The commands and the functions of '{assembly.GetName().Name}' are not all registered: {exception.Message}");
+                Log.Error($"A command or a function of '{assembly.GetName().Name}' is not registered: {problem}");
             }
         }
     }

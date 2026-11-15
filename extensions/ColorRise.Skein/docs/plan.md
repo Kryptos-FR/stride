@@ -256,14 +256,17 @@ As built (2026-11-15).
 ### Task 13: Functions of the game for the compiler
 
 **Files:**
-- Create: `src/ColorRise.Skein.Assets/Compilation/GameActionScanner.cs`
-- Test: `tests/ColorRise.Skein.Tests/Compilation/GameActionScannerTests.cs`
+- Create: `src/ColorRise.Skein.Assets/Compilation/GameActionScanner.cs` (with `GameActions`)
+- Change: `src/ColorRise.Skein/Actions/YarnActionRegistry.cs` (`RegisterWhatFits`), `src/ColorRise.Skein/Engine/DialogueSystem.cs`, `src/ColorRise.Skein.Assets/YarnProjectAssetCompiler.cs`
+- Test: `tests/ColorRise.Skein.Tests/Compilation/GameActionScannerTests.cs`, `GeneratedGame.cs` (an assembly made in the test, for methods the test assembly must not hold), one more test in `Assets/AssetCompilationTests.cs`
 
-**Interfaces:**
-- Produces: `static IReadOnlyList<YarnActionDescription> GameActionScanner.Scan(IEnumerable<Assembly> assemblies)` over `[YarnCommand]` and `[YarnFunction]`, used by the asset compiler (the game's assemblies as the build registers them), by Game Studio's analysis (the session's game assemblies, again after a reload) and by the definitions file.
+**Interfaces (as built):**
+- Produces: `static GameActions GameActionScanner.Scan(IEnumerable<Assembly> assemblies)` over `[YarnCommand]` and `[YarnFunction]`, with `record GameActions(IReadOnlyList<YarnActionDescription> Actions, IReadOnlyList<string> Problems) { IReadOnlyList<YarnFunctionDeclaration> Functions; static GameActions None }`. An assembly that does not reference `ColorRise.Skein` is skipped; no method runs. Used by the asset compiler (`AssemblyRegistry.FindAll()`: the assemblies the build loaded to read the game's assets), by Game Studio's analysis (Task 15: the session's game assemblies, again after a reload) and by the definitions file (Task 12's writer).
+- Produces: `IReadOnlyList<string> YarnActionRegistry.RegisterWhatFits(Assembly assembly)`: as `RegisterAssembly`, but a method that cannot be a command or a function is a message in the result and the others are added. The running game uses it too: `DialogueSystem` logs one error per such method and keeps the rest.
+- Changes: `YarnProjectAssetCompiler` gives the game's functions to the Yarn compiler (they are part of the command's hash) and says each problem as a warning of the build, once per package: `The function 'where' (Places.Where) returns a Guid: a function returns a boolean, a number or a string. Scripts cannot use it.`
 
-- [ ] **Step 1:** Tests: an assembly with one command and one function gives both with parameter names and types; an unsupported function return type (`Vector3`) is reported as a diagnostic naming the method, not thrown.
-- [ ] **Step 2:** Implement, with the mapping of a function's `YarnActionDescription` to the bridge's `YarnFunctionDeclaration`, and wire it into Task 11's compiler. Commit `feat(skein): the game's commands and functions for the compiler`, push.
+- [x] **Step 1:** Tests (3): an assembly with commands and functions gives them with parameter names and types and the declarations of its functions; a function that returns a `Guid` and a command that returns a number are problems naming the methods, not thrown, and the function beside them is found; an assembly that does not reference Skein is not read.
+- [x] **Step 2:** Build test (1): with a game function `stock_of(string)`, a script that calls `stock_of(3)` fails the build at its line, and builds once the call is right. Checked in a real build of `sample/Brinemoor` with a function in the game's code: `Hello.yarn(14,15): error YS0050: [Lighthouse] 3 (Number) is not convertible to String`. Whole suite: 287 pass. Commit `feat(skein): the game's commands and functions for the compiler`, push.
 
 ### Task 14: The text patcher
 

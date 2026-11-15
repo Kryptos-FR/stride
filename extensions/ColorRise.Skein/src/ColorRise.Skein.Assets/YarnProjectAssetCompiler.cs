@@ -3,6 +3,7 @@ using ColorRise.Skein.Assets.Localisation;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Compiler;
 using Stride.Core.BuildEngine;
+using Stride.Core.Reflection;
 using Stride.Core.Serialization;
 using Stride.Core.Serialization.Contents;
 
@@ -10,8 +11,9 @@ namespace ColorRise.Skein.Assets;
 
 /// <summary>
 /// Compiles a Yarn project asset: one <see cref="YarnProject"/> at the URL of the asset, and the lines of each language
-/// at <see cref="YarnProject.StringTableUrl"/>. The text of every script the project includes, and of the strings file
-/// of each language, is part of what it compiles: a change to one of them compiles the project again.
+/// at <see cref="YarnProject.StringTableUrl"/>. The text of every script the project includes, the strings file of each
+/// language and the functions of the game's code are part of what it compiles: a change to one of them compiles the
+/// project again.
 /// </summary>
 [AssetCompiler(typeof(YarnProjectAsset), typeof(AssetCompilationContext))]
 public sealed class YarnProjectAssetCompiler : AssetCompilerBase
@@ -22,12 +24,20 @@ public sealed class YarnProjectAssetCompiler : AssetCompilerBase
         var project = (YarnProjectAsset)assetItem.Asset;
         var scripts = YarnProjectFiles.ScriptsOf(assetItem);
 
+        // The assemblies of the game are the ones the build loaded to read its assets
+        var actions = GameActionScanner.Scan(AssemblyRegistry.FindAll());
+
         // Said once for a package, by the first of its projects
         if (assetItem.Package is { } package && package.Assets.Where(a => a.Asset is YarnProjectAsset).MinBy(a => a.Location.FullPath, StringComparer.Ordinal) == assetItem)
         {
             foreach (var script in YarnProjectFiles.ScriptsInNoProject(package))
             {
                 result.Warning($"{YarnProjectFiles.FileNameOf(script)} is in no Yarn project: the game does not have its nodes. Add it to the source files of a Yarn project.");
+            }
+
+            foreach (var problem in actions.Problems)
+            {
+                result.Warning($"{problem} Scripts cannot use it.");
             }
         }
 
@@ -49,7 +59,7 @@ public sealed class YarnProjectAssetCompiler : AssetCompilerBase
         }
 
         result.BuildSteps = new AssetBuildStep(assetItem);
-        result.BuildSteps.Add(new YarnProjectCommand(targetUrlInStorage, project, assetItem.Location.FullPath, files, paths, [.. strings], [], assetItem.Package!));
+        result.BuildSteps.Add(new YarnProjectCommand(targetUrlInStorage, project, assetItem.Location.FullPath, files, paths, [.. strings], [.. actions.Functions], assetItem.Package!));
     }
 
     // The build engine serializes a command to run it in another process, which this one never asks for

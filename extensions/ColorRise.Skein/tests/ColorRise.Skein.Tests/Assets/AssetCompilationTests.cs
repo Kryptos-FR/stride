@@ -1,5 +1,6 @@
 using ColorRise.Skein.Assets;
 using ColorRise.Skein.Assets.Localisation;
+using ColorRise.Skein.Tests.Compilation;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Compiler;
 using Stride.Core.BuildEngine;
@@ -209,6 +210,37 @@ public sealed class AssetCompilationTests : IDisposable
 
         Assert.Equal(ResultStatus.Failed, status);
         Assert.Contains(log, m => m.StartsWith($"Error: {file}: The strings file has no 'id' column", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void The_functions_of_the_games_code_check_the_calls_of_the_scripts()
+    {
+        using var game = new GeneratedGame(
+            "CompiledGame",
+            ("StockOf", typeof(int), typeof(YarnFunctionAttribute), "stock_of", [("item", typeof(string))]),
+            ("Where", typeof(Guid), typeof(YarnFunctionAttribute), "where", []));
+        AssemblyRegistry.Register(game.Assembly, AssemblyCommonCategories.Assets);
+        try
+        {
+            Script("Dialogue/Chatter/Pier").Text = "title: Pier\n---\n<<if stock_of(3) > 1>>\n    Fisher: Mind the nets. #line:nets\n<<endif>>\n===\n";
+            var (prepared, wrong, log, builder1) = Build();
+            builder1.Dispose();
+
+            Assert.Equal(ResultStatus.Failed, wrong);
+            Assert.Contains(log, m => m.StartsWith("Error: ", StringComparison.Ordinal) && m.Contains("Pier.yarn(3,", StringComparison.Ordinal));
+            Assert.Contains(prepared.Messages, m => m.Type == LogMessageType.Warning
+                && m.Text == "The function 'where' (Places.Where) returns a Guid: a function returns a boolean, a number or a string. Scripts cannot use it.");
+
+            Script("Dialogue/Chatter/Pier").Text = Script("Dialogue/Chatter/Pier").Text!.Replace("stock_of(3)", "stock_of(\"oil\")");
+            var (_, right, _, builder2) = Build();
+            builder2.Dispose();
+
+            Assert.Equal(ResultStatus.Successful, right);
+        }
+        finally
+        {
+            AssemblyRegistry.Unregister(game.Assembly);
+        }
     }
 
     [Fact]

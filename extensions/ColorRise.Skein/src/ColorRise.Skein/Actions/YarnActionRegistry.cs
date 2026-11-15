@@ -71,22 +71,42 @@ public sealed class YarnActionRegistry
     {
         ArgumentNullException.ThrowIfNull(assembly);
 
-        Type?[] types;
-        try
+        foreach (var type in TypesOf(assembly))
         {
-            types = assembly.GetTypes();
+            RegisterType(type);
         }
-        catch (ReflectionTypeLoadException exception)
+    }
+
+    /// <summary>
+    /// Adds the methods of an assembly as <see cref="RegisterAssembly"/> does, but goes on after a method that cannot be
+    /// a command or a function: the others are added.
+    /// </summary>
+    /// <returns>What is wrong with each method that was not added; the message names it.</returns>
+    [RequiresUnreferencedCode("Commands and functions are found by reflection: a trimmed game must keep the methods that carry the attributes.")]
+    public IReadOnlyList<string> RegisterWhatFits(Assembly assembly)
+    {
+        ArgumentNullException.ThrowIfNull(assembly);
+
+        var problems = new List<string>();
+        foreach (var type in TypesOf(assembly))
         {
-            // What the assembly could load still gives its commands
-            types = exception.Types;
+            if (type.IsGenericTypeDefinition)
+                continue;
+
+            foreach (var method in type.GetMethods(Declared))
+            {
+                try
+                {
+                    RegisterMethod(type, method);
+                }
+                catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+                {
+                    problems.Add(exception.Message);
+                }
+            }
         }
 
-        foreach (var type in types)
-        {
-            if (type is not null)
-                RegisterType(type);
-        }
+        return problems;
     }
 
     /// <summary>
@@ -103,31 +123,45 @@ public sealed class YarnActionRegistry
 
         foreach (var method in type.GetMethods(Declared))
         {
-            if (method.GetCustomAttribute<YarnCommandAttribute>() is { } command)
-            {
-                if (commands.TryGetValue(command.Name, out var existing) && existing.Method == method)
-                    continue;
+            RegisterMethod(type, method);
+        }
+    }
 
-                AddCommand(new Command(CheckName(command.Name, "command"), method, Target: null, method.IsStatic ? null : type, command.Description));
-            }
+    private static IEnumerable<Type> TypesOf(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException exception)
+        {
+            // What the assembly could load still gives its commands
+            return exception.Types.OfType<Type>();
+        }
+    }
 
-            if (method.GetCustomAttribute<YarnFunctionAttribute>() is { } function)
-            {
-                if (functions.TryGetValue(function.Name, out var existing) && existing.Delegate.Method == method)
-                    continue;
+    private void RegisterMethod(Type type, MethodInfo method)
+    {
+        if (method.GetCustomAttribute<YarnCommandAttribute>() is { } command
+            && !(commands.TryGetValue(command.Name, out var sameCommand) && sameCommand.Method == method))
+        {
+            AddCommand(new Command(CheckName(command.Name, "command"), method, Target: null, method.IsStatic ? null : type, command.Description));
+        }
 
-                var name = CheckName(function.Name, "function");
-                if (!method.IsStatic)
-                    throw new ArgumentException($"The function '{name}' ({Name(method)}) must be a static method: a function has no object to run on.");
-                if (method.IsGenericMethodDefinition)
-                    throw new ArgumentException($"The function '{name}' ({Name(method)}) cannot be a generic method.");
+        if (method.GetCustomAttribute<YarnFunctionAttribute>() is { } function
+            && !(functions.TryGetValue(function.Name, out var sameFunction) && sameFunction.Delegate.Method == method))
+        {
+            var name = CheckName(function.Name, "function");
+            if (!method.IsStatic)
+                throw new ArgumentException($"The function '{name}' ({Name(method)}) must be a static method: a function has no object to run on.");
+            if (method.IsGenericMethodDefinition)
+                throw new ArgumentException($"The function '{name}' ({Name(method)}) cannot be a generic method.");
 
-                var signature = method.GetParameters().Select(p => p.ParameterType).Append(method.ReturnType).ToArray();
-                if (method.ReturnType == typeof(void) || signature.Any(t => t.IsByRef || t.IsPointer))
-                    throw new ArgumentException($"The function '{name}' ({Name(method)}) must return a boolean, a number or a string, and take its parameters by value.");
+            var signature = method.GetParameters().Select(p => p.ParameterType).Append(method.ReturnType).ToArray();
+            if (method.ReturnType == typeof(void) || signature.Any(t => t.IsByRef || t.IsPointer))
+                throw new ArgumentException($"The function '{name}' ({Name(method)}) must return a boolean, a number or a string, and take its parameters by value.");
 
-                AddFunction(new Function(name, method.CreateDelegate(Expression.GetFuncType(signature)), function.Description));
-            }
+            AddFunction(new Function(name, method.CreateDelegate(Expression.GetFuncType(signature)), function.Description));
         }
     }
 
