@@ -219,6 +219,7 @@ public sealed class YarnAnalysisService
             {
                 Project = unit.Owner as YarnProjectViewModel,
                 Scripts = input.Scripts,
+                Texts = input.Files,
                 Build = build,
                 Nodes = unit.GoodNodes ?? build.Compilation.Nodes,
                 Actions = gameActions,

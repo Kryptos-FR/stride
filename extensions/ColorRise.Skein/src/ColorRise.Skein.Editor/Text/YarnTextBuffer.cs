@@ -1,3 +1,4 @@
+using ColorRise.Skein.Assets.Text;
 using ColorRise.Skein.Editor.ViewModels;
 using Stride.Core.Presentation.Dirtiables;
 using Stride.Core.Presentation.Services;
@@ -84,9 +85,45 @@ public sealed class YarnTextBuffer : IDisposable
             return;
         }
 
-        var operation = Push(edit, actionName);
+        var operation = Push([edit], actionName);
         typing = actionName == TypingActionName ? operation : null;
         typingTimestamp = Time.GetTimestamp();
+    }
+
+    /// <summary>
+    /// Applies the edits of one operation of <see cref="YarnTextPatcher"/> as one step of the undo history named
+    /// <paramref name="actionName"/>. Inside a transaction of the caller, the step is a part of that transaction.
+    /// </summary>
+    /// <param name="edits">Places of the text as it is now, in order, that do not overlap.</param>
+    public void Apply(IReadOnlyList<YarnTextEdit> edits, string actionName)
+    {
+        ArgumentNullException.ThrowIfNull(edits);
+        ArgumentException.ThrowIfNullOrEmpty(actionName);
+
+        // From the last to the first, each edit is applied to a text whose start is still the one it was made on
+        var current = Text;
+        var steps = new List<TextEdit>(edits.Count);
+        var limit = current.Length;
+        for (var i = edits.Count - 1; i >= 0; i--)
+        {
+            var edit = edits[i];
+            ArgumentOutOfRangeException.ThrowIfNegative(edit.Offset, nameof(edits));
+            ArgumentOutOfRangeException.ThrowIfNegative(edit.Length, nameof(edits));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(edit.Offset + edit.Length, limit, nameof(edits));
+            limit = edit.Offset;
+
+            var step = new TextEdit(edit.Offset, current.Substring(edit.Offset, edit.Length), edit.Text);
+            if (step.Removed != step.Inserted)
+            {
+                steps.Add(step);
+            }
+        }
+
+        if (steps.Count == 0)
+            return;
+
+        Push(steps, actionName);
+        typing = null;
     }
 
     /// <summary>
@@ -108,7 +145,7 @@ public sealed class YarnTextBuffer : IDisposable
         while (end < current.Length - start && end < text.Length - start && current[^(end + 1)] == text[^(end + 1)])
             ++end;
 
-        Push(new TextEdit(start, current[start..^end], text[start..^end]), ReloadActionName);
+        Push([new TextEdit(start, current[start..^end], text[start..^end])], ReloadActionName);
         typing = null;
         undoRedo.NotifySave(script);
     }
@@ -122,10 +159,10 @@ public sealed class YarnTextBuffer : IDisposable
         undoRedo.Cleared -= OnHistoryCleared;
     }
 
-    private TextOperation Push(TextEdit edit, string actionName)
+    private TextOperation Push(IReadOnlyList<TextEdit> edits, string actionName)
     {
-        var operation = new TextOperation(this, script.Dirtiables, edit);
-        Apply([edit]);
+        var operation = new TextOperation(this, script.Dirtiables, edits);
+        Apply(edits);
         pushing = true;
         try
         {
@@ -187,9 +224,9 @@ public sealed class YarnTextBuffer : IDisposable
         public TextEdit Inverse => new(Offset, Inserted, Removed);
     }
 
-    private sealed class TextOperation(YarnTextBuffer buffer, IEnumerable<IDirtiable> dirtiables, TextEdit first) : DirtyingOperation(dirtiables)
+    private sealed class TextOperation(YarnTextBuffer buffer, IEnumerable<IDirtiable> dirtiables, IReadOnlyList<TextEdit> first) : DirtyingOperation(dirtiables)
     {
-        private readonly List<TextEdit> edits = [first];
+        private readonly List<TextEdit> edits = [.. first];
 
         public bool IsDiscarded { get; private set; }
 

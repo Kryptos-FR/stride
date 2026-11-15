@@ -37,6 +37,13 @@ public sealed class YarnScriptAsset : SourceCodeAsset
     }
 
     /// <summary>
+    /// The text the last save wrote; null for a script that was not saved since it was loaded.
+    /// </summary>
+    [DataMemberIgnore]
+    [Display(Browsable = false)]
+    public string? SavedText { get; private set; }
+
+    /// <summary>
     /// Writes the text as UTF-8, with a byte order mark only when the file had one.
     /// </summary>
     public override void Save(Stream stream)
@@ -44,7 +51,9 @@ public sealed class YarnScriptAsset : SourceCodeAsset
         // Read before anything is written: the file being saved may be the one the answer comes from
         var encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: HasByteOrderMark);
         using var writer = new StreamWriter(stream, encoding, bufferSize: 1024, leaveOpen: true);
-        writer.Write(Text);
+        var text = Text;
+        writer.Write(text);
+        SavedText = text;
     }
 
     private bool FileStartsWithByteOrderMark()

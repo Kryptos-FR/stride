@@ -19,6 +19,11 @@ public sealed record YarnProjectAnalysis
     public required IReadOnlyList<(string FileName, YarnScriptViewModel Script)> Scripts { get; init; }
 
     /// <summary>
+    /// The text of each script as it was compiled.
+    /// </summary>
+    public required IReadOnlyList<(string FileName, string Text)> Texts { get; init; }
+
+    /// <summary>
     /// What the build of the game would make of the scripts.
     /// </summary>
     public required YarnProjectBuild Build { get; init; }
@@ -57,6 +62,21 @@ public sealed record YarnProjectAnalysis
         {
             if (name == fileName)
                 return script;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The text of a script as it was compiled, or null for a script that was not compiled.
+    /// </summary>
+    public string? TextOf(YarnScriptViewModel script)
+    {
+        var fileName = FileNameOf(script);
+        foreach (var (name, text) in Texts)
+        {
+            if (name == fileName)
+                return text;
         }
 
         return null;

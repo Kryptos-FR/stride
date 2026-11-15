@@ -25,5 +25,9 @@ public sealed class SkeinEditorPlugin : StrideAssetsPlugin
         var analysis = new YarnAnalysisService(context.Session);
         context.Services.Register(analysis);
         context.OnClose(analysis.Close);
+
+        var externalChanges = new YarnExternalChangeService(context.Session);
+        context.Services.Register(externalChanges);
+        context.OnClose(externalChanges.Close);
     }
 }

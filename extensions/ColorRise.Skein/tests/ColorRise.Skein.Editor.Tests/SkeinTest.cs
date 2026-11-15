@@ -31,6 +31,8 @@ internal sealed class SkeinSession : IAsyncDisposable
 
     public YarnAnalysisService Analysis => YarnAnalysisService.Of(kit.Session);
 
+    public YarnExternalChangeService ExternalChanges => YarnExternalChangeService.Of(kit.Session);
+
     public IUndoRedoService UndoRedo => kit.Session.ServiceProvider.Get<IUndoRedoService>();
 
     /// <summary>
@@ -62,6 +64,17 @@ internal sealed class SkeinSession : IAsyncDisposable
     public YarnProjectViewModel ProjectAt(string location) => kit.Asset<YarnProjectViewModel>(location);
 
     /// <summary>
+    /// Opens the editor of a script, as a double click in the asset view does.
+    /// </summary>
+    public YarnScriptEditorViewModel Edit(string location)
+    {
+        var script = ScriptAt(location);
+        kit.Session.EditorCollection.OpenAssetEditor(script);
+        Assert.True(kit.Session.EditorCollection.TryGetAssetEditor<YarnScriptEditorViewModel>(script, out var editor));
+        return editor;
+    }
+
+    /// <summary>
     /// The path of the file of an asset of the package.
     /// </summary>
     public string FileOf(string location, string extension) => Path.Combine(kit.Directory, kit.PackageName, "Assets", location.Replace('/', Path.DirectorySeparatorChar) + extension);
@@ -71,6 +84,7 @@ internal sealed class SkeinSession : IAsyncDisposable
         // The editor disposes its plugin host with the session, which runs what the plugins registered for the close;
         // the session of the test kit leaves its host as it is
         kit.OnUiThread(Analysis.Close);
+        kit.OnUiThread(ExternalChanges.Close);
         await kit.DisposeAsync();
     }
 }
