@@ -22,9 +22,6 @@ public enum SagaGraphNodeKind
 }
 
 /// <summary>
-/// A node of a Saga graph: a card of the story (act, scenario, quest), a dialogue of a scenario or quest, or a node of a dialogue.
-/// </summary>
-/// <summary>
 /// Where the story played in the session is, on a node of a Saga graph.
 /// </summary>
 public enum SagaPlayMark
@@ -59,6 +56,9 @@ public enum SagaPlayMark
     Failed,
 }
 
+/// <summary>
+/// A node of a Saga graph: a card of the story (act, scenario, quest), a dialogue of a scenario or quest, or a node of a dialogue.
+/// </summary>
 public sealed class SagaGraphNodeViewModel : SagaGraphItemViewModel
 {
     private readonly List<SagaGraphSlot> outputs = [];
@@ -133,9 +133,6 @@ public sealed class SagaGraphNodeViewModel : SagaGraphItemViewModel
     public bool IsEntry { get => isEntry; internal set => SetValue(ref isEntry, value); }
 
     /// <summary>
-    /// The dialogue a node of a scenario or quest stands for.
-    /// </summary>
-    /// <summary>
     /// Where the story played in the session is on this node, at the cursor of its run.
     /// </summary>
     public SagaPlayMark PlayMark { get => playMark; internal set => SetValue(ref playMark, value); }
@@ -145,6 +142,9 @@ public sealed class SagaGraphNodeViewModel : SagaGraphItemViewModel
     /// </summary>
     public string PlayNote { get => playNote; internal set => SetValue(ref playNote, value); }
 
+    /// <summary>
+    /// The dialogue a node of a scenario or quest stands for.
+    /// </summary>
     public DialogueViewModel? Dialogue { get; internal init; }
 
     internal string? DialogueName { get; init; }

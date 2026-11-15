@@ -28,7 +28,7 @@ public sealed class StoryAssetCompiler : AssetCompilerBase
     {
         var story = (StoryAsset)assetItem.Asset;
         // The checks across the story and its dialogues read the dialogues it references (each once); one that can't be found is
-        // reported when the story's content is loaded, as before
+        // reported when the story's content is loaded
         var dialogues = new List<(DialogueAsset Asset, string Url)>();
         foreach (var reference in story.Acts.SelectMany(x => x.Scenarios.SelectMany(s => s.Dialogues).Concat(x.Quests.SelectMany(q => q.Dialogues))))
         {
