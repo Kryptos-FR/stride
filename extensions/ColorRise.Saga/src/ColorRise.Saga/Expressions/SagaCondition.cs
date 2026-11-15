@@ -15,6 +15,12 @@ public sealed class SagaCondition : ISagaCondition
     /// </summary>
     public SagaExpression? Tree { get; set; }
 
+    /// <summary>
+    /// Whether the condition is empty. Where an empty condition means "never" rather than "always", the runtime checks it.
+    /// </summary>
+    [DataMemberIgnore]
+    public bool IsEmpty => Tree is null;
+
     public bool Evaluate(ISagaEvaluationContext context) => Tree is null || SagaTreeEvaluator.Evaluate(Tree, context).AsBool();
 
     public override string ToString() => Source;
