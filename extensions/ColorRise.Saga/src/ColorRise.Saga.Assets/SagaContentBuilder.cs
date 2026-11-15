@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using ColorRise.Saga.Content;
 using ColorRise.Saga.Expressions;
+using Stride.Core.Serialization;
 
 namespace ColorRise.Saga.Assets;
 
@@ -40,11 +41,14 @@ public static partial class SagaContentBuilder
                 EndWhen = builder.Condition(act.EndWhen, $"{actCard} / EndWhen"),
                 Attributes = builder.Attributes(act.Attributes, SagaCardKinds.Act, actCard),
             };
+            var linked = new HashSet<string>();
             foreach (var link in act.Next)
             {
                 var linkCard = $"{actCard} / link to {link.TargetActId}";
                 if (!story.Acts.Any(x => x.Id == link.TargetActId))
                     builder.Report(linkCard, $"The story has no act '{link.TargetActId}'.");
+                else if (!linked.Add(link.TargetActId))
+                    builder.Report(linkCard, $"The act already links to '{link.TargetActId}': give one link the conditions of both.");
                 definition.Next.Add(new ActLink { TargetActId = link.TargetActId, When = builder.Condition(link.When, $"{linkCard} / When") });
             }
             foreach (var scenario in act.Scenarios)
@@ -108,12 +112,63 @@ public static partial class SagaContentBuilder
             plot.Acts.Add(definition);
         }
 
+        CheckPlotLoops(story, builder);
+        CheckDialogueNames(story, builder);
+
         if (story.Acts.Count == 0)
             builder.Report("Acts", "The story has no act.");
         else if (!actIds.Contains(story.FirstActId))
             builder.Report("FirstActId", story.FirstActId.Length == 0 ? "The story has no first act." : $"The story has no act '{story.FirstActId}'.");
 
         return new StoryDefinition { Name = NameOf(assetUrl), Declarations = story.Declarations, Plot = plot };
+    }
+
+    // The plot has no loops (design): each link back to an act on the path is reported where it closes the loop
+    private static void CheckPlotLoops(StoryAsset story, Builder builder)
+    {
+        var acts = story.Acts.GroupBy(x => x.Id).ToDictionary(x => x.Key, x => x.First());
+        var done = new HashSet<string>();
+        var path = new List<string>();
+        void Visit(ActCard act)
+        {
+            path.Add(act.Id);
+            foreach (var target in act.Next.Select(x => x.TargetActId).Distinct())
+            {
+                if (path.IndexOf(target) is var start and >= 0)
+                    builder.Report($"act {act.Id} / link to {target}", $"This link closes a loop in the plot ({string.Join(" → ", path.Skip(start).Append(target))}): acts follow each other without coming back.");
+                else if (!done.Contains(target) && acts.TryGetValue(target, out var next))
+                    Visit(next);
+            }
+            path.RemoveAt(path.Count - 1);
+            done.Add(act.Id);
+        }
+        foreach (var act in acts.Values)
+        {
+            if (!done.Contains(act.Id))
+                Visit(act);
+        }
+    }
+
+    // A dialogue's name keys its visits and its once: two dialogues of a story must not share one
+    private static void CheckDialogueNames(StoryAsset story, Builder builder)
+    {
+        var urls = new Dictionary<string, string>();
+        foreach (var act in story.Acts)
+        {
+            var owners = act.Scenarios.Select(x => ($"act {act.Id} / scenario {x.Id}", x.Dialogues))
+                .Concat(act.Quests.Select(x => ($"act {act.Id} / quest {x.Id}", x.Dialogues)));
+            foreach (var (card, dialogues) in owners)
+            {
+                foreach (var dialogue in dialogues)
+                {
+                    if (AttachedReferenceManager.GetAttachedReference(dialogue)?.Url is not { } url)
+                        continue;
+                    var name = NameOf(url);
+                    if (!urls.TryAdd(name, url) && urls[name] != url)
+                        builder.Report($"{card} / Dialogues", $"The dialogues '{urls[name]}' and '{url}' have the same name '{name}', which keys their visits and once: rename one.");
+                }
+            }
+        }
     }
 
     /// <summary>

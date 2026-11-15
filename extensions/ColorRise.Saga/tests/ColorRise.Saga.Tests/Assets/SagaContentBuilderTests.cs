@@ -1,6 +1,8 @@
 using ColorRise.Saga.Assets;
 using ColorRise.Saga.Content;
 using ColorRise.Saga.Expressions;
+using Stride.Core.Assets;
+using Stride.Core.Serialization;
 using Xunit;
 
 namespace ColorRise.Saga.Tests.Assets;
@@ -135,6 +137,68 @@ public sealed class SagaContentBuilderTests
 
         Assert.Empty(diagnostics);
         Assert.Equal("act_1", Assert.Single(story.Plot.Acts).Id);
+    }
+
+    [Fact]
+    public void PlotLoopIsReportedOnTheLinkThatClosesIt()
+    {
+        var asset = Story();
+        asset.Acts.Add(new ActCard { Id = "act_3", Next = { new ActLinkCard { TargetActId = "act_1" } } });
+        asset.Acts[1].Next.Add(new ActLinkCard { TargetActId = "act_3" });
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        SagaContentBuilder.BuildStory(asset, "Story/Main", diagnostics);
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("act act_3 / link to act_1", diagnostic.Card);
+        Assert.Contains("act_1 → act_2 → act_3 → act_1", diagnostic.Message);
+    }
+
+    [Fact]
+    public void ActLinkingBackToItselfIsALoop()
+    {
+        var asset = Story();
+        asset.Acts[1].Next.Add(new ActLinkCard { TargetActId = "act_2" });
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        SagaContentBuilder.BuildStory(asset, "Story/Main", diagnostics);
+
+        Assert.Equal("act act_2 / link to act_2", Assert.Single(diagnostics).Card);
+    }
+
+    [Fact]
+    public void SecondLinkToTheSameActIsReported()
+    {
+        var asset = Story();
+        asset.Acts[0].Next.Add(new ActLinkCard { TargetActId = "act_2", When = "day > 5" });
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        SagaContentBuilder.BuildStory(asset, "Story/Main", diagnostics);
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("act act_1 / link to act_2", diagnostic.Card);
+        Assert.Contains("already", diagnostic.Message);
+    }
+
+    [Fact]
+    public void DialoguesSharingANameAreReported()
+    {
+        // The name keys the visits and the once of a dialogue
+        var asset = Story();
+        var quest = asset.Acts[0].Quests[0];
+        var scenario = asset.Acts[1].Scenarios[0];
+        quest.Dialogues.Add(AttachedReferenceManager.CreateProxyObject<DialogueDefinition>(AssetId.New(), "Act1/Intro"));
+        scenario.Dialogues.Add(AttachedReferenceManager.CreateProxyObject<DialogueDefinition>(AssetId.New(), "Act2/Intro"));
+        // The same dialogue twice is not a clash
+        scenario.Dialogues.Add(quest.Dialogues[0]);
+        var diagnostics = new List<SagaBuildDiagnostic>();
+
+        SagaContentBuilder.BuildStory(asset, "Story/Main", diagnostics);
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("act act_2 / scenario overlord / Dialogues", diagnostic.Card);
+        Assert.Contains("'Act1/Intro'", diagnostic.Message);
+        Assert.Contains("'Act2/Intro'", diagnostic.Message);
     }
 
     private static StoryAsset Story() => new()
