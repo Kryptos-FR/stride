@@ -87,9 +87,9 @@ Settles whether Yarn's dependencies load beside Stride's (tests, asset compiler,
 **Interfaces:**
 - Produces: `public sealed class YarnNodeHeaders` (plain object: `Title`, `Tags`, `Color`, `Cluster`, `When` list, `Others` list of key and value) and `public sealed class YarnNodeHeadersViewModel : IPropertyProviderViewModel` giving the session's property grid a Quantum graph of a `YarnNodeHeaders`, with `event Action<YarnNodeHeaders>? Changed`.
 
-- [ ] **Step 1:** Test: selecting a `YarnNodeHeadersViewModel` in the session's active properties shows nodes `Title`, `Tags`, `Color`, `Cluster`, `When`, `Others`; setting `Title` through its node presenter raises `Changed` once with the new title, and is one step of `IUndoRedoService`.
-- [ ] **Step 2:** Game Studio check with a hard-coded object selected from the script editor stub.
-- [ ] **Step 3:** Decide R2: works → Task 17 builds on it; else fallback (a header form inside the script editor), which is not the design's "support through our property grid" for node headers, so a decision for Nicolas. Record findings. Commit, push.
+- [x] **Step 1:** Test: selecting a `YarnNodeHeadersViewModel` in the session's active properties shows nodes `Title`, `Tags`, `Color`, `Cluster`, `When`, `Others`; setting `Title` through its node presenter raises `Changed` once with the new title, and is one step of `IUndoRedoService`.
+- [x] **Step 2:** Game Studio check with a hard-coded object selected from the script editor stub.
+- [x] **Step 3:** Decide R2: works → Task 17 builds on it; else fallback (a header form inside the script editor), which is not the design's "support through our property grid" for node headers, so a decision for Nicolas. Record findings. Commit, push.
 
 ### Task 4: Spike R3 — typing as steps of the session's undo history
 
@@ -396,3 +396,8 @@ Filled in by Tasks 2 to 4: for each of R1 to R4, what was tried, the result, and
 - Facts later tasks rely on: the id comes from the location (`SourceCodeAsset.GenerateIdFromLocation(package, "/<namespace>/<location>")`), so a rename changes it and nothing may refer to a script by id (the Yarn project includes scripts by pattern); a text change is undoable and dirties the asset when it is pushed as an `AnonymousDirtyingOperation` on the script's `Dirtiables` in a transaction of `IUndoRedoService`.
 - Two problems met and kept inside Skein (findings 3 and 4 of `plugin-findings.md`): Stride's save added a byte order mark (now `YarnScriptAsset.Save` writes UTF-8 with a mark only when the file had one), and a new asset whose default name starts with the folder's name lands at the root (the template's default name is now `YarnScript`).
 
+### R2: the property grid on node headers (Task 3): holds, no fallback
+
+- Tried: a plain object `YarnNodeHeaders` (title, tags, colour, cluster, `when:` conditions, free headers) given to the session's property grid through `YarnNodeHeadersViewModel : IPropertyProviderViewModel`, whose root node comes from the session's node container (`session.AssetNodeContainer.GetOrCreateNode(headers)`); in a test session and in Game Studio.
+- Result: the grid shows the six headers with its standard editors (text boxes, lists with add and remove, a key and value pair per free header) under the name "Yarn node <title>". A change made in the grid reaches `Changed` once, inside the undo transaction the grid opens ("Update property Title"): what the handler pushes there is one step of the session's history, and a change that pushes nothing leaves no step. So the script editor rewrites the header in the text from that handler, and the text stays the truth.
+- For Task 17: the headers object is a view of the text; an undo, typing or an outside change makes a new object and shows it again. The grid's "Open this asset in editor" button stayed visible from the selection before: check it with the real editor.
