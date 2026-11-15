@@ -2,4 +2,11 @@
   <Project Path="SagaSandbox.Game/SagaSandbox.Game.csproj" />
   <Project Path="SagaSandbox.Linux/SagaSandbox.Linux.csproj" />
   <Project Path="SagaSandbox.Windows/SagaSandbox.Windows.csproj" />
+  <!-- Saga itself: Game Studio compiles the companion projects of the solution and reloads them when they change -->
+  <Folder Name="/Saga/">
+    <Project Path="../../src/ColorRise.Saga/ColorRise.Saga.csproj" />
+    <Project Path="../../src/ColorRise.Saga.Assets/ColorRise.Saga.Assets.csproj" />
+    <Project Path="../../src/ColorRise.Saga.Editor/ColorRise.Saga.Editor.csproj" />
+    <Project Path="../../src/ColorRise.Saga.Editor.Avalonia/ColorRise.Saga.Editor.Avalonia.csproj" />
+  </Folder>
 </Solution>

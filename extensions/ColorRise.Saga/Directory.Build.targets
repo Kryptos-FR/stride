@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Against a local engine build, the dev package stubs point at the engine's build output in the configuration the engine
+    was built in ($(StrideDevConfiguration)), but the asset compiler's targets look for the compiler in this project's
+    $(Configuration): a Release build or pack (dotnet pack's default) after a Debug engine build fails with "Stride
+    AssetCompiler could not be found". Take the compiler from the engine's configuration (docs/plugin-findings.md, finding 2).
+  -->
+  <PropertyGroup Condition="'$(StrideCompileAssetCommand)' == '' And '$(StrideDevRedirect)' == 'true' And '$(StrideDevConfiguration)' != '' And '$(StrideRoot)' != ''">
+    <StrideCompileAssetCommand>$(StrideRoot)sources/assets/Stride.AssetCompiler/bin/$(StrideDevConfiguration)/net10.0/Stride.AssetCompiler.dll</StrideCompileAssetCommand>
+  </PropertyGroup>
+</Project>
