@@ -121,6 +121,17 @@ public sealed class StoryPlayerViewModel : PanelViewModel
     /// </summary>
     public ICommandBase ContinueCommand { get; }
 
+    /// <summary>
+    /// Plays a story from its start: picks it, checks it, and starts it unless it has problems.
+    /// </summary>
+    public void Play(StoryViewModel story)
+    {
+        ArgumentNullException.ThrowIfNull(story);
+        RefreshStories();
+        SelectedStory = story;
+        Start();
+    }
+
     /// <inheritdoc />
     protected override void OnIsShownChanged()
     {

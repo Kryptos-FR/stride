@@ -16,5 +16,7 @@ public sealed class SagaEditorPlugin : StrideAssetsPlugin
     {
         base.Initialize(context);
         context.Panels.Register(StoryPlayerViewModel.Panel);
+        foreach (var command in SagaCommands.Create())
+            context.Commands.Register(command);
     }
 }
