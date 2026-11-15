@@ -1,8 +1,10 @@
+using System.Globalization;
+
 namespace ColorRise.Saga.Expressions;
 
 /// <summary>
-/// Reads the literals of declarations and attributes (<c>12</c>, <c>-2.5</c>, <c>"Mara"</c>, <c>true</c>, <c>active</c>), and
-/// gives the default value of each type.
+/// Reads the literals of declarations and attributes (<c>12</c>, <c>-2.5</c>, <c>"Mara"</c>, <c>true</c>, <c>active</c>), writes
+/// values back as literals, and gives the default value of each type.
 /// </summary>
 public static class SagaLiterals
 {
@@ -46,6 +48,35 @@ public static class SagaLiterals
             return $"'{text.Trim()}' is not {SagaTypeChecker.Describe(type)}.";
         value = converted;
         return null;
+    }
+
+    /// <summary>
+    /// Writes a value as a literal that <see cref="TryParse"/> reads back to the same value.
+    /// </summary>
+    public static string Format(SagaValue value) => value.Kind switch
+    {
+        SagaValueKind.Float => FormatFloat(value.AsFloat()),
+        SagaValueKind.String => "\"" + value.AsString().Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"",
+        _ => value.ToString(),
+    };
+
+    // The shortest text that reads back to the same number, without the exponent the language doesn't read, and with a point
+    private static string FormatFloat(float number)
+    {
+        var text = number.ToString("R", CultureInfo.InvariantCulture);
+        if (text.IndexOf('E') is var e and >= 0)
+        {
+            var negative = text[0] == '-';
+            var mantissa = text[(negative ? 1 : 0)..e];
+            var point = mantissa.IndexOf('.');
+            var digits = point < 0 ? mantissa : mantissa.Remove(point, 1);
+            var position = (point < 0 ? mantissa.Length : point) + int.Parse(text[(e + 1)..], CultureInfo.InvariantCulture);
+            var body = position <= 0 ? "0." + new string('0', -position) + digits
+                : position >= digits.Length ? digits + new string('0', position - digits.Length)
+                : digits[..position] + "." + digits[position..];
+            text = (negative ? "-" : "") + body;
+        }
+        return text.Contains('.') ? text : text + ".0";
     }
 
     /// <summary>

@@ -26,7 +26,7 @@ public sealed class ManualFunctionViewModel : ViewModelBase
         this.apply = apply ?? throw new ArgumentNullException(nameof(apply));
         Signature = $"{Name}({string.Join(", ", declaration.Parameters)}) → {returnType}";
         Value = SagaLiterals.DefaultOf(returnType);
-        answer = Value.ToString();
+        answer = SagaLiterals.Format(Value);
     }
 
     public string Name { get; }
@@ -74,6 +74,6 @@ public sealed class ManualFunctionViewModel : ViewModelBase
         if (Error.Length > 0)
             return;
         Value = current;
-        SetValue(ref answer, current.ToString(), nameof(Answer));
+        SetValue(ref answer, SagaLiterals.Format(current), nameof(Answer));
     }
 }

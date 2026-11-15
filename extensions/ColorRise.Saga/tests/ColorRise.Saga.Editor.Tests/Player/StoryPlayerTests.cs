@@ -161,6 +161,38 @@ public sealed class StoryPlayerTests
         return Task.CompletedTask;
     });
 
+    [Fact]
+    public Task ValuesSetByHandAreRecordedAsTheyAre()
+    {
+        var (story, dialogue) = MaraStory.Create();
+        story.Declarations.Variables.Add(new VariableDeclaration { Name = "greeting", Type = SagaTypeKind.String });
+        story.Declarations.Variables.Add(new VariableDeclaration { Name = "depth", Type = SagaTypeKind.Float });
+        return SagaSessionFixture.RunAsync(fixture =>
+        {
+            var context = new PanelContext { Descriptor = StoryPlayerViewModel.Panel, Session = fixture.Session, ServiceProvider = fixture.Session.ServiceProvider };
+            var player = (StoryPlayerViewModel)StoryPlayerViewModel.Panel.CreateViewModel(context);
+            try
+            {
+                player.SelectedStory = player.Stories.Single();
+                player.StartCommand.Execute(null);
+                var greeting = player.Variables.Single(x => x.Name == "greeting");
+                var depth = player.Variables.Single(x => x.Name == "depth");
+                greeting.Value = "\"say \\\"hi\\\" in C:\\\\mine\"";
+                depth.Value = "0.12345";
+
+                Assert.Equal(("", ""), (greeting.Error, depth.Error));
+                var runtime = player.Service.Run!.Runtime;
+                Assert.Equal((SagaValue.String("say \"hi\" in C:\\mine"), SagaValue.Float(0.12345f)), (runtime.Get("greeting"), runtime.Get("depth")));
+                Assert.Equal(("\"say \\\"hi\\\" in C:\\\\mine\"", "0.12345"), (greeting.Value, depth.Value));
+            }
+            finally
+            {
+                player.Destroy();
+            }
+            return Task.CompletedTask;
+        }, (MaraStory.StoryUrl, story), (MaraStory.DialogueUrl, dialogue));
+    }
+
     private static IEnumerable<string> Errors(StoryPlayerViewModel player) => player.Diagnostics.Where(x => x.Severity == SagaDiagnosticSeverity.Error).Select(x => x.ToString());
 
     /// <summary>

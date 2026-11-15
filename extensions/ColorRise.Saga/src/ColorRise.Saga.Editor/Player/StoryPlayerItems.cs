@@ -32,7 +32,7 @@ public sealed class PlayerVariableViewModel : ViewModelBase
     {
         Name = declaration.Name;
         type = declaration.Type;
-        this.value = value.ToString();
+        this.value = SagaLiterals.Format(value);
         this.apply = apply;
     }
 
@@ -66,7 +66,7 @@ public sealed class PlayerVariableViewModel : ViewModelBase
     internal void Update(SagaValue current)
     {
         if (Error.Length == 0)
-            SetValue(ref value, current.ToString(), nameof(Value));
+            SetValue(ref value, SagaLiterals.Format(current), nameof(Value));
     }
 }
 

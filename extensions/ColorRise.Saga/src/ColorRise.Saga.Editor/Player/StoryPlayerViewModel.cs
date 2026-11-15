@@ -211,9 +211,9 @@ public sealed class StoryPlayerViewModel : PanelViewModel
             return;
         var declarations = definition.Declarations;
         foreach (var declaration in declarations.Functions)
-            Functions.Add(new ManualFunctionViewModel(ServiceProvider, declaration, value => Service.Do(SagaStep.Answer(declaration.Name, value.ToString()))));
+            Functions.Add(new ManualFunctionViewModel(ServiceProvider, declaration, value => Service.Do(SagaStep.Answer(declaration.Name, SagaLiterals.Format(value)))));
         foreach (var declaration in declarations.Variables)
-            Variables.Add(new PlayerVariableViewModel(ServiceProvider, declaration, SagaLiterals.DefaultOf(declaration.Type), value => Service.Do(SagaStep.Set(declaration.Name, value.ToString()))));
+            Variables.Add(new PlayerVariableViewModel(ServiceProvider, declaration, SagaLiterals.DefaultOf(declaration.Type), value => Service.Do(SagaStep.Set(declaration.Name, SagaLiterals.Format(value)))));
         foreach (var declaration in declarations.Events)
             Events.Add(new PlayerEventViewModel(ServiceProvider, declaration.Name, () => Service.Do(SagaStep.Raise(declaration.Name))));
         foreach (var declaration in declarations.Characters)
