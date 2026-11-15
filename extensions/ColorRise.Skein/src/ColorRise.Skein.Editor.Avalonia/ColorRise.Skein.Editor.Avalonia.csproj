@@ -12,6 +12,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="$(SkeinAvaloniaVersion)" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="$(SkeinAvaloniaEditVersion)" />
     <PackageReference Include="Stride.Assets.Editor.Avalonia" Version="$(SkeinStrideVersion)" />
     <PackageReference Include="Stride.AssetCompiler" Version="$(SkeinStrideVersion)" IncludeAssets="build;buildTransitive" />
     <ProjectReference Include="..\ColorRise.Skein.Editor\ColorRise.Skein.Editor.csproj" />

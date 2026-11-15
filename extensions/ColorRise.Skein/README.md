@@ -45,7 +45,8 @@ To build against another Stride version, copy `Directory.Build.local.props.examp
 This section follows the work: it says what can be tried at the current commit.
 
 - The five packages build and pack.
-- A `.yarn` file of an asset folder is an asset, "Yarn script": the asset view shows it, *Add asset > Dialogue > Yarn script* makes one, and saving, renaming and moving it in Game Studio keep it a plain Yarn file (UTF-8, no byte order mark unless the file came with one). Nothing opens it yet.
+- A `.yarn` file of an asset folder is an asset, "Yarn script": the asset view shows it, *Add asset > Dialogue > Yarn script* makes one, and saving, renaming and moving it in Game Studio keep it a plain Yarn file (UTF-8, no byte order mark unless the file came with one).
+- A double click on a script opens it in a text pane, the first piece of the script editor. Typing is part of Game Studio's own undo history: the Edit history panel lists "Typing" steps, Ctrl+Z, Ctrl+Y and the Edit menu undo and redo them, and File > Save writes the file. No colours, graph or checks yet.
 - The sample game "Brinemoor" is an empty scene with one script, to open in Game Studio:
 
   ```sh

@@ -97,11 +97,11 @@ Settles whether Yarn's dependencies load beside Stride's (tests, asset compiler,
 - Create: `src/ColorRise.Skein.Editor/Text/YarnTextBuffer.cs`, `tests/ColorRise.Skein.Editor.Tests/Spikes/TextUndoTests.cs`; in `.Avalonia`: `Views/YarnTextPane.cs` (AvaloniaEdit `TextEditor` bound to the buffer, its own undo stack off)
 
 **Interfaces:**
-- Produces: `public sealed class YarnTextBuffer` over a script asset's text: `string Text { get; }`, `void Replace(int offset, int length, string text, string actionName)` (one undo step; consecutive typing within 1 s merges into one step named "Typing"), `event Action<YarnTextChange>? Changed` (`Offset`, `RemovedLength`, `InsertedText`), `void ReloadFromDisk(string text)` (not a step).
+- Produces: `public sealed class YarnTextBuffer` over a script asset's text: `string Text { get; }`, `void Replace(int offset, int length, string text, string actionName)` (one undo step; consecutive typing within 1 s merges into one step named "Typing"), `event Action<YarnTextChange>? Changed` (`Offset`, `RemovedLength`, `InsertedText`), `void ReloadFromDisk(string text)` (a step named "Reload from disk" that leaves the script clean). The script owns its buffer: `YarnScriptViewModel.TextBuffer`.
 
-- [ ] **Step 1:** Tests: two `Replace` then undo twice gives the original text and a clean asset; undo then redo gives the text after the second; typing "abc" as three changes in a row is one step; a graph-style replace between typing steps keeps the order in the history.
-- [ ] **Step 2:** Game Studio check: type in the pane, Ctrl+Z in the pane and Edit > Undo both undo, the history panel lists "Typing", the caret stays where the change was.
-- [ ] **Step 3:** Decide R3: works → kept; else the fallback of the design (the pane's own history, graph edits as its steps). Record findings. Commit, push.
+- [x] **Step 1:** Tests: two `Replace` then undo twice gives the original text and a clean asset; undo then redo gives the text after the second; typing "abc" as three changes in a row is one step; a graph-style replace between typing steps keeps the order in the history.
+- [x] **Step 2:** Game Studio check: type in the pane, Ctrl+Z in the pane and Edit > Undo both undo, the history panel lists "Typing", the caret stays where the change was.
+- [x] **Step 3:** Decide R3: works → kept; else the fallback of the design (the pane's own history, graph edits as its steps). Record findings. Commit, push.
 
 ### Task 5: Compiler bridge
 
@@ -401,3 +401,11 @@ Filled in by Tasks 2 to 4: for each of R1 to R4, what was tried, the result, and
 - Tried: a plain object `YarnNodeHeaders` (title, tags, colour, cluster, `when:` conditions, free headers) given to the session's property grid through `YarnNodeHeadersViewModel : IPropertyProviderViewModel`, whose root node comes from the session's node container (`session.AssetNodeContainer.GetOrCreateNode(headers)`); in a test session and in Game Studio.
 - Result: the grid shows the six headers with its standard editors (text boxes, lists with add and remove, a key and value pair per free header) under the name "Yarn node <title>". A change made in the grid reaches `Changed` once, inside the undo transaction the grid opens ("Update property Title"): what the handler pushes there is one step of the session's history, and a change that pushes nothing leaves no step. So the script editor rewrites the header in the text from that handler, and the text stays the truth.
 - For Task 17: the headers object is a view of the text; an undo, typing or an outside change makes a new object and shows it again. The grid's "Open this asset in editor" button stayed visible from the selection before: check it with the real editor.
+
+### R3: typing as steps of the session's undo history (Task 4): holds, no fallback
+
+- Tried: `YarnTextBuffer`, one per script (`YarnScriptViewModel.TextBuffer`), whose `Replace` pushes a dirtying operation on the session's history; a text pane (`YarnTextPane`, AvaloniaEdit with its own history off) that types into the buffer and shows every change of it; in a test session and in Game Studio.
+- Result: typing shows as "Typing" steps in the Edit history panel, Ctrl+Z and Ctrl+Y in the pane and Edit > Undo and Redo all move through the session's history, the script is dirty or clean as the history says, and the caret goes where the change was.
+- How typing joins one step: Stride merges operations only inside one transaction, so the buffer adds a typing change to its last typing step while that step is still the last of the history, not saved, and less than a second old. Any other step, an undo, a redo or a save ends it.
+- Changed from the plan: the buffer belongs to the script and not to the editor, so the steps still work after the editor closed; `ReloadFromDisk` is a step ("Reload from disk") that leaves the script without unsaved changes, so the steps made before an outside change still apply to the text they were made on.
+- AvaloniaEdit's text area takes the keys of its own Undo and Redo even with nothing to undo: the pane removes those two bindings so that the keys reach the window. The Edit menu reaches the pane through `IEditCommandHandler`, which the pane implements for Cut, Copy, Paste and Delete only.
