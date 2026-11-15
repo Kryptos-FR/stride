@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:player="using:ColorRise.Saga.Editor.Player"
+             xmlns:views="using:ColorRise.Saga.Editor.Avalonia.Views"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="220"
+             x:Class="ColorRise.Saga.Editor.Avalonia.Views.StoryTimelineView"
+             x:DataType="player:StoryTimelineViewModel">
+  <UserControl.Styles>
+    <Style Selector="Button.step">
+      <Setter Property="Padding" Value="8,1"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel Margin="6">
+    <!-- Back and forth through the steps, the replay after an edit, and where the run is -->
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+      <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
+        <Button Classes="step" Content="◀" Command="{Binding BackCommand}" ToolTip.Tip="{sd:LocalizeString Back one step, Context=ToolTip}"/>
+        <Button Classes="step" Content="▶" Command="{Binding ForwardCommand}" ToolTip.Tip="{sd:LocalizeString Forward one step, Context=ToolTip}"/>
+        <Button Content="{sd:LocalizeString Replay, Context=Button}" Command="{Binding ReplayCommand}"
+                ToolTip.Tip="{sd:LocalizeString Build the story again and play the steps up to here on it, Context=ToolTip}"/>
+      </StackPanel>
+      <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" Text="{Binding Status}"/>
+    </DockPanel>
+
+    <!-- What the step at the cursor did -->
+    <ScrollViewer DockPanel.Dock="Right" Width="300" Margin="6,0,0,0" HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding Details}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="x:String">
+            <TextBlock Margin="0,1" TextWrapping="Wrap" Text="{Binding}"/>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <!-- The steps and the lanes; a click moves the run to a step -->
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <views:SagaTimelineControl HorizontalAlignment="Left" VerticalAlignment="Top"
+                                 Steps="{Binding Steps}" Lanes="{Binding Lanes}" CurrentStep="{Binding Cursor}"
+                                 GoToStepCommand="{Binding GoToStepCommand}"
+                                 Brushes="{StaticResource SagaTimelineBrushes}"
+                                 Background="{DynamicResource ControlBackgroundBrush}"/>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>
