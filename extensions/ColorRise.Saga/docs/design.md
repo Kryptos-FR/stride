@@ -143,7 +143,7 @@ The Stride version is never committed: a local engine build is `4.5.3-devN`, wit
 | `context.Panels`, `context.ViewTypes`, `context.Services`, `CreateInstance` | story player |
 | `context.Commands`, context menus of the asset view and the entity tree, palette | commands |
 | Compiling and reloading editor packages from the game's solution | sandbox |
-| Opting in to the experimental areas (`STREXP001`, `003`, `006`) | Editor packages |
+| Opting in to the experimental areas (`STREXP001`, `003`, `006`, `010`) | Editor packages |
 
 The WPF Game Studio gets no Saga views: it must still open the sandbox, with Saga's assets in the generic property grid.
 

@@ -6,7 +6,9 @@
     <StridePackageKind>Editor</StridePackageKind>
     <!-- The views of the cross-platform Game Studio; ColorRise.Saga.Editor (toolkit-neutral) declares this package as its companion.
          The toolkit (Avalonia) is inferred from the Avalonia references. -->
-    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006</NoWarn>
+    <!-- The experimental areas used: panels and views (STREXP001), commands (STREXP003), services (STREXP006) and the node graph
+         controls (STREXP010, from the engine's follow-ups to the review of stacks 7 to 9; an engine without it ignores the id) -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006;STREXP010</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="$(SagaAvaloniaVersion)" />
