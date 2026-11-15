@@ -1,4 +1,6 @@
 using Avalonia.Markup.Xaml.Styling;
+using ColorRise.Saga.Editor.Avalonia.Views;
+using ColorRise.Saga.Editor.Player;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Editor.Avalonia;
 
@@ -20,5 +22,6 @@ public sealed class SagaEditorAvaloniaPlugin : StrideAssetsAvaloniaPlugin
     {
         base.Initialize(context);
         RegisterControlThemes(context.Logger, new ResourceInclude(StylesUri) { Source = StylesUri });
+        context.ViewTypes.Register(typeof(StoryPlayerViewModel), typeof(StoryPlayerView));
     }
 }

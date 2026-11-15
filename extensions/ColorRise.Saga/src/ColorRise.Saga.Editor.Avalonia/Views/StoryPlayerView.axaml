@@ -1,0 +1,172 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:vm="using:ColorRise.Saga.Editor.ViewModels"
+             xmlns:player="using:ColorRise.Saga.Editor.Player"
+             mc:Ignorable="d" d:DesignWidth="320" d:DesignHeight="600"
+             x:Class="ColorRise.Saga.Editor.Avalonia.Views.StoryPlayerView"
+             x:DataType="player:StoryPlayerViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Margin" Value="0,10,0,4"/>
+    </Style>
+    <Style Selector="TextBlock.dim">
+      <Setter Property="Foreground" Value="Gray"/>
+    </Style>
+    <Style Selector="TextBlock.error">
+      <Setter Property="Foreground" Value="#FFE57373"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="Button.small">
+      <Setter Property="Padding" Value="6,1"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel Margin="8">
+    <!-- The story to play -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*, Auto, Auto">
+      <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding Stories}" SelectedItem="{Binding SelectedStory}"
+                PlaceholderText="{sd:LocalizeString Pick a story, Context=Placeholder}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:StoryViewModel">
+            <TextBlock Text="{Binding Name}"/>
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <Button Grid.Column="1" Margin="4,0,0,0" Content="{sd:LocalizeString Start, Context=Button}" Command="{Binding StartCommand}"/>
+      <Button Grid.Column="2" Margin="4,0,0,0" Content="{sd:LocalizeString Reset, Context=Button}" Command="{Binding ResetCommand}"
+              ToolTip.Tip="{sd:LocalizeString Stop the story and check it again, Context=ToolTip}"/>
+    </Grid>
+
+    <!-- What keeps the story from starting, as the compiler reports it -->
+    <ItemsControl DockPanel.Dock="Top" Margin="0,6,0,0" ItemsSource="{Binding Diagnostics}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="x:String">
+          <TextBlock Classes="error" Text="{Binding}"/>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <!-- The dialogue being played: its choices, or Continue after a line -->
+    <StackPanel DockPanel.Dock="Bottom" Margin="0,6,0,0" IsVisible="{Binding IsPlaying}">
+      <ItemsControl ItemsSource="{Binding Choices}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="player:PlayerChoiceViewModel">
+            <Button Margin="0,2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                    Command="{Binding ChooseCommand}" IsEnabled="{Binding IsEnabled}">
+              <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Button Content="{sd:LocalizeString Continue, Context=Button}" Command="{Binding ContinueCommand}"
+              IsVisible="{Binding $self.IsEffectivelyEnabled}"/>
+    </StackPanel>
+
+    <Grid RowDefinitions="*, 5, *">
+      <!-- Where the story is, and its API by hand -->
+      <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel IsVisible="{Binding IsPlaying}">
+          <TextBlock Classes="section" Text="{Binding CurrentAct, StringFormat='Act: {0}'}"/>
+          <ItemsControl ItemsSource="{Binding Scenarios}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="player:StoryPlayerEntry">
+                <TextBlock TextWrapping="Wrap">
+                  <Run Text="Scenario"/>
+                  <Run Text="{Binding Id}" FontWeight="Bold"/>
+                  <Run Text="{Binding State}" Foreground="Gray"/>
+                  <Run Text="{Binding Detail}"/>
+                </TextBlock>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <ItemsControl ItemsSource="{Binding Quests}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="player:StoryPlayerEntry">
+                <TextBlock TextWrapping="Wrap">
+                  <Run Text="Quest"/>
+                  <Run Text="{Binding Id}" FontWeight="Bold"/>
+                  <Run Text="{Binding State}" Foreground="Gray"/>
+                  <Run Text="{Binding Detail}"/>
+                </TextBlock>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Classes="section" Text="{sd:LocalizeString Talk to}"/>
+          <ItemsControl ItemsSource="{Binding Characters}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="player:PlayerCharacterViewModel">
+                <Button Classes="small" Margin="0,0,4,4" Content="{Binding DisplayName}" Command="{Binding TalkCommand}" ToolTip.Tip="{Binding Id}"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Classes="section" Text="{sd:LocalizeString Variables}"/>
+          <ItemsControl ItemsSource="{Binding Variables}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="player:PlayerVariableViewModel">
+                <StackPanel Margin="0,1">
+                  <Grid ColumnDefinitions="*, 2*">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{Binding Name}" ToolTip.Tip="{Binding Type}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Value, UpdateSourceTrigger=LostFocus}"/>
+                  </Grid>
+                  <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Classes="section" Text="{sd:LocalizeString Events}"/>
+          <ItemsControl ItemsSource="{Binding Events}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="player:PlayerEventViewModel">
+                <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,1">
+                  <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{Binding Name}"/>
+                  <TextBlock Grid.Column="1" Classes="dim" Margin="6,0" VerticalAlignment="Center" Text="{Binding Count, StringFormat='×{0}'}"/>
+                  <Button Grid.Column="2" Classes="small" Content="{sd:LocalizeString Raise, Context=Button}" Command="{Binding RaiseCommand}"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Classes="section" Text="{sd:LocalizeString Functions (answered by hand)}"/>
+          <ItemsControl ItemsSource="{Binding Functions}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="player:ManualFunctionViewModel">
+                <StackPanel Margin="0,1">
+                  <Grid ColumnDefinitions="*, 2*">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Name}" ToolTip.Tip="{Binding Signature}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Answer, UpdateSourceTrigger=LostFocus}"/>
+                  </Grid>
+                  <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+
+      <GridSplitter Grid.Row="1" ResizeDirection="Rows" Background="#FF1D1D1D"/>
+
+      <!-- The transcript of the dialogues -->
+      <ScrollViewer x:Name="TranscriptScroll" Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Transcript}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <SelectableTextBlock Margin="0,1" TextWrapping="Wrap" Text="{Binding}"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>
