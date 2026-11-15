@@ -262,9 +262,10 @@ public sealed class AssetCompilationTests : IDisposable
 }
 
 /// <summary>
-/// The tests that build assets run one after the other: a build mounts its database for the whole process.
+/// The tests that build assets run one after the other, and while no other test runs: a build mounts its database for
+/// the whole process, and a test that gives the build a game registers the game's assembly for the whole process too.
 /// </summary>
-[CollectionDefinition(Name)]
+[CollectionDefinition(Name, DisableParallelization = true)]
 public sealed class BuildCollection
 {
     public const string Name = "Build";
