@@ -60,6 +60,40 @@ public sealed class PlayMarksTests
     });
 
     [Fact]
+    public Task EndedQuestsAreMarkedWithoutANote() => RunAsync(async (fixture, playback) =>
+    {
+        var story = fixture.Asset<StoryViewModel>("Story/Main");
+        var editor = new StoryEditorViewModel(story);
+        Assert.True(await editor.Initialize());
+        try
+        {
+            var quest = story.Asset.Acts[0].Quests[0];
+            fixture.Edit(quest, nameof(QuestCard.StartsAutomatically), true);
+            playback.Select(story);
+            Assert.True(playback.Start());
+            editor.OpenCommand.Execute(Node(editor, "the_mine"));
+
+            // Offered and taken on at once, then both stages done: it succeeds
+            Assert.Null(playback.Do(SagaStep.Set("lamp_asked", "true")));
+            Assert.Equal((SagaPlayMark.Running, "stage 1/2"), Mark(editor, "find_the_lamp"));
+            Assert.Null(playback.Do(SagaStep.Raise("met_mara")));
+            Assert.Null(playback.Do(SagaStep.Set("day", "2")));
+            Assert.Equal((SagaPlayMark.Done, ""), Mark(editor, "find_the_lamp"));
+
+            // Failing once a day passes, before Mara was met
+            fixture.Edit(quest, nameof(QuestCard.FailWhen), "day > 1");
+            Assert.True(playback.Replay());
+            playback.GoTo(1);
+            Assert.Null(playback.Do(SagaStep.Set("day", "2")));
+            Assert.Equal((SagaPlayMark.Failed, ""), Mark(editor, "find_the_lamp"));
+        }
+        finally
+        {
+            editor.Destroy();
+        }
+    });
+
+    [Fact]
     public Task DialogueEditorMarksTheNodeAndThePath() => RunAsync(async (fixture, playback) =>
     {
         var editor = new DialogueEditorViewModel(fixture.Asset<DialogueViewModel>("Dialogues/Mara"));

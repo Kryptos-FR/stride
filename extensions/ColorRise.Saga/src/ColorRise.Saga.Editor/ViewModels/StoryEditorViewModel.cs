@@ -291,8 +291,9 @@ public sealed class StoryEditorViewModel : SagaGraphEditorViewModel<StoryViewMod
                 {
                     { State: QuestState.Available } => (SagaPlayMark.Offered, ""),
                     { State: QuestState.Active } active => (SagaPlayMark.Running, StageNote(run, quest.Id, active.Stage)),
-                    { State: QuestState.Succeeded } => (SagaPlayMark.Done, "succeeded"),
-                    { State: QuestState.Failed } => (SagaPlayMark.Failed, "failed"),
+                    // The badge shows the mark's name before the note: Done says the quest succeeded, Failed that it failed
+                    { State: QuestState.Succeeded } => (SagaPlayMark.Done, ""),
+                    { State: QuestState.Failed } => (SagaPlayMark.Failed, ""),
                     _ => (SagaPlayMark.None, ""),
                 };
             case DialogueDefinition when node.DialogueName is { } name:
