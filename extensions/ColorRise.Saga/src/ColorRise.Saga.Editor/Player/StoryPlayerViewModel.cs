@@ -24,7 +24,7 @@ public sealed class StoryPlayerViewModel : PanelViewModel
     /// <summary>
     /// The identifier of the panel.
     /// </summary>
-    public const string PanelId = "ColorRise.Saga.StoryPlayer";
+    public new const string PanelId = "ColorRise.Saga.StoryPlayer";
 
     private readonly ISessionViewModel session;
     private StoryDefinition? shown;

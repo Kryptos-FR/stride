@@ -20,14 +20,15 @@
                          Current="#FF42A5F5" Visited="#FF90CAF9" Running="#FF66BB6A" Offered="#FFFFCA28" Done="#FF9E9E9E" Failed="#FFEF5350"/>
 
   <!-- The story timeline: the acts indigo, the scenarios and quests teal (offered paler, the stages light, success green,
-       failure red), the dialogues orange, what the game did yellow, slate and purple, the signals blue; the cursor blue, the
-       steps after it dimmed, a step that no longer applies red, a step that plays differently since the replay an orange dot. -->
+       failure red), the dialogues orange, what the game did yellow, slate and purple, the signals blue; the cursor blue, a step
+       that no longer applies red, a step that plays differently since the replay an orange dot. The text and the background
+       come from the theme; the grey tints work on a light or a dark one. -->
   <views:SagaTimelineBrushes x:Key="SagaTimelineBrushes"
                              Act="#FF3949AB" Scenario="#FF00796B" Offered="#FF4D8F88" Active="#FF00897B" Stage="#FF80CBC4"
                              Succeeded="#FF43A047" Failed="#FFE53935" Dialogue="#FFEF6C00" Choice="#FFFFB74D"
                              Event="#FFFFD54F" Variable="#FF90A4AE" Answer="#FFBA68C8" Signal="#FF4FC3F7"
-                             SpanText="#FFF5F5F5" Header="#FF2B2B2B" AlternateLane="#10FFFFFF" Grid="#FF4A4A4A"
-                             Cursor="#4042A5F5" Future="#90202020" FutureText="#FF808080"
+                             SpanText="#FFF5F5F5" AlternateLane="#14808080" Grid="#60808080"
+                             Cursor="#4042A5F5" FutureText="#FF808080"
                              Diverged="#50E53935" DivergedText="#FFEF5350" PlaysDifferently="#FFFFA726"/>
 
   <!-- A node of a Saga graph: what it is and its title in the header, its input on the left, its ways out on the right -->

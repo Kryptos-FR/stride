@@ -43,7 +43,7 @@
                                  Steps="{Binding Steps}" Lanes="{Binding Lanes}" CurrentStep="{Binding Cursor}"
                                  GoToStepCommand="{Binding GoToStepCommand}"
                                  Brushes="{StaticResource SagaTimelineBrushes}"
-                                 Background="{DynamicResource ControlBackgroundBrush}"/>
+                                 Background="{DynamicResource SystemControlBackgroundAltHighBrush}"/>
     </ScrollViewer>
   </DockPanel>
 </UserControl>

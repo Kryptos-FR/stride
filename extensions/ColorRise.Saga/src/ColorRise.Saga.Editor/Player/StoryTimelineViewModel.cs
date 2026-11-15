@@ -23,7 +23,7 @@ public sealed class StoryTimelineViewModel : PanelViewModel
     /// <summary>
     /// The identifier of the panel.
     /// </summary>
-    public const string PanelId = "ColorRise.Saga.StoryTimeline";
+    public new const string PanelId = "ColorRise.Saga.StoryTimeline";
 
     private IReadOnlyList<TimelineStep> steps = [];
     private IReadOnlyList<TimelineLane> lanes = [];

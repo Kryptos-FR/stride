@@ -180,11 +180,12 @@ public sealed class SagaTimelineControl : Control
         }
 
         for (var lane = 0; lane < lanes.Count; ++lane)
-            DrawLane(context, lanes[lane], LaneY(lane), brushes, typeface);
+            DrawLane(context, lanes[lane], LaneY(lane), brushes, foreground, typeface);
 
-        // The steps after the cursor, dimmed over their items
+        // The steps after the cursor, faded into the background over their items
+        var future = header is ISolidColorBrush solid ? new SolidColorBrush(solid.Color, 0.6) : brushes.Future;
         if (CurrentStep >= 0 && CurrentStep < steps.Count - 1)
-            context.FillRectangle(brushes.Future, new Rect(ColumnX(CurrentStep + 1), HeaderHeight, (steps.Count - CurrentStep - 1) * StepWidth, height - HeaderHeight));
+            context.FillRectangle(future, new Rect(ColumnX(CurrentStep + 1), HeaderHeight, (steps.Count - CurrentStep - 1) * StepWidth, height - HeaderHeight));
 
         // The header and the titles stay in view while scrolling
         context.FillRectangle(header, new Rect(0, offset.Y, bounds.Width, HeaderHeight));
@@ -214,7 +215,7 @@ public sealed class SagaTimelineControl : Control
         context.DrawLine(new Pen(brushes.Grid, 1), new Point(x + 0.5, top), new Point(x + 0.5, top + HeaderHeight));
     }
 
-    private static void DrawLane(DrawingContext context, TimelineLane lane, double y, SagaTimelineBrushes brushes, Typeface typeface)
+    private static void DrawLane(DrawingContext context, TimelineLane lane, double y, SagaTimelineBrushes brushes, IBrush foreground, Typeface typeface)
     {
         foreach (var item in lane.Items.Where(x => !x.IsMark))
         {
@@ -236,18 +237,19 @@ public sealed class SagaTimelineControl : Control
             DrawText(context, item.Label, bar.Deflate(new Thickness(5, 0, item.IsOpen ? 12 : 5, 0)), brushes.SpanText, typeface, 11, FontWeight.Normal);
         }
 
-        // The marks of a step side by side, their labels after them
+        // The marks of a step side by side, their labels after them; on a bar (a choice in its dialogue) in the bar's text color
         foreach (var cell in lane.Items.Where(x => x.IsMark).GroupBy(x => x.Start))
         {
+            var onBar = lane.Items.Any(x => !x.IsMark && x.Start <= cell.Key && cell.Key <= x.End);
             var x = ColumnX(cell.Key) + 6;
             var center = y + LaneHeight / 2;
             foreach (var mark in cell)
             {
-                DrawMark(context, mark.Kind, new Point(x + MarkSize / 2, center), brushes.Of(mark.Kind));
+                DrawMark(context, mark.Kind, new Point(x + MarkSize / 2, center), onBar ? brushes.SpanText : brushes.Of(mark.Kind));
                 x += MarkSize + 2;
             }
             DrawText(context, string.Join(", ", cell.Select(m => m.Label)), new Rect(x + 1, y, ColumnX(cell.Key) + StepWidth - x - 3, LaneHeight),
-                brushes.Of(cell.Last().Kind), typeface, 11, FontWeight.Normal);
+                onBar ? brushes.SpanText : foreground, typeface, 11, FontWeight.Normal);
         }
     }
 
@@ -378,18 +380,18 @@ public sealed class SagaTimelineBrushes
     /// <summary>
     /// The background of the header and of the titles, without <see cref="SagaTimelineControl.Background"/>.
     /// </summary>
-    public IBrush Header { get; set; } = Brushes.Black;
+    public IBrush Header { get; set; } = Brushes.Gainsboro;
 
-    public IBrush AlternateLane { get; set; } = new SolidColorBrush(Color.FromArgb(0x10, 0xFF, 0xFF, 0xFF));
+    public IBrush AlternateLane { get; set; } = new SolidColorBrush(Color.FromArgb(0x14, 0x80, 0x80, 0x80));
 
-    public IBrush Grid { get; set; } = Brushes.DimGray;
+    public IBrush Grid { get; set; } = new SolidColorBrush(Color.FromArgb(0x60, 0x80, 0x80, 0x80));
 
     public IBrush Cursor { get; set; } = new SolidColorBrush(Color.FromArgb(0x40, 0x42, 0xA5, 0xF5));
 
     /// <summary>
-    /// Laid over the steps after the cursor.
+    /// Laid over the steps after the cursor when the background is not a plain color, which is faded instead.
     /// </summary>
-    public IBrush Future { get; set; } = new SolidColorBrush(Color.FromArgb(0x90, 0x20, 0x20, 0x20));
+    public IBrush Future { get; set; } = new SolidColorBrush(Color.FromArgb(0x90, 0x80, 0x80, 0x80));
 
     public IBrush FutureText { get; set; } = Brushes.Gray;
 
