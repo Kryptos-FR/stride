@@ -1,3 +1,4 @@
+using ColorRise.Skein.Editor.Services;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Editor;
 
@@ -20,5 +21,9 @@ public sealed class SkeinEditorPlugin : StrideAssetsPlugin
     public override void InitializeSession(ISessionPluginContext context)
     {
         base.InitializeSession(context);
+
+        var analysis = new YarnAnalysisService(context.Session);
+        context.Services.Register(analysis);
+        context.OnClose(analysis.Close);
     }
 }
