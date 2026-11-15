@@ -83,14 +83,36 @@ public sealed class VariableStorage : IVariableStorage
     /// <inheritdoc />
     public bool TryGetValue<T>(string variableName, [NotNullWhen(true)] out T? result)
     {
+        if (TryGetStored(variableName, program, out result, out var declared))
+            return true;
+
+        // Neither set nor declared with a value: a smart variable of the running dialogue, or nothing
+        if (!declared && program is not null && SmartVariableEvaluator is not null && program.GetVariableKind(variableName) == VariableKind.Smart)
+            return SmartVariableEvaluator.TryGetSmartVariable(variableName, out result);
+
+        return false;
+    }
+
+    /// <inheritdoc />
+    public VariableKind GetVariableKind(string name) => GetVariableKind(name, program);
+
+    /// <summary>
+    /// Reads a variable for the dialogue of one project: its value, else the default that project declares (or another
+    /// project of the storage).
+    /// </summary>
+    /// <param name="declared">Whether a value was set or a project declares a default: not a smart variable, then.</param>
+    internal bool TryGetStored<T>(string variableName, Program? reader, [NotNullWhen(true)] out T? result, out bool declared)
+    {
         if (values.TryGetValue(variableName, out var stored) && stored is T typed)
         {
             result = typed;
+            declared = true;
             return true;
         }
 
-        if (TryGetDefault(variableName, out var initial))
+        if (TryGetDefault(variableName, reader, out var initial))
         {
+            declared = true;
             if (initial is T typedInitial)
             {
                 result = typedInitial;
@@ -101,21 +123,17 @@ public sealed class VariableStorage : IVariableStorage
             return false;
         }
 
-        // Neither set nor declared with a value: a smart variable of the running dialogue, or nothing
-        if (program is not null && SmartVariableEvaluator is not null && program.GetVariableKind(variableName) == VariableKind.Smart)
-            return SmartVariableEvaluator.TryGetSmartVariable(variableName, out result);
-
+        declared = false;
         result = default;
         return false;
     }
 
-    /// <inheritdoc />
-    public VariableKind GetVariableKind(string name)
+    internal VariableKind GetVariableKind(string name, Program? reader)
     {
         if (values.ContainsKey(name))
             return VariableKind.Stored;
 
-        if (program is not null && program.GetVariableKind(name) is var kind and not VariableKind.Unknown)
+        if (reader is not null && reader.GetVariableKind(name) is var kind and not VariableKind.Unknown)
             return kind;
 
         foreach (var known in programs)
@@ -294,9 +312,9 @@ public sealed class VariableStorage : IVariableStorage
         return false;
     }
 
-    private bool TryGetDefault(string name, [NotNullWhen(true)] out object? value)
+    private bool TryGetDefault(string name, Program? reader, [NotNullWhen(true)] out object? value)
     {
-        if (program is not null && program.InitialValues.TryGetValue(name, out var initial))
+        if (reader is not null && reader.InitialValues.TryGetValue(name, out var initial))
         {
             value = Unwrap(initial);
             return true;
@@ -321,7 +339,7 @@ public sealed class VariableStorage : IVariableStorage
             return;
 
         if (!values.TryGetValue(name, out var value))
-            TryGetDefault(name, out value);
+            TryGetDefault(name, program, out value);
         changed(name, value);
     }
 

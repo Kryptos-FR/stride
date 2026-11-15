@@ -399,4 +399,26 @@ public sealed class YarnCompilerBridgeTests
         Assert.Contains(result.Diagnostics, d => d.Severity == YarnSeverity.Error && d.File is "Empty.yarn" or "Notes.yarn");
         Assert.Contains(result.Nodes, n => n.Title == "Wreck");
     }
+
+    [Fact]
+    public void The_functions_a_dialogue_adds_are_known_wherever_they_are_called()
+    {
+        var result = Compile(("Visits.yarn", """
+            title: Start
+            ---
+            Odile: You came {visited_count("Start")} times, {visited("Start")}, {has_any_content("Start")}.
+            ===
+            """));
+
+        Assert.DoesNotContain(result.Diagnostics, d => d.Severity == YarnSeverity.Error);
+        Assert.NotNull(result.Program);
+
+        // A game may give its own in their place
+        var own = YarnCompilerBridge.Compile(new YarnCompilationRequest
+        {
+            Files = [("Visits.yarn", "title: Start\n---\n<<set $times = visited_count(1) + 1>>\n===\n")],
+            Functions = [new YarnFunctionDeclaration { Name = "visited_count", ParameterTypes = [YarnFunctionDeclaration.Number], ReturnType = YarnFunctionDeclaration.Number }],
+        });
+        Assert.DoesNotContain(own.Diagnostics, d => d.Severity == YarnSeverity.Error);
+    }
 }

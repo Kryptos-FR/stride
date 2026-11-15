@@ -12,6 +12,16 @@ namespace ColorRise.Skein.Assets.Compilation;
 public static class YarnCompilerBridge
 {
     /// <summary>
+    /// The functions every dialogue has beside the standard library: the compiler knows the library, not these.
+    /// </summary>
+    private static readonly YarnFunctionDeclaration[] DialogueFunctions =
+    [
+        new() { Name = "visited", ParameterTypes = [YarnFunctionDeclaration.String], ReturnType = YarnFunctionDeclaration.Bool },
+        new() { Name = "visited_count", ParameterTypes = [YarnFunctionDeclaration.String], ReturnType = YarnFunctionDeclaration.Number },
+        new() { Name = "has_any_content", ParameterTypes = [YarnFunctionDeclaration.String], ReturnType = YarnFunctionDeclaration.Bool },
+    ];
+
+    /// <summary>
     /// Compiles the scripts of one Yarn project.
     /// </summary>
     /// <param name="request">The scripts, and what the project and the game tell the compiler.</param>
@@ -22,7 +32,11 @@ public static class YarnCompilerBridge
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var declarations = request.Functions.Select(ToDeclaration).ToList();
+        var declarations = DialogueFunctions
+            .Where(d => request.Functions.All(f => f.Name != d.Name))
+            .Concat(request.Functions)
+            .Select(ToDeclaration)
+            .ToList();
         request.Cancellation.ThrowIfCancellationRequested();
         if (request.Files.Count == 0)
             return new YarnCompilation();

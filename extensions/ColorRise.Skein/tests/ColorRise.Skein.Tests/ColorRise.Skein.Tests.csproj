@@ -14,4 +14,8 @@
     <ProjectReference Include="..\..\src\ColorRise.Skein.UI\ColorRise.Skein.UI.csproj" />
     <ProjectReference Include="..\..\src\ColorRise.Skein.Assets\ColorRise.Skein.Assets.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Yarn Spinner's own test scripts and plans: read from beside the tests, never compiled -->
+    <None Include="Conformance\TestCases\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
