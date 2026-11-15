@@ -315,6 +315,19 @@ public sealed class YarnCompilerBridgeTests
     }
 
     [Fact]
+    public void A_function_takes_as_many_values_as_its_variadic_type_allows()
+    {
+        var result = YarnCompilerBridge.Compile(new YarnCompilationRequest
+        {
+            Files = [("Sum.yarn", "title: Start\n---\n<<if sum_of(1, 2, 3) == 6 and sum_of() == 0>>\nOdile: Six.\n<<endif>>\n===\n")],
+            Functions = [new YarnFunctionDeclaration { Name = "sum_of", VariadicType = YarnFunctionDeclaration.Number, ReturnType = YarnFunctionDeclaration.Number }],
+        });
+
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.Program);
+    }
+
+    [Fact]
     public void A_function_of_an_unknown_type_is_refused_by_name()
     {
         var request = new YarnCompilationRequest

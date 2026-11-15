@@ -56,6 +56,9 @@ public static class YarnCompilerBridge
             type = type.WithParameter(ToType(function, parameter));
         }
 
+        if (function.VariadicType is { } variadic)
+            type = type.WithVariadicParameterType(ToType(function, variadic));
+
         return new DeclarationBuilder().WithName(function.Name).WithType(type.FunctionType).Declaration;
     }
 
