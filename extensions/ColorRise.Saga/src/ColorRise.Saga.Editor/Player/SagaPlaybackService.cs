@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using ColorRise.Saga.Assets;
 using ColorRise.Saga.Content;
 using ColorRise.Saga.Editor.ViewModels;
@@ -15,10 +16,12 @@ namespace ColorRise.Saga.Editor.Player;
 /// <remarks>
 /// Going back plays the steps again on a new runtime of the same build. An edit of the story or of one of its dialogues makes the
 /// run stale (<see cref="IsStale"/>): it keeps its build until <see cref="Replay"/> builds the story again and plays the same steps
-/// on it. Saga's editor plugin registers one instance per session.
+/// on it. There is one instance per session (<see cref="Of"/>), which Saga's editor plugin registers as a service of the session.
 /// </remarks>
 public sealed class SagaPlaybackService : IDisposable
 {
+    private static readonly ConditionalWeakTable<ISessionViewModel, SagaPlaybackService> instances = new();
+
     private readonly ISessionViewModel session;
     private readonly List<SagaRunStep> steps = [];
     private readonly List<AssetViewModel> watched = [];
@@ -29,6 +32,16 @@ public sealed class SagaPlaybackService : IDisposable
     public SagaPlaybackService(ISessionViewModel session)
     {
         this.session = session ?? throw new ArgumentNullException(nameof(session));
+    }
+
+    /// <summary>
+    /// The playback of a session, made on first use. Saga's panels take it from here rather than from the session's services: Game
+    /// Studio makes the panels of a plugin that joins an open session before it initializes the plugin for the session.
+    /// </summary>
+    public static SagaPlaybackService Of(ISessionViewModel session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        return instances.GetValue(session, x => new SagaPlaybackService(x));
     }
 
     /// <summary>
@@ -218,6 +231,8 @@ public sealed class SagaPlaybackService : IDisposable
     {
         Stop();
         Story = null;
+        if (instances.TryGetValue(session, out var instance) && instance == this)
+            instances.Remove(session);
     }
 
     // Plays the recorded steps after the cursor up to an index, each result replacing the recorded one

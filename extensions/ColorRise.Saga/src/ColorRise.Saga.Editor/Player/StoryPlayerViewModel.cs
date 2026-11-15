@@ -34,7 +34,7 @@ public sealed class StoryPlayerViewModel : PanelViewModel
         : base(context)
     {
         session = context.Session;
-        Service = ServiceProvider.Get<SagaPlaybackService>();
+        Service = SagaPlaybackService.Of(session);
         StartCommand = new AnonymousCommand(ServiceProvider, () => Service.Start());
         ResetCommand = new AnonymousCommand(ServiceProvider, Service.Reset);
         ContinueCommand = new AnonymousCommand(ServiceProvider, () => Service.Do(SagaStep.Continue()));

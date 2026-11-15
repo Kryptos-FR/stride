@@ -83,6 +83,39 @@ public sealed class StoryTimelineTests
         return Task.CompletedTask;
     });
 
+    // Game Studio makes the panels of a plugin that joins an open session before it initializes the plugin for the session, where
+    // Saga registers the playback service
+    [Fact]
+    public Task PanelsMadeBeforeTheServiceIsRegisteredFollowIt()
+    {
+        var (story, dialogue) = MaraStory.Create();
+        return SagaSessionFixture.RunAsync(fixture =>
+        {
+            var services = (Stride.Core.Presentation.ViewModels.ViewModelServiceProvider)fixture.Session.ServiceProvider;
+            var playback = services.Get<SagaPlaybackService>();
+            services.UnregisterService(playback);
+            var timeline = (StoryTimelineViewModel)StoryTimelineViewModel.Panel.CreateViewModel(Context(fixture, StoryTimelineViewModel.Panel));
+            var player = (StoryPlayerViewModel)StoryPlayerViewModel.Panel.CreateViewModel(Context(fixture, StoryPlayerViewModel.Panel));
+            try
+            {
+                services.RegisterService(playback);
+                Play(fixture, playback);
+                Assert.Equal(4, timeline.Steps.Count);
+                Assert.Same(playback, player.Service);
+                Assert.True(player.IsPlaying);
+            }
+            finally
+            {
+                timeline.Destroy();
+                player.Destroy();
+            }
+            return Task.CompletedTask;
+        }, ("Story/Main", story), ("Dialogues/Mara", dialogue));
+    }
+
+    private static PanelContext Context(SagaSessionFixture fixture, PanelDescriptor panel)
+        => new() { Descriptor = panel, Session = fixture.Session, ServiceProvider = fixture.Session.ServiceProvider };
+
     // Start, talk to Mara, go on to the choices, leave
     private static void Play(SagaSessionFixture fixture, SagaPlaybackService playback)
     {

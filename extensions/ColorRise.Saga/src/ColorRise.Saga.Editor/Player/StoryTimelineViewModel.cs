@@ -33,7 +33,7 @@ public sealed class StoryTimelineViewModel : PanelViewModel
     public StoryTimelineViewModel(PanelContext context)
         : base(context)
     {
-        Service = ServiceProvider.Get<SagaPlaybackService>();
+        Service = SagaPlaybackService.Of(context.Session);
         GoToStepCommand = new AnonymousCommand<int>(ServiceProvider, Service.GoTo);
         BackCommand = new AnonymousCommand(ServiceProvider, () => Service.GoTo(Service.Cursor - 1));
         ForwardCommand = new AnonymousCommand(ServiceProvider, () => Service.GoTo(Service.Cursor + 1));

@@ -26,7 +26,7 @@ public sealed class SagaEditorPlugin : StrideAssetsPlugin
     {
         base.InitializeSession(context);
         // The story played in the session, which the player drives and the timeline and editors follow
-        var playback = new SagaPlaybackService(context.Session);
+        var playback = SagaPlaybackService.Of(context.Session);
         context.Services.Register(playback);
         context.OnClose(playback.Dispose);
     }
