@@ -16,7 +16,7 @@ public sealed class YarnTestPlanTests
     /// <summary>
     /// The scripts with a test plan.
     /// </summary>
-    public static TheoryData<string> Plans() => [.. Directory.GetFiles(TestCases, "*.testplan").Select(Path.GetFileNameWithoutExtension).Order(StringComparer.Ordinal)!];
+    public static TheoryData<string> Plans() => [.. Directory.GetFiles(TestCases, "*.testplan").Select(f => Path.GetFileNameWithoutExtension(f)).Order(StringComparer.Ordinal)];
 
     /// <summary>
     /// The scripts Yarn Spinner's tests expect the compiler to refuse: the ones without a test plan.

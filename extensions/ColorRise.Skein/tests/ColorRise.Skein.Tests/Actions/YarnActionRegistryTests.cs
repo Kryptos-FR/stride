@@ -108,6 +108,22 @@ public sealed class YarnActionRegistryTests
     }
 
     [Fact]
+    public async Task A_run_can_find_its_targets_its_own_way()
+    {
+        var cellar = new Door();
+        var attic = new Door();
+        var registry = Registry(new Doors(("Door", cellar)));
+
+        Assert.True(await registry.RunCommandAsync("open Door", new Doors(("Door", attic)), CancellationToken.None));
+        Assert.True(attic.IsOpen);
+        Assert.False(cellar.IsOpen);
+
+        // Without its own way, the registry's
+        Assert.True(await registry.RunCommandAsync("open Door", targets: null, CancellationToken.None));
+        Assert.True(cellar.IsOpen);
+    }
+
+    [Fact]
     public async Task A_parameter_of_a_type_text_does_not_convert_to_is_found_as_a_target_is()
     {
         var registry = Registry(new Doors(("CellarDoor", new Door()), ("AtticDoor", new Door())));

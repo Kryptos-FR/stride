@@ -29,6 +29,11 @@ public sealed class DialogueSessionOptions
     public IDialogueClock Clock { get; init; } = SystemDialogueClock.Instance;
 
     /// <summary>
+    /// What finds the objects the commands of this session name; the registry's own by default.
+    /// </summary>
+    public IYarnTargetResolver? Targets { get; init; }
+
+    /// <summary>
     /// Where the session tells what goes wrong: a command that cannot be called, a function nothing provides.
     /// </summary>
     public ILogger? Log { get; init; }
@@ -314,7 +319,7 @@ public sealed class DialogueSession : IYarnDialogueEvents
         var cancellation = stop!.Token;
         try
         {
-            if (await actions.RunCommandAsync(text, cancellation))
+            if (await actions.RunCommandAsync(text, options.Targets, cancellation))
                 return;
         }
         catch (YarnCommandException exception)

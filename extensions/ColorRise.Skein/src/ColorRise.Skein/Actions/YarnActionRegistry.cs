@@ -139,9 +139,21 @@ public sealed class YarnActionRegistry
     /// <param name="cancellation">Given to the handler when it takes one: the dialogue stops waiting when it is cancelled.</param>
     /// <returns>False when no handler has the command's name: the command is someone else's to handle.</returns>
     /// <exception cref="YarnCommandException">The target was not found, or the words do not fit the parameters.</exception>
-    public ValueTask<bool> RunCommandAsync(string commandText, CancellationToken cancellation)
+    public ValueTask<bool> RunCommandAsync(string commandText, CancellationToken cancellation) => RunCommandAsync(commandText, targets: null, cancellation);
+
+    /// <summary>
+    /// Runs a command as <see cref="RunCommandAsync(string, CancellationToken)"/> does, finding the objects it names
+    /// the way of this run: a dialogue of one scene finds them in its scene.
+    /// </summary>
+    /// <param name="commandText">The text of the command, the values of the script already in it.</param>
+    /// <param name="targets">What finds the objects the command names; null for <see cref="Targets"/>.</param>
+    /// <param name="cancellation">Given to the handler when it takes one: the dialogue stops waiting when it is cancelled.</param>
+    /// <returns>False when no handler has the command's name: the command is someone else's to handle.</returns>
+    /// <exception cref="YarnCommandException">The target was not found, or the words do not fit the parameters.</exception>
+    public ValueTask<bool> RunCommandAsync(string commandText, IYarnTargetResolver? targets, CancellationToken cancellation)
     {
         ArgumentNullException.ThrowIfNull(commandText);
+        targets ??= Targets;
 
         var words = YarnCommandText.Split(commandText);
         if (words.Count == 0 || !commands.TryGetValue(words[0], out var command))
@@ -154,10 +166,10 @@ public sealed class YarnActionRegistry
             if (words.Count < 2)
                 throw new YarnCommandException(commandText, $"it runs on a {targetType.Name}: the first word after '{command.Name}' names the target.");
 
-            target = Find(commandText, words[next++], targetType, "the target");
+            target = Find(commandText, targets, words[next++], targetType, "the target");
         }
 
-        var arguments = Bind(commandText, command, words, next, cancellation);
+        var arguments = Bind(commandText, command, words, next, targets, cancellation);
 
         object? result;
         try
@@ -277,7 +289,7 @@ public sealed class YarnActionRegistry
         functions.Add(function.Name, function);
     }
 
-    private object?[] Bind(string commandText, Command command, IReadOnlyList<string> words, int next, CancellationToken cancellation)
+    private static object?[] Bind(string commandText, Command command, IReadOnlyList<string> words, int next, IYarnTargetResolver? targets, CancellationToken cancellation)
     {
         var parameters = command.Method.GetParameters();
         var arguments = new object?[parameters.Length];
@@ -294,14 +306,14 @@ public sealed class YarnActionRegistry
                 var rest = Array.CreateInstance(elementType, words.Count - next);
                 for (var j = 0; next < words.Count; j++)
                 {
-                    rest.SetValue(Convert(commandText, words[next++], elementType, parameter), j);
+                    rest.SetValue(Convert(commandText, targets, words[next++], elementType, parameter), j);
                 }
 
                 arguments[i] = rest;
             }
             else if (next < words.Count)
             {
-                arguments[i] = Convert(commandText, words[next++], parameter.ParameterType, parameter);
+                arguments[i] = Convert(commandText, targets, words[next++], parameter.ParameterType, parameter);
             }
             else if (parameter.HasDefaultValue)
             {
@@ -322,7 +334,7 @@ public sealed class YarnActionRegistry
         return arguments;
     }
 
-    private object? Convert(string commandText, string word, Type type, ParameterInfo parameter)
+    private static object? Convert(string commandText, IYarnTargetResolver? targets, string word, Type type, ParameterInfo parameter)
     {
         type = Nullable.GetUnderlyingType(type) ?? type;
         if (type == typeof(string))
@@ -360,15 +372,15 @@ public sealed class YarnActionRegistry
             }
         }
 
-        return Find(commandText, word, type, $"the parameter '{parameter.Name}'");
+        return Find(commandText, targets, word, type, $"the parameter '{parameter.Name}'");
     }
 
-    private object Find(string commandText, string name, Type type, string role)
+    private static object Find(string commandText, IYarnTargetResolver? targets, string name, Type type, string role)
     {
-        if (Targets is null)
+        if (targets is null)
             throw new YarnCommandException(commandText, $"nothing finds objects by name here, so {role} '{name}' ({type.Name}) cannot be found.");
 
-        return Targets.Find(name, type)
+        return targets.Find(name, type)
             ?? throw new YarnCommandException(commandText, $"no {type.Name} named '{name}' was found for {role}.");
     }
 
