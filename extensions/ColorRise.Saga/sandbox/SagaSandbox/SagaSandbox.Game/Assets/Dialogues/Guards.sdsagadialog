@@ -1,0 +1,59 @@
+!SagaDialogueAsset
+Id: 7d2a5c74-9e3f-4b5a-9cad-3f4e5a6b7c83
+SerializedVersion: {ColorRise.Saga: 1.0.0.0}
+Tags: []
+Story: 5b0e3a52-7c1d-4f3e-9a8b-1d2c3e4f5a61:Story/Main
+CharacterId: guard_captain
+When: 
+Priority: 0
+Once: false
+OnlyWhileOwnerLive: true
+Participants:
+    99934253287a60bdc378cacff7971062: guard_captain
+    87789221617277cd0903d56887f57c2f: guard
+EntryNodeId: again
+Nodes:
+    56b5cbdbe88788ae1da82505a3eed265: !SagaLineNodeCard
+        Id: again
+        Name: 
+        SpeakerId: guard_captain
+        Text: The mine again?
+        Actions: 
+        NextId: third
+        Position: {X: 0.0, Y: 0.0}
+    0e2dcbae14461a15705b75ca82125397: !SagaLineNodeCard
+        Id: third
+        Name: 
+        SpeakerId: guard
+        Text: Third time this year, captain.
+        Actions: 
+        NextId: who_pays
+        Position: {X: 0.0, Y: 120.0}
+    43ad9f57e7884ecd3effcf0d87ba6a59: !SagaBranchNodeCard
+        Id: who_pays
+        Name: 
+        Links:
+            96ae50c4f71b6cd24e595fdbee6da8bc:
+                When: sided_with == "guild"
+                TargetId: guild
+            f29087162be4805906da1dac98768b5d:
+                When: 
+                TargetId: crown
+        Position: {X: 0.0, Y: 240.0}
+    b4af04ae86a61ef0927a98e2a31e9a37: !SagaLineNodeCard
+        Id: guild
+        Name: 
+        SpeakerId: guard_captain
+        Text: And the guild pays the diggers. Not us.
+        Actions: 
+        NextId: 
+        Position: {X: -180.0, Y: 360.0}
+    15dce5b4a5ce23f83281230121229ff6: !SagaLineNodeCard
+        Id: crown
+        Name: 
+        SpeakerId: guard_captain
+        Text: Then the crown will want a word.
+        Actions: 
+        NextId: 
+        Position: {X: 180.0, Y: 360.0}
+Attributes: {}

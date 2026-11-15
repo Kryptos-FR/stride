@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SagaSandbox.Linux</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <OutputPath>..\Bin\Linux\$(Configuration)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <StrideCurrentPackagePath>$(MSBuildThisFileDirectory)..\SagaSandbox.Game\SagaSandbox.Game.sdpkg</StrideCurrentPackagePath>
+    <StridePlatform>Linux</StridePlatform>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SagaSandbox.Game\SagaSandbox.Game.csproj" />
+  </ItemGroup>
+</Project>

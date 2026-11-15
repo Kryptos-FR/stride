@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>SagaSandbox.Windows</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <OutputPath>..\Bin\Windows\$(Configuration)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <StrideCurrentPackagePath>$(MSBuildThisFileDirectory)..\SagaSandbox.Game\SagaSandbox.Game.sdpkg</StrideCurrentPackagePath>
+    <StridePlatform>Windows</StridePlatform>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SagaSandbox.Game\SagaSandbox.Game.csproj" />
+  </ItemGroup>
+</Project>

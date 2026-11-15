@@ -1,0 +1,154 @@
+!SagaStoryAsset
+Id: 5b0e3a52-7c1d-4f3e-9a8b-1d2c3e4f5a61
+SerializedVersion: {ColorRise.Saga: 1.0.0.0}
+Tags: []
+Declarations:
+    Variables:
+        8273530bd69d8a68d45b81c2b91254c1:
+            Name: player_name
+            Type: String
+            Default: '"Ash"'
+        cd921941115a89dac111dd3b42cc7a8c:
+            Name: day
+            Type: Int
+            Default: 1
+        65529484db97db0e1aec18b6e341b5d8:
+            Name: sided_with
+            Type: String
+            Default: '""'
+        7d9b9204f7e21e67a9f3e075bd912dfd:
+            Name: reputation
+            Type: Int
+            Default: 0
+    Events:
+        90186300e12512877bfca1f93a4a366b:
+            Name: cave_in
+        22dae301c22e3b17dd431ae97e4e9b5b:
+            Name: rubble_cleared
+        9ab3d7c38be7eafa7ab462441393e010:
+            Name: rescue_done
+        e059d32a6f1db1ec02c4dcc5320f05fe:
+            Name: night_fell
+    Functions:
+        ff0e62b76bb17e76b713ced6d04e78c6:
+            Name: has_item
+            Parameters:
+                b7f8e0067119992f1d0211f3be6dd420: String
+            ReturnType: Bool
+    Signals:
+        c2b7aea93f1737b1661b876440df8c99:
+            Name: give_item
+            Parameters:
+                6ac9b3b8554b8649a704a7c22cbf2687: String
+                f48d485ee667e931868de8056a208e52: Int
+        da2810c539b2852fb7199a7a0cbea3ea:
+            Name: play_sound
+            Parameters:
+                ef8b6b28e9a4531732c5cc78f7f13232: String
+    Characters:
+        3c6d3071647c37fd8074f91b7f1fae11:
+            Id: foreman
+            DisplayName: Foreman Dorr
+        4e5740ef206abf1dbf53ad53f2389495:
+            Id: guard_captain
+            DisplayName: Captain Vell
+        496ccba605d24debb22b1b2e75e0a47f:
+            Id: guard
+            DisplayName: Guard Rook
+    AttributeTypes:
+        1bd8833d88f663ad6d58fb7c5fb7eeb1:
+            Name: reward
+            Type: Int
+            AppliesTo: Quest
+        411a4def262007e296ee94604a4c749c:
+            Name: region
+            Type: String
+            AppliesTo: Act, Scenario
+FirstActId: the_mine
+Acts:
+    eb3072f53b14429dbf2625c1244bacba:
+        Id: the_mine
+        Title: The mine
+        EndWhen: scenario.cave_in.state == done
+        Next:
+            ee746e9e0529a3135c14ac985fab4582:
+                TargetActId: with_the_guild
+                When: sided_with == "guild"
+            db4319da53754a64ab249f6e4667be6c:
+                TargetActId: with_the_crown
+                When: 
+        Scenarios:
+            2547c3d53312b1857e60357ff2477449:
+                Id: cave_in
+                Title: The cave-in
+                StartWhen: raised("cave_in")
+                EndWhen: quest.rescue.state == succeeded || quest.rescue.state == failed || day > 3
+                ContinuesAcrossActs: false
+                OnStart: emit play_sound("rumble")
+                OnEnd: 
+                Outcomes:
+                    02b25dee3f45aa9704b126489f1a6d18:
+                        Name: saved
+                        When: quest.rescue.state == succeeded
+                    aea0b02d13c5602bdba822f806f8b7b5:
+                        Name: lost
+                        When: 
+                Dialogues:
+                    1869491665e28747723e38e1741ceeca: 7d2a5c74-9e3f-4b5a-9cad-3f4e5a6b7c83:Dialogues/Guards
+                Attributes: {}
+                Position: {X: 0.0, Y: 160.0}
+        Quests:
+            8c137c473dbd83071614b43250a619a4:
+                Id: rescue
+                Title: Dig them out
+                ScenarioId: cave_in
+                OfferWhen: 
+                StartsAutomatically: false
+                Stages:
+                    756dd4c015a77e9adb8f4c340b695606:
+                        Id: clear_rubble
+                        Title: Clear the rubble
+                        DoneWhen: raised("rubble_cleared")
+                        OnDone: 
+                    3ece6d62b63d0a37ed20d7df03c840a5:
+                        Id: bring_out
+                        Title: Bring the diggers out
+                        DoneWhen: raised("rescue_done")
+                        OnDone: 
+                SucceedWhen: 
+                FailWhen: 
+                OnActivate: 
+                OnSucceed: |-
+                    reputation = reputation + 1
+                    emit give_item("pickaxe", 1)
+                OnFail: 
+                Dialogues:
+                    1f7a8c9e95463e3fbf2136bbdbd42485: 6c1f4b63-8d2e-4a4f-8b9c-2e3d4f5a6b72:Dialogues/Foreman
+                Attributes:
+                    bf0415101c17a15b3b633ebbd205b280:
+                        Name: reward
+                        Value: 50
+                Position: {X: 260.0, Y: 160.0}
+        Attributes:
+            718ce4e5e99960fce6fae557ff00dc3d:
+                Name: region
+                Value: '"Low Quarter"'
+        Position: {X: 0.0, Y: 0.0}
+    3920cd029ca68e2ac4be5fb85a679ff2:
+        Id: with_the_guild
+        Title: With the guild
+        EndWhen: 
+        Next: {}
+        Scenarios: {}
+        Quests: {}
+        Attributes: {}
+        Position: {X: -160.0, Y: 360.0}
+    3862bde5751cac457a6f0f93256b3204:
+        Id: with_the_crown
+        Title: With the crown
+        EndWhen: 
+        Next: {}
+        Scenarios: {}
+        Quests: {}
+        Attributes: {}
+        Position: {X: 160.0, Y: 360.0}

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>SagaSandbox</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Engine" Version="$(SagaStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SagaStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <!-- The game references the runtime only; the asset compiler and Game Studio find its companions -->
+    <ProjectReference Include="..\..\..\src\ColorRise.Saga\ColorRise.Saga.csproj" />
+  </ItemGroup>
+</Project>

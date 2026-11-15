@@ -1,0 +1,77 @@
+!SagaDialogueAsset
+Id: 6c1f4b63-8d2e-4a4f-8b9c-2e3d4f5a6b72
+SerializedVersion: {ColorRise.Saga: 1.0.0.0}
+Tags: []
+Story: 5b0e3a52-7c1d-4f3e-9a8b-1d2c3e4f5a61:Story/Main
+CharacterId: foreman
+When: 
+Priority: 0
+Once: false
+OnlyWhileOwnerLive: true
+Participants:
+    4d622c383c2e3f6383453e6217cdc4c2: player
+    1617c3efd4a822a6b02490c3e0248a4f: foreman
+EntryNodeId: hello
+Nodes:
+    4ad5908494770b386277ceaa268c9e35: !SagaLineNodeCard
+        Id: hello
+        Name: 
+        SpeakerId: foreman
+        Text: '{player_name}! The east tunnel came down.'
+        Actions: 
+        NextId: hub
+        Position: {X: 0.0, Y: 0.0}
+    495c5e7888d35cebe3bab1ac5d847ea2: !SagaChoicesNodeCard
+        Id: hub
+        Name: hub
+        Choices:
+            bf0fef792cdea50470cf82723881f0bf:
+                Text: Who is trapped?
+                When: 
+                HideWhenFalse: true
+                Once: true
+                Actions: 
+                TargetId: who
+            d305804d16d80c5c75ad78988fee8250:
+                Text: I'll dig them out.
+                When: quest.rescue.state == available
+                HideWhenFalse: true
+                Once: false
+                Actions: quest.rescue.state = active
+                TargetId: thanks
+            7fbef1cd774e7efc2099ef9499912fc8:
+                Text: The guild will pay the diggers.
+                When: quest.rescue.state == active && sided_with == ""
+                HideWhenFalse: false
+                Once: false
+                Actions: sided_with = "guild"
+                TargetId: end
+            8d094ec1cc1f29d43175d1afae1f5ffe:
+                Text: Leave.
+                When: 
+                HideWhenFalse: true
+                Once: false
+                Actions: 
+                TargetId: end
+        Position: {X: 0.0, Y: 140.0}
+    9f334c915a014bd5685ed853420ef29c: !SagaLineNodeCard
+        Id: who
+        Name: 
+        SpeakerId: foreman
+        Text: Three of my diggers. Old Bram too.
+        Actions: 
+        NextId: hub
+        Position: {X: -260.0, Y: 300.0}
+    8abe4658bee5c2f2304f9e4f67108d62: !SagaLineNodeCard
+        Id: thanks
+        Name: 
+        SpeakerId: foreman
+        Text: Take my lamp. Hurry.
+        Actions: emit give_item("lamp", 1)
+        NextId: end
+        Position: {X: 0.0, Y: 300.0}
+    868540a1d5ac7ebc01c83e0927ea7f6c: !SagaEndNodeCard
+        Id: end
+        Name: 
+        Position: {X: 0.0, Y: 440.0}
+Attributes: {}

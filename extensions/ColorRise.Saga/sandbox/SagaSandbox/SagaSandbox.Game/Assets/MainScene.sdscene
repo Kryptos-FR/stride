@@ -1,0 +1,81 @@
+!SceneAsset
+Id: 8f3a6d85-0a4b-4c6b-adbe-4a5b6c7d8e94
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 0.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! dd6d2dcc-679d-12b9-430a-9787bab45b33
+        - ref!! bec670e5-a554-24d8-40db-8636ecc28828
+        - ref!! a0cc2b32-2ea1-b3be-caa2-24bf4041a43e
+        - ref!! ab334fee-b31c-0512-4cb7-3fa12571c2f6
+        - ref!! df4ad9d5-c22e-cabc-a116-e2b8dd0c140c
+    Parts:
+        -   Entity:
+                Id: dd6d2dcc-679d-12b9-430a-9787bab45b33
+                Name: Camera
+                Components:
+                    5f95cd9623b136d3a2068fcd0b5cd3a0: !TransformComponent
+                        Id: d9b94663-f762-835d-26c4-a8f11e8cfd40
+                        Position: {X: 0.0, Y: 1.6, Z: 6.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ca6f8ffdb228b282a739fe18575ae68b: !CameraComponent
+                        Id: ae38d6c5-c918-1c55-207e-c2fa0ca74da0
+                        Name: null
+                        Projection: Perspective
+                        Slot: d0a6bf72-b3cd-4bd4-94ca-69952999d537
+        -   Entity:
+                Id: bec670e5-a554-24d8-40db-8636ecc28828
+                Name: Story
+                Components:
+                    9a7ee0b8858bc55ed568ed0e73232b38: !TransformComponent
+                        Id: 35e20852-6b5c-0434-1a0b-eaf0e1876454
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    70333b5a24da151d59cfea1a187af0b0: !SagaSandbox.StoryRunner,SagaSandbox.Game
+                        Id: 8a19fdd1-ad27-ce72-963c-3425a05b2722
+                        Story: 5b0e3a52-7c1d-4f3e-9a8b-1d2c3e4f5a61:Story/Main
+        -   Entity:
+                Id: a0cc2b32-2ea1-b3be-caa2-24bf4041a43e
+                Name: Foreman
+                Components:
+                    c3f38e335946943fe1309adad5800980: !TransformComponent
+                        Id: 0c5a8039-bb0e-a092-5e2b-ef01d57c2c84
+                        Position: {X: -2.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    fea79dc3ade52b0aed339192cf83a848: !SagaCharacterComponent
+                        Id: 963767ba-c028-7b2b-f369-53bbdff78479
+                        CharacterId: foreman
+        -   Entity:
+                Id: ab334fee-b31c-0512-4cb7-3fa12571c2f6
+                Name: Captain
+                Components:
+                    d268a03ab3f32ad2d0ee34b36758ad31: !TransformComponent
+                        Id: 265bc701-66fc-39ec-8282-4d594749f8c4
+                        Position: {X: 2.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    33082490fe018e98bc32ec3bf4115578: !SagaCharacterComponent
+                        Id: 23d313ab-7f04-b811-735c-beebc036cb63
+                        CharacterId: guard_captain
+        -   Entity:
+                Id: df4ad9d5-c22e-cabc-a116-e2b8dd0c140c
+                Name: Guard
+                Components:
+                    a7dd476ff5a2120989ae9fe83209b134: !TransformComponent
+                        Id: 54565b01-6c11-74ac-750c-4ecac097dc43
+                        Position: {X: 3.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ce425d97cf3f6e277dba33e8916a86cb: !SagaCharacterComponent
+                        Id: 8d990f1a-79c7-9a98-757e-bcc7795d26e0
+                        CharacterId: guard

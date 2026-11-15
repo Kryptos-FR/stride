@@ -12,6 +12,16 @@ namespace ColorRise.Saga.Assets;
 [AssetCompiler(typeof(StoryAsset), typeof(AssetCompilationContext))]
 public sealed class StoryAssetCompiler : AssetCompilerBase
 {
+    /// <summary>
+    /// The cards whose content references the compiled story keeps: their dialogues are compiled with the story, since nothing
+    /// else roots them (see docs/plugin-findings.md, finding 4).
+    /// </summary>
+    public override IEnumerable<Type> GetRuntimeTypes(AssetItem assetItem)
+    {
+        yield return typeof(ScenarioCard);
+        yield return typeof(QuestCard);
+    }
+
     protected override void Prepare(AssetCompilerContext context, AssetItem assetItem, string targetUrlInStorage, AssetCompilerResult result)
     {
         result.BuildSteps = new AssetBuildStep(assetItem);
