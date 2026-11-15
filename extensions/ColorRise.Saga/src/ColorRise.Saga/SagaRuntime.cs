@@ -175,6 +175,23 @@ public sealed partial class SagaRuntime
     /// <exception cref="ArgumentException">The story does not declare the character.</exception>
     public DialogueSession? Talk(string characterId)
     {
+        var dialogue = DialogueFor(characterId);
+        if (dialogue is null)
+            return null;
+
+        var session = new DialogueSession(this, logger, dialogue);
+        session.Begin();
+        return session;
+    }
+
+    /// <summary>
+    /// The dialogue <see cref="Talk"/> would play now, without playing it: a game shows from it whether a character has
+    /// something to say, before the player talks.
+    /// </summary>
+    /// <returns>The dialogue, or null when no dialogue of the character can play.</returns>
+    /// <exception cref="ArgumentException">The story does not declare the character.</exception>
+    public DialogueDefinition? DialogueFor(string characterId)
+    {
         if (!characters.Contains(characterId))
             throw new ArgumentException($"The story declares no character '{characterId}'.", nameof(characterId));
 
@@ -190,12 +207,7 @@ public sealed partial class SagaRuntime
             if (Holds(dialogue.When, $"dialogue {dialogue.Name}", "activation"))
                 best = dialogue;
         }
-        if (best is null)
-            return null;
-
-        var session = new DialogueSession(this, logger, best);
-        session.Begin();
-        return session;
+        return best;
     }
 
     /// <summary>

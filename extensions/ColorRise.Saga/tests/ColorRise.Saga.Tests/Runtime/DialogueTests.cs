@@ -117,6 +117,33 @@ public sealed class DialogueTests
     }
 
     [Fact]
+    public void DialogueForSaysWhatTalkWouldPlayWithoutPlayingIt()
+    {
+        var once = Dialogue("intro", priority: 5);
+        once.Once = true;
+        var story = Story(new ActDefinition
+        {
+            Id = "act_1",
+            Scenarios = { new ScenarioDefinition { Id = "s", StartWhen = C("raised(\"offer\")"), Dialogues = { once, Dialogue("small_talk") } } },
+        });
+        var runtime = Started(story);
+
+        // Its owner is not running yet
+        Assert.Null(runtime.DialogueFor("mara"));
+
+        // Asking twice changes nothing: the once dialogue is still the one
+        runtime.Raise("offer");
+        Assert.Equal("intro", runtime.DialogueFor("mara")?.Name);
+        Assert.Equal("intro", runtime.DialogueFor("mara")?.Name);
+        Assert.Empty(runtime.State.UsedOnce);
+        Assert.Empty(runtime.State.Visits);
+
+        Assert.Equal("intro", runtime.Talk("mara")?.Dialogue.Name);
+        Assert.Equal("small_talk", runtime.DialogueFor("mara")?.Name);
+        Assert.Throws<ArgumentException>(() => runtime.DialogueFor("nobody"));
+    }
+
+    [Fact]
     public void HubLoopsAndOnceChoiceDisappears()
     {
         var dialogue = Dialogue("mara", nodes:
