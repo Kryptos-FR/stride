@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Skein.Assets</RootNamespace>
+    <Description>Skein's asset types, Yarn compiler bridge, asset compilers and templates.</Description>
+    <!-- What this companion carries: asset types, compilers, templates and icons, loaded by the asset compiler and Game Studio -->
+    <StridePackageKind>Assets</StridePackageKind>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Core.Assets" Version="$(SkeinStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SkeinStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <PackageReference Include="YarnSpinner.Compiler" Version="$(SkeinYarnVersion)" />
+    <ProjectReference Include="..\ColorRise.Skein\ColorRise.Skein.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Templates\**" />
+    <None Remove="Resources\*.png" />
+    <EmbeddedResource Include="Resources\*.png" />
+  </ItemGroup>
+</Project>

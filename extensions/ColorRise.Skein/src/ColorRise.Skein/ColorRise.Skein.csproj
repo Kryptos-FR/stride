@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Skein</RootNamespace>
+    <PackageTags>stride-plugin;dialogue;story;yarn-spinner</PackageTags>
+    <Description>Skein: Yarn Spinner support for Stride games. The runtime: dialogue runner, presenters, variable storage, commands and functions. Built with Yarn Spinner.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The companions a host loads on behalf of this package: the asset compiler takes the Assets one, Game Studio both.
+         A game references this project (or its package), and ColorRise.Skein.UI when it wants the provided presenters. -->
+    <StrideCompanionProject Include="..\ColorRise.Skein.Assets\ColorRise.Skein.Assets.csproj" />
+    <StrideCompanionProject Include="..\ColorRise.Skein.Editor\ColorRise.Skein.Editor.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Engine" Version="$(SkeinStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SkeinStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <PackageReference Include="YarnSpinner" Version="$(SkeinYarnVersion)" />
+  </ItemGroup>
+</Project>

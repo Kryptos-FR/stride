@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Skein.UI</RootNamespace>
+    <PackageTags>stride-plugin;dialogue;story;yarn-spinner;ui</PackageTags>
+    <Description>Skein's dialogue presenters on Stride's UI: a line presenter with a typewriter, an options presenter and a line advancer.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.UI" Version="$(SkeinStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SkeinStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <ProjectReference Include="..\ColorRise.Skein\ColorRise.Skein.csproj" />
+  </ItemGroup>
+</Project>

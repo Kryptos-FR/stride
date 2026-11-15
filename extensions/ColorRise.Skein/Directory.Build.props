@@ -1,0 +1,44 @@
+<Project>
+  <!--
+    ColorRise.Skein builds against Stride through packages only, as any third party would, and against nothing else of the
+    repository it sits in today: this file, Directory.Build.targets and nuget.config are its own, so that the folder can move to
+    a repository of its own.
+
+    SkeinStrideVersion is the Stride version to build against. Set another one in Directory.Build.local.props (git-ignored; copy
+    Directory.Build.local.props.example).
+  -->
+  <Import Project="Directory.Build.local.props" Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.local.props')" />
+
+  <PropertyGroup>
+    <!-- What a local build of the Stride engine packs today: no released Stride has the plugin model Skein uses -->
+    <SkeinStrideVersion Condition="'$(SkeinStrideVersion)' == ''">4.5.3-dev</SkeinStrideVersion>
+    <!-- Yarn Spinner, from nuget.org, unchanged -->
+    <SkeinYarnVersion Condition="'$(SkeinYarnVersion)' == ''">3.2.2</SkeinYarnVersion>
+    <!-- The Avalonia and AvaloniaEdit versions must be the ones Game Studio ships with -->
+    <SkeinAvaloniaVersion Condition="'$(SkeinAvaloniaVersion)' == ''">12.1.1</SkeinAvaloniaVersion>
+    <SkeinAvaloniaEditVersion Condition="'$(SkeinAvaloniaEditVersion)' == ''">12.0.0</SkeinAvaloniaEditVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.1.0</Version>
+    <Authors>Color-Rise</Authors>
+    <Company>Color-Rise</Company>
+    <Copyright>Copyright (c) Color-Rise</Copyright>
+    <PackageProjectUrl>https://github.com/Kryptos-FR/stride/tree/feature/colorrise-skein/extensions/ColorRise.Skein</PackageProjectUrl>
+    <!-- dotnet pack puts the packages in one folder, the feed a game outside this folder restores them from -->
+    <PackageOutputPath>$(MSBuildThisFileDirectory)bin/packages/</PackageOutputPath>
+  </PropertyGroup>
+
+  <!--
+    Without a RuntimeIdentifier, Stride picks the Windows platform and Direct3D11, even on Linux or macOS. An engine built on
+    those hosts has only the Vulkan Stride.Graphics, so the projects here would load assemblies that need a Vortice.Vulkan they
+    were not given (docs/plugin-findings.md).
+  -->
+  <PropertyGroup Condition="'$(StrideGraphicsApi)' == '' And !$([MSBuild]::IsOSPlatform('Windows'))">
+    <StrideGraphicsApi>Vulkan</StrideGraphicsApi>
+  </PropertyGroup>
+</Project>

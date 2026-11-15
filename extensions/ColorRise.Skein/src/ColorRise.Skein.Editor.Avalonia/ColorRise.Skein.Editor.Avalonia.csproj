@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Skein.Editor.Avalonia</RootNamespace>
+    <Description>Skein's views for the cross-platform Game Studio.</Description>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- The views of the cross-platform Game Studio; ColorRise.Skein.Editor (toolkit-neutral) declares this package as its
+         companion. The toolkit (Avalonia) is inferred from the Avalonia references. -->
+    <StridePackageKind>Editor</StridePackageKind>
+    <!-- Experimental plugin API: panels and views (STREXP001), commands (STREXP003), services (STREXP006), the node graph
+         controls (STREXP010) -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006;STREXP010</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="$(SkeinAvaloniaVersion)" />
+    <PackageReference Include="Stride.Assets.Editor.Avalonia" Version="$(SkeinStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SkeinStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <ProjectReference Include="..\ColorRise.Skein.Editor\ColorRise.Skein.Editor.csproj" />
+  </ItemGroup>
+</Project>

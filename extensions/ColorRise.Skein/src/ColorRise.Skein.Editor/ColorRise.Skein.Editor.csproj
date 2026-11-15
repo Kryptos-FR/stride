@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Skein.Editor</RootNamespace>
+    <Description>Skein's Game Studio extensions: the Yarn script editor, the dialogue player and the commands (toolkit-neutral).</Description>
+    <!-- What this companion carries: Game Studio extensions; only Game Studio loads it -->
+    <StridePackageKind>Editor</StridePackageKind>
+    <!-- Experimental plugin API: panels and views (STREXP001), commands (STREXP003), services (STREXP006) -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The views of the cross-platform Game Studio -->
+    <StrideCompanionProject Include="..\ColorRise.Skein.Editor.Avalonia\ColorRise.Skein.Editor.Avalonia.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Assets.Editor" Version="$(SkeinStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SkeinStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <ProjectReference Include="..\ColorRise.Skein\ColorRise.Skein.csproj" />
+    <ProjectReference Include="..\ColorRise.Skein.UI\ColorRise.Skein.UI.csproj" />
+    <ProjectReference Include="..\ColorRise.Skein.Assets\ColorRise.Skein.Assets.csproj" />
+  </ItemGroup>
+</Project>
