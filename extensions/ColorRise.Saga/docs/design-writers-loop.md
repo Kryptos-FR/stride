@@ -62,13 +62,13 @@ A **step** (`SagaStep`) is what the writer did, recorded as names and texts, nev
 | Answer | the function and the answer as text | it is declared and the text is a literal of its return type |
 | Talk | the character | the story declares it (having nothing to say is a result, not a failure) |
 | Continue | | a dialogue shows a line and no choices |
-| Choose | the choice's index and text | a dialogue shows choices and one of them, enabled, has the same text, or else the same index |
+| Choose | the choice's index and text, and the texts of the choices shown | a dialogue shows choices and one of them, enabled, has the same text, or else the same index when that one was reworded |
 
 A **run step** (`SagaRunStep`) is a step with what it did: the story state after it (a copy), the changes of the story (`SagaChangedEventArgs`), the signals emitted, the transcript lines, the runtime's warnings and errors, and the dialogue open during or ended by the step (its name, the nodes it went through, whether it is still open).
 
 Answering a function is a step **(C)**: the function's answer at each point of the run must be known to replay it, and it shows on the timeline. In v1 an answer was a field that only mattered at the next step; that stays true, the step changes nothing by itself.
 
-A choice is matched by its text first, then by its index **(C)**: a writer who reorders choices keeps the run; one who rewords a choice keeps it too, as long as the order stays.
+A choice is matched by its text first, then by its index **(C)**: a writer who reorders choices keeps the run; one who rewords a choice keeps it too, as long as the order stays. The index counts only for a reword: the node shows as many choices as when the step was taken, and the text at the index is not one it showed then. A choice removed before others would otherwise hand its index to the next one.
 
 What a step throws while the story settles (a story that doesn't settle) is recorded in its messages, as v1's transcript does, and replays the same way. Only a step that can't apply stops a replay.
 

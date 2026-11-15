@@ -1,3 +1,5 @@
+using ColorRise.Saga.Assets;
+using ColorRise.Saga.Content;
 using ColorRise.Saga.Editor.Player;
 using ColorRise.Saga.Editor.Tests.Helpers;
 using ColorRise.Saga.Expressions;
@@ -31,7 +33,7 @@ public sealed class SagaRunTests
         Assert.Equal(["hello", "hub"], next.DialoguePath);
 
         var leave = run.Apply(SagaStep.Choose(1, "Leave"));
-        Assert.Equal(SagaStep.Choose(1, "Leave"), leave.Step);
+        Assert.Equal(SagaStep.Choose(1, "Leave", ["Leave"]), leave.Step);
         Assert.Equal(["> Leave", "(the dialogue ends)"], leave.Lines);
         Assert.Equal([(SagaChangeKind.QuestAvailable, "find_the_lamp")], leave.Changes.Select(x => (x.Kind, x.Id)));
         Assert.Equal(["ring"], leave.Signals.Select(x => x.Name));
@@ -80,10 +82,32 @@ public sealed class SagaRunTests
         using var run = Talking();
 
         // "Ask about the mine" is hidden without a pickaxe: "Leave" is shown first, at index 1
-        Assert.Equal(SagaStep.Choose(1, "Leave"), run.Apply(SagaStep.Choose(7, "Leave")).Step);
+        Assert.Equal(SagaStep.Choose(1, "Leave", ["Leave"]), run.Apply(SagaStep.Choose(7, "Leave")).Step);
 
         using var other = Talking();
-        Assert.Equal(SagaStep.Choose(1, "Leave"), other.Apply(SagaStep.Choose(1, "Go away")).Step);
+        // A step that doesn't know what the node showed takes the choice at its index
+        Assert.Equal(SagaStep.Choose(1, "Leave", ["Leave"]), other.Apply(SagaStep.Choose(1, "Go away")).Step);
+    }
+
+    [Fact]
+    public void RecordedChoiceFallsBackToItsIndexOnlyWhenOneOfAsManyChoicesWasReworded()
+    {
+        var (story, dialogue) = MaraStory.Create();
+        var hub = (ChoicesNodeCard)dialogue.Nodes[1];
+        SagaStep taken;
+        using (var run = Asking(MaraStory.Build(story, dialogue)))
+            taken = run.Apply(SagaStep.Choose(0, "Ask about the mine")).Step;
+        Assert.Equal(SagaStep.Choose(0, "Ask about the mine", ["Ask about the mine", "Leave"]), taken);
+
+        // Reworded: as many choices, and the one at its index is new
+        hub.Choices[0].Text = "What happened down there?";
+        using (var reworded = Asking(MaraStory.Build(story, dialogue)))
+            Assert.Equal(SagaStep.Choose(0, "What happened down there?", ["What happened down there?", "Leave"]), reworded.Apply(taken).Step);
+
+        // Removed: "Leave" moved to its index, but it was offered next to it
+        hub.Choices.RemoveAt(0);
+        using var removed = Asking(MaraStory.Build(story, dialogue));
+        Assert.Equal("The choice \"Ask about the mine\" is no longer offered.", removed.CanApply(taken));
     }
 
     [Fact]
@@ -123,6 +147,17 @@ public sealed class SagaRunTests
             ["Start", "Raise met_mara", "Set day = 4", "Answer has_pickaxe() → true", "Talk to mara", "Continue", "Choose \"Leave\""],
             new[] { SagaStep.Start(), SagaStep.Raise("met_mara"), SagaStep.Set("day", "4"), SagaStep.Answer("has_pickaxe", "true"), SagaStep.Talk("mara"), SagaStep.Continue(), SagaStep.Choose(1, "Leave") }
                 .Select(x => x.ToString()));
+    }
+
+    // At Mara's choices with a pickaxe: both choices shown
+    private static SagaRun Asking(StoryDefinition story)
+    {
+        var run = new SagaRun(story);
+        run.Apply(SagaStep.Start());
+        run.Apply(SagaStep.Answer("has_pickaxe", "true"));
+        run.Apply(SagaStep.Talk("mara"));
+        run.Apply(SagaStep.Continue());
+        return run;
     }
 
     private static SagaRun Talking()

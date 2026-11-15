@@ -48,7 +48,8 @@ public enum SagaStepKind
 /// <param name="Name">The event, variable, function or character.</param>
 /// <param name="Value">The value of a variable or the answer of a function, as a literal; the text of a choice.</param>
 /// <param name="ChoiceIndex">The index of a choice in its node.</param>
-public sealed record SagaStep(SagaStepKind Kind, string Name = "", string Value = "", int ChoiceIndex = -1)
+/// <param name="Offered">The texts of the choices the node showed when the choice was taken, or null when unknown.</param>
+public sealed record SagaStep(SagaStepKind Kind, string Name = "", string Value = "", int ChoiceIndex = -1, IReadOnlyList<string>? Offered = null)
 {
     public static SagaStep Start() => new(SagaStepKind.Start);
 
@@ -62,7 +63,12 @@ public sealed record SagaStep(SagaStepKind Kind, string Name = "", string Value 
 
     public static SagaStep Continue() => new(SagaStepKind.Continue);
 
-    public static SagaStep Choose(int index, string text) => new(SagaStepKind.Choose, Value: text, ChoiceIndex: index);
+    public static SagaStep Choose(int index, string text, IReadOnlyList<string>? offered = null) => new(SagaStepKind.Choose, Value: text, ChoiceIndex: index, Offered: offered);
+
+    public bool Equals(SagaStep? other) => other is not null && Kind == other.Kind && Name == other.Name && Value == other.Value
+        && ChoiceIndex == other.ChoiceIndex && (Offered ?? []).SequenceEqual(other.Offered ?? []) && (Offered is null) == (other.Offered is null);
+
+    public override int GetHashCode() => HashCode.Combine(Kind, Name, Value, ChoiceIndex, Offered?.Count);
 
     /// <summary>
     /// The step in words: <c>Raise met_mara</c>, <c>Set day = 4</c>, <c>Choose "Leave"</c>.

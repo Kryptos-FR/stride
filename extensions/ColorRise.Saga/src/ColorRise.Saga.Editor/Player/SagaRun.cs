@@ -143,7 +143,7 @@ public sealed class SagaRun : IDisposable
                     break;
                 case SagaStepKind.Choose:
                     var choice = FindChoice(step, out _)!;
-                    applied = SagaStep.Choose(choice.Index, choice.Text);
+                    applied = SagaStep.Choose(choice.Index, choice.Text, [.. Dialogue!.Choices.Select(x => x.Text)]);
                     lines.Add($"> {choice.Text}");
                     Dialogue!.Choose(choice.Index);
                     break;
@@ -179,11 +179,14 @@ public sealed class SagaRun : IDisposable
         subscriptions.Clear();
     }
 
-    // The choice a step takes: the shown choice with its text, else the one at its index
+    // The choice a step takes: the shown choice with its text, else the one at its index when that one was reworded: the node shows
+    // as many choices as when the step was taken, and the text at the index is not one it showed then
     private DialogueChoiceView? FindChoice(SagaStep step, out string reason)
     {
         var choices = Dialogue!.Choices;
-        var choice = choices.FirstOrDefault(x => x.Text == step.Value) ?? choices.FirstOrDefault(x => x.Index == step.ChoiceIndex && x.IsEnabled);
+        var choice = choices.FirstOrDefault(x => x.Text == step.Value)
+            ?? choices.FirstOrDefault(x => x.Index == step.ChoiceIndex && x.IsEnabled
+                && (step.Offered is null || (choices.Count == step.Offered.Count && !step.Offered.Contains(x.Text))));
         reason = choice switch
         {
             null => $"The choice \"{step.Value}\" is no longer offered.",
