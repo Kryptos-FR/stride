@@ -28,4 +28,13 @@
     <!-- The avalonia version must be the one the Game Studio ships with -->
     <SagaAvaloniaVersion Condition="'$(SagaAvaloniaVersion)' == ''">12.1.1</SagaAvaloniaVersion>
   </PropertyGroup>
+
+  <!--
+    Without a RuntimeIdentifier, Stride picks the Windows platform and Direct3D11, even on Linux or macOS. An engine built on
+    those hosts has only the Vulkan Stride.Graphics, so the projects here would load assemblies that need a Vortice.Vulkan they
+    were not given (see docs/plugin-findings.md, finding 3).
+  -->
+  <PropertyGroup Condition="'$(StrideGraphicsApi)' == '' And !$([MSBuild]::IsOSPlatform('Windows'))">
+    <StrideGraphicsApi>Vulkan</StrideGraphicsApi>
+  </PropertyGroup>
 </Project>
