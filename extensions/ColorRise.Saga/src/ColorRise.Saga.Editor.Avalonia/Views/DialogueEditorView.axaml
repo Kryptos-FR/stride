@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:vm="using:ColorRise.Saga.Editor.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ColorRise.Saga.Editor.Avalonia.Views.DialogueEditorView"
+             x:DataType="vm:DialogueEditorViewModel"
+             Focusable="True">
+  <UserControl.Styles>
+    <Style Selector="Button.tool">
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="Padding" Value="8,3"/>
+      <Setter Property="Margin" Value="2,0"/>
+    </Style>
+  </UserControl.Styles>
+  <!-- Delete removes the selected nodes and links -->
+  <sd:EditCommands.Bindings>
+    <sd:EditCommandBinding Kind="Delete" Command="{Binding DeleteSelectionCommand}"/>
+  </sd:EditCommands.Bindings>
+
+  <DockPanel>
+    <!-- New nodes, and what applies to the selected node -->
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6">
+      <Button Classes="tool" Content="{sd:LocalizeString Add line, Context=Button}" Command="{Binding AddLineCommand}"/>
+      <Button Classes="tool" Content="{sd:LocalizeString Add choices, Context=Button}" Command="{Binding AddChoicesCommand}"/>
+      <Button Classes="tool" Content="{sd:LocalizeString Add branch, Context=Button}" Command="{Binding AddBranchCommand}"/>
+      <Button Classes="tool" Content="{sd:LocalizeString Add end, Context=Button}" Command="{Binding AddEndCommand}"/>
+      <Separator Width="1" Margin="6,2" Background="Gray"/>
+      <Button Classes="tool" Content="{sd:LocalizeString Add way out, Context=Button}"
+              Command="{Binding AddWayOutCommand}" CommandParameter="{Binding SelectedNodes[0], FallbackValue={x:Null}}"
+              ToolTip.Tip="{sd:LocalizeString Add a choice to the selected choices node or a link to the selected branch, Context=ToolTip}"/>
+      <Button Classes="tool" Content="{sd:LocalizeString Set as entry, Context=Button}"
+              Command="{Binding SetEntryCommand}" CommandParameter="{Binding SelectedNodes[0], FallbackValue={x:Null}}"
+              ToolTip.Tip="{sd:LocalizeString Start the dialogue at the selected node, Context=ToolTip}"/>
+    </StackPanel>
+
+    <!-- The nodes and the ways out that lead from one to another. The view gives the graph its nodes, links and commands
+         (SagaGraphBinding). -->
+    <sd:NodeGraphControl x:Name="Graph" AutoLayout="False" NodeTemplate="{StaticResource SagaNodeTemplate}">
+      <sd:NodeGraphControl.ContextMenu>
+        <ContextMenu>
+          <MenuItem Header="{sd:LocalizeString Delete selection, Context=Menu}" InputGesture="{x:Static sd:EditCommands.DeleteGesture}"
+                    Command="{Binding DeleteSelectionCommand}"/>
+        </ContextMenu>
+      </sd:NodeGraphControl.ContextMenu>
+    </sd:NodeGraphControl>
+  </DockPanel>
+</UserControl>

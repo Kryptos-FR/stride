@@ -1,0 +1,44 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+                    xmlns:vm="using:ColorRise.Saga.Editor.ViewModels"
+                    xmlns:views="using:ColorRise.Saga.Editor.Avalonia.Views">
+  <!-- The look of Saga's editors; SagaEditorAvaloniaPlugin merges this dictionary into the application. -->
+
+  <!-- The header color of a node, by what it stands for: the acts of the plot indigo, the scenarios and quests of an act teal,
+       the dialogues of a scenario or quest orange; in a dialogue, lines slate, choices orange, branches purple, ends red. -->
+  <views:SagaNodeBrushes x:Key="SagaNodeBrushes"
+                         Act="#FF3949AB" Scenario="#FF00796B" Quest="#FF00897B" Dialogue="#FFEF6C00"
+                         Line="#FF546E7A" Choices="#FFEF6C00" Branch="#FF7B1FA2" End="#FFC62828"
+                         Default="#FF595656"/>
+  <SolidColorBrush x:Key="SagaEntryBrush" Color="#FFFFD54F"/>
+
+  <!-- A node of a Saga graph: what it is and its title in the header, its input on the left, its ways out on the right -->
+  <DataTemplate x:Key="SagaNodeTemplate" x:DataType="vm:SagaGraphNodeViewModel">
+    <StackPanel MinWidth="140" MaxWidth="260">
+      <Border Background="{Binding Kind, Converter={StaticResource SagaNodeBrushes}}" CornerRadius="2,2,0,0" Padding="8,3">
+        <StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock FontSize="10" Foreground="#C0FFFFFF" Text="{Binding Kind}"/>
+            <TextBlock FontSize="10" FontWeight="Bold" Foreground="{StaticResource SagaEntryBrush}" Text="ENTRY" IsVisible="{Binding IsEntry}"/>
+          </StackPanel>
+          <TextBlock FontWeight="Bold" Foreground="#FFEBEBEB" TextTrimming="CharacterEllipsis" Text="{Binding Title}" ToolTip.Tip="{Binding Id}"/>
+        </StackPanel>
+      </Border>
+      <Grid ColumnDefinitions="Auto, *" Margin="0,3">
+        <sd:NodeGraphConnector Grid.Column="0" Margin="3,1" VerticalAlignment="Top" Slot="{Binding Input}" Direction="Input"/>
+        <ItemsControl Grid.Column="1" ItemsSource="{Binding Outputs}" HorizontalAlignment="Right">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SagaGraphSlot">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <TextBlock Foreground="#FFEBEBEB" VerticalAlignment="Center" Margin="10,0,2,0" MaxWidth="200"
+                           TextTrimming="CharacterEllipsis" Text="{Binding Name}"/>
+                <sd:NodeGraphConnector Margin="3,1" Slot="{Binding}" Direction="Output"/>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Grid>
+    </StackPanel>
+  </DataTemplate>
+</ResourceDictionary>

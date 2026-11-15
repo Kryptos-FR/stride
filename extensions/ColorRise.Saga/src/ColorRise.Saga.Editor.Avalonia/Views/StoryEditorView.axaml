@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:vm="using:ColorRise.Saga.Editor.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ColorRise.Saga.Editor.Avalonia.Views.StoryEditorView"
+             x:DataType="vm:StoryEditorViewModel"
+             Focusable="True">
+  <UserControl.Styles>
+    <Style Selector="Button.tool">
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="Padding" Value="8,3"/>
+      <Setter Property="Margin" Value="2,0"/>
+    </Style>
+    <Style Selector="Button.crumb">
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Padding" Value="4,2"/>
+    </Style>
+    <!-- The open level, last in the breadcrumb -->
+    <Style Selector="ContentPresenter:nth-last-child(1) Button.crumb">
+      <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+    <Style Selector="ContentPresenter:nth-child(1) TextBlock.separator">
+      <Setter Property="IsVisible" Value="False"/>
+    </Style>
+  </UserControl.Styles>
+  <!-- Delete removes the selected cards and links -->
+  <sd:EditCommands.Bindings>
+    <sd:EditCommandBinding Kind="Delete" Command="{Binding DeleteSelectionCommand}"/>
+  </sd:EditCommands.Bindings>
+
+  <DockPanel>
+    <!-- The breadcrumb (Story › Act › Scenario) and what the open level can add -->
+    <DockPanel DockPanel.Dock="Top" Margin="8,6">
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+        <Button Classes="tool" Content="{sd:LocalizeString Add act, Context=Button}" Command="{Binding AddActCommand}"
+                IsVisible="{Binding $self.IsEffectivelyEnabled}"/>
+        <Button Classes="tool" Content="{sd:LocalizeString Add scenario, Context=Button}" Command="{Binding AddScenarioCommand}"
+                IsVisible="{Binding $self.IsEffectivelyEnabled}"/>
+        <Button Classes="tool" Content="{sd:LocalizeString Add quest, Context=Button}" Command="{Binding AddQuestCommand}"
+                IsVisible="{Binding $self.IsEffectivelyEnabled}"/>
+        <Button Classes="tool" Content="{sd:LocalizeString Add dialogue, Context=Button}" Command="{Binding AddDialogueCommand}"
+                IsVisible="{Binding $self.IsEffectivelyEnabled}"
+                ToolTip.Tip="{sd:LocalizeString Create a dialogue next to the story for this scenario or quest, Context=ToolTip}"/>
+      </StackPanel>
+      <ItemsControl ItemsSource="{Binding Breadcrumb}" VerticalAlignment="Center">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:StoryGraphLevel">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Classes="separator" Text="›" Margin="2,0" VerticalAlignment="Center" Foreground="Gray"/>
+              <Button Classes="crumb" Content="{Binding Title}"
+                      Command="{Binding $parent[UserControl].((vm:StoryEditorViewModel)DataContext).GoToLevelCommand}" CommandParameter="{Binding}"/>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </DockPanel>
+
+    <!-- The cards of the open level and their links; a double click opens a card. The view gives the graph its nodes, links
+         and commands (SagaGraphBinding). -->
+    <sd:NodeGraphControl x:Name="Graph" AutoLayout="False" NodeTemplate="{StaticResource SagaNodeTemplate}">
+      <sd:NodeGraphControl.ContextMenu>
+        <ContextMenu>
+          <MenuItem Header="{sd:LocalizeString Delete selection, Context=Menu}" InputGesture="{x:Static sd:EditCommands.DeleteGesture}"
+                    Command="{Binding DeleteSelectionCommand}"/>
+        </ContextMenu>
+      </sd:NodeGraphControl.ContextMenu>
+    </sd:NodeGraphControl>
+  </DockPanel>
+</UserControl>
