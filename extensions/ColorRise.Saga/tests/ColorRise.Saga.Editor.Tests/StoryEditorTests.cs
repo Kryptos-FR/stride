@@ -186,6 +186,65 @@ public sealed class StoryEditorTests
     });
 
     [Fact]
+    public Task TwoLinksToTheSameActKeepTheEditorWorking() => RunAsync((fixture, editor) =>
+    {
+        // The property grid can point a second link at the act the first one leads to
+        editor.LinkCommand.Execute(new SagaLinkRequest(Node(editor, "the_mine").Output, Node(editor, "with_the_crown").Input));
+        var second = editor.Asset.Asset.Acts[0].Next[1];
+        fixture.Edit(second, nameof(ActLinkCard.TargetActId), "with_the_guild");
+        Assert.Equal(2, editor.Links.Count(x => x.ToString() == "the_mine.Output -> with_the_guild.Input"));
+
+        editor.AddActCommand.Execute(null);
+        fixture.Session.UndoRedoService.Undo();
+        fixture.Session.UndoRedoService.Undo();
+
+        Assert.Equal("with_the_crown", second.TargetActId);
+        Assert.Equal(["the_mine.Output -> with_the_guild.Input", "the_mine.Output -> with_the_crown.Input"], editor.Links.Select(x => x.ToString()));
+        return Task.CompletedTask;
+    });
+
+    [Fact]
+    public Task RenamingACardRenamesWhatRefersToIt() => RunAsync((fixture, editor) =>
+    {
+        var story = editor.Asset.Asset;
+        var names = RecordUndoNames(fixture);
+
+        fixture.Edit(story.Acts[1], nameof(ActCard.Id), "guild");
+        fixture.Edit(story.Acts[0], nameof(ActCard.Id), "mine");
+        fixture.Edit(story.Acts[0].Scenarios[0], nameof(ScenarioCard.Id), "collapse");
+
+        Assert.Equal(["Edit Id", "Edit Id", "Edit Id"], names);
+        Assert.Equal(("guild", "mine"), (story.Acts[0].Next[0].TargetActId, story.FirstActId));
+        Assert.Equal(["collapse", ""], story.Acts[0].Quests.Select(x => x.ScenarioId));
+        Assert.Equal(["mine.Output -> guild.Input"], editor.Links.Select(x => x.ToString()));
+
+        fixture.Session.UndoRedoService.Undo();
+        fixture.Session.UndoRedoService.Undo();
+        fixture.Session.UndoRedoService.Undo();
+        Assert.Equal(("with_the_guild", "the_mine"), (story.Acts[0].Next[0].TargetActId, story.FirstActId));
+        Assert.Equal(["cave_in", ""], story.Acts[0].Quests.Select(x => x.ScenarioId));
+        Assert.Equal(["the_mine.Output -> with_the_guild.Input"], editor.Links.Select(x => x.ToString()));
+        return Task.CompletedTask;
+    });
+
+    [Fact]
+    public Task UndoingAnAddedActTakesItOutOfThePropertyGrid() => RunAsync(async (fixture, editor) =>
+    {
+        editor.AddActCommand.Execute(null);
+        var added = Node(editor, "act_4");
+        editor.SelectedNodes.Add(added);
+        await fixture.WaitForPropertiesAsync();
+        var properties = fixture.Session.AssetViewProperties;
+        Assert.Same(added, Assert.Single(properties.Selection!));
+
+        fixture.Session.UndoRedoService.Undo();
+        await fixture.WaitForPropertiesAsync();
+
+        Assert.Empty(editor.SelectedNodes);
+        Assert.DoesNotContain(added, properties.Selection ?? []);
+    });
+
+    [Fact]
     public Task MovingAnActLinkKeepsItsCondition() => RunAsync((fixture, editor) =>
     {
         var story = editor.Asset.Asset;

@@ -125,6 +125,30 @@ public sealed class DialogueEditorTests
         return Task.CompletedTask;
     });
 
+    [Fact]
+    public Task RenamingANodeRenamesTheWaysToIt() => RunAsync((fixture, editor) =>
+    {
+        var dialogue = editor.Asset.Asset;
+        var hello = (LineNodeCard)dialogue.Nodes[0];
+        var hub = (ChoicesNodeCard)dialogue.Nodes[1];
+        var mine = (LineNodeCard)dialogue.Nodes[2];
+
+        fixture.Edit(hub, nameof(DialogueNodeCard.Id), "questions");
+        fixture.Edit(hello, nameof(DialogueNodeCard.Id), "greeting");
+        fixture.Edit(mine, nameof(DialogueNodeCard.Id), "collapse");
+
+        Assert.Equal(("questions", "questions", "greeting"), (hello.NextId, mine.NextId, dialogue.EntryNodeId));
+        Assert.Equal(["collapse", "end"], hub.Choices.Select(x => x.TargetId));
+        Assert.True(Node(editor, "greeting").IsEntry);
+
+        fixture.Session.UndoRedoService.Undo();
+        fixture.Session.UndoRedoService.Undo();
+        fixture.Session.UndoRedoService.Undo();
+        Assert.Equal(("hub", "hub", "hello"), (hello.NextId, mine.NextId, dialogue.EntryNodeId));
+        Assert.Equal(["mine", "end"], hub.Choices.Select(x => x.TargetId));
+        return Task.CompletedTask;
+    });
+
     private static SagaGraphNodeViewModel Node(DialogueEditorViewModel editor, string id) => editor.Nodes.Single(x => x.Id == id);
 
     private static List<string?> RecordUndoNames(SagaSessionFixture fixture)

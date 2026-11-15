@@ -131,6 +131,17 @@ public sealed class DialogueEditorViewModel : SagaGraphEditorViewModel<DialogueV
         }
     }
 
+    /// <inheritdoc />
+    protected override void RenameReferences(object card, string oldId, string newId)
+    {
+        if (card is not DialogueNodeCard)
+            return;
+        foreach (var way in Dialogue.Nodes.SelectMany(WaysOutOf).Where(x => TargetOf(x) == oldId).ToList())
+            SetTarget(way, newId);
+        if (Dialogue.EntryNodeId == oldId)
+            RootNode[nameof(DialogueAsset.EntryNodeId)].Update(newId);
+    }
+
     private void SetTarget(object way, string target)
     {
         var member = way switch

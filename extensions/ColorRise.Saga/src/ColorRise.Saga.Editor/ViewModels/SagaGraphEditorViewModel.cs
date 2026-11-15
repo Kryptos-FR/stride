@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using Stride.Core.Assets.Editor.ViewModels;
+using Stride.Core.Assets.Quantum;
 using Stride.Core.Assets.Presentation.ViewModels;
 using Stride.Core.Mathematics;
 using Stride.Core.Presentation.Collections;
@@ -24,6 +25,7 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
 
     private bool refreshing;
     private bool changingSelection;
+    private bool propertiesStale;
 
     protected SagaGraphEditorViewModel(TAssetViewModel asset)
         : base(asset)
@@ -78,10 +80,13 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
     /// <inheritdoc />
     public override Task<bool> Initialize()
     {
-        Asset.PropertyGraph.Changed += AssetChanged;
+        Asset.PropertyGraph.Changed += AssetMemberChanged;
         Asset.PropertyGraph.ItemChanged += AssetChanged;
         SelectedNodes.CollectionChanged += SelectionChanged;
         SelectedLinks.CollectionChanged += SelectionChanged;
+        UndoRedoService.Done += ChangeCompleted;
+        UndoRedoService.Undone += ChangeCompleted;
+        UndoRedoService.Redone += ChangeCompleted;
         Refresh();
         return Task.FromResult(true);
     }
@@ -89,10 +94,13 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
     /// <inheritdoc />
     public override void Destroy()
     {
-        Asset.PropertyGraph.Changed -= AssetChanged;
+        Asset.PropertyGraph.Changed -= AssetMemberChanged;
         Asset.PropertyGraph.ItemChanged -= AssetChanged;
         SelectedNodes.CollectionChanged -= SelectionChanged;
         SelectedLinks.CollectionChanged -= SelectionChanged;
+        UndoRedoService.Done -= ChangeCompleted;
+        UndoRedoService.Undone -= ChangeCompleted;
+        UndoRedoService.Redone -= ChangeCompleted;
         base.Destroy();
     }
 
@@ -162,6 +170,13 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
     /// Deletes a node and what leads to it; the caller opens the transaction.
     /// </summary>
     protected abstract void Delete(SagaGraphNodeViewModel node);
+
+    /// <summary>
+    /// Makes what refers to a card by its id follow a new id; the transaction of the change is open.
+    /// </summary>
+    protected virtual void RenameReferences(object card, string oldId, string newId)
+    {
+    }
 
     /// <summary>
     /// Called before the graph is rebuilt.
@@ -250,27 +265,23 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
         if (refreshing)
             return;
         refreshing = true;
+        var selection = SelectedNodes.Concat(SelectedLinks).ToList();
         try
         {
             OnRefreshing();
             var previous = Nodes.ToDictionary(x => x.Card!, ReferenceEqualityComparer.Instance);
             var nodes = BuildNodes(previous).ToList();
-            if (!nodes.SequenceEqual(Nodes))
-            {
-                Nodes.Clear();
-                Nodes.AddRange(nodes);
-            }
+            Update(Nodes, nodes);
             foreach (var node in nodes)
                 node.Refresh();
 
             var byCard = nodes.ToDictionary(x => x.Card!, ReferenceEqualityComparer.Instance);
-            var previousLinks = Links.ToDictionary(x => (x.Source, x.Target));
+            // Two links can join the same slots (the property grid can point a second act link at the same act)
+            var previousLinks = new Dictionary<(SagaGraphSlot, SagaGraphSlot), SagaGraphLinkViewModel>();
+            foreach (var link in Links)
+                previousLinks.TryAdd((link.Source, link.Target), link);
             var links = BuildLinks(byCard).Select(x => previousLinks.TryGetValue((x.Source, x.Target), out var kept) && kept.Card == x.Card ? kept : x).ToList();
-            if (!links.SequenceEqual(Links))
-            {
-                Links.Clear();
-                Links.AddRange(links);
-            }
+            Update(Links, links);
 
             foreach (var gone in SelectedNodes.Where(x => !Nodes.Contains(x)).ToList())
                 SelectedNodes.Remove(gone);
@@ -280,6 +291,36 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
         finally
         {
             refreshing = false;
+        }
+
+        // A selected card that left (an undo, a rebuild) leaves the property grid too, once the asset no longer changes: the grid
+        // builds its nodes on another thread
+        if (!selection.SequenceEqual(SelectedNodes.Concat(SelectedLinks)))
+        {
+            if (UndoRedoService.TransactionInProgress || UndoRedoService.UndoRedoInProgress)
+                propertiesStale = true;
+            else
+                UpdateProperties();
+        }
+    }
+
+    // Changes a list into another by removing and inserting items, so that the graph keeps the selection of the others
+    private static void Update<T>(ObservableList<T> list, List<T> items)
+        where T : class
+    {
+        for (var i = list.Count - 1; i >= 0; --i)
+        {
+            if (!items.Contains(list[i]))
+                list.RemoveAt(i);
+        }
+        for (var i = 0; i < items.Count; ++i)
+        {
+            if (i < list.Count && ReferenceEquals(list[i], items[i]))
+                continue;
+            var index = list.IndexOf(items[i]);
+            if (index >= 0)
+                list.RemoveAt(index);
+            list.Insert(i, items[i]);
         }
     }
 
@@ -319,6 +360,27 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
     }
 
     private void AssetChanged(object? sender, EventArgs e) => Refresh();
+
+    private void AssetMemberChanged(object? sender, AssetMemberNodeChangeEventArgs e)
+    {
+        // A card renamed (in the property grid): what refers to it by id follows, in the same step of the undo history. An undo or
+        // a redo brings the references back by itself.
+        if (e.Member.Name == "Id" && e.OldValue is string { Length: > 0 } oldId && e.NewValue is string { Length: > 0 } newId && oldId != newId
+            && !UndoRedoService.UndoRedoInProgress && e.Member.Parent.Retrieve() is { } card)
+        {
+            RenameReferences(card, oldId, newId);
+        }
+        Refresh();
+    }
+
+    private void ChangeCompleted(object? sender, EventArgs e)
+    {
+        if (propertiesStale)
+        {
+            propertiesStale = false;
+            UpdateProperties();
+        }
+    }
 
     private void SelectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {

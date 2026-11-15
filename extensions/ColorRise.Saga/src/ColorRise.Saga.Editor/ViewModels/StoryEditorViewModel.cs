@@ -162,6 +162,24 @@ public sealed class StoryEditorViewModel : SagaGraphEditorViewModel<StoryViewMod
         }
     }
 
+    /// <inheritdoc />
+    protected override void RenameReferences(object card, string oldId, string newId)
+    {
+        switch (card)
+        {
+            case ActCard:
+                foreach (var next in Story.Acts.SelectMany(x => x.Next).Where(x => x.TargetActId == oldId).ToList())
+                    NodeOf(next)[nameof(ActLinkCard.TargetActId)].Update(newId);
+                if (Story.FirstActId == oldId)
+                    RootNode[nameof(StoryAsset.FirstActId)].Update(newId);
+                break;
+            case ScenarioCard:
+                foreach (var quest in Story.Acts.SelectMany(x => x.Quests).Where(x => x.ScenarioId == oldId).ToList())
+                    NodeOf(quest)[nameof(QuestCard.ScenarioId)].Update(newId);
+                break;
+        }
+    }
+
     /// <summary>
     /// Goes up to the deepest level whose cards are still in the story, and updates the titles.
     /// </summary>

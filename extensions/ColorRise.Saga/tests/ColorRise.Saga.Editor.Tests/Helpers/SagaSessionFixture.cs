@@ -79,6 +79,17 @@ public sealed class SagaSessionFixture
     }
 
     /// <summary>
+    /// Sets a member of a card or asset through the property graph, in one step of the undo history, as the property grid does.
+    /// </summary>
+    public void Edit(object owner, string member, object? value)
+    {
+        var undoRedo = Session.UndoRedoService;
+        using var transaction = undoRedo.CreateTransaction();
+        (Session.AssetNodeContainer.GetNode(owner) ?? throw new InvalidOperationException($"{owner} is not in an asset."))[member].Update(value);
+        undoRedo.SetName(transaction, $"Edit {member}");
+    }
+
+    /// <summary>
     /// Writes a package with the given assets (location in the package, asset), opens it, runs the test and destroys the session.
     /// </summary>
     public static Task RunAsync(Func<SagaSessionFixture, Task> test, params (string Location, Asset Asset)[] assets)
