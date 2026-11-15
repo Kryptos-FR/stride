@@ -51,6 +51,21 @@ public sealed class DialogueEditorTests
     });
 
     [Fact]
+    public Task MovingALinkRetargetsItsWayOut() => RunAsync((fixture, editor) =>
+    {
+        var names = RecordUndoNames(fixture);
+        var link = editor.Links.Single(x => x.ToString() == "hub.Leave -> end.Input");
+
+        editor.LinkCommand.Execute(new SagaLinkRequest(link.Source, Node(editor, "check").Input, link));
+
+        Assert.Equal(["Move link"], names);
+        Assert.Equal("check", ((ChoicesNodeCard)editor.Asset.Asset.Nodes[1]).Choices[1].TargetId);
+        Assert.Contains(editor.Links, x => x.ToString() == "hub.Leave -> check.Input");
+        Assert.DoesNotContain(editor.Links, x => x.ToString() == "hub.Leave -> end.Input");
+        return Task.CompletedTask;
+    });
+
+    [Fact]
     public Task AddingNodesAndWaysOutAreUndoSteps() => RunAsync((fixture, editor) =>
     {
         var names = RecordUndoNames(fixture);
@@ -100,6 +115,7 @@ public sealed class DialogueEditorTests
     {
         var names = RecordUndoNames(fixture);
 
+        Assert.False(editor.SetEntryCommand.CanExecute(null));
         editor.SetEntryCommand.Execute(Node(editor, "hub"));
 
         Assert.Equal(["Set entry node"], names);

@@ -31,10 +31,17 @@ public sealed class StoryEditorViewModel : SagaGraphEditorViewModel<StoryViewMod
 
         OpenCommand = new AnonymousCommand<SagaGraphNodeViewModel>(ServiceProvider, Open);
         GoToLevelCommand = new AnonymousCommand<StoryGraphLevel>(ServiceProvider, GoToLevel);
-        AddActCommand = new AnonymousCommand(ServiceProvider, AddAct, () => CurrentLevel.Depth == StoryGraphDepth.Plot);
-        AddScenarioCommand = new AnonymousCommand(ServiceProvider, () => AddToAct(isQuest: false), () => CurrentLevel.Depth == StoryGraphDepth.Act);
-        AddQuestCommand = new AnonymousCommand(ServiceProvider, () => AddToAct(isQuest: true), () => CurrentLevel.Depth == StoryGraphDepth.Act);
-        AddDialogueCommand = new AnonymousCommand(ServiceProvider, AddDialogue, () => CurrentLevel.Owner is not null);
+        AddActCommand = new AnonymousCommand(ServiceProvider, AddAct);
+        AddScenarioCommand = new AnonymousCommand(ServiceProvider, () => AddToAct(isQuest: false));
+        AddQuestCommand = new AnonymousCommand(ServiceProvider, () => AddToAct(isQuest: true));
+        AddDialogueCommand = new AnonymousCommand(ServiceProvider, AddDialogue);
+        UpdateLevelCommands();
+        // What can be added depends on the open level, which the views show
+        Breadcrumb.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(CurrentLevel));
+            UpdateLevelCommands();
+        };
     }
 
     /// <summary>
@@ -98,6 +105,16 @@ public sealed class StoryEditorViewModel : SagaGraphEditorViewModel<StoryViewMod
                 Change("Attach quest to scenario", () => NodeOf(quest)[nameof(QuestCard.ScenarioId)].Update(scenario.Id));
                 break;
         }
+    }
+
+    /// <inheritdoc />
+    protected override void MoveLink(SagaGraphLinkViewModel link, SagaGraphSlot source, SagaGraphSlot target)
+    {
+        // A link between acts keeps its condition: only its target changes
+        if (link.Card is ActLinkCard next && source == link.Source && target.Node.Card is ActCard to)
+            NodeOf(next)[nameof(ActLinkCard.TargetActId)].Update(to.Id);
+        else
+            base.MoveLink(link, source, target);
     }
 
     /// <inheritdoc />
@@ -266,6 +283,13 @@ public sealed class StoryEditorViewModel : SagaGraphEditorViewModel<StoryViewMod
         }
         ClearSelection();
         Refresh();
+    }
+
+    private void UpdateLevelCommands()
+    {
+        AddActCommand.IsEnabled = CurrentLevel.Depth == StoryGraphDepth.Plot;
+        AddScenarioCommand.IsEnabled = AddQuestCommand.IsEnabled = CurrentLevel.Depth == StoryGraphDepth.Act;
+        AddDialogueCommand.IsEnabled = CurrentLevel.Owner is not null;
     }
 
     private void GoToLevel(StoryGraphLevel level)

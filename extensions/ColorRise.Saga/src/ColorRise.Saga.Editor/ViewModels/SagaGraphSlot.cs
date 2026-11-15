@@ -34,4 +34,5 @@ public sealed class SagaGraphSlot(SagaGraphNodeViewModel node, SagaGraphSlotDire
 /// </summary>
 /// <param name="Source">The output slot.</param>
 /// <param name="Target">The input slot.</param>
-public sealed record SagaLinkRequest(SagaGraphSlot Source, SagaGraphSlot Target);
+/// <param name="Replaced">The link the user moved to the input slot, if any: the new link takes its place.</param>
+public sealed record SagaLinkRequest(SagaGraphSlot Source, SagaGraphSlot Target, SagaGraphLinkViewModel? Replaced = null);

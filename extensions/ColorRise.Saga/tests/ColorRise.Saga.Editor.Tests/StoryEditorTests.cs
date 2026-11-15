@@ -69,6 +69,31 @@ public sealed class StoryEditorTests
     }, ("Dialogues/Guards", new DialogueAsset()));
 
     [Fact]
+    public Task TheAddCommandsFollowTheOpenLevel() => RunAsync((_, editor) =>
+    {
+        var changes = new List<string?>();
+        editor.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+        var scenarioChanged = 0;
+        editor.AddScenarioCommand.CanExecuteChanged += (_, _) => ++scenarioChanged;
+        Assert.True(editor.AddActCommand.CanExecute(null));
+        Assert.False(editor.AddScenarioCommand.CanExecute(null));
+
+        editor.OpenCommand.Execute(Node(editor, "the_mine"));
+
+        Assert.Contains(nameof(StoryEditorViewModel.CurrentLevel), changes);
+        Assert.True(scenarioChanged > 0);
+        Assert.False(editor.AddActCommand.CanExecute(null));
+        Assert.True(editor.AddScenarioCommand.CanExecute(null));
+        Assert.True(editor.AddQuestCommand.CanExecute(null));
+        Assert.False(editor.AddDialogueCommand.CanExecute(null));
+
+        editor.OpenCommand.Execute(Node(editor, "cave_in"));
+        Assert.True(editor.AddDialogueCommand.CanExecute(null));
+        Assert.False(editor.AddQuestCommand.CanExecute(null));
+        return Task.CompletedTask;
+    }, ("Dialogues/Guards", new DialogueAsset()));
+
+    [Fact]
     public Task OpeningADialogueOpensItsEditor() => RunAsync((fixture, editor) =>
     {
         editor.OpenCommand.Execute(Node(editor, "the_mine"));
@@ -157,6 +182,43 @@ public sealed class StoryEditorTests
         fixture.Session.UndoRedoService.Undo();
         Assert.Empty(editor.Asset.Asset.Acts[1].Next);
         Assert.Single(editor.Links);
+        return Task.CompletedTask;
+    });
+
+    [Fact]
+    public Task MovingAnActLinkKeepsItsCondition() => RunAsync((fixture, editor) =>
+    {
+        var story = editor.Asset.Asset;
+        var next = story.Acts[0].Next[0];
+        next.When = "day > 3";
+        var names = RecordUndoNames(fixture);
+        var link = editor.Links.Single(x => x.ToString() == "the_mine.Output -> with_the_guild.Input");
+
+        editor.LinkCommand.Execute(new SagaLinkRequest(link.Source, Node(editor, "with_the_crown").Input, link));
+
+        Assert.Equal(["Move link"], names);
+        Assert.Same(next, Assert.Single(story.Acts[0].Next));
+        Assert.Equal(("with_the_crown", "day > 3"), (next.TargetActId, next.When));
+        Assert.Equal(["the_mine.Output -> with_the_crown.Input"], editor.Links.Select(x => x.ToString()));
+
+        fixture.Session.UndoRedoService.Undo();
+        Assert.Equal("with_the_guild", next.TargetActId);
+        return Task.CompletedTask;
+    });
+
+    [Fact]
+    public Task MovingAQuestLinkAttachesTheOtherQuest() => RunAsync((fixture, editor) =>
+    {
+        editor.OpenCommand.Execute(Node(editor, "the_mine"));
+        var names = RecordUndoNames(fixture);
+        var link = Assert.Single(editor.Links);
+
+        editor.LinkCommand.Execute(new SagaLinkRequest(link.Source, Node(editor, "side_job").Input, link));
+
+        Assert.Equal(["Move link"], names);
+        var quests = editor.Asset.Asset.Acts[0].Quests;
+        Assert.Equal(("", "cave_in"), (quests[0].ScenarioId, quests[1].ScenarioId));
+        Assert.Equal(["cave_in.Output -> side_job.Input"], editor.Links.Select(x => x.ToString()));
         return Task.CompletedTask;
     });
 

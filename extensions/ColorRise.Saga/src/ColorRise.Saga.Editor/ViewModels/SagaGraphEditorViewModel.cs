@@ -29,7 +29,7 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
         : base(asset)
     {
         RootNode = Session.AssetNodeContainer.GetNode(asset.Asset) ?? throw new InvalidOperationException("The asset has no property graph.");
-        LinkCommand = new AnonymousCommand<SagaLinkRequest>(ServiceProvider, x => Link(x.Source, x.Target), x => x is not null && CanLink(x.Source, x.Target));
+        LinkCommand = new AnonymousCommand<SagaLinkRequest>(ServiceProvider, Link, x => x is not null && CanLink(x.Source, x.Target));
         UnlinkCommand = new AnonymousCommand<SagaGraphLinkViewModel>(ServiceProvider, x => Change(UnlinkName(x), () => Unlink(x)));
         DeleteSelectionCommand = new AnonymousCommand(ServiceProvider, DeleteSelection);
     }
@@ -55,7 +55,8 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
     public ObservableList<object> SelectedLinks { get; } = [];
 
     /// <summary>
-    /// Links two slots (<see cref="SagaLinkRequest"/>), when <see cref="CanLink"/> accepts it.
+    /// Links two slots (<see cref="SagaLinkRequest"/>), when <see cref="CanLink"/> accepts it; a link the user moved to another
+    /// slot is moved in one step of the undo history.
     /// </summary>
     public ICommandBase LinkCommand { get; }
 
@@ -136,6 +137,16 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
     /// Links two slots that <see cref="CanLink"/> accepted, as one named step of the undo history.
     /// </summary>
     protected abstract void Link(SagaGraphSlot source, SagaGraphSlot target);
+
+    /// <summary>
+    /// Moves a link the user dragged to another slot; the caller opens the transaction. By default the link is removed and the new
+    /// one made.
+    /// </summary>
+    protected virtual void MoveLink(SagaGraphLinkViewModel link, SagaGraphSlot source, SagaGraphSlot target)
+    {
+        Unlink(link);
+        Link(source, target);
+    }
 
     /// <summary>
     /// The name of the undo step that removes a link.
@@ -270,6 +281,14 @@ public abstract class SagaGraphEditorViewModel<TAssetViewModel> : AssetEditorVie
         {
             refreshing = false;
         }
+    }
+
+    private void Link(SagaLinkRequest request)
+    {
+        if (request.Replaced is { } replaced)
+            Change("Move link", () => MoveLink(replaced, request.Source, request.Target));
+        else
+            Link(request.Source, request.Target);
     }
 
     private void DeleteSelection()

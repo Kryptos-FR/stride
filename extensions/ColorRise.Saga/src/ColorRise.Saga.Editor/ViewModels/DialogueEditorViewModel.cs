@@ -19,7 +19,7 @@ public sealed class DialogueEditorViewModel : SagaGraphEditorViewModel<DialogueV
         AddBranchCommand = new AnonymousCommand(ServiceProvider, () => AddNode("Add branch", "branch_", new BranchNodeCard { Links = { new DialogueLinkCard() } }));
         AddEndCommand = new AnonymousCommand(ServiceProvider, () => AddNode("Add end", "end_", new EndNodeCard()));
         AddWayOutCommand = new AnonymousCommand<SagaGraphNodeViewModel>(ServiceProvider, AddWayOut, x => x?.Card is ChoicesNodeCard or BranchNodeCard);
-        SetEntryCommand = new AnonymousCommand<SagaGraphNodeViewModel>(ServiceProvider, x => Change("Set entry node", () => RootNode[nameof(DialogueAsset.EntryNodeId)].Update(x.Id)));
+        SetEntryCommand = new AnonymousCommand<SagaGraphNodeViewModel>(ServiceProvider, x => Change("Set entry node", () => RootNode[nameof(DialogueAsset.EntryNodeId)].Update(x.Id)), x => x?.Card is DialogueNodeCard);
     }
 
     public ICommandBase AddLineCommand { get; }
