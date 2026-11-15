@@ -23,7 +23,7 @@ public sealed class SagaSystemTests
         var second = system.Load(Story("act_1"), saved);
         Assert.Same(second, system.Runtime);
         Assert.NotSame(first, second);
-        Assert.Same(saved, second.State);
+        Assert.NotSame(saved, second.State);
         Assert.Equal("act_1", second.State.CurrentActId);
     }
 

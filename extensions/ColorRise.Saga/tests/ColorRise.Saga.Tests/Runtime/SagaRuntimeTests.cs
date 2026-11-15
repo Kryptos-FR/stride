@@ -395,6 +395,26 @@ public sealed class SagaRuntimeTests
     }
 
     [Fact]
+    public void RestoringLeavesTheSavedStateAsItWas()
+    {
+        var story = TwoActs(continues: true);
+        var original = new SagaRuntime(story);
+        original.Start();
+        original.Raise("scouted");
+        var saved = original.CaptureState();
+        var before = Describe(saved);
+
+        // A quick-save slot restored, played on, then restored again
+        var restored = new SagaRuntime(story, saved);
+        restored.Start();
+        restored.Raise("end");
+        Assert.Equal(before, Describe(saved));
+        var again = new SagaRuntime(story, saved);
+        again.Start();
+        Assert.Equal("act_1", again.State.CurrentActId);
+    }
+
+    [Fact]
     public void CaptureThenRestoreGivesSameBehavior()
     {
         var story = TwoActs(continues: true);

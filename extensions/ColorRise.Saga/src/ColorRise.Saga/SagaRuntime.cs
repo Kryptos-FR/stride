@@ -32,8 +32,8 @@ public sealed partial class SagaRuntime
     /// Creates a runtime for a story.
     /// </summary>
     /// <param name="story">The compiled story.</param>
-    /// <param name="state">A saved state to resume from. What the story no longer has is dropped, and what it gained starts
-    /// from its default.</param>
+    /// <param name="state">A saved state to resume from, copied (the runtime never changes it). What the story no longer has is
+    /// dropped, and what it gained starts from its default.</param>
     /// <param name="logger">Where to report problems the story can live with.</param>
     public SagaRuntime(StoryDefinition story, SagaState? state = null, ILogger? logger = null)
     {
@@ -48,7 +48,8 @@ public sealed partial class SagaRuntime
         characters = [.. declarations.Characters.Select(x => x.Id)];
         IndexPlot();
         context = new Context(this);
-        State = state ?? new SagaState();
+        // A copy: the game may restore the same save again
+        State = state is null ? new SagaState() : Copy(state);
         Normalize(state is not null);
     }
 
@@ -151,16 +152,18 @@ public sealed partial class SagaRuntime
     /// <summary>
     /// Copies the state, for the game to save.
     /// </summary>
-    public SagaState CaptureState() => new()
+    public SagaState CaptureState() => Copy(State);
+
+    private static SagaState Copy(SagaState state) => new()
     {
-        CurrentActId = State.CurrentActId,
-        CompletedActs = [.. State.CompletedActs],
-        Variables = new Dictionary<string, SagaValue>(State.Variables),
-        Quests = State.Quests.ToDictionary(x => x.Key, x => new QuestProgress { State = x.Value.State, Stage = x.Value.Stage }),
-        Scenarios = State.Scenarios.ToDictionary(x => x.Key, x => new ScenarioProgress { State = x.Value.State, Outcome = x.Value.Outcome }),
-        Events = new Dictionary<string, int>(State.Events),
-        Visits = new Dictionary<string, int>(State.Visits),
-        UsedOnce = [.. State.UsedOnce],
+        CurrentActId = state.CurrentActId,
+        CompletedActs = [.. state.CompletedActs],
+        Variables = new Dictionary<string, SagaValue>(state.Variables),
+        Quests = state.Quests.ToDictionary(x => x.Key, x => new QuestProgress { State = x.Value.State, Stage = x.Value.Stage }),
+        Scenarios = state.Scenarios.ToDictionary(x => x.Key, x => new ScenarioProgress { State = x.Value.State, Outcome = x.Value.Outcome }),
+        Events = new Dictionary<string, int>(state.Events),
+        Visits = new Dictionary<string, int>(state.Visits),
+        UsedOnce = [.. state.UsedOnce],
     };
 
     /// <summary>
