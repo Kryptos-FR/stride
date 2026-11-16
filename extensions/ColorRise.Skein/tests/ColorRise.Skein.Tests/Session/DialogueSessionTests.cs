@@ -556,6 +556,28 @@ public sealed class DialogueSessionTests
     }
 
     [Fact]
+    public void A_condition_of_a_node_group_calls_the_functions_of_the_game_before_any_run()
+    {
+        var has = false;
+        var actions = new YarnActionRegistry();
+        actions.AddFunction("has_bread", () => has);
+        var dialogue = new TestDialogue(
+            """
+            title: Gulls
+            when: has_bread()
+            ---
+            The gulls dive.
+            ===
+            """,
+            actions);
+
+        Assert.False(dialogue.Session.HasSalientContent("Gulls"));
+        has = true;
+        Assert.True(dialogue.Session.HasSalientContent("Gulls"));
+        Assert.Empty(dialogue.Errors);
+    }
+
+    [Fact]
     public async Task Wait_asks_the_clock_and_stop_ends_the_dialogue_without_the_responder()
     {
         var dialogue = new TestDialogue("""

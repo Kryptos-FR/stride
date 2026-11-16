@@ -38,6 +38,9 @@ public enum UnavailableOptions
 [ComponentCategory("Dialogue")]
 public sealed class OptionsPresenter : DialoguePresenter
 {
+    // The digits of a keyboard that choose an option: 1 to 9
+    private const int MostNumbered = 9;
+
     private readonly List<ButtonBase> buttons = [];
     private readonly Dictionary<ButtonBase, int> offered = [];
     private Panel? panel;
@@ -95,6 +98,13 @@ public sealed class OptionsPresenter : DialoguePresenter
     [DataMember(70)]
     public GamePadButton ChooseButton { get; set; } = GamePadButton.A;
 
+    /// <summary>
+    /// Whether the first nine options show their number, and the keys 1 to 9 choose them.
+    /// </summary>
+    /// <userdoc>Number the options (1. 2. 3.) and let the keys 1 to 9 choose them.</userdoc>
+    [DataMember(80)]
+    public bool NumberKeys { get; set; }
+
     /// <inheritdoc />
     public override Task OnDialogueCompletedAsync()
     {
@@ -126,7 +136,7 @@ public sealed class OptionsPresenter : DialoguePresenter
 
             var option = shown[i];
             if (button.FindVisualChildOfType<TextBlock>() is { } label)
-                label.Text = option.Line.TextWithoutCharacterName.Text;
+                label.Text = NumberKeys && i < MostNumbered ? $"{i + 1}. {option.Line.TextWithoutCharacterName.Text}" : option.Line.TextWithoutCharacterName.Text;
             button.IsEnabled = option.IsAvailable;
             button.Visibility = Visibility.Visible;
             if (option.IsAvailable)
@@ -160,6 +170,9 @@ public sealed class OptionsPresenter : DialoguePresenter
 
                 if (Pressed(ChooseKey, ChooseButton))
                     return shown[selected].Index;
+
+                if (NumberKeys && PressedNumber(shown) is { } byNumber)
+                    return byNumber;
             }
         }
         finally
@@ -171,6 +184,20 @@ public sealed class OptionsPresenter : DialoguePresenter
 
     private bool Pressed(Keys key, GamePadButton button)
         => Input.IsKeyPressed(key) || Input.DefaultGamePad?.IsButtonPressed(button) == true;
+
+    /// <summary>
+    /// The option whose number was pressed, on the row of digits or on the numeric pad, when it can be chosen.
+    /// </summary>
+    private int? PressedNumber(List<DialogueOption> shown)
+    {
+        for (var i = 0; i < shown.Count && i < MostNumbered; i++)
+        {
+            if (shown[i].IsAvailable && (Input.IsKeyPressed(Keys.D1 + i) || Input.IsKeyPressed(Keys.NumPad1 + i)))
+                return shown[i].Index;
+        }
+
+        return null;
+    }
 
     private void Hide()
     {

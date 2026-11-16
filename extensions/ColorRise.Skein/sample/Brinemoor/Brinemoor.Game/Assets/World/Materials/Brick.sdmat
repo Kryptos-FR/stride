@@ -1,14 +1,14 @@
 !MaterialAsset
-Id: be35cb08-b16d-2544-f46e-3d9a560dd2c6
+Id: de19482d-9e2c-5eb1-bc45-fd3ba0b05543
 SerializedVersion: {Stride: 2.0.0.0}
 Tags: []
 Attributes:
     MicroSurface: !MaterialGlossinessMapFeature
         GlossinessMap: !ComputeFloat
-            Value: 0.3
+            Value: 0.25
     Diffuse: !MaterialDiffuseMapFeature
         DiffuseMap: !ComputeColor
-            Value: {R: 0.2, G: 0.45, B: 0.9, A: 1.0}
+            Value: {R: 0.62, G: 0.3, B: 0.24, A: 1.0}
     DiffuseModel: !MaterialDiffuseLambertModelFeature {}
     Specular: !MaterialMetalnessMapFeature
         MetalnessMap: !ComputeFloat

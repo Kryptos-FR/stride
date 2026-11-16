@@ -188,6 +188,11 @@ public sealed class DialogueRunnerComponent : StartupScript
     public void RequestNextLine() => run?.Session.RequestNextLine();
 
     /// <summary>
+    /// Whether the project has a node, or a node group, of this name.
+    /// </summary>
+    public bool NodeExists(string node) => GetSession().NodeExists(node);
+
+    /// <summary>
     /// Whether starting this node group now would run a node: at least one has all its conditions true. A plain node
     /// always would.
     /// </summary>

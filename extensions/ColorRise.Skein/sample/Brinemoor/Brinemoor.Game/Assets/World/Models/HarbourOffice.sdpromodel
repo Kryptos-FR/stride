@@ -1,0 +1,12 @@
+!ProceduralModelAsset
+Id: 19c14d37-0e63-5c5a-b0e4-7fd30d17ff83
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CubeProceduralModel
+    Size: {X: 5.0, Y: 3.2, Z: 4.0}
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 1.6, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: de19482d-9e2c-5eb1-bc45-fd3ba0b05543:World/Materials/Brick

@@ -1,0 +1,12 @@
+!ProceduralModelAsset
+Id: dc38c76a-feca-566e-8eb9-1f165dd837e6
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CubeProceduralModel
+    Size: {X: 4.0, Y: 2.8, Z: 3.6}
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 1.4, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: c6de6515-2e39-5593-b977-50fe1c48bc5a:World/Materials/Cream

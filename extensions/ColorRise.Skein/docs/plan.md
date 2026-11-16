@@ -434,21 +434,34 @@ As built (2026-11-15).
 ### Task 22: The sample — Brinemoor's game
 
 **Files:**
-- Create in `sample/Brinemoor/`: `Brinemoor.slnx`, `Brinemoor.Game/` (`StoryDirector.cs`, `Journal.cs`, `Inventory.cs`, `DayClock.cs`, `SaveSlot.cs`: engine-free classes; `BrinemoorGame.cs`, `PlayerController.cs`, `Talkable.cs`, `Hud.cs`, `StoryCommands.cs`: Stride scripts), `Brinemoor.Linux/`, `Brinemoor.Windows/`, `Assets/` (scene of simple shapes, UI page, `Dialogue/Story.sdyarn`), `nuget.config`
-- Test: `tests/ColorRise.Skein.Tests/Sample/` referencing `Brinemoor.Game`
+- Created in `sample/Brinemoor/Brinemoor.Game/`: `StoryDirector.cs`, `Journal.cs`, `Inventory.cs`, `DayClock.cs`, `SaveSlot.cs`, `StoryCommands.cs` (no engine needed); `BrinemoorGame.cs`, `PlayerController.cs`, `Talkable.cs`, `ShownWhen.cs`, `Hud.cs`, `Chatter.cs`, `MoodPresenter.cs` (Stride scripts); `Assets/MainScene.sdscene` (39 entities of simple shapes), `Assets/World/` (materials and models), `Assets/UI/Font.sdfnt`, `Assets/GraphicsCompositor.sdgfxcomp` (a stage for the UI), `Assets/Dialogue/Story.yarn` and `Act1.yarn` (a starter, which Task 23 replaces)
+- Updated in Skein: `DialogueSession.HasSalientContent` (calls the game's functions before any run), `DialogueRunnerComponent.NodeExists`, `OptionsPresenter.NumberKeys`, `DefaultDialogueLook` (panel colours)
+- Test: `sample/Brinemoor/Brinemoor.Tests/` (`StoryDirectorTests.cs`, `WorldTests.cs`, `TestStory.cs`), in both solutions; two tests added to `tests/ColorRise.Skein.Tests`
 
 **Interfaces:**
 - Consumes: the runner, presenters, `DialogueSystem`, `[YarnCommand]`, `[YarnFunction]`.
-- Produces: `StoryDirector` (engine-free): after each dialogue and each fact, runs the node group `Events` while `HasSalientContent("Events")` and nothing plays. Commands `walk`, `give`, `take`, `quest_changed`, `end_day`, `ending`; functions `has_item(string)`, `time_of_day()`. Keys: WASD move, T talk, E use, Space next, 1 to 9 choose, N end the day, L switch language, F5 save, F9 load, Esc quit.
+- Produces: `StoryDirector` (engine-free): after each dialogue and each fact, runs the node group `Events` while `HasSalientContent("Events")` and nothing plays. Commands `walk`, `give`, `take`, `quest_changed`, `end_day`, `ending`; functions `has_item(string)`, `time_of_day()`. Keys: WASD move, T talk, E use, Space next, 1 to 9 choose, N let time pass, L switch language, F5 save, F9 load, Esc quit.
 
-- [ ] **Step 1:** Tests on the engine-free classes with a stub story of ten nodes: the director runs an `Events` node when its `when:` turns true and not while a dialogue plays; `quest_changed lamp` adds a journal entry; save then load restores variables, inventory and day.
-- [ ] **Step 2:** Implement the game; `dotnet build` and a launch under Xvfb reach the scene with the dialogue box (screenshot). Commit `feat(skein): the Brinemoor sample game`, push.
+**As built:**
+- The story's state is in three places, each with one owner. Yarn's variables hold what the story decides (`$act`, `$quest_<id>`, flags). The game holds the world: `Inventory`, `DayClock` (four parts of a day), `Journal`. The scripts read the world with functions (`has_item`, `item_count`, `time_of_day`, `day`) and change it with commands (`give`, `take`, `end_day`, `quest_changed`, `ending`, and `walk` on a `Talkable`); nothing of the world is copied into variables. A derived fact is a smart variable over them (`<<declare $lamp_can_be_lit = has_item("oil") and has_item("key")>>`).
+- `StoryDirector` (no engine: it plays through an `IStoryStage`) plays a node when the courier talks, then the node group `Events` while one of its nodes has something to say; the same after time passes and at the start, so the story opens with its first event. Twenty events in a row is an error in the log (an event must make its own `when:` false, or have `when: once`). `CanTalk(node)` is what shows a prompt: a person with nothing to say has none.
+- `StoryCommands` is a static class with the current story (`StoryCommands.Story`): static commands and functions need no target in the scripts. A command that cannot be done (`take` of what the courier does not carry) throws `YarnCommandException`: an error in the log, and the dialogue goes on.
+- `SaveSlot` writes one JSON file in the user's folder (`Brinemoor/save.json`): the variables (with Yarn's own visit counts and `once` marks), the inventory, the day, the journal, the ending and where everybody stands. No save while a dialogue plays.
+- The game: `BrinemoorGame` (the keys, the director on the scene's runner, the screen's words from line ids of the node `Interface`, so they are translated with the story), `PlayerController` (no collisions), `Talkable` (a person or a thing, with its node), `ShownWhen` (shows an entity while a Yarn variable is true or false: the lamp's light, the can of oil), `Hud` (built in code: the UI editor is postponed), `Chatter` with `CaptionPresenter` (people talking nearby, on a second runner, as captions that never block), `MoodPresenter` (colours the speaker's name by the line's `#mood:` tag).
+- Keys: WASD or the arrows move, T talk, E use, Space next, 1 to 9 choose, N lets time pass (one part of the day; `<<end_day>>` goes to the next morning), L switches the language, F5 save, F9 load, Esc quit.
+- Skein gained what the game needed: `OptionsPresenter.NumberKeys` (off by default: "1. 2. 3." and the digit keys), `DialogueRunnerComponent.NodeExists`, and `HasSalientContent` before any run now sees the game's functions.
+- The default compositor draws the UI before the post effects, which wash it out: the sample's compositor has a stage for the UI, drawn after them (finding 20). The font is the system's Arial through a font asset (Liberation Sans on Linux): no font file is shipped.
+- The sample's tests are a project of their own, not a folder of Skein's tests: a game's commands and the test fixtures' commands of the same name (`give`, `has_item`) cannot live in one process, where every loaded assembly is scanned.
+- The scene's file was written by a script that is not in the repository; Game Studio opens and edits it as any scene.
+
+- [x] **Step 1:** Tests on the engine-free classes with a stub story of ten nodes: the director runs an `Events` node when its `when:` turns true and not while a dialogue plays; `quest_changed lamp` adds a journal entry; save then load restores variables, inventory and day. 14 tests.
+- [x] **Step 2:** Implement the game; `dotnet build` and a launch under Xvfb reach the scene with the dialogue box. Played under Xvfb with the keys: the opening event, the chatter on the pier, a quest from its offer to its success, the options by digit, save, time passing, load. The scene opens in Game Studio with its dialogue components (screenshots `task22-opening.png`, `task22-prompt.png`, `task22-line.png`, `task22-game-studio.png` in the project files, `yarn-spinner/screens/`). Commit `feat(skein): the Brinemoor sample game`, push.
 
 ### Task 23: The sample — Brinemoor's story
 
 **Files:**
 - Create: `sample/Brinemoor/Assets/Dialogue/Story.yarn`, `Act1.yarn`, `Act2.yarn`, `Act3.yarn`, `Chatter.yarn`, `Strings/fr.csv`
-- Test: `tests/ColorRise.Skein.Tests/Sample/PlaythroughTests.cs`, `FeatureCoverageTests.cs`
+- Test: `sample/Brinemoor/Brinemoor.Tests/PlaythroughTests.cs`, `FeatureCoverageTests.cs`
 
 **Interfaces:**
 - The convention of the design's section 12: `enum Act`, `enum QuestState` (`NotStarted`, `Offered`, `Active`, `Succeeded`, `Failed`), `$act`, `$quest_<id>`, smart variables for derived facts, headers `act:`, `scenario:`, `quest:` on every node, one node group per character, the node group `Events`. Three acts, the scenarios and quests of the design's table, four endings. About 60 nodes.

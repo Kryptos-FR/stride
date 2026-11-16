@@ -74,18 +74,30 @@ This section follows the work: it says what can be tried at the current commit.
 - *Add entity > Dialogue > Dialogue runner* in the scene editor makes an entity with a dialogue runner that starts at the node `Start`, and with a line presenter, an options presenter and a line advancer when the game references `ColorRise.Skein.UI`. In a game with one Yarn project, the runner plays it.
 - The Yarn script and the Yarn project have their thumbnail in the asset view and their icon in *Add asset*; the dialogue runner and the presenters have an icon in the property grid.
 - Covered by tests only: the runtime (the dialogue system, the dialogue runner component, presenters, actors, commands and functions in C#, variable storage) and the UI presenters. Yarn Spinner's own 32 test plans pass against Skein's dialogue session.
-- The sample game "Brinemoor" is an empty scene with one script and one project, to open in Game Studio:
+- The sample game "Brinemoor" (`sample/Brinemoor`): a courier on a small island, with people to talk to and things to use. For now it plays the start of its story (one quest, *Light the lamp*); the three acts come next.
+  - Build and run it on Linux (on Windows, `Brinemoor.Windows`):
 
-  ```sh
-  cd sources/editor/Stride.GameStudio.Avalonia.Desktop/bin/Debug/net10.0
-  dotnet Stride.GameStudio.Avalonia.Desktop.dll <checkout>/extensions/ColorRise.Skein/sample/Brinemoor/Brinemoor.slnx
-  ```
+    ```sh
+    cd extensions/ColorRise.Skein/sample/Brinemoor
+    dotnet build Brinemoor.Linux/Brinemoor.Linux.csproj
+    dotnet Bin/Linux/Debug/Brinemoor.Linux.dll
+    ```
 
-  *View > Plugins* lists `ColorRise.Skein.Editor` and `ColorRise.Skein.Editor.Avalonia` under "Plugins of the project". After a rebuild of Skein while Game Studio is open, Game Studio offers to reload.
+  - Keys: WASD or the arrows move, T talks to the person nearby, E uses the thing nearby, Space goes to the next line, 1 to 9 choose an option, N lets time pass, L switches the language, F5 saves, F9 loads, Esc quits.
+  - What it shows of Skein in a game: a dialogue runner with the line presenter, the options presenter (numbered) and the line advancer; a presenter of the game's own (`MoodPresenter`); a second runner whose lines are captions (`Chatter`); commands and functions in C# (`StoryCommands`, and `walk` on a `Talkable`); a node group `Events` that the game plays whenever one of its nodes has something to say (`StoryDirector`); the screen's own words taken from line ids, so that they are translated with the story; a save of the variables with the game's state (`SaveSlot`).
+  - Its tests (`Brinemoor.Tests`) play the story's classes without a running game.
+  - Open it in Game Studio:
+
+    ```sh
+    cd sources/editor/Stride.GameStudio.Avalonia.Desktop/bin/Debug/net10.0
+    dotnet Stride.GameStudio.Avalonia.Desktop.dll <checkout>/extensions/ColorRise.Skein/sample/Brinemoor/Brinemoor.slnx
+    ```
+
+    *View > Plugins* lists `ColorRise.Skein.Editor` and `ColorRise.Skein.Editor.Avalonia` under "Plugins of the project". After a rebuild of Skein while Game Studio is open, Game Studio offers to reload.
 
 ### Not yet
 
-Everything else of the design: the game and the story of the sample.
+The story of the sample: its three acts, its quests, its four endings and its French text.
 
 ## Tied to the fork
 

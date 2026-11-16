@@ -1,0 +1,80 @@
+title: Story
+cluster: Story
+color: yellow
+---
+// The state of the story. The acts and the quests are variables: the nodes read them in their "when:" headers, and
+// the game shows them on its screen.
+<<enum Act>>
+    <<case Arrival>>
+    <<case Wreck>>
+    <<case HighTide>>
+<<endenum>>
+
+<<enum QuestState>>
+    <<case NotStarted>>
+    <<case Offered>>
+    <<case Active>>
+    <<case Succeeded>>
+    <<case Failed>>
+<<endenum>>
+
+/// The act the story is in.
+<<declare $act = Act.Arrival>>
+
+/// Light the lamp of the lighthouse before the night.
+<<declare $quest_lamp = QuestState.NotStarted>>
+
+/// The lamp of the lighthouse burns. The game shows its light.
+<<declare $lamp_lit = false>>
+
+/// Maud said the courier can take a can of oil from her shed.
+<<declare $oil_allowed = false>>
+
+/// The can of oil is taken. The game hides it.
+<<declare $oil_taken = false>>
+
+/// The courier has what the lamp needs.
+<<declare $lamp_can_be_lit = has_item("oil") and has_item("key")>>
+
+/// The night has fallen.
+<<declare $is_night = time_of_day() == "night">>
+===
+
+title: Interface
+cluster: Story
+color: yellow
+---
+// The words of the game's own screen. Nothing plays this node: the game reads each line by its id, in the language of
+// the moment.
+Day #line:ui_day
+morning #line:time_morning
+afternoon #line:time_afternoon
+evening #line:time_evening
+night #line:time_night
+Carrying #line:ui_carrying
+Journal #line:ui_journal
+talk to #line:ui_talk
+WASD move · T talk · E use · N let time pass · L language · F5 save · F9 load · Esc quit #line:ui_help
+Saved. #line:ui_saved
+Loaded. #line:ui_loaded
+There is no save yet. #line:ui_no_save
+The end #line:ui_the_end
+F9 load · Esc quit #line:ui_end_help
+
+Act I · Arrival #line:act_0
+Act II · The wreck #line:act_1
+Act III · High tide #line:act_2
+
+offered #line:state_offered
+to do #line:state_active
+done #line:state_succeeded
+failed #line:state_failed
+
+Light the lamp #line:quest_lamp
+
+lamp oil #line:item_oil
+the lighthouse key #line:item_key
+
+try the lighthouse door #line:use_door
+take a can of oil #line:use_oil
+===

@@ -6,39 +6,667 @@ ChildrenIds: []
 Offset: {X: 0.0, Y: 0.0, Z: 0.0}
 Hierarchy:
     RootParts:
-        - ref!! dd6d2dcc-679d-12b9-430a-9787bab45b33
-        - ref!! 58b9525b-e7ae-7864-c617-b6a50861e524
-        - ref!! 156b0cba-a396-4455-72fb-4d2451118ae4
-        - ref!! 17f2894b-bf3c-ac0a-31e2-b1fa10422cb1
-        - ref!! c7c4e523-7cef-8fb5-2cac-6b8e09794339
+        - ref!! 660900f9-c931-53db-9345-81652ead0abf
+        - ref!! 8b86a701-67df-5711-9084-294a451ff0e6
+        - ref!! 7f7a6e8b-05f6-5448-aa65-b0c6cd4027aa
+        - ref!! b5ead03b-27b4-5eed-b7e6-32d06d74f41c
+        - ref!! 26fa3ccc-2b6e-5735-a28f-1f01891b425e
+        - ref!! 4305fffa-0e46-53ef-8e38-baaedd661aca
+        - ref!! 6aefd39d-e71b-5097-8198-d1e1431e46cc
+        - ref!! 0924d35f-406d-56e3-9b9c-7140e05c4341
+        - ref!! a95a0de8-f59a-5cc1-a902-8bc1667167c2
+        - ref!! 1fd6d8eb-f0c3-5197-b3a2-95cb890e56ab
+        - ref!! e665abe7-c589-55e0-8104-35ae36293b6e
+        - ref!! d8260c4d-c8b4-52b2-bbcc-5358c7b51d35
+        - ref!! d35da459-3911-5473-ab81-f0f060ec3c54
+        - ref!! f467e929-ae80-5be3-a16f-ff0f1992f6f8
+        - ref!! 589480b2-2422-5a28-8370-603e7bfc971f
+        - ref!! a78fa533-f295-58f1-aeef-4fcbd7d0875b
+        - ref!! ff0d9b94-5437-528c-9d41-dea57d6ce02b
+        - ref!! e3f40a96-31fd-55e4-81c1-acea3be26767
+        - ref!! c6c70267-f3a8-5237-9cc5-ad70c9ffbadc
+        - ref!! 384d4824-ae73-5222-89e2-702f8ff5d547
+        - ref!! 168fbe8c-26f8-5c9b-ad4c-7ef23a040bed
+        - ref!! bd2ca75c-9133-5516-bef5-cab914394afe
+        - ref!! d58ea697-a0c7-5b5a-9b0c-42e01e43c96b
+        - ref!! 75d1a6fe-9482-54a6-952c-adb5d54b948b
+        - ref!! 442deb1c-e370-5ba1-9d66-27c14e201c2d
+        - ref!! aeef22f7-f86f-5229-a1e9-d94e2fa82669
+        - ref!! 4ce103a7-f551-54ff-a083-b65a9e73a768
+        - ref!! d18cdc59-e175-52ad-a182-9c0abc35749c
+        - ref!! 6740a402-a679-5c60-847c-82e6ebebdf01
+        - ref!! 7a10270e-5bc9-5d8e-abd0-3bffe2a53d72
+        - ref!! 2d917977-9369-53b4-ae09-c913b0bf75d3
+        - ref!! d39e2377-c499-5998-a7d7-0d7d35a640c0
+        - ref!! 7e1c2d7d-cc6e-551f-bf48-8e6dfc950ac0
+        - ref!! 7f723125-d628-5cfe-81eb-f5d921e71617
+        - ref!! 36b282a3-44d1-5eaa-a624-5d5ec2eff206
+        - ref!! c3d39e85-5122-5f47-9e93-2f42d2b02b68
+        - ref!! afeba305-586c-52fd-9e1d-f381daaa074d
+        - ref!! b05ec1e7-74b0-5cd1-a21c-8f38ef624f27
+        - ref!! 7a147b40-10e2-5110-ab38-2794d523c5ca
     Parts:
         -   Entity:
-                Id: dd6d2dcc-679d-12b9-430a-9787bab45b33
-                Name: Camera
+                Id: 660900f9-c931-53db-9345-81652ead0abf
+                Name: Sea
                 Components:
-                    de3c4d6eaa68ff05d528af463132556d: !TransformComponent
-                        Id: d9b94663-f762-835d-26c4-a8f11e8cfd40
-                        Position: {X: 0.0, Y: 11.0, Z: 13.0}
-                        Rotation: {X: -0.34202015, Y: 0.0, Z: 0.0, W: 0.9396926}
+                    c40ad7563dec542abc7ca3674b8b5b69: !TransformComponent
+                        Id: 94b29104-6d2c-510c-8cfc-b93b25c2dc7a
+                        Position: {X: 0.0, Y: -0.15, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
-                    ca6f8ffdb228b282a739fe18575ae68b: !CameraComponent
-                        Id: ae38d6c5-c918-1c55-207e-c2fa0ca74da0
+                    2a3bb6c7bc3d5bce8e6703b5d85e6f48: !ModelComponent
+                        Id: c97108f6-bf96-5cc4-af0e-d80829867b8b
+                        Model: 32f5c1e2-38ae-5599-970f-333876c223f1:World/Models/Sea
+                        Materials: {}
+        -   Entity:
+                Id: 8b86a701-67df-5711-9084-294a451ff0e6
+                Name: Ground
+                Components:
+                    d0a1d472442153948266efdbf6a125e6: !TransformComponent
+                        Id: 914ee06b-9091-53d3-ba6c-453d91398cf4
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    d719a09b8ed85c57b260aa7e2e245f73: !ModelComponent
+                        Id: a8d2c4fa-ba39-5d14-86f0-2102683910e5
+                        Model: b6a901bc-b804-5d2b-b572-574ae18ddbd9:World/Models/Ground
+                        Materials: {}
+        -   Entity:
+                Id: 7f7a6e8b-05f6-5448-aa65-b0c6cd4027aa
+                Name: Lighthouse
+                Components:
+                    a03fa8707b9b5cf991ba6ab958ebb3e9: !TransformComponent
+                        Id: 950d56c8-646d-594e-800d-afcbcc1ea73c
+                        Position: {X: -16.0, Y: 0.0, Z: -12.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    47c86d2481d45066866a98ab6a2030e4: !ModelComponent
+                        Id: f7c8d30f-9375-52f8-a292-d732e53eb0ed
+                        Model: fd7d0b22-f48e-59ee-87dd-7568b51f90f6:World/Models/Lighthouse
+                        Materials: {}
+        -   Entity:
+                Id: b5ead03b-27b4-5eed-b7e6-32d06d74f41c
+                Name: LampRoom
+                Components:
+                    fafbd93ca5d75b05869a56091c0cac06: !TransformComponent
+                        Id: 3e6dc7b6-da65-5133-addd-21ad34fb8f76
+                        Position: {X: -16.0, Y: 10.0, Z: -12.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    46e06ea652ca59379133ce57587f06df: !ModelComponent
+                        Id: d968b127-bd9c-529e-bac5-caa5067f801f
+                        Model: 254fe9a8-e13d-5133-8be4-a91ddc15decc:World/Models/LampRoom
+                        Materials: {}
+        -   Entity:
+                Id: 26fa3ccc-2b6e-5735-a28f-1f01891b425e
+                Name: LampLight
+                Components:
+                    18476dc2617f56e6be8903d125b4553f: !TransformComponent
+                        Id: a2788974-04cf-56e8-a017-3cdb3b1f01b4
+                        Position: {X: -16.0, Y: 10.1, Z: -12.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    3020d9c622135bc188e9aed334189d0f: !ModelComponent
+                        Id: f508cfe8-43c1-55f9-bbf9-1255e088acb7
+                        Model: b76a45f7-e68d-5673-a5e6-3b673d79ecd6:World/Models/LampLight
+                        Materials: {}
+                    b4e0bc58af255a12ac326bbe40767e65: !Brinemoor.ShownWhen,Brinemoor.Game
+                        Id: 05f42c2b-2b55-5828-8ba4-19217a17bdd7
+                        Variable: $lamp_lit
+                        Not: false
+                    a506920aa8655d44892a84a52679431b: !LightComponent
+                        Id: 53d164b7-7f9b-552a-9fba-20bf8e52271a
+                        Type: !LightPoint
+                            Color: !ColorRgbProvider
+                                Value: {R: 1.0, G: 0.85, B: 0.45}
+                            Radius: 40.0
+                        Intensity: 60.0
+        -   Entity:
+                Id: 4305fffa-0e46-53ef-8e38-baaedd661aca
+                Name: LighthouseDoor
+                Components:
+                    dc14aebb07e8513092b44f523acb06f4: !TransformComponent
+                        Id: d492920e-40a5-5bad-825f-586e0511e8de
+                        Position: {X: -16.0, Y: 0.0, Z: -10.3}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    a691c8a3d6765a4eb07a0946ba4dc4f2: !ModelComponent
+                        Id: 9657ac5c-2266-5ea9-8f18-80f9c92c534e
+                        Model: 28c3cf50-0651-5d41-a795-e7af6025fea8:World/Models/Door
+                        Materials: {}
+                    65d1e645f12e5cbeb80574c9fe93e88f: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: 1b004479-a78b-541c-a2ca-143b990e94f7
+                        Node: LighthouseDoor
+                        IsThing: true
+                        Label: 'line:use_door'
+                        WalkSpeed: 3.0
+        -   Entity:
+                Id: 6aefd39d-e71b-5097-8198-d1e1431e46cc
+                Name: HarbourOffice
+                Components:
+                    a4d8a09761f15ec7ae9433e7b8fccd32: !TransformComponent
+                        Id: cddcdb33-3838-55ad-b614-b0990aae856e
+                        Position: {X: 15.0, Y: 0.0, Z: 1.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    32d55afdc3915f0fb5e9ff92615675b2: !ModelComponent
+                        Id: 00c67c59-7aaf-5085-b96d-c5e5a6232e8d
+                        Model: 19c14d37-0e63-5c5a-b0e4-7fd30d17ff83:World/Models/HarbourOffice
+                        Materials: {}
+        -   Entity:
+                Id: 0924d35f-406d-56e3-9b9c-7140e05c4341
+                Name: Brandt
+                Components:
+                    74b36d7e98cb58e59a48805fa12767fc: !TransformComponent
+                        Id: 86469409-c8aa-5c28-94e9-13995e37d3ce
+                        Position: {X: 11.4, Y: 0.0, Z: 3.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    2193733f1c885a0887ca53dcd058c1cc: !ModelComponent
+                        Id: 0c5837da-c1e9-5bac-a7a0-3d9c1edba8fe
+                        Model: 5be9e4ad-dcbc-5f14-a3d6-d5f404081f90:World/Models/Brandt
+                        Materials: {}
+                    fe132937067c5c82b5ff58cc58eae98b: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: 34dc0c43-1a4a-50cb-8f33-fa24db442151
+                        Node: Brandt
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+        -   Entity:
+                Id: a95a0de8-f59a-5cc1-a902-8bc1667167c2
+                Name: BellPost
+                Components:
+                    82cb0ed80a6c5f378b1a9ff3678498f8: !TransformComponent
+                        Id: 84fa45e3-5d9f-5f64-a5d8-6808a55be98a
+                        Position: {X: 4.0, Y: 0.0, Z: 3.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    56efe82ee9c85297a2851a01ddf1d4b5: !ModelComponent
+                        Id: 5688796b-bdb3-595f-8dda-515c02cd7361
+                        Model: 1e0e7d79-284c-539b-bf4b-e06fdfc182fd:World/Models/BellPost
+                        Materials: {}
+        -   Entity:
+                Id: 1fd6d8eb-f0c3-5197-b3a2-95cb890e56ab
+                Name: Bell
+                Components:
+                    7f402986a5e05696a630ce842434b41b: !TransformComponent
+                        Id: ae4c25de-6950-50fb-be87-0640d2d1f9ef
+                        Position: {X: 4.0, Y: 1.5, Z: 3.35}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ba58bf410d6a529fb8ec61a98d84e998: !ModelComponent
+                        Id: e321e847-ec1c-56b0-8b9a-2606eace6094
+                        Model: 51fde6c6-762e-5828-8f00-b0efbc5cf0ef:World/Models/Bell
+                        Materials: {}
+                    8c0fcb52f521526e9b34eac9eb6c68d9: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: f107bcf5-1c3d-578f-813f-29165848f612
+                        Node: Bell
+                        IsThing: true
+                        Label: 'line:use_bell'
+                        WalkSpeed: 3.0
+        -   Entity:
+                Id: e665abe7-c589-55e0-8104-35ae36293b6e
+                Name: Inn
+                Components:
+                    c11b2a079fc05e0a9e2ce249287ecf5e: !TransformComponent
+                        Id: a212d4bf-414c-58d1-88aa-2b92aff95819
+                        Position: {X: -5.0, Y: 0.0, Z: -1.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    2135587ff2d9577c8aa21431f31f2378: !ModelComponent
+                        Id: 72fc6b6d-597a-58b1-a163-e7ad29bc4865
+                        Model: 7673b61e-9187-513e-98a5-1d1b744bb056:World/Models/Inn
+                        Materials: {}
+        -   Entity:
+                Id: d8260c4d-c8b4-52b2-bbcc-5358c7b51d35
+                Name: Tam
+                Components:
+                    8b42cc366663518793e6d68488cf52cd: !TransformComponent
+                        Id: d723f597-7bdd-5897-9768-1001d5238b6e
+                        Position: {X: -5.5, Y: 0.0, Z: 2.4}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    df19a8a126905f489eb3315e4f53b311: !ModelComponent
+                        Id: e9230d1b-6248-5c35-bcdc-a0a39a4d14f9
+                        Model: 590cd0ba-57d8-5ee8-be2b-5cf31028f3ec:World/Models/Tam
+                        Materials: {}
+                    17afeaeff41051698adc4e2219ae6218: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: c688b46f-e10c-5e8c-b92a-78c752da5581
+                        Node: Tam
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+        -   Entity:
+                Id: d35da459-3911-5473-ab81-f0f060ec3c54
+                Name: Wren
+                Components:
+                    436e725f49c85fe29b93fe2a3a3f15fb: !TransformComponent
+                        Id: 8a07128e-ad01-5b0e-9dd6-cad11640bded
+                        Position: {X: -1.2, Y: 0.0, Z: 2.2}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    5fea49ef63095c0990bf0b2086fbe4c4: !ModelComponent
+                        Id: e86f88f6-c3db-511e-b74b-f10d7af91f89
+                        Model: 9a4cf60c-88ec-5b74-be29-cc441e43d40e:World/Models/Wren
+                        Materials: {}
+                    2ffde72e898259e3857fc81f1bd69734: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: 309f7ceb-6b6c-54a7-80c4-9c790c19a0e0
+                        Node: Wren
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                    d428087f0f3a5f93aa156a90faebe9d7: !Brinemoor.ShownWhen,Brinemoor.Game
+                        Id: 34177209-3b7f-5faa-99c3-6774dcdbf033
+                        Variable: $wren_here
+                        Not: false
+        -   Entity:
+                Id: f467e929-ae80-5be3-a16f-ff0f1992f6f8
+                Name: Pim
+                Components:
+                    11e131b784cd54cc91e052480c32dc60: !TransformComponent
+                        Id: 8d5c15fb-4dfe-54ef-b587-1788bea2c824
+                        Position: {X: -9.6, Y: 0.0, Z: 2.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    9c118fb3f5b95f939b2200340a56e985: !ModelComponent
+                        Id: 4f41d6ce-2aad-5894-95b2-9bcaf406b132
+                        Model: a68f194c-6944-5042-a56d-d21c4035413c:World/Models/Pim
+                        Materials: {}
+                    63b44324973d5dff9acef70269deb14a: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: 743e452c-5117-547a-80e9-4ffad7201559
+                        Node: Pim
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+        -   Entity:
+                Id: 589480b2-2422-5a28-8370-603e7bfc971f
+                Name: Cat
+                Components:
+                    370a3a3c73985003b022c85725326df4: !TransformComponent
+                        Id: 630b9f10-3bb4-5799-9492-b42ee3b6e0f6
+                        Position: {X: -7.6, Y: 3.4, Z: 1.2}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    89a281233ec2501a96cf0a0726fda3c6: !ModelComponent
+                        Id: 5460f6c0-2ae3-5608-a3dd-dea9fe9043fa
+                        Model: b0d39c73-ccaf-54e4-89ca-b69cb7e787df:World/Models/Cat
+                        Materials: {}
+                    f383de5c373b5257850bf338a4318945: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: 43baf73f-f392-5ce1-8c68-ec6bd50d9b28
+                        Node: Cat
+                        IsThing: true
+                        Label: 'line:use_cat'
+                        WalkSpeed: 3.0
+                    d4c8cf3f6cd25ee5837942e1ac5c85f3: !Brinemoor.ShownWhen,Brinemoor.Game
+                        Id: 4359abb6-d304-515b-b43a-9a48d71039da
+                        Variable: $cat_down
+                        Not: true
+        -   Entity:
+                Id: a78fa533-f295-58f1-aeef-4fcbd7d0875b
+                Name: Pier
+                Components:
+                    a703a5b6603354ff86936d2c499607ab: !TransformComponent
+                        Id: 6e705fa8-8621-56a6-a87d-5d6c44d5a001
+                        Position: {X: 5.0, Y: 0.05, Z: 21.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    876586e9bed251ffa88122a736ae1c33: !ModelComponent
+                        Id: dc14033d-3388-57de-93bb-326cb34c880c
+                        Model: 5a6aae2d-d0d0-578e-a3f2-50481d9e171a:World/Models/Pier
+                        Materials: {}
+        -   Entity:
+                Id: ff0d9b94-5437-528c-9d41-dea57d6ce02b
+                Name: Maud
+                Components:
+                    762b938e794d542d915a7047624255fc: !TransformComponent
+                        Id: b95759ee-c078-56e1-868c-2d70bbe8ac5e
+                        Position: {X: 3.6, Y: 0.0, Z: 16.2}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    4bf7f15c14da5163b2abcd4e7216de58: !ModelComponent
+                        Id: 31deff01-6bb9-5b55-8cd8-c9961f3e2964
+                        Model: a1d04a03-91cc-5a15-902e-44a2622f8b46:World/Models/Maud
+                        Materials: {}
+                    be1c08854e19531fb9a77b49287586cf: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: fe55f425-fa37-5eac-acc2-ed1dd1e4cc94
+                        Node: Maud
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+        -   Entity:
+                Id: e3f40a96-31fd-55e4-81c1-acea3be26767
+                Name: Joss
+                Components:
+                    0d796b40881a52ad94f80a0c63973062: !TransformComponent
+                        Id: 833217de-0ad9-58d7-9b13-00f83f499446
+                        Position: {X: 6.6, Y: 0.0, Z: 17.2}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    272b1e6e69475eb4af1ca59b7d36e383: !ModelComponent
+                        Id: cf6dc314-1e92-5e25-aa6c-4f05df43f741
+                        Model: c9f1011a-9e59-566a-abdd-27d7ba878a88:World/Models/Joss
+                        Materials: {}
+                    6588cf3de60152f3b49a69a38cb5d223: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: 032427ba-41d6-531e-bd09-02fa02b82a14
+                        Node: Joss
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+        -   Entity:
+                Id: c6c70267-f3a8-5237-9cc5-ad70c9ffbadc
+                Name: Shed
+                Components:
+                    22626d5ef904591fb7671e6d8b4c939f: !TransformComponent
+                        Id: 193ae5fe-3d52-52f2-bfe2-4cfb7d959a49
+                        Position: {X: -2.5, Y: 0.0, Z: 15.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    a6016f7fdb925c4483a80ff8306f9d69: !ModelComponent
+                        Id: 02a1ba65-1593-5fdb-a405-520e617a2901
+                        Model: fb4bd727-44e8-52b0-9c99-e725ac5adce3:World/Models/Shed
+                        Materials: {}
+        -   Entity:
+                Id: 384d4824-ae73-5222-89e2-702f8ff5d547
+                Name: OilCan
+                Components:
+                    f700b68b05eb518eae75de9e881729d7: !TransformComponent
+                        Id: 4f02e1f3-e28e-5052-a582-a91c7a80a5bf
+                        Position: {X: -0.4, Y: 0.0, Z: 15.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    293b4d4ddbb153da91a4478a716da776: !ModelComponent
+                        Id: 38a1f7f4-f860-55c8-a298-c446b8d869be
+                        Model: 04fe8660-5ea1-56a9-9965-8ee47d421755:World/Models/OilCan
+                        Materials: {}
+                    e762081e4fe8516c981a6a0bf6831b94: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: e8151146-2ab1-5785-ae89-89618ef978de
+                        Node: OilCan
+                        IsThing: true
+                        Label: 'line:use_oil'
+                        WalkSpeed: 3.0
+                    eeadb9e58da557ff9abd6b462f1091c7: !Brinemoor.ShownWhen,Brinemoor.Game
+                        Id: a5c99166-6bfa-5f8d-b86b-45ac18de2799
+                        Variable: $oil_taken
+                        Not: true
+        -   Entity:
+                Id: 168fbe8c-26f8-5c9b-ad4c-7ef23a040bed
+                Name: House1
+                Components:
+                    6b4b5c3b426e50e7be2dde3b969f28f8: !TransformComponent
+                        Id: 70ac539a-4cd4-57ae-b5c0-1bc73393c5df
+                        Position: {X: 7.0, Y: 0.0, Z: -8.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    9c1ae8436b345710b60431a9a30dc81a: !ModelComponent
+                        Id: 5258f637-320d-57b7-b48d-711f030ff98c
+                        Model: dc38c76a-feca-566e-8eb9-1f165dd837e6:World/Models/House
+                        Materials: {}
+        -   Entity:
+                Id: bd2ca75c-9133-5516-bef5-cab914394afe
+                Name: House2
+                Components:
+                    9febc96e46155ead902966f9c97b623f: !TransformComponent
+                        Id: 64c1029d-fc2e-51d8-b92a-fd2278d10ec0
+                        Position: {X: 0.0, Y: 0.0, Z: -10.0}
+                        Rotation: {X: 0.0, Y: 0.173648, Z: 0.0, W: 0.984808}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    1a4efda4744159df9fe6c9e282103b9f: !ModelComponent
+                        Id: 12294c0d-0f9b-56e1-8cca-ec3735ab11f7
+                        Model: dc38c76a-feca-566e-8eb9-1f165dd837e6:World/Models/House
+                        Materials: {}
+        -   Entity:
+                Id: d58ea697-a0c7-5b5a-9b0c-42e01e43c96b
+                Name: House3
+                Components:
+                    e44cb9c47676586083f9ab94a3de5668: !TransformComponent
+                        Id: 6c16ee0c-0147-54e0-8621-04f2331efa35
+                        Position: {X: -12.0, Y: 0.0, Z: 8.0}
+                        Rotation: {X: 0.0, Y: -0.130526, Z: 0.0, W: 0.991445}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    9e579027eb605da69647f84d62e69143: !ModelComponent
+                        Id: 078a3c21-e635-58fd-a377-f51ef5ad0cd8
+                        Model: dc38c76a-feca-566e-8eb9-1f165dd837e6:World/Models/House
+                        Materials: {}
+        -   Entity:
+                Id: 75d1a6fe-9482-54a6-952c-adb5d54b948b
+                Name: Rocks1
+                Components:
+                    720c19ea00095abe8b0d36d0fb91f9b9: !TransformComponent
+                        Id: 1cf8e807-ed19-5773-a7ad-7dd496e2332e
+                        Position: {X: 17.0, Y: 0.0, Z: -16.0}
+                        Rotation: {X: 0.0, Y: 0.21644, Z: 0.0, W: 0.976296}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    84df1a6ac6a15525a43745ba0266ff2d: !ModelComponent
+                        Id: 8ee74a64-4697-5908-9982-92325ac7c8a9
+                        Model: 33817958-3c8d-52dc-8bd2-5c10a20ce07c:World/Models/Rock
+                        Materials: {}
+        -   Entity:
+                Id: 442deb1c-e370-5ba1-9d66-27c14e201c2d
+                Name: Rocks2
+                Components:
+                    e4e32a31452f59c0bb9fecf7e69e78c9: !TransformComponent
+                        Id: 8523d89e-8438-5890-96ff-8469c84fb549
+                        Position: {X: 20.0, Y: 0.0, Z: -13.0}
+                        Rotation: {X: -0.018054, Y: -0.258189, Z: 0.06738, W: 0.963573}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    7bb435c4ffb8515597f058d21ad5febc: !ModelComponent
+                        Id: cfa17d3c-6a1b-5d1c-82f5-4d9d3e359a5d
+                        Model: 33817958-3c8d-52dc-8bd2-5c10a20ce07c:World/Models/Rock
+                        Materials: {}
+        -   Entity:
+                Id: aeef22f7-f86f-5229-a1e9-d94e2fa82669
+                Name: Rocks3
+                Components:
+                    8396378afa2c5ea38cae14528de101fb: !TransformComponent
+                        Id: 15aabd7d-c6fc-5039-8297-4bbac984639e
+                        Position: {X: 13.5, Y: 0.0, Z: -17.5}
+                        Rotation: {X: 0.0, Y: 0.5, Z: 0.0, W: 0.866025}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    3e7ddb4a39e95eb29057078421b7fb70: !ModelComponent
+                        Id: 1bfd2a66-c29e-5a9d-b24a-ce3077b2e374
+                        Model: 33817958-3c8d-52dc-8bd2-5c10a20ce07c:World/Models/Rock
+                        Materials: {}
+        -   Entity:
+                Id: 4ce103a7-f551-54ff-a083-b65a9e73a768
+                Name: Cave
+                Components:
+                    7925554a01a75d53a6305cab33c1ecbe: !TransformComponent
+                        Id: 18a2b330-f753-5398-ac01-c765067022ce
+                        Position: {X: 16.2, Y: 0.0, Z: -13.2}
+                        Rotation: {X: 0.0, Y: 0.21644, Z: 0.0, W: 0.976296}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    f7d6bd3803bd55ca848f116c1d757d3e: !ModelComponent
+                        Id: 1cdfb8ea-32e6-5b54-a032-55a37db908c6
+                        Model: 1f705ce0-d6fc-5a0e-9a3f-0da4f2c68152:World/Models/Cave
+                        Materials: {}
+                    766cf9d23fca5a3da84d8e2508772269: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: 0684820b-663c-5e95-a600-73a82741993b
+                        Node: Cave
+                        IsThing: true
+                        Label: 'line:use_cave'
+                        WalkSpeed: 3.0
+        -   Entity:
+                Id: d18cdc59-e175-52ad-a182-9c0abc35749c
+                Name: Lantern
+                Components:
+                    72c74a7f705453fc80251262acf2f5b3: !TransformComponent
+                        Id: f1857335-aca9-594f-8a4c-fcfad8ca178e
+                        Position: {X: 8.0, Y: 0.0, Z: -17.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    c0c4f8f2f5cd598c90eac4da12affde1: !ModelComponent
+                        Id: 05681b77-9e11-57db-86e2-38f4b791af15
+                        Model: 5dd55fe6-b7f4-5edc-bf7d-7d9c034d241a:World/Models/Lantern
+                        Materials: {}
+                    c2a182f980b65eb78a04d2c0eb99be8a: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: 0a85aeee-67b6-5aae-937a-a286aa66e21c
+                        Node: Lantern
+                        IsThing: true
+                        Label: 'line:use_lantern'
+                        WalkSpeed: 3.0
+                    c2f2f93520b0538294bbb52f7bab8280: !Brinemoor.ShownWhen,Brinemoor.Game
+                        Id: 88c0b254-6457-5d70-a1a7-c224849ee0fa
+                        Variable: $clue_lantern
+                        Not: true
+        -   Entity:
+                Id: 6740a402-a679-5c60-847c-82e6ebebdf01
+                Name: Boot
+                Components:
+                    77d3a47066815135add2c210e7be6ce9: !TransformComponent
+                        Id: 0c8626e3-a1c9-5941-bce1-337410459b35
+                        Position: {X: 21.0, Y: 0.0, Z: -5.0}
+                        Rotation: {X: 0.0, Y: 0.34202, Z: 0.0, W: 0.939693}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ec8f153be89f571398e576a13664e04a: !ModelComponent
+                        Id: 2affab4b-a115-546d-a9e6-93e86f0641e9
+                        Model: ed3a79e7-f3a6-5413-963a-6506030ddff8:World/Models/Boot
+                        Materials: {}
+                    7eed92f672e25bbead786c347c891808: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: 73df5521-a861-599b-bd0d-7a98136369f3
+                        Node: Boot
+                        IsThing: true
+                        Label: 'line:use_boot'
+                        WalkSpeed: 3.0
+                    f11482685fb050ffa2b43d70c8b65871: !Brinemoor.ShownWhen,Brinemoor.Game
+                        Id: 66415a05-9cf6-57ba-b205-4af8b7012e85
+                        Variable: $clue_boot
+                        Not: true
+        -   Entity:
+                Id: 7a10270e-5bc9-5d8e-abd0-3bffe2a53d72
+                Name: Ship
+                Components:
+                    7021dd158fac5d6a9377c1e8c5a3f0b6: !TransformComponent
+                        Id: 5fee7f84-9464-518d-8805-5164645c2ea5
+                        Position: {X: 5.0, Y: 0.2, Z: 34.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    5e1a2f2a023a582d813ade5cb365f143: !ModelComponent
+                        Id: 223093e7-e81b-523f-b5c8-3191e91126ab
+                        Model: 7dfb80be-8093-547d-8089-c797a2d8d2ad:World/Models/Ship
+                        Materials: {}
+                    237013c01edf5f6688bc0a6a75bf648a: !Brinemoor.ShownWhen,Brinemoor.Game
+                        Id: abbf01ea-3a3c-53f3-bc27-9fe49a3c7162
+                        Variable: $ship_anchored
+                        Not: false
+        -   Entity:
+                Id: 2d917977-9369-53b4-ae09-c913b0bf75d3
+                Name: Wreck
+                Components:
+                    1d1c777b653759fea49896fb942bdb8e: !TransformComponent
+                        Id: 9f78d8b0-f70b-5869-b81e-083174d744f8
+                        Position: {X: 25.5, Y: -0.3, Z: 10.0}
+                        Rotation: {X: 0.057377, Y: 0.295181, Z: 0.181978, W: 0.936194}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    5d749d9cb9275cb4bac3a84530013dba: !ModelComponent
+                        Id: a925728f-32d2-5744-9819-8f1ccc65a08a
+                        Model: 5559457e-a1af-5f37-8847-f0c137cdd839:World/Models/Wreck
+                        Materials: {}
+                    0546b4e82a855f3d804c4b43a5dfc673: !Brinemoor.ShownWhen,Brinemoor.Game
+                        Id: 29d9e595-73ff-5bed-a0c8-c166cb952386
+                        Variable: $wreck_aground
+                        Not: false
+        -   Entity:
+                Id: d39e2377-c499-5998-a7d7-0d7d35a640c0
+                Name: Odile
+                Components:
+                    e1c933656a815dc496f21a831c56312b: !TransformComponent
+                        Id: 6a5746ef-4af2-5f68-a660-5da167c9bb95
+                        Position: {X: -13.4, Y: 0.0, Z: -9.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    cb3e2bf3649c54068f8f196dbf42600a: !ModelComponent
+                        Id: 9e6c84b9-80e1-59b8-ab83-e0b583a39c64
+                        Model: c8bb4f71-5b2e-5ea4-9697-50cb118cedef:World/Models/Odile
+                        Materials: {}
+                    44f4307f9a035b9aac709c5e2fcb0d94: !Brinemoor.Talkable,Brinemoor.Game
+                        Id: fa4d7574-ecdd-5756-beda-13203e38decf
+                        Node: Odile
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                    3a0e56b99ed85286abb5bc9ef4407f19: !Brinemoor.ShownWhen,Brinemoor.Game
+                        Id: 4b8e8dc9-5de1-5563-b78b-944a5d288057
+                        Variable: $odile_here
+                        Not: false
+        -   Entity:
+                Id: 7e1c2d7d-cc6e-551f-bf48-8e6dfc950ac0
+                Name: Player
+                Components:
+                    8cae9290672a5f4e961ae626f247da6f: !TransformComponent
+                        Id: 7f0eac57-842c-5965-9f9b-7d0694318a7a
+                        Position: {X: 2.0, Y: 0.0, Z: 9.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    8cf029403ce858dfa7d400823e5079e5: !ModelComponent
+                        Id: 2f449bdf-e956-5b25-82af-a01ca78ed15c
+                        Model: 3af1ff91-09e9-521f-a477-f6c3b58c5e74:World/Models/Courier
+                        Materials: {}
+                    2f657c6fb155512f9d0a4874faddfdd2: !Brinemoor.PlayerController,Brinemoor.Game
+                        Id: dd8bfe8a-6124-5b46-951d-504f998299e6
+                        Speed: 5.0
+                        Bounds: {X: 22.0, Y: 18.5}
+                        Camera: ref!! 7f723125-d628-5cfe-81eb-f5d921e71617
+        -   Entity:
+                Id: 7f723125-d628-5cfe-81eb-f5d921e71617
+                Name: Camera
+                Components:
+                    d2597654a61f5caa8d14105d8c93e4e5: !TransformComponent
+                        Id: 7a653a02-b501-5b5b-8ddf-8e88589c3dd9
+                        Position: {X: 2.0, Y: 13.0, Z: 21.0}
+                        Rotation: {X: -0.401073, Y: 0.0, Z: 0.0, W: 0.916046}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    c8e927342b3751aca198f3c35a64e5f1: !CameraComponent
+                        Id: 6ca21f55-fb9f-5be8-b3c1-2939b10e5202
                         Name: null
                         Projection: Perspective
                         Slot: d0a6bf72-b3cd-4bd4-94ca-69952999d537
         -   Entity:
-                Id: 58b9525b-e7ae-7864-c617-b6a50861e524
+                Id: 36b282a3-44d1-5eaa-a624-5d5ec2eff206
                 Name: Sun
                 Components:
-                    ccec50e3204b158187be425d0454af60: !TransformComponent
-                        Id: f56726c3-ebaf-05cd-3ab1-fe8843f83f41
+                    7f1e2aebe0e65f5b8d7096166d3e2f54: !TransformComponent
+                        Id: 773c191c-0199-50cc-a86e-d6b49f37f858
                         Position: {X: 0.0, Y: 5.0, Z: 0.0}
-                        Rotation: {X: -0.45080333, Y: -0.19198428, Z: -0.09994069, W: 0.86598513}
+                        Rotation: {X: -0.450803, Y: -0.191984, Z: -0.099941, W: 0.865985}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
-                    341e4c083aea19db3e2a5d908002c716: !LightComponent
-                        Id: 8cd0bc77-d06c-0075-98b9-aa4da30fb8b9
+                    87df62bdfa4f59bf9d27563385af1034: !LightComponent
+                        Id: 912a04af-94c1-5c06-937d-f73dc1395587
                         Type: !LightDirectional
                             Color: !ColorRgbProvider
                                 Value: {R: 1.0, G: 0.97, B: 0.9}
@@ -53,46 +681,113 @@ Hierarchy:
                                 BiasParameters: {}
                         Intensity: 4.0
         -   Entity:
-                Id: 156b0cba-a396-4455-72fb-4d2451118ae4
+                Id: c3d39e85-5122-5f47-9e93-2f42d2b02b68
                 Name: Ambient
                 Components:
-                    61c48e45f38a6a5952f97334b922c12a: !TransformComponent
-                        Id: c7eb3429-fc4d-f165-ee6a-f37afdba4343
+                    eda8d511bd215a31b4e17e4b13762be7: !TransformComponent
+                        Id: d9ac1de2-9281-520e-bd52-e363f29bb006
                         Position: {X: 0.0, Y: 5.0, Z: 0.0}
                         Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
-                    683aaa4cfa87ab064212691e71d96e6c: !LightComponent
-                        Id: 75b4fa04-8a72-09fc-a819-30a9a7ce01b6
+                    deaf2a8d8fb456188192ccebd4c9de07: !LightComponent
+                        Id: e80caf7b-e695-5180-80e5-89689d95fd16
                         Type: !LightAmbient
                             Color: !ColorRgbProvider
                                 Value: {R: 0.8, G: 0.85, B: 1.0}
                         Intensity: 0.8
         -   Entity:
-                Id: 17f2894b-bf3c-ac0a-31e2-b1fa10422cb1
-                Name: Ground
+                Id: afeba305-586c-52fd-9e1d-f381daaa074d
+                Name: Dialogue
                 Components:
-                    66257f5403608d7a50d831cbc9a6a621: !TransformComponent
-                        Id: 601d3355-4eb2-2475-4d75-cca6ca043a2e
+                    33446dfb63c35a42b78ab3c0d02492f4: !TransformComponent
+                        Id: a8e50080-b2d1-5a4a-b5b7-ffe573a466b6
                         Position: {X: 0.0, Y: 0.0, Z: 0.0}
                         Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
-                    bc72f2444bc7a3fbee6ff13f32fe1c12: !ModelComponent
-                        Id: 624a8a2d-c12f-b856-e9a1-fc7c7179cc9a
-                        Model: b57d637d-8827-a1a0-8bae-f80e29e1f188:World/Models/Ground
-                        Materials: {}
+                    721ba3fc36c259628ba5898fe5e178ac: !DialogueRunnerComponent
+                        Id: 75203fbe-f96b-5506-8a04-4130eb0ac153
+                        Project: 0a14ed8f-ca2c-47d7-8492-670d7098e66a:Dialogue/Brinemoor
+                        StartNode: ''
+                        AutoStart: false
+                        Presenters:
+                            eedd6a59e54751859e4b3ea6faee5c6b: ref!! 2ec3000d-25f0-5428-946c-00159f74373c
+                            4e835c732daa5f1bb93de06183136f31: ref!! b579e976-4078-529f-a6f1-e8d9edea06ec
+                            1ce26ae0f0c65a378993d1d34ae6a054: ref!! 3c462eb7-5d77-5c2b-bba5-4ba8d3d292dc
+                            5c5eee32b83759db98dedfa80d8928d6: ref!! 3dc74872-fe1f-5e99-9a3b-fc7cb9fb2a51
+                        Saliency: null
+                        OptionsFallThrough: true
+                    56d9a866f38e5659bf9f12e4c3134160: !SkeinLinePresenter
+                        Id: 2ec3000d-25f0-5428-946c-00159f74373c
+                        Page: null
+                        Font: c8bc2110-015e-5331-a178-2ed0a37396a5:UI/Font
+                        Typewriter: Letter
+                        Speed: 45.0
+                        AutoAdvance: false
+                        HoldTime: 1.5
+                    0c2ec440615e5e02a52d31349850a3b1: !SkeinOptionsPresenter
+                        Id: b579e976-4078-529f-a6f1-e8d9edea06ec
+                        Page: null
+                        Font: c8bc2110-015e-5331-a178-2ed0a37396a5:UI/Font
+                        Unavailable: Hidden
+                        PreviousKey: Up
+                        NextKey: Down
+                        ChooseKey: Enter
+                        ChooseButton: A
+                        NumberKeys: true
+                    fa332c58d3d75a9488bf62ea3bbf16c0: !SkeinLineAdvancer
+                        Id: 3c462eb7-5d77-5c2b-bba5-4ba8d3d292dc
+                        AdvanceKey: Space
+                        AdvanceButton: A
+                        AdvanceWithPointer: true
+                    4eda3f39f9af59cf8393027d627bb236: !Brinemoor.MoodPresenter,Brinemoor.Game
+                        Id: 3dc74872-fe1f-5e99-9a3b-fc7cb9fb2a51
         -   Entity:
-                Id: c7c4e523-7cef-8fb5-2cac-6b8e09794339
-                Name: Player
+                Id: b05ec1e7-74b0-5cd1-a21c-8f38ef624f27
+                Name: Story
                 Components:
-                    0c4dd0ea9c461809b711e79918009780: !TransformComponent
-                        Id: aa2314eb-7826-9189-2aa0-1bce3703b45e
-                        Position: {X: 0.0, Y: 0.0, Z: 4.0}
+                    f262b9b9a1505d53a49108b635b3244b: !TransformComponent
+                        Id: 433acfae-e848-50d8-80a1-8618e5c2a1c0
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
                         Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
-                    8352eda69862d177654e3aafff88da69: !ModelComponent
-                        Id: 792328d6-71ce-12c6-6d24-0fd389f6b2a6
-                        Model: fdc64b52-7b2d-38cc-de24-423884bf120c:World/Models/Player
-                        Materials: {}
+                    b321ddd49fe15348974387522812c0a9: !Brinemoor.BrinemoorGame,Brinemoor.Game
+                        Id: 441eda54-6e1a-5a5b-971c-fef37248613b
+                        Runner: ref!! 75203fbe-f96b-5506-8a04-4130eb0ac153
+                        Player: ref!! 7e1c2d7d-cc6e-551f-bf48-8e6dfc950ac0
+                        Camera: ref!! 7f723125-d628-5cfe-81eb-f5d921e71617
+                        Font: c8bc2110-015e-5331-a178-2ed0a37396a5:UI/Font
+                        Reach: 2.5
+        -   Entity:
+                Id: 7a147b40-10e2-5110-ab38-2794d523c5ca
+                Name: PierChatter
+                Components:
+                    2249d57556565d2db594a21cf44ae069: !TransformComponent
+                        Id: 2e6ff636-bc9b-5ef5-a42f-8b12dc0e59b3
+                        Position: {X: 5.2, Y: 0.0, Z: 16.8}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    0c1f6456173256a0b287aba1d6da3af2: !DialogueRunnerComponent
+                        Id: 5077a8e5-afd0-5108-b2b7-5cd6724eba43
+                        Project: 0a14ed8f-ca2c-47d7-8492-670d7098e66a:Dialogue/Brinemoor
+                        StartNode: ''
+                        AutoStart: false
+                        Presenters:
+                            9dc279024bc750c39aee72daf45bc16b: ref!! dbdfd617-6db8-504f-a8cc-492fc4c88d93
+                        Saliency: null
+                        OptionsFallThrough: true
+                    5765c61e3e665568b9a89742c515e330: !Brinemoor.CaptionPresenter,Brinemoor.Game
+                        Id: dbdfd617-6db8-504f-a8cc-492fc4c88d93
+                        Font: c8bc2110-015e-5331-a178-2ed0a37396a5:UI/Font
+                        HoldTime: 1.6
+                        TimePerLetter: 0.045
+                    d7d0dd1f2b275c56935dc15bac8c4d57: !Brinemoor.Chatter,Brinemoor.Game
+                        Id: 9ac1b9d7-f192-536b-9a8a-d7261db668fa
+                        Runner: ref!! 5077a8e5-afd0-5108-b2b7-5cd6724eba43
+                        Node: PierChatter
+                        Listener: ref!! 7e1c2d7d-cc6e-551f-bf48-8e6dfc950ac0
+                        Distance: 9.0
+                        Pause: 10.0

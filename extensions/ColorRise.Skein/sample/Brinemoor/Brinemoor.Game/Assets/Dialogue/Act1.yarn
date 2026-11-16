@@ -1,0 +1,96 @@
+title: Events
+act: Arrival
+scenario: The dark lamp
+when: once
+when: $act == Act.Arrival
+---
+The causeway to Brinemoor is open at low tide. You cross it with the post bag on your back.
+The lighthouse stands dark over the town.
+===
+
+title: Brandt
+act: Arrival
+scenario: The dark lamp
+when: $quest_lamp == QuestState.Active and not has_item("key")
+---
+Brandt: The keeper is gone, and the lamp with her. Odile left me the spare key.
+-> I will light the lamp. Give me the key.
+    Brandt: Take it. Bring it back.
+    <<give key>>
+-> It is not my lamp.
+    Brandt: It will be everyone's, tonight.
+===
+
+title: Brandt
+act: Arrival
+when: always
+---
+Brandt: Harbour office. Mind the tide.
+===
+
+title: Maud
+act: Arrival
+scenario: The dark lamp
+when: $quest_lamp == QuestState.Active and not $oil_allowed
+---
+Maud: A lamp needs oil. Take a can from my shed, by the pier.
+<<set $oil_allowed = true>>
+===
+
+title: Maud
+act: Arrival
+when: always
+---
+Maud: The fish don't wait, courier.
+===
+
+title: OilCan
+act: Arrival
+quest: lamp
+when: $oil_allowed and not $oil_taken
+---
+You take a can of lamp oil.
+<<give oil>>
+<<set $oil_taken = true>>
+===
+
+title: LighthouseDoor
+act: Arrival
+quest: lamp
+when: $quest_lamp == QuestState.NotStarted
+---
+You knock. Nobody answers. High above, the lamp room is dark.
+<<set $quest_lamp = QuestState.Active>>
+<<quest_changed lamp>>
+===
+
+title: LighthouseDoor
+act: Arrival
+quest: lamp
+when: $quest_lamp == QuestState.Active and $lamp_can_be_lit
+---
+The key turns. You climb, fill the lamp and light it.
+<<take oil>>
+<<set $lamp_lit = true>>
+<<set $quest_lamp = QuestState.Succeeded>>
+<<quest_changed lamp>>
+===
+
+title: Events
+act: Arrival
+scenario: The dark lamp
+when: $is_night
+when: $quest_lamp == QuestState.Active
+---
+Night falls on a dark lamp.
+<<set $quest_lamp = QuestState.Failed>>
+<<quest_changed lamp>>
+===
+
+title: PierChatter
+act: Arrival
+when: always
+---
+Maud: Dues up again, they say.
+Joss: Let them say it to my face.
+===

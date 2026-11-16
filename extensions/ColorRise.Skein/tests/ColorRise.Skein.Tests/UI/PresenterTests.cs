@@ -297,6 +297,33 @@ public sealed class PresenterTests
     }
 
     [Fact]
+    public void Numbered_options_are_chosen_with_their_digit()
+    {
+        using var harness = new GameHarness();
+        var page = new Page(buttons: 3);
+        var runner = Runner(harness, Choice, page, new LinePresenter { Typewriter = TypewriterMode.Instant }, new OptionsPresenter { Unavailable = UnavailableOptions.Disabled, NumberKeys = true });
+
+        runner.StartDialogue("Start");
+        harness.Step(2);
+        Assert.Equal(["1. Wait", "2. Pay", "3. Leave"], [page.Label(0), page.Label(1), page.Label(2)]);
+
+        // The digit of an option that cannot be chosen, and a digit past the options, choose nothing
+        harness.Press(Keys.D2);
+        harness.Press(Keys.D4);
+        harness.Step(2);
+        Assert.Equal(Visibility.Visible, page.Options.Visibility);
+
+        harness.Press(Keys.NumPad3);
+        harness.Step(3);
+
+        Assert.Equal("Go on, then.", page.Text.Text);
+        Assert.True(runner.NodeExists("Start"));
+        Assert.False(runner.NodeExists("Nowhere"));
+        runner.Stop();
+        harness.Step(2);
+    }
+
+    [Fact]
     public void Options_beyond_the_buttons_of_the_page_are_an_error_once()
     {
         using var harness = new GameHarness();

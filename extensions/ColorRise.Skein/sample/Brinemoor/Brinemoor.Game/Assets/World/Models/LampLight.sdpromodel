@@ -1,0 +1,13 @@
+!ProceduralModelAsset
+Id: b76a45f7-e68d-5673-a5e6-3b673d79ecd6
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !SphereProceduralModel
+    Radius: 0.75
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.75, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 185220f1-f7c8-5fed-b6b4-837da2fc2172:World/Materials/Glow

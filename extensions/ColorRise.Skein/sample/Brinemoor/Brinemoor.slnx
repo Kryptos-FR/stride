@@ -8,5 +8,6 @@
   </Folder>
   <Project Path="Brinemoor.Game/Brinemoor.Game.csproj" />
   <Project Path="Brinemoor.Linux/Brinemoor.Linux.csproj" DefaultStartup="true" />
+  <Project Path="Brinemoor.Tests/Brinemoor.Tests.csproj" />
   <Project Path="Brinemoor.Windows/Brinemoor.Windows.csproj" />
 </Solution>

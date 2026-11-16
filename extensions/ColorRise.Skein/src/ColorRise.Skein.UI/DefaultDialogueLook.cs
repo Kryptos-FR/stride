@@ -38,15 +38,16 @@ public static class DefaultDialogueLook
     /// </summary>
     public const string OptionsName = "SkeinOptions";
 
-    private static readonly Color Panel = new(18, 22, 30, 225);
+    // Colours blend in linear space, where a panel lets more through than its alpha says
+    private static readonly Color Panel = new(18, 22, 30, 248);
     private static readonly Color Accent = new(232, 178, 92, 255);
     private static readonly Color Text = new(240, 240, 240, 255);
 
     /// <summary>
     /// The colour of an option's button, and of the one the player is on.
     /// </summary>
-    internal static readonly Color Option = new(18, 22, 30, 225);
-    internal static readonly Color SelectedOption = new(70, 84, 112, 240);
+    internal static readonly Color Option = new(18, 22, 30, 248);
+    internal static readonly Color SelectedOption = new(70, 84, 112, 252);
 
     /// <summary>
     /// Makes the text box of the lines: the speaker's name, the text, and a mark that shows when the line waits.

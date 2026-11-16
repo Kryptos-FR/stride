@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: 3af1ff91-09e9-521f-a477-f6c3b58c5e74
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CapsuleProceduralModel
+    Length: 0.9
+    Radius: 0.35
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.8, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 597ec89e-b3bd-5b3f-93af-c8f85e3dfb59:World/Materials/Courier

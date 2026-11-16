@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: 254fe9a8-e13d-5133-8be4-a91ddc15decc
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CylinderProceduralModel
+    Height: 1.4
+    Radius: 1.2
+    Tessellation: 24
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.7, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: af561035-1a69-539c-a6b7-f7452074f637:World/Materials/Dark

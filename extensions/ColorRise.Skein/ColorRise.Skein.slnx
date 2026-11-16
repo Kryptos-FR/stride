@@ -9,6 +9,7 @@
   <Folder Name="/sample/">
     <Project Path="sample/Brinemoor/Brinemoor.Game/Brinemoor.Game.csproj" />
     <Project Path="sample/Brinemoor/Brinemoor.Linux/Brinemoor.Linux.csproj" />
+    <Project Path="sample/Brinemoor/Brinemoor.Tests/Brinemoor.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ColorRise.Skein.Tests/ColorRise.Skein.Tests.csproj" />

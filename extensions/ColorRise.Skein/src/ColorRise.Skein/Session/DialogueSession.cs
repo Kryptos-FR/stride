@@ -188,11 +188,15 @@ public sealed class DialogueSession : IYarnDialogueEvents
 
     /// <summary>
     /// Whether running this node group now would run a node: at least one has all its conditions true. A plain node
-    /// always would.
+    /// always would. The conditions call the functions of the game as they are now.
     /// </summary>
     /// <exception cref="ArgumentException">The program has no node of this name.</exception>
     public bool HasSalientContent(string nodeGroup)
     {
+        // A dialogue that runs keeps the functions of its start
+        if (!IsRunning)
+            PrepareFunctions();
+
         var wasAsking = saliency.IsAsking;
         saliency.IsAsking = true;
         try
