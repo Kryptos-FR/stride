@@ -530,12 +530,12 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     }
 
     /// <summary>
-    /// Writes a place for every card: in columns along the jumps, from the nodes nothing jumps to.
+    /// Writes a place for every card: along the jumps, in rows of the nodes nothing jumps to.
     /// </summary>
     public void Layout()
     {
         var current = Synchronize();
-        var places = YarnGraphLayout.Compute(Cards.Count, CardLinks());
+        var places = YarnGraphLayout.Compute(Cards.Count, CardLinks(), NodeGroups(Cards));
         var edits = Cards.Select((card, i) => YarnTextPatcher.SetPosition(current, card.Span, places[i].X, places[i].Y)).ToArray();
         Apply("Lay out nodes", edits);
     }
@@ -736,7 +736,12 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         return !ReferenceEquals(before, TextBuffer.Text);
     }
 
-    private void OnTextChanged(YarnTextChange change) => Refresh(withLinks: false);
+    private void OnTextChanged(YarnTextChange change)
+    {
+        // A step of several edits tells each of them, all once the text is the new one: the cards are read once
+        if (document.Text != TextBuffer.Text)
+            Refresh(withLinks: false);
+    }
 
     private void OnAnalysisChanged(YarnProjectAnalysis changed)
     {
@@ -965,6 +970,28 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         return links;
     }
 
+    // The nodes of a node group, which have one title, stay together in a layout
+    private static List<int> NodeGroups(IEnumerable<object> cards)
+    {
+        var numbers = new Dictionary<string, int>(StringComparer.Ordinal);
+        var groups = new List<int>();
+        foreach (var card in cards)
+        {
+            if (card is YarnNodeCardViewModel { IsNote: false } node)
+            {
+                if (!numbers.TryGetValue(node.Title, out var number))
+                    numbers[node.Title] = number = numbers.Count;
+                groups.Add(number);
+            }
+            else
+            {
+                groups.Add(-1);
+            }
+        }
+
+        return groups;
+    }
+
     /// <summary>
     /// Gives each card its place: the one its node has, or one worked out for it, among the others without a place,
     /// under the cards that have theirs.
@@ -975,7 +1002,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         free.AddRange(Cards.Where(c => !c.HasPosition));
         free.AddRange(Stubs.Where(s => !s.Source.HasPosition));
         var links = Links.Select(l => (free.IndexOf(l.Source), free.IndexOf(l.Target))).ToList();
-        var places = YarnGraphLayout.Compute(free.Count, links);
+        var places = YarnGraphLayout.Compute(free.Count, links, NodeGroups(free));
         var top = Cards.Where(c => c.HasPosition).Select(c => c.Span.Position!.Value.Y + YarnGraphLayout.RowHeight).DefaultIfEmpty(0).Max();
 
         foreach (var card in Cards)

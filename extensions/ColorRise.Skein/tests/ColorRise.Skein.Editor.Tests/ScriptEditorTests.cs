@@ -249,7 +249,14 @@ public sealed class ScriptEditorTests
         Assert.NotSame(start, editor.Cards[0]);
         // Laying out gives every node a place, along the jumps
         await session.Analysis.WhenIdle();
+        var refreshes = 0;
+        void Count() => refreshes++;
+        editor.Refreshed += Count;
         editor.LayoutCommand.Execute(null);
+        editor.Refreshed -= Count;
+
+        // One step of three edits: the cards are read once
+        Assert.Equal(1, refreshes);
         Assert.Equal(Patched(
             YarnTextPatcher.SetPosition(document, document.Nodes[0], 0, 0),
             YarnTextPatcher.SetPosition(document, document.Nodes[1], YarnGraphLayout.ColumnWidth, 0),
