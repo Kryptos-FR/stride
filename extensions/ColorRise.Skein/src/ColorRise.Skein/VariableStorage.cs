@@ -11,7 +11,8 @@ namespace ColorRise.Skein;
 /// </summary>
 /// <remarks>
 /// A variable that was never set reads the default its script declares. A smart variable is computed each time and never
-/// stored. Not thread-safe: a dialogue and the game use it from the game's thread.
+/// stored: game code reads it too, computed with the functions of <see cref="Functions"/>. Not thread-safe: a dialogue and
+/// the game use it from the game's thread.
 /// </remarks>
 public sealed class VariableStorage : IVariableStorage
 {
@@ -21,7 +22,10 @@ public sealed class VariableStorage : IVariableStorage
     public const string InternalPrefix = "$Yarn.Internal.";
 
     private readonly Dictionary<string, object> values = [];
+    private readonly HashSet<string> undeclared = new(StringComparer.Ordinal);
     private readonly List<Program> programs = [];
+    private readonly Dictionary<Program, SmartReader> readers = new(ReferenceEqualityComparer.Instance);
+    private Func<YarnActionRegistry?>? functions;
     private readonly ILogger? log;
     private Program? program;
 
@@ -60,9 +64,31 @@ public sealed class VariableStorage : IVariableStorage
     public ISmartVariableEvaluator? SmartVariableEvaluator { get; set; }
 
     /// <summary>
+    /// The functions a smart variable calls when game code reads it, outside a dialogue (a dialogue has its own). The
+    /// <see cref="DialogueSystem"/> gives the game's.
+    /// </summary>
+    public YarnActionRegistry? Functions
+    {
+        get => functions?.Invoke();
+        set => functions = value is null ? null : () => value;
+    }
+
+    /// <summary>
+    /// Gives the functions of a source that may change, read at each smart variable game code reads.
+    /// </summary>
+    internal void UseFunctions(Func<YarnActionRegistry?> source) => functions = source;
+
+    /// <summary>
     /// The names of the variables that have been set, in no order.
     /// </summary>
     public IReadOnlyCollection<string> StoredNames => values.Keys;
+
+    /// <summary>
+    /// The names of the values that no project the storage knows declares: <see cref="Load"/> keeps them until a project
+    /// that declares them is <see cref="Declare(Program)"/>d, which checks their types. <see cref="DropUndeclared"/>
+    /// forgets them.
+    /// </summary>
+    public IReadOnlyCollection<string> UndeclaredNames => undeclared;
 
     /// <summary>
     /// Makes the variables of a project known: their defaults are read, their types checked when one is set, and
@@ -87,6 +113,19 @@ public sealed class VariableStorage : IVariableStorage
         }
 
         programs.Add(project);
+        CheckUndeclared(project);
+    }
+
+    /// <summary>
+    /// Forgets the values that no project declares, with one warning that lists them: for a game that has declared all
+    /// its projects, a save made with an older story keeps no variable the story lost.
+    /// </summary>
+    /// <returns>The names that were dropped, sorted.</returns>
+    public IReadOnlyList<string> DropUndeclared()
+    {
+        var dropped = undeclared.Order(StringComparer.Ordinal).ToList();
+        Drop(dropped, "the story does not declare");
+        return dropped;
     }
 
     /// <inheritdoc />
@@ -95,9 +134,20 @@ public sealed class VariableStorage : IVariableStorage
         if (TryGetStored(variableName, program, out result, out var declared))
             return true;
 
+        if (declared)
+            return false;
+
         // Neither set nor declared with a value: a smart variable of the running dialogue, or nothing
-        if (!declared && program is not null && SmartVariableEvaluator is not null && program.GetVariableKind(variableName) == VariableKind.Smart)
+        if (program is not null && SmartVariableEvaluator is not null && program.GetVariableKind(variableName) == VariableKind.Smart)
             return SmartVariableEvaluator.TryGetSmartVariable(variableName, out result);
+
+        // Game code reads a smart variable: computed with the program that declares it
+        if (SmartOwner(variableName) is { } owner)
+        {
+            if (!readers.TryGetValue(owner, out var reader))
+                readers[owner] = reader = new SmartReader(this, owner);
+            return reader.TryRead(variableName, Functions, out result);
+        }
 
         return false;
     }
@@ -170,6 +220,7 @@ public sealed class VariableStorage : IVariableStorage
     {
         var names = values.Keys.ToList();
         values.Clear();
+        undeclared.Clear();
         foreach (var name in names)
         {
             RaiseChanged(name);
@@ -202,9 +253,10 @@ public sealed class VariableStorage : IVariableStorage
     }
 
     /// <summary>
-    /// Replaces the variables by the ones of a snapshot. When the storage knows a project, what no project declares any
-    /// more, what a project now declares with another type and what is now a smart variable are dropped, with one warning
-    /// that lists them: a save made with an older story loads.
+    /// Replaces the variables by the ones of a snapshot. What a project the storage knows declares with another type, or
+    /// as a smart variable, is dropped, with one warning that lists them: a save made with an older story loads. What no
+    /// project it knows declares is kept, unchecked, until a project that declares it is <see cref="Declare(Program)"/>d
+    /// (see <see cref="UndeclaredNames"/>): a save can be loaded before the scenes that use some of the projects start.
     /// </summary>
     /// <returns>The names that were dropped, sorted.</returns>
     public IReadOnlyList<string> Load(VariableSnapshot snapshot)
@@ -212,6 +264,7 @@ public sealed class VariableStorage : IVariableStorage
         ArgumentNullException.ThrowIfNull(snapshot);
 
         var loaded = new Dictionary<string, object>();
+        var unknown = new List<string>();
         var dropped = new List<string>();
         foreach (var (name, value) in snapshot.Numbers)
         {
@@ -242,14 +295,16 @@ public sealed class VariableStorage : IVariableStorage
         }
 
         values.Clear();
+        undeclared.Clear();
         foreach (var (name, value) in loaded)
         {
             values[name] = value;
         }
 
+        undeclared.UnionWith(unknown);
         dropped.Sort(StringComparer.Ordinal);
         if (dropped.Count > 0)
-            log?.Warning($"The saved variables hold {dropped.Count} that the story no longer has; they were dropped: {string.Join(", ", dropped)}.");
+            log?.Warning($"The saved variables hold {dropped.Count} that the story declares otherwise; they were dropped: {string.Join(", ", dropped)}.");
 
         foreach (var name in changed)
         {
@@ -260,10 +315,16 @@ public sealed class VariableStorage : IVariableStorage
 
         void Take(string name, object value)
         {
-            if (value is null || loaded.ContainsKey(name) || !Accepts(name, value, out _))
+            var verdict = value is null || loaded.ContainsKey(name) ? Verdict.Refused : Check(name, value, out _);
+            if (verdict == Verdict.Refused)
+            {
                 dropped.Add(name);
-            else
-                loaded[name] = value;
+                return;
+            }
+
+            loaded[name] = value!;
+            if (verdict == Verdict.Undeclared)
+                unknown.Add(name);
         }
     }
 
@@ -271,8 +332,15 @@ public sealed class VariableStorage : IVariableStorage
     {
         ArgumentNullException.ThrowIfNull(name);
         ArgumentNullException.ThrowIfNull(value);
-        if (!Accepts(name, value, out var reason))
+        // A storage that knows no project takes any name, and checks it once a project is declared
+        var verdict = Check(name, value, out var reason);
+        if (verdict == Verdict.Refused || (verdict == Verdict.Undeclared && programs.Count > 0))
             throw new ArgumentException($"The variable '{name}' cannot be set to {Describe(value)}: {reason}.", nameof(name));
+
+        if (verdict == Verdict.Accepted)
+            undeclared.Remove(name);
+        else
+            undeclared.Add(name);
 
         if (values.TryGetValue(name, out var current) && current.Equals(value))
             return;
@@ -282,43 +350,114 @@ public sealed class VariableStorage : IVariableStorage
     }
 
     /// <summary>
-    /// Whether a value can be stored under a name: always when no project is known, or for what Yarn Spinner keeps for
-    /// itself without a declaration; else the name must be a stored variable of a project, of the value's type.
+    /// Checks the values no project declared against a project that was just declared: the ones it declares with their
+    /// type are kept, the others it declares are dropped.
     /// </summary>
-    private bool Accepts(string name, object value, [NotNullWhen(false)] out string? reason)
+    private void CheckUndeclared(Program project)
+    {
+        if (undeclared.Count == 0)
+            return;
+
+        var dropped = new List<string>();
+        foreach (var name in undeclared.Order(StringComparer.Ordinal).ToList())
+        {
+            if (project.InitialValues.TryGetValue(name, out var initial))
+            {
+                if (Unwrap(initial).GetType() == values[name].GetType())
+                    undeclared.Remove(name);
+                else
+                    dropped.Add(name);
+            }
+            else if (project.GetVariableKind(name) == VariableKind.Smart)
+            {
+                dropped.Add(name);
+            }
+        }
+
+        Drop(dropped, "the story declares otherwise");
+    }
+
+    private void Drop(List<string> names, string why)
+    {
+        if (names.Count == 0)
+            return;
+
+        foreach (var name in names)
+        {
+            values.Remove(name);
+            undeclared.Remove(name);
+        }
+
+        log?.Warning($"The variables hold {names.Count} that {why}; they were dropped: {string.Join(", ", names)}.");
+        foreach (var name in names)
+        {
+            RaiseChanged(name);
+        }
+    }
+
+    /// <summary>
+    /// The program that declares a smart variable: the running dialogue's, else the first known one.
+    /// </summary>
+    private Program? SmartOwner(string name)
+    {
+        if (program is not null && program.GetVariableKind(name) == VariableKind.Smart)
+            return program;
+
+        foreach (var known in programs)
+        {
+            if (known.GetVariableKind(name) == VariableKind.Smart)
+                return known;
+        }
+
+        return null;
+    }
+
+    private enum Verdict
+    {
+        /// <summary>A known project declares it with the value's type, or Yarn Spinner keeps it for itself.</summary>
+        Accepted,
+
+        /// <summary>No known project declares it.</summary>
+        Undeclared,
+
+        /// <summary>A known project declares it with another type, or as a smart variable.</summary>
+        Refused,
+    }
+
+    /// <summary>
+    /// Whether a value can be stored under a name: a known project must declare it as a stored variable of the value's
+    /// type, but what Yarn Spinner keeps for itself needs no declaration.
+    /// </summary>
+    private Verdict Check(string name, object value, out string? reason)
     {
         reason = null;
-        if (programs.Count == 0)
-            return true;
-
         foreach (var known in programs)
         {
             if (known.InitialValues.TryGetValue(name, out var initial))
             {
                 var declared = Unwrap(initial);
                 if (declared.GetType() == value.GetType())
-                    return true;
+                    return Verdict.Accepted;
 
                 reason = $"the story declares it as {Describe(declared)}";
-                return false;
+                return Verdict.Refused;
             }
-
         }
 
         if (name.StartsWith(InternalPrefix, StringComparison.Ordinal))
-            return true;
+            return Verdict.Accepted;
 
         foreach (var known in programs)
         {
             if (known.GetVariableKind(name) == VariableKind.Smart)
             {
                 reason = "it is a smart variable, computed from its declaration";
-                return false;
+                return Verdict.Refused;
             }
         }
 
         reason = "no script declares it";
-        return false;
+        return Verdict.Undeclared;
     }
 
     private bool TryGetDefault(string name, Program? reader, [NotNullWhen(true)] out object? value)
@@ -365,4 +504,64 @@ public sealed class VariableStorage : IVariableStorage
         string => "a string",
         _ => "a boolean",
     };
+
+    /// <summary>
+    /// Computes the smart variables of one program for game code: a Yarn Spinner dialogue that never runs, on the
+    /// variables of the storage.
+    /// </summary>
+    private sealed class SmartReader : IVariableStorage
+    {
+        private readonly VariableStorage storage;
+        private readonly Program owner;
+        private readonly Dialogue dialogue;
+
+        public SmartReader(VariableStorage storage, Program owner)
+        {
+            this.storage = storage;
+            this.owner = owner;
+            dialogue = new Dialogue(this)
+            {
+                LineHandler = _ => { },
+                OptionsHandler = _ => { },
+                CommandHandler = _ => { },
+                NodeStartHandler = _ => { },
+                NodeCompleteHandler = _ => { },
+                DialogueCompleteHandler = () => { },
+                PrepareForLinesHandler = _ => { },
+            };
+            dialogue.SetProgram(owner);
+            SmartVariableEvaluator = dialogue;
+        }
+
+        public Program? Program { get; set; }
+
+        public ISmartVariableEvaluator? SmartVariableEvaluator { get; set; }
+
+        public bool TryRead<T>(string name, YarnActionRegistry? functions, [NotNullWhen(true)] out T? result)
+        {
+            functions?.CopyFunctionsTo(dialogue.Library);
+            return dialogue.TryGetSmartVariable(name, out result);
+        }
+
+        public bool TryGetValue<T>(string variableName, [NotNullWhen(true)] out T? result)
+        {
+            if (storage.TryGetStored(variableName, owner, out result, out var declared))
+                return true;
+
+            if (!declared && SmartVariableEvaluator is not null && owner.GetVariableKind(variableName) == VariableKind.Smart)
+                return SmartVariableEvaluator.TryGetSmartVariable(variableName, out result);
+
+            return false;
+        }
+
+        public VariableKind GetVariableKind(string name) => storage.GetVariableKind(name, owner);
+
+        public void SetValue(string variableName, string stringValue) => storage.SetValue(variableName, stringValue);
+
+        public void SetValue(string variableName, float floatValue) => storage.SetValue(variableName, floatValue);
+
+        public void SetValue(string variableName, bool boolValue) => storage.SetValue(variableName, boolValue);
+
+        public void Clear() => storage.Clear();
+    }
 }

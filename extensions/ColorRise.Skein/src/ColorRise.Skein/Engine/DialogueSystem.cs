@@ -32,6 +32,7 @@ public sealed class DialogueSystem : GameSystemBase
         : base(registry)
     {
         Variables = new VariableStorage(Log);
+        Variables.UseFunctions(() => Actions);
         AssemblyRegistry.AssemblyRegistered += OnAssemblyRegistered;
     }
 

@@ -207,7 +207,7 @@ public sealed class SaveFile
         foreach (var (name, value) in Bools)
             snapshot.Bools[name] = value;
 
-        // What the story no longer declares is dropped, and returned
+        // What the story declares with another type is dropped, and returned
         return dialogues.Variables.Load(snapshot);
     }
 }

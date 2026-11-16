@@ -1,3 +1,4 @@
+using ColorRise.Skein.Assets.Compilation;
 using Stride.Core.Diagnostics;
 using Stride.Engine;
 
@@ -555,9 +556,27 @@ public sealed class DialogueRunnerTests
         save.Numbers["$gone"] = 1f;
         var dropped = variables.Load(save);
 
-        Assert.Equal(["$gone"], dropped);
+        Assert.Empty(dropped);
+        Assert.Equal(["$gone"], variables.UndeclaredNames);
         Assert.True(variables.TryGetValue<float>("$gold", out gold));
         Assert.Equal(12, gold);
+    }
+
+    [Fact]
+    public void Game_code_reads_a_smart_variable_with_the_functions_of_the_game()
+    {
+        using var harness = new GameHarness();
+        var variables = harness.Dialogues.Variables;
+        variables.Declare(Scripts.Program("""
+            title: Market
+            ---
+            <<declare $can_pay = purse_weight() >= 3>>
+            ===
+            """, new YarnFunctionDeclaration { Name = "purse_weight", ReturnType = YarnFunctionDeclaration.Number }));
+        harness.Dialogues.Actions.AddFunction("purse_weight", () => 4f);
+
+        Assert.True(variables.TryGetValue<bool>("$can_pay", out var canPay));
+        Assert.True(canPay);
     }
 
     [Fact]

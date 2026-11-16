@@ -384,9 +384,9 @@ public sealed class LampLight : SyncScript
 ```
 
 - Numbers are `float`, and an enum of a script is a number (its case, counted from zero) unless its cases have values.
-- A smart variable (`<<declare $can_pay = coins() >= 3>>`) is computed each time it is read, and cannot be set.
+- A smart variable (`<<declare $can_pay = coins() >= 3>>`) is computed each time it is read, and cannot be set. Game code reads it like any other, with the functions of `DialogueSystem.Actions`.
 - Setting a variable no script declares, or with another type than its declaration, throws `ArgumentException` with the reason.
-- The storage knows the variables of a project from the start of a scene that has a runner of it. Code that reads a variable or loads a save before that (a script that starts before the runner, a menu without a runner) calls `Variables.Declare(project)` first.
+- The storage knows the variables of a project from the start of a scene that has a runner of it. Code that reads a variable before that (a script that starts before the runner, a menu without a runner) calls `Variables.Declare(project)` first. A save loads at any time (section 7).
 - Where to keep the state of a game is a choice. Brinemoor keeps what the story decides in Yarn variables (`$act`, `$quest_lamp`), and what the world owns in the game (the inventory, the clock), which the story reads with functions and changes with commands. Nothing is in both.
 
 ## 7. Saving
@@ -418,7 +418,7 @@ public sealed class SaveFile
         foreach (var (name, value) in Bools)
             snapshot.Bools[name] = value;
 
-        // What the story no longer declares is dropped, and returned
+        // What the story declares with another type is dropped, and returned
         return dialogues.Variables.Load(snapshot);
     }
 }
@@ -426,8 +426,8 @@ public sealed class SaveFile
 
 - **Save between two dialogues.** A dialogue that is running is not in the snapshot: where it is in its node cannot be saved. A game refuses to save while a runner `IsRunning`, or saves when the dialogue is over.
 - How often each node was visited, and what each `once` remembers, are variables of the storage (their names start with `$Yarn.Internal.`): they are saved with the rest.
-- Load a save once the storage knows the story (section 6): a storage that knows no project keeps everything it is given, and one that knows another project drops what that project does not declare.
-- A save made with an older story loads: what no script declares any more, or declares with another type, is dropped, with one warning that lists it.
+- A save can be loaded before the storage knows every project of the game: what no project it knows declares is kept, unchecked (`Variables.UndeclaredNames`), and checked when a project that declares it is declared, at the start of the scene of its runner or by `Variables.Declare(project)`.
+- A save made with an older story loads: what a script now declares with another type, or as a smart variable, is dropped, with one warning that lists it. What no script declares any more stays unchecked; a game that has declared all its projects calls `Variables.DropUndeclared()` to forget it, with one warning.
 
 ## 8. Languages
 

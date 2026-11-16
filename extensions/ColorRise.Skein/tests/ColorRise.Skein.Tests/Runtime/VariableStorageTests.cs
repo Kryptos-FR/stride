@@ -1,3 +1,4 @@
+using ColorRise.Skein.Assets.Compilation;
 using Stride.Core.Diagnostics;
 
 namespace ColorRise.Skein.Tests.Runtime;
@@ -107,7 +108,7 @@ public sealed class VariableStorageTests
     }
 
     [Fact]
-    public void What_the_project_no_longer_declares_is_dropped_with_one_warning()
+    public void What_no_project_declares_is_kept_until_it_is_dropped_with_one_warning()
     {
         var log = new LoggerResult();
         var storage = PurseStorage(log);
@@ -116,16 +117,111 @@ public sealed class VariableStorageTests
         snapshot.Strings["$older"] = "x";
         snapshot.Numbers["$gold"] = 7f;
 
-        var dropped = storage.Load(snapshot);
+        // A project declared later may have them: they are kept, and saved again
+        Assert.Empty(storage.Load(snapshot));
+        Assert.Empty(log.Messages);
+        Assert.Equal(["$old", "$older"], storage.UndeclaredNames.Order());
+        Assert.Equal(3f, storage.Save().Numbers["$old"]);
+
+        // A game that declared all its projects forgets them
+        var changes = new List<string>();
+        storage.VariableChanged += (name, _) => changes.Add(name);
+        var dropped = storage.DropUndeclared();
 
         Assert.Equal(["$old", "$older"], dropped);
         var warning = Assert.Single(log.Messages);
         Assert.Equal(LogMessageType.Warning, warning.Type);
         Assert.Contains("$old", warning.Text);
         Assert.Contains("$older", warning.Text);
+        Assert.Equal(["$old", "$older"], changes);
+        Assert.Empty(storage.UndeclaredNames);
         Assert.False(storage.TryGetValue<float>("$old", out _));
         Assert.True(storage.TryGetValue<float>("$gold", out var gold));
         Assert.Equal(7f, gold);
+    }
+
+    [Fact]
+    public void A_save_loaded_before_a_project_is_declared_keeps_its_variables_and_checks_them_then()
+    {
+        var log = new LoggerResult();
+        var storage = PurseStorage(log);
+        var snapshot = new VariableSnapshot();
+        snapshot.Numbers["$tide"] = 4f;
+        snapshot.Bools["$moon"] = true;
+        snapshot.Numbers["$gold"] = 7f;
+        storage.Load(snapshot);
+
+        // The project of another scene, declared once its scene starts
+        var changes = new List<(string Name, object? Value)>();
+        storage.VariableChanged += (name, value) => changes.Add((name, value));
+        storage.Declare(Scripts.Program("title: Shore\n---\n<<declare $tide = 2>>\n<<declare $moon = \"full\">>\n===\n"));
+
+        Assert.True(storage.TryGetValue<float>("$tide", out var tide));
+        Assert.Equal(4f, tide);
+        Assert.True(storage.TryGetValue<string>("$moon", out var moon));
+        Assert.Equal("full", moon);
+        Assert.Equal([("$moon", "full")], changes);
+        Assert.Contains("$moon", Assert.Single(log.Messages).Text);
+        Assert.Empty(storage.UndeclaredNames);
+    }
+
+    [Fact]
+    public void A_value_set_before_any_project_is_known_is_checked_when_one_is()
+    {
+        var storage = new VariableStorage(new LoggerResult());
+        storage.SetValue("$gold", "many");
+        storage.SetValue("$tide", 3f);
+
+        storage.Declare(Scripts.Program(Purse));
+
+        Assert.True(storage.TryGetValue<float>("$gold", out var gold));
+        Assert.Equal(5f, gold);
+        Assert.Equal(["$tide"], storage.UndeclaredNames);
+        Assert.Throws<ArgumentException>(() => storage.SetValue("$wind", 1f));
+    }
+
+    [Fact]
+    public void Game_code_reads_a_smart_variable()
+    {
+        var storage = PurseStorage();
+        Assert.True(storage.TryGetValue<bool>("$rich", out var rich));
+        Assert.False(rich);
+
+        storage.SetValue("$gold", 120f);
+
+        Assert.True(storage.TryGetValue<bool>("$rich", out rich));
+        Assert.True(rich);
+        Assert.True(storage.TryGetValue<IConvertible>("$rich", out var any));
+        Assert.Equal(true, any);
+    }
+
+    [Fact]
+    public void Game_code_reads_a_smart_variable_of_another_project_that_calls_a_function_of_the_game()
+    {
+        var coins = 1f;
+        var actions = new YarnActionRegistry();
+        actions.AddFunction("coins", () => coins);
+        var storage = PurseStorage();
+        storage.Functions = actions;
+        storage.Declare(Scripts.Program("""
+            title: Market
+            ---
+            <<declare $can_pay = coins() >= 3>>
+            <<declare $can_pay_twice = $can_pay and coins() >= 6>>
+            ===
+            """, new YarnFunctionDeclaration { Name = "coins", ReturnType = YarnFunctionDeclaration.Number }));
+
+        Assert.True(storage.TryGetValue<bool>("$can_pay", out var canPay));
+        Assert.False(canPay);
+
+        coins = 7f;
+
+        Assert.True(storage.TryGetValue<bool>("$can_pay", out canPay));
+        Assert.True(canPay);
+        Assert.True(storage.TryGetValue<bool>("$can_pay_twice", out var twice));
+        Assert.True(twice);
+        Assert.Equal(Yarn.VariableKind.Smart, storage.GetVariableKind("$can_pay"));
+        Assert.Empty(storage.Save().Bools);
     }
 
     [Fact]
