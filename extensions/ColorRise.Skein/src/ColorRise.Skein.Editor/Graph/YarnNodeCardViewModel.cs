@@ -7,7 +7,7 @@ namespace ColorRise.Skein.Editor.Graph;
 /// The card of a node of a script on the graph. It is the same object for as long as the text keeps the node, so a
 /// selection lasts through the changes of the text.
 /// </summary>
-public sealed class YarnNodeCardViewModel : ViewModelBase
+public sealed class YarnNodeCardViewModel : ViewModelBase, IYarnGraphNode
 {
     private string title = "";
     private int groupIndex;
@@ -33,6 +33,7 @@ public sealed class YarnNodeCardViewModel : ViewModelBase
         Span = span;
         InSlot = new YarnCardSlot(this, isInput: true);
         OutSlot = new YarnCardSlot(this, isInput: false);
+        DetourSlot = new YarnCardSlot(this, isInput: false);
     }
 
     /// <summary>
@@ -137,9 +138,14 @@ public sealed class YarnNodeCardViewModel : ViewModelBase
     public YarnCardSlot InSlot { get; }
 
     /// <summary>
-    /// The slot the node's links start from.
+    /// The slot the node's jumps start from.
     /// </summary>
     public YarnCardSlot OutSlot { get; }
+
+    /// <summary>
+    /// The slot the node's detours start from.
+    /// </summary>
+    public YarnCardSlot DetourSlot { get; }
 
     private void SetList(ref IReadOnlyList<string> field, IReadOnlyList<string> value, string propertyName)
     {

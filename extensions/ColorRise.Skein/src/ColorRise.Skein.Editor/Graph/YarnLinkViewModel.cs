@@ -41,7 +41,7 @@ public sealed class YarnLinkViewModel
     /// <summary>
     /// The slot the link starts from.
     /// </summary>
-    public YarnCardSlot SourceSlot => Source.OutSlot;
+    public YarnCardSlot SourceSlot => IsDetour ? Source.DetourSlot : Source.OutSlot;
 
     /// <summary>
     /// The slot the link arrives on.

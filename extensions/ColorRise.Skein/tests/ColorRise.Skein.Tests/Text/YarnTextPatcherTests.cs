@@ -142,6 +142,7 @@ public sealed class YarnTextPatcherTests
     public void A_jump_is_added_as_the_last_line_of_the_body(string variant)
     {
         Check(variant, d => YarnTextPatcher.AppendJump(d, d.Find("Odile_Key", 1)!, "Start"), Script[..^4] + "<<jump Start>>\n===\n");
+        Check(variant, d => YarnTextPatcher.AppendJump(d, d.Find("Odile_Key", 1)!, "Start", detour: true), Script[..^4] + "<<detour Start>>\n===\n");
         Check(variant, d => YarnTextPatcher.AppendJump(d, d.Find("Start")!, "Lighthouse"), Script.Replace("\t<<detour Odile_Key>>\n", "\t<<detour Odile_Key>>\n<<jump Lighthouse>>\n"));
     }
 

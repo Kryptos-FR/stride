@@ -212,7 +212,8 @@ public static partial class YarnTextPatcher
     /// <summary>
     /// Adds <c>&lt;&lt;jump target&gt;&gt;</c> as the last line of a node's body.
     /// </summary>
-    public static IReadOnlyList<YarnTextEdit> AppendJump(YarnDocument document, YarnNodeSpan node, string target)
+    /// <param name="detour">Whether to add <c>&lt;&lt;detour target&gt;&gt;</c> instead: the dialogue comes back once the target ends.</param>
+    public static IReadOnlyList<YarnTextEdit> AppendJump(YarnDocument document, YarnNodeSpan node, string target, bool detour = false)
     {
         Check(document, node);
         ArgumentException.ThrowIfNullOrEmpty(target);
@@ -229,7 +230,7 @@ public static partial class YarnTextPatcher
             text.Append("---").Append(newLine);
         }
 
-        text.Append("<<jump ").Append(target).Append(">>").Append(newLine);
+        text.Append(detour ? "<<detour " : "<<jump ").Append(target).Append(">>").Append(newLine);
         return [new YarnTextEdit(node.BodyEnd, 0, text.ToString())];
     }
 

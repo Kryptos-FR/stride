@@ -313,6 +313,123 @@ public sealed class ScriptEditorTests
     }
 
     [Fact]
+    public async Task A_detour_is_a_link_from_the_detour_slot_of_its_card()
+    {
+        await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", Act1));
+        var editor = session.Edit("Dialogue/Act1");
+        var script = session.ScriptAt("Dialogue/Act1");
+        await session.Analysis.WhenIdle();
+        var (start, lamp) = (editor.Cards[0], editor.Cards[2]);
+
+        editor.LinkCommand.Execute(new YarnLinkRequest(lamp, start, IsDetour: true));
+
+        Assert.Equal(Act1[..^4] + "<<detour Start>>\n===\n", script.TextBuffer.Text);
+        Assert.Equal("Link nodes", session.Steps[^1]);
+        await session.Analysis.WhenIdle();
+        var detour = Assert.Single(editor.Links, l => l.Source == lamp);
+        Assert.True(detour.IsDetour);
+        Assert.Same(start, detour.Target);
+        Assert.Same(lamp.DetourSlot, detour.SourceSlot);
+        Assert.NotSame(lamp.OutSlot, lamp.DetourSlot);
+        Assert.Same(start.InSlot, detour.TargetSlot);
+    }
+
+    [Fact]
+    public async Task Moving_a_card_writes_the_place_of_the_cards_that_had_none()
+    {
+        await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", Act1));
+        var editor = session.Edit("Dialogue/Act1");
+        var script = session.ScriptAt("Dialogue/Act1");
+        await session.Analysis.WhenIdle();
+        var (start, lamp) = (editor.Cards[0], editor.Cards[2]);
+        var shown = lamp.Position;
+
+        // The place of 'Lamp' is worked out from the cards that have one: it is written with the move, so that
+        // 'Lamp' stays where the user sees it
+        editor.Move([new YarnCardMove(start, new YarnGraphPoint(0, 900))]);
+
+        Assert.Contains("title: Start\nposition: 0,900\n", script.TextBuffer.Text);
+        Assert.Contains($"title: Lamp\nposition: {shown.X},{shown.Y}\n", script.TextBuffer.Text);
+        Assert.Equal(shown, lamp.Position);
+        Assert.True(lamp.HasPosition);
+        Assert.Equal(["Move node"], session.Steps);
+
+        session.UndoRedo.Undo();
+        Assert.Equal(Act1, script.TextBuffer.Text);
+
+        // A move of no card of the script writes nothing
+        editor.Move([]);
+        Assert.Equal(Act1, script.TextBuffer.Text);
+        Assert.Equal(["Move node"], session.Steps);
+    }
+
+    [Fact]
+    public async Task The_messages_of_the_compiler_lead_to_their_place_in_the_text()
+    {
+        const string broken = "title: Harbour\n---\n<<jump Nowhere>>\nThe boats are in.\n===\n";
+        await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", Act1), SkeinSession.Script("Dialogue/Act2", broken));
+        var editor = session.Edit("Dialogue/Act1");
+        var script = session.ScriptAt("Dialogue/Act1");
+        Assert.False(editor.IsAnalysisCurrent);
+        await session.Analysis.WhenIdle();
+
+        // The messages of the project are all there; the ones of the script are apart
+        Assert.True(editor.IsAnalysisCurrent);
+        var message = Assert.Single(editor.Diagnostics);
+        Assert.Equal("Dialogue/Act2.yarn", message.File);
+        Assert.Empty(editor.ScriptDiagnostics);
+
+        // A message of another script opens the editor of that script, which is asked for the place
+        await editor.GoTo(message);
+        Assert.Null(editor.TakeRequestedPlace());
+        Assert.True(session.Session.EditorCollection.TryGetAssetEditor<YarnScriptEditorViewModel>(session.ScriptAt("Dialogue/Act2"), out var other));
+        Assert.Equal(new YarnTextPlace(message.Line, Math.Max(1, message.Column)), other.TakeRequestedPlace());
+        Assert.Null(other.TakeRequestedPlace());
+        Assert.Equal(3, message.Line);
+
+        // A message of the script itself asks its own text pane
+        var at = Act1.IndexOf("Fisher: Mind", StringComparison.Ordinal);
+        script.TextBuffer.Replace(at, 0, "<<if $oil ==\n", "Typing");
+        Assert.False(editor.IsAnalysisCurrent);
+        await session.Analysis.WhenIdle();
+        Assert.True(editor.IsAnalysisCurrent);
+        Assert.NotEmpty(editor.ScriptDiagnostics);
+        Assert.All(editor.ScriptDiagnostics, d => Assert.Equal("Dialogue/Act1.yarn", d.File));
+        Assert.Equal(editor.ScriptDiagnostics, editor.Diagnostics.Take(editor.ScriptDiagnostics.Count));
+
+        var asked = 0;
+        editor.PlaceRequested += () => asked++;
+        var mine = editor.ScriptDiagnostics[0];
+        await editor.GoTo(mine);
+        Assert.Equal(1, asked);
+        Assert.Equal(new YarnTextPlace(mine.Line, Math.Max(1, mine.Column)), editor.TakeRequestedPlace());
+    }
+
+    [Fact]
+    public async Task A_title_leads_to_its_node_in_the_script_or_in_another_of_the_project()
+    {
+        await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", Act1), SkeinSession.Script("Dialogue/Act2", Act2));
+        var editor = session.Edit("Dialogue/Act1");
+        await session.Analysis.WhenIdle();
+
+        Assert.True(await editor.GoToNode("Lamp"));
+        Assert.Equal([editor.Cards[2]], editor.SelectedCards);
+
+        Assert.True(await editor.GoToNode("Harbour"));
+        Assert.True(session.Session.EditorCollection.TryGetAssetEditor<YarnScriptEditorViewModel>(session.ScriptAt("Dialogue/Act2"), out var other));
+        Assert.Equal(["Harbour"], other.SelectedCards.Cast<YarnNodeCardViewModel>().Select(c => c.Title));
+        Assert.Equal([editor.Cards[2]], editor.SelectedCards);
+
+        Assert.False(await editor.GoToNode("Nowhere"));
+
+        // A place of the text is in the node of a card, from the first header to the end of the node
+        Assert.Same(editor.Cards[0], editor.CardAt(0));
+        Assert.Same(editor.Cards[1], editor.CardAt(Act1.IndexOf("Fisher", StringComparison.Ordinal)));
+        Assert.Same(editor.Cards[2], editor.CardAt(Act1.IndexOf("title: Lamp", StringComparison.Ordinal)));
+        Assert.Null(editor.CardAt(Act1.Length + 5));
+    }
+
+    [Fact]
     public async Task A_script_in_no_project_or_in_several_says_so()
     {
         await using var session = await SkeinSession.OpenAsync(

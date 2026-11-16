@@ -7,7 +7,7 @@ namespace ColorRise.Skein.Editor.Graph;
 /// The card of a node a jump names that is not in the script of the graph: a node of another script of the project, or
 /// a node that is nowhere.
 /// </summary>
-public sealed class YarnStubCardViewModel : ViewModelBase
+public sealed class YarnStubCardViewModel : ViewModelBase, IYarnGraphNode
 {
     private YarnGraphPoint position;
 

@@ -42,11 +42,15 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     private YarnDocument document;
     private YarnProjectAnalysis? analysis;
     private IReadOnlyList<YarnDiagnostic> diagnostics = [];
+    private IReadOnlyList<YarnDiagnostic> scriptDiagnostics = [];
     private IReadOnlyList<string> groupableHeaders = [];
     private string? notice;
     private string? problem;
     private string? groupBy;
     private string search = "";
+    private bool isAnalysisCurrent;
+    private bool showWholeFile;
+    private YarnTextPlace? requestedPlace;
 
     public YarnScriptEditorViewModel(YarnScriptViewModel script)
         : base(script)
@@ -61,7 +65,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         DuplicateCommand = new AnonymousCommand(ServiceProvider, Duplicate);
         DeleteSelectionCommand = new AnonymousCommand(ServiceProvider, DeleteSelection);
         SetColorCommand = new AnonymousCommand<string>(ServiceProvider, SetColor);
-        LinkCommand = new AnonymousCommand<YarnLinkRequest>(ServiceProvider, request => Link(request.Source, request.Target));
+        LinkCommand = new AnonymousCommand<YarnLinkRequest>(ServiceProvider, request => Link(request.Source, request.Target, request.IsDetour));
         MoveCommand = new AnonymousCommand<IReadOnlyList<YarnCardMove>>(ServiceProvider, Move);
         LayoutCommand = new AnonymousCommand(ServiceProvider, Layout);
         OpenTargetCommand = new AnonymousTaskCommand<YarnStubCardViewModel>(ServiceProvider, OpenTarget);
@@ -111,6 +115,36 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             }
         }
     }
+
+    /// <summary>
+    /// The ones of <see cref="Diagnostics"/> that are about this script.
+    /// </summary>
+    public IReadOnlyList<YarnDiagnostic> ScriptDiagnostics
+    {
+        get => scriptDiagnostics;
+        private set
+        {
+            if (!scriptDiagnostics.SequenceEqual(value))
+            {
+                SetValue(ref scriptDiagnostics, value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether <see cref="Diagnostics"/> are about the text as it is: their lines are places of the text that was compiled.
+    /// </summary>
+    public bool IsAnalysisCurrent { get => isAnalysisCurrent; private set => SetValue(ref isAnalysisCurrent, value); }
+
+    /// <summary>
+    /// Whether the text pane shows the whole file, or only the selected nodes.
+    /// </summary>
+    public bool ShowWholeFile { get => showWholeFile; set => SetValue(ref showWholeFile, value); }
+
+    /// <summary>
+    /// Raised when the text pane is to show a place: <see cref="TakeRequestedPlace"/> gives it.
+    /// </summary>
+    public event Action? PlaceRequested;
 
     /// <summary>
     /// What the user should know of the place of the script among the Yarn projects, or null: no project includes it,
@@ -362,7 +396,8 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     /// <summary>
     /// Adds a jump to a node at the end of another: <paramref name="target"/> is a card of the script or a stub.
     /// </summary>
-    public void Link(YarnNodeCardViewModel source, object target)
+    /// <param name="detour">Whether to add a detour, from which the dialogue comes back, instead of a jump.</param>
+    public void Link(YarnNodeCardViewModel source, object target, bool detour = false)
     {
         var title = target switch
         {
@@ -374,11 +409,13 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             return;
 
         var current = Synchronize();
-        Apply("Link nodes", YarnTextPatcher.AppendJump(current, source.Span, title));
+        Apply("Link nodes", YarnTextPatcher.AppendJump(current, source.Span, title, detour));
     }
 
     /// <summary>
-    /// Writes the places of cards in their <c>position:</c> headers, as one step whatever their number.
+    /// Writes the places of cards in their <c>position:</c> headers, as one step whatever their number. The cards
+    /// that had no place of their own get the one they are shown at with them: they would move otherwise, as their
+    /// place is worked out from the cards that have one.
     /// </summary>
     public void Move(IReadOnlyList<YarnCardMove> moves)
     {
@@ -386,16 +423,26 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
 
         var current = Synchronize();
         var places = new Dictionary<YarnNodeCardViewModel, YarnGraphPoint>();
+        foreach (var card in Cards.Where(c => !c.HasPosition))
+        {
+            places[card] = card.Position;
+        }
+
+        var moved = new HashSet<YarnNodeCardViewModel>();
         foreach (var move in moves)
         {
             if (Knows(move.Card))
             {
                 places[move.Card] = move.Position;
+                moved.Add(move.Card);
             }
         }
 
+        if (moved.Count == 0)
+            return;
+
         var edits = places.Select(p => YarnTextPatcher.SetPosition(current, p.Key.Span, p.Value.X, p.Value.Y)).ToArray();
-        Apply(edits.Length == 1 ? "Move node" : "Move nodes", edits);
+        Apply(moved.Count == 1 ? "Move node" : "Move nodes", edits);
     }
 
     /// <summary>
@@ -414,14 +461,83 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     /// </summary>
     public async Task OpenTarget(YarnStubCardViewModel stub)
     {
-        if (stub?.Script is not { } script || ServiceProvider.TryGet<IAssetEditorsManager>() is not { } editors)
-            return;
-
-        await editors.OpenAssetEditorAsync(script);
-        if (editors.TryGetAssetEditor<YarnScriptEditorViewModel>(script, out var editor))
+        if (stub?.Script is { } script && await OpenEditor(script) is { } editor)
         {
             editor.Select(stub.Title);
         }
+    }
+
+    private async Task<YarnScriptEditorViewModel?> OpenEditor(YarnScriptViewModel script)
+    {
+        if (ServiceProvider.TryGet<IAssetEditorsManager>() is not { } editors)
+            return null;
+
+        await editors.OpenAssetEditorAsync(script);
+        return editors.TryGetAssetEditor<YarnScriptEditorViewModel>(script, out var editor) ? editor : null;
+    }
+
+    /// <summary>
+    /// The card of the node a place of the text is in, or null between two nodes.
+    /// </summary>
+    public YarnNodeCardViewModel? CardAt(int offset)
+    {
+        Synchronize();
+        return Cards.FirstOrDefault(c => offset >= c.Span.HeaderStart && offset < Math.Max(c.Span.End, c.Span.HeaderStart + 1));
+    }
+
+    /// <summary>
+    /// Asks the text pane to show a place of the script. A pane that opens later shows it then.
+    /// </summary>
+    public void RequestPlace(YarnTextPlace place)
+    {
+        requestedPlace = place;
+        PlaceRequested?.Invoke();
+    }
+
+    /// <summary>
+    /// Gives the place last asked for, once.
+    /// </summary>
+    public YarnTextPlace? TakeRequestedPlace()
+    {
+        var place = requestedPlace;
+        requestedPlace = null;
+        return place;
+    }
+
+    /// <summary>
+    /// Shows the place of a message of the compiler: in this script, or in the editor of the script it is about.
+    /// </summary>
+    public async Task GoTo(YarnDiagnostic diagnostic)
+    {
+        ArgumentNullException.ThrowIfNull(diagnostic);
+
+        var place = new YarnTextPlace(Math.Max(1, diagnostic.Line), Math.Max(1, diagnostic.Column));
+        var script = analysis?.ScriptOf(diagnostic.File);
+        if (script is null || script == Asset)
+        {
+            RequestPlace(place);
+        }
+        else if (await OpenEditor(script) is { } editor)
+        {
+            editor.RequestPlace(place);
+        }
+    }
+
+    /// <summary>
+    /// Selects the node of a title: a card of this script, or a card of the script of the project that has it, in its editor.
+    /// </summary>
+    /// <returns>Whether a node of the title was found.</returns>
+    public async Task<bool> GoToNode(string title)
+    {
+        if (Select(title))
+            return true;
+
+        var fileName = analysis?.FileNameOf(Asset);
+        var node = analysis?.Nodes.FirstOrDefault(n => n.Title == title && n.File != fileName);
+        return node is not null
+            && analysis!.ScriptOf(node.File) is { } script
+            && await OpenEditor(script) is { } editor
+            && editor.Select(title);
     }
 
     /// <summary>
@@ -526,7 +642,8 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     private void Refresh(bool withLinks)
     {
         document = YarnDocument.Parse(TextBuffer.Text);
-        withLinks |= analysis?.TextOf(Asset) == document.Text;
+        IsAnalysisCurrent = analysis?.TextOf(Asset) == document.Text;
+        withLinks |= IsAnalysisCurrent;
         var fileName = analysis?.FileNameOf(Asset);
         var compiled = CompiledNodes(fileName);
 
@@ -546,6 +663,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         Diagnostics = analysis is null
             ? []
             : [.. analysis.Diagnostics.OrderBy(d => d.File == fileName ? 0 : 1).ThenBy(d => d.File, StringComparer.Ordinal).ThenBy(d => d.Line).ThenBy(d => d.Column)];
+        ScriptDiagnostics = [.. Diagnostics.Where(d => d.File == fileName)];
         RefreshNotice();
     }
 
@@ -848,7 +966,13 @@ public sealed record YarnRenameRequest(YarnNodeCardViewModel Card, string Title)
 /// What <see cref="YarnScriptEditorViewModel.LinkCommand"/> takes: the card a jump is added to, and the card or the stub
 /// it leads to.
 /// </summary>
-public sealed record YarnLinkRequest(YarnNodeCardViewModel Source, object Target);
+/// <param name="IsDetour">Whether the dialogue comes back from the target.</param>
+public sealed record YarnLinkRequest(YarnNodeCardViewModel Source, object Target, bool IsDetour = false);
+
+/// <summary>
+/// A place in the text of a script, from 1.
+/// </summary>
+public readonly record struct YarnTextPlace(int Line, int Column);
 
 /// <summary>
 /// A card and the place the user dragged it to.
