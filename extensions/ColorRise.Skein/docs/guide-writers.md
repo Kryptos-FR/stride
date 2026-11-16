@@ -181,7 +181,7 @@ The dialogue player has a box for the language: it plays the story in a translat
 Things to know:
 
 - Keep the ids once a line is translated. A line whose id is removed is a new line for the translation.
-- *Descriptive* ids need a node name that is used once: in a node group, where several nodes have the same title, Skein gives random ids to the lines.
+- *Descriptive* ids are made of the node, a number and the speaker: `line:Tavern_0100_Odile`. Words before a colon that do not read as a name (narration such as "A mark on the wall: a circle") are left out of the id. A node whose title other scripts use too, as the nodes of a node group often do, gets the name of its script in its ids: `line:Events_Mill_0100_Odile`.
 - `[select]`, `[plural]` and `[ordinal]` work in every language, with the rules of the language of the line. A translation can give other cases than the original: French has no "few", and its rules call "many" what English calls "other". A case that the marker does not give falls back to its `other` text, so `other` is the one to always write.
 
 ## 9. With Visual Studio Code, on the same files

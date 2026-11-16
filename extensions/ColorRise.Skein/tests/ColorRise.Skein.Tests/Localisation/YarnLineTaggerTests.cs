@@ -55,18 +55,57 @@ public sealed class YarnLineTaggerTests
         var a = YarnLineTagger.AddLineIds("A.yarn", "title: Tavern\n---\nOdile: Hello.\n===\n", first, YarnLineIdStyle.Descriptive);
 
         // The same node, speaker and place in another script would get the same descriptive id
-        var b = YarnLineTagger.AddLineIds("B.yarn", "title: Tavern\n---\nOdile: Hello.\n===\n", first, YarnLineIdStyle.Descriptive);
+        var b = YarnLineTagger.AddLineIds("Dialogue/B.yarn", "title: Tavern\n---\nOdile: Hello.\n===\n", first, YarnLineIdStyle.Descriptive);
 
         var idA = Assert.Single(a.AddedIds);
         Assert.Equal("line:Tavern_0100_Odile", idA);
         Assert.Empty(a.Problems);
         Assert.Equal($"title: Tavern\n---\nOdile: Hello. #{idA}\n===\n", a.Text);
 
-        // The script gets random ids, and no error is written in it
+        // The id takes the name of its script, and stays descriptive
         var idB = Assert.Single(b.AddedIds);
-        Assert.NotEqual(idA, idB);
+        Assert.Equal("line:Tavern_B_0100_Odile", idB);
         Assert.Equal($"title: Tavern\n---\nOdile: Hello. #{idB}\n===\n", b.Text);
-        Assert.Contains("B.yarn: descriptive line ids would repeat", Assert.Single(b.Problems));
+        Assert.Empty(b.Problems);
+    }
+
+    [Fact]
+    public void A_node_group_split_over_scripts_gets_descriptive_ids_in_each_and_its_new_lines_follow()
+    {
+        const string Events = "title: Events\nwhen: always\n---\nOdile: Rain again.\n===\n";
+        var ids = new HashSet<string>();
+        YarnLineTagger.AddLineIds("Village.yarn", Events, ids, YarnLineIdStyle.Descriptive);
+        var mill = YarnLineTagger.AddLineIds("Mill.yarn", Events.Replace("Rain again.", "The wheel turns.\nOdile: Still turning."), ids, YarnLineIdStyle.Descriptive);
+
+        Assert.Empty(mill.Problems);
+        Assert.Equal(["line:Events.cb2a808c_Mill_0100_Odile", "line:Events.cb2a808c_Mill_0200_Odile"], mill.AddedIds);
+
+        // A line written later between two of them keeps the script's name, though its own id would be free
+        var added = mill.Text.Replace("Odile: Still turning.", "Odile: Slower now.\nOdile: Still turning.");
+        var again = YarnLineTagger.AddLineIds("Mill.yarn", added, ids, YarnLineIdStyle.Descriptive);
+        Assert.Equal(["line:Events.cb2a808c_Mill_0150_Odile"], again.AddedIds);
+
+        var lines = YarnCompilerBridge.Compile(new YarnCompilationRequest { Files = [("Village.yarn", Events), ("Mill.yarn", again.Text)] });
+        Assert.DoesNotContain(lines.Diagnostics, d => d.Severity == YarnSeverity.Error);
+    }
+
+    [Theory]
+    [InlineData("A mason's mark cut in the wall: a circle.", "line:Mark_0100")]
+    [InlineData("Old Tom: Mind the step.", "line:Mark_0100_OldTom")]
+    [InlineData("Maren: Hello there.", "line:Mark_0100_Maren")]
+    [InlineData("the note says: come alone.", "line:Mark_0100")]
+    [InlineData("Plain narration.", "line:Mark_0100")]
+    public void A_descriptive_id_names_a_speaker_only_when_the_words_before_the_colon_read_as_a_name(string line, string id)
+    {
+        var script = $"title: Mark\n---\n{line}\n===\n";
+
+        var tagged = YarnLineTagger.AddLineIds("Mark.yarn", script, new HashSet<string>(), YarnLineIdStyle.Descriptive);
+
+        Assert.Empty(tagged.Problems);
+        Assert.Equal([id], tagged.AddedIds);
+        var compiled = YarnCompilerBridge.Compile(new YarnCompilationRequest { Files = [("Mark.yarn", tagged.Text)] });
+        Assert.DoesNotContain(compiled.Diagnostics, d => d.Severity == YarnSeverity.Error);
+        Assert.False(compiled.Lines[id].IsImplicitId);
     }
 
     [Fact]

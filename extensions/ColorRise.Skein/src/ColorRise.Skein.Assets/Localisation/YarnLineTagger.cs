@@ -33,14 +33,14 @@ public static class YarnLineTagger
         if (Utility.ParseSourceText(text, fileName).Diagnostics.Any(d => d.Severity == Diagnostic.DiagnosticSeverity.Error))
             return new YarnTaggedScript(text, [], [$"{fileName}: the script has errors, so no line id was added to it. Fix the errors first."]);
 
-        var (tagged, ids, failures) = Tag(fileName, text, existingIds, style == YarnLineIdStyle.Descriptive ? new DescriptiveLineTagGenerator() : new RandomLineTagGenerator());
+        var (tagged, ids, failures) = Tag(fileName, text, existingIds, style == YarnLineIdStyle.Descriptive ? new DescriptiveLineIds(fileName) : new RandomLineTagGenerator());
         var problems = new List<string>();
         if (failures.Count > 0 && style == YarnLineIdStyle.Descriptive)
         {
-            // A descriptive id that the project already has (two nodes of one title) makes the tagger write an error in
-            // the script: random ids never meet that, so the script gets those instead
+            // Descriptive ids are made new (an id another script has gets the script's name), so this is only a safety
+            // net: random ids never meet an id the project has
             (tagged, ids, failures) = Tag(fileName, text, existingIds, new RandomLineTagGenerator());
-            problems.Add($"{fileName}: descriptive line ids would repeat ids the project already has, so the script got random ones.");
+            problems.Add($"{fileName}: descriptive line ids could not be made for the script, so it got random ones.");
         }
 
         if (failures.Count > 0)
