@@ -58,7 +58,7 @@ public sealed class Chatter : AsyncScript
     public override async Task Execute()
     {
         var silence = 2.0;
-        while (Game.IsRunning)
+        while (!CancellationToken.IsCancellationRequested)
         {
             await Script.NextFrame();
             var listener = Listener ?? Services.GetService<StorySystem>()?.Stage?.Player;
