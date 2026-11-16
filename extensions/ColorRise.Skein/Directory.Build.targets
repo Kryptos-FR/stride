@@ -11,4 +11,19 @@
   <PropertyGroup Condition="'$(StrideCompileAssetCommand)' == '' And '$(StrideDevRedirect)' == 'true' And '$(StrideDevConfiguration)' != '' And '$(StrideRoot)' != ''">
     <StrideCompileAssetCommand>$(StrideRoot)sources/assets/Stride.AssetCompiler/bin/$(StrideDevConfiguration)/net10.0/Stride.AssetCompiler.dll</StrideCompileAssetCommand>
   </PropertyGroup>
+
+  <!--
+    The descriptions of the properties, which Game Studio shows: Stride.Core's targets write the <userdoc> tags of a project to
+    a .usrdoc file beside its assembly, and this puts that file in the package, beside the assembly too
+    (docs/plugin-findings.md, finding 22).
+  -->
+  <PropertyGroup>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.usrdoc</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);_SkeinUserDocumentationInPackage</TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+  <Target Name="_SkeinUserDocumentationInPackage">
+    <ItemGroup Condition="Exists('$(OutputPath)$(AssemblyName).usrdoc')">
+      <BuildOutputInPackage Include="$(OutputPath)$(AssemblyName).usrdoc" />
+    </ItemGroup>
+  </Target>
 </Project>
