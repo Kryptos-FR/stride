@@ -14,7 +14,7 @@ public static class YarnGraphLayout
     /// <summary>
     /// The distance between the tops of two cards of a column.
     /// </summary>
-    public const int RowHeight = 200;
+    public const int RowHeight = 240;
 
     /// <summary>
     /// Gives each of <paramref name="count"/> nodes, named by their index in the order of the text, its place.

@@ -102,6 +102,8 @@ public sealed partial class YarnScriptEditorView : UserControl, IAssetEditorView
             box.Focus();
             box.SelectAll();
         };
+        // A title refused is the matter of the field only
+        flyout.Closed += (_, _) => editor?.DismissProblem();
         flyout.ShowAt(container);
         return box;
     }
@@ -172,6 +174,8 @@ public sealed partial class YarnScriptEditorView : UserControl, IAssetEditorView
     }
 
     private void OnRenameRequested(YarnNodeCardViewModel card) => BeginRename(card);
+
+    private void OnProblemDismissed(object? sender, RoutedEventArgs e) => editor?.DismissProblem();
 
     // The headers of the script to group by, after the choice of none
     private void FillGroupBy()
@@ -265,7 +269,7 @@ public sealed partial class YarnScriptEditorView : UserControl, IAssetEditorView
 
     private void OnAddNoteHereClick(object? sender, RoutedEventArgs e) => editor?.AddNote(MenuPlace());
 
-    private void OnFitClick(object? sender, RoutedEventArgs e) => Graph.FitToView();
+    private void OnFitClick(object? sender, RoutedEventArgs e) => binding?.FitToView();
 
     private void OnProblemDoubleTapped(object? sender, TappedEventArgs e)
     {

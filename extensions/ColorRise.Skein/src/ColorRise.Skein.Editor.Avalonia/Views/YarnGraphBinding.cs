@@ -18,8 +18,13 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
 {
     private readonly NodeGraphControl graph;
     private readonly YarnScriptEditorViewModel editor;
+    // The room around the nodes when the graph shows them all: the frames of the nodes and their labels fit in it
+    private const double FitMargin = 60;
+
     private readonly List<INotifyPropertyChanged> observed = [];
     private bool fitted;
+    // What the last fit gave: while the graph still has it, a change of its size fits again
+    private (double Zoom, Vector Offset, Size Size) fit;
 
     /// <summary>
     /// Shows an editor in a graph.
@@ -62,6 +67,31 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
 
     /// <inheritdoc />
     public object? GetTargetSlot(object link) => (link as YarnLinkViewModel)?.TargetSlot;
+
+    /// <summary>
+    /// Zooms and pans the graph so that it shows every node with its frames, at a zoom of 1 at most.
+    /// </summary>
+    public void FitToView()
+    {
+        Rect? found = null;
+        foreach (var node in editor.Nodes)
+        {
+            if (graph.GetNodePosition(node) is { } position && graph.ContainerFromNode(node) is { } container)
+            {
+                var rect = new Rect(position, container.Bounds.Size);
+                found = found?.Union(rect) ?? rect;
+            }
+        }
+
+        var size = graph.Bounds.Size;
+        if (found is not { } nodes || size.Width <= 0 || size.Height <= 0)
+            return;
+
+        var area = nodes.Inflate(FitMargin);
+        graph.Zoom = Math.Min(1.0, Math.Min(size.Width / area.Width, size.Height / area.Height));
+        graph.Offset = new Vector((size.Width - area.Width * graph.Zoom) / 2 - area.X * graph.Zoom, (size.Height - area.Height * graph.Zoom) / 2 - area.Y * graph.Zoom);
+        fit = (graph.Zoom, graph.Offset, size);
+    }
 
     /// <inheritdoc />
     public void Dispose()
@@ -190,11 +220,16 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
     // The first time the graph has its size and its nodes theirs, it shows them all
     private void OnLayoutUpdated(object? sender, EventArgs e)
     {
-        if (fitted || graph.Bounds.Width <= 0 || editor.Nodes.Count == 0 || graph.ContainerFromNode(editor.Nodes[0]) is not { Bounds.Width: > 0 })
+        if (graph.Bounds.Width <= 0 || editor.Nodes.Count == 0 || graph.ContainerFromNode(editor.Nodes[0]) is not { Bounds.Width: > 0 })
+            return;
+
+        // The first time, and when the size of the graph changes (the list of problems comes and goes) while it shows what the last fit gave
+        if (fitted && (graph.Bounds.Size == fit.Size || graph.Zoom != fit.Zoom || graph.Offset != fit.Offset))
             return;
 
         fitted = true;
-        Dispatcher.UIThread.Post(graph.FitToView, DispatcherPriority.Background);
+        fit = fit with { Size = graph.Bounds.Size };
+        Dispatcher.UIThread.Post(FitToView, DispatcherPriority.Background);
     }
 
     private sealed class GraphCommand(Func<object?, bool> canExecute, Action<object?> execute) : ICommand

@@ -103,6 +103,23 @@ public sealed class ScriptEditorTests
     }
 
     [Fact]
+    public async Task A_stub_takes_the_free_row_nearest_to_its_card()
+    {
+        const string text = "title: Start\nposition: 0,0\n---\n<<jump Harbour>>\n<<jump Nowhere>>\n===\ntitle: Near\nposition: 280,0\n---\nHere.\n===\n";
+        await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", text), SkeinSession.Script("Dialogue/Act2", Act2));
+        var editor = session.Edit("Dialogue/Act1");
+        await session.Analysis.WhenIdle();
+
+        // The card on the right of Start is in the way: one stub goes over it and the other under it
+        var (harbour, nowhere) = (editor.Stubs[0], editor.Stubs[1]);
+        var near = editor.Cards[1];
+        Assert.Equal(near.Position.X, harbour.Position.X);
+        Assert.Equal(near.Position.Y - 120, harbour.Position.Y);
+        Assert.Equal(near.Position.X, nowhere.Position.X);
+        Assert.Equal(near.Position.Y + 240, nowhere.Position.Y);
+    }
+
+    [Fact]
     public async Task Adding_nodes_writes_them_at_the_end_of_the_text_one_step_each()
     {
         await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", Act1), SkeinSession.Script("Dialogue/Act2", Act2));

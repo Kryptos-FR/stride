@@ -90,7 +90,7 @@ public sealed class YarnGraphDecorations : Control
         {
             foreach (var group in editor.Cards.Where(c => !string.IsNullOrEmpty(c.GroupValue)).GroupBy(c => c.GroupValue!, StringComparer.Ordinal))
             {
-                frames.Add(new Frame($"{header}: {group.Key}", YarnPalette.OfValue(group.Key), 30, [.. group]));
+                frames.Add(new Frame($"{header}: {group.Key}", YarnPalette.OfValue(group.Key), 40, [.. group]));
             }
         }
 

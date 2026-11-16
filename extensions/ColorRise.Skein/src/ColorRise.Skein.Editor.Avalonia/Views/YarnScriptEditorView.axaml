@@ -97,7 +97,10 @@
 
     <!-- Why the last thing asked of the graph was not done -->
     <Border DockPanel.Dock="Bottom" Padding="8,3" Background="#40E5534B" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}">
-      <TextBlock Text="{Binding Problem}" TextWrapping="Wrap"/>
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Content="✕" Padding="6,0" Background="Transparent" ToolTip.Tip="Hide this message" Click="OnProblemDismissed"/>
+        <TextBlock Text="{Binding Problem}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+      </DockPanel>
     </Border>
 
     <Grid ColumnDefinitions="3*,4,2*">
@@ -119,7 +122,7 @@
               <MenuItem x:Name="AddNodeItem" Header="{sd:LocalizeString Add node here, Context=Menu}" Click="OnAddNodeHereClick"/>
               <MenuItem x:Name="AddNoteItem" Header="{sd:LocalizeString Add note here, Context=Menu}" Click="OnAddNoteHereClick"/>
               <MenuItem x:Name="LayoutItem" Header="{sd:LocalizeString Lay out the nodes, Context=Menu}" Command="{Binding LayoutCommand}"/>
-              <MenuItem x:Name="FitItem" Header="{sd:LocalizeString Show all the nodes, Context=Menu}" InputGesture="Home" Click="OnFitClick"/>
+              <MenuItem x:Name="FitItem" Header="{sd:LocalizeString Show all the nodes, Context=Menu}" Click="OnFitClick"/>
             </ContextMenu>
           </sd:NodeGraphControl.ContextMenu>
         </sd:NodeGraphControl>

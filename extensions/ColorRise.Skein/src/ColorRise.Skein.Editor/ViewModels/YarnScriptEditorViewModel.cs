@@ -32,11 +32,20 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     // Where the stubs of a card with a place of its own go: on its right, one under the other
     private const int StubOffsetX = 280;
     private const int StubRowHeight = 60;
+    // About the room a card and a stub take on the graph, to keep the stubs clear of the cards
+    private const int CardWidth = 240;
+    private const int CardHeight = 180;
+    private const int StubWidth = 220;
+    private const int StubHeight = 44;
+    private const int StubMargin = 10;
+    private const int StubRowsTried = 40;
+    private const int FrameLabelHeight = 60;
     private const int PreviewLines = 3;
     private const int PreviewLineLength = 100;
 
-    // The headers that are not for grouping: each node has its own title and place, and a condition is not a name
-    private static readonly HashSet<string> UngroupableHeaders = new(StringComparer.Ordinal) { "title", "position", "when" };
+    // The headers that are not for grouping: each node has its own title and place, a condition is not a name, and
+    // the colour and the style are looks
+    private static readonly HashSet<string> UngroupableHeaders = new(StringComparer.Ordinal) { "title", "position", "when", "color", "style" };
 
     private readonly YarnAnalysisService? analysisService;
     private YarnDocument document;
@@ -156,6 +165,11 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     /// Why the last thing asked of the graph was not done, or null.
     /// </summary>
     public string? Problem { get => problem; private set => SetValue(ref problem, value); }
+
+    /// <summary>
+    /// Takes away what <see cref="Problem"/> says.
+    /// </summary>
+    public void DismissProblem() => Problem = null;
 
     /// <summary>
     /// The header whose value groups the cards (<see cref="YarnNodeCardViewModel.GroupValue"/>), or null.
@@ -823,16 +837,34 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             card.Position = card.Span.Position is var (x, y) ? new YarnGraphPoint(x, y) : Free(card);
         }
 
-        // The stubs of a card with a place go on its right, one under the other
-        var ranks = new Dictionary<YarnNodeCardViewModel, int>();
+        // The stubs of a card with a place go on its right, one under the other, each in the free row nearest to its own,
+        // with room over a card for the label of a frame
+        var taken = Cards.Select(c => (c.Position.X, Y: c.Position.Y - FrameLabelHeight, Width: CardWidth, Height: CardHeight + FrameLabelHeight)).ToList();
+        var rows = new Dictionary<YarnNodeCardViewModel, int>();
         foreach (var stub in Stubs)
         {
-            var rank = ranks.GetValueOrDefault(stub.Source);
-            ranks[stub.Source] = rank + 1;
-            stub.Position = stub.Source.HasPosition
-                ? new YarnGraphPoint(stub.Source.Position.X + StubOffsetX, stub.Source.Position.Y + rank * StubRowHeight)
-                : Free(stub);
+            if (!stub.Source.HasPosition)
+            {
+                stub.Position = Free(stub);
+                continue;
+            }
+
+            var row = rows.GetValueOrDefault(stub.Source);
+            rows[stub.Source] = row + 1;
+            var x = stub.Source.Position.X + StubOffsetX;
+            var y = stub.Source.Position.Y + row * StubRowHeight;
+            for (var step = 1; step <= StubRowsTried && IsTaken(x, y); step++)
+            {
+                // Under, over, further under, further over
+                y += step % 2 == 1 ? step * StubRowHeight : -step * StubRowHeight;
+            }
+
+            stub.Position = new YarnGraphPoint(x, y);
+            taken.Add((x, y, StubWidth, StubHeight));
         }
+
+        bool IsTaken(int x, int y)
+            => taken.Exists(t => x < t.X + t.Width + StubMargin && t.X < x + StubWidth + StubMargin && y < t.Y + t.Height + StubMargin && t.Y < y + StubHeight + StubMargin);
 
         YarnGraphPoint Free(object node)
         {

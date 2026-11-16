@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using AvaloniaEdit;
@@ -71,6 +72,8 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
         TextArea.TextView.PointerHover += OnPointerHover;
         TextArea.TextView.PointerHoverStopped += OnPointerHoverStopped;
         TextArea.Caret.PositionChanged += OnCaretPositionChanged;
+        ActualThemeVariantChanged += (_, _) => ShowTheme();
+        ShowTheme();
         // Before the text area, which would move the caret
         AddHandler(PointerPressedEvent, OnPointerPressedFirst, RoutingStrategies.Tunnel);
 
@@ -227,6 +230,12 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
         }
 
         Observe(Editor);
+    }
+
+    private void ShowTheme()
+    {
+        highlighter.IsDark = ActualThemeVariant == ThemeVariant.Dark;
+        TextArea.TextView.Redraw();
     }
 
     /// <summary>
