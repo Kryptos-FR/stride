@@ -130,7 +130,7 @@ public sealed class PlayerPanelTests
         await session.Player.GoTo(session.Player.Steps.ToList().FindIndex(s => s.Kind == PlayerStepKind.Function));
         Assert.Null(panel.Answers[0].Give("false"));
         await panel.Continue();
-        Assert.Empty(panel.Transcript.Where(t => t.Text == "Your lamp is full."));
+        Assert.DoesNotContain(panel.Transcript, t => t.Text == "Your lamp is full.");
 
         panel.ResetCommand.Execute();
         Assert.False(panel.IsPlaying);

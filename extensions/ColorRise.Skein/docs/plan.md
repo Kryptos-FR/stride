@@ -394,11 +394,20 @@ As built (2026-11-15).
 ### Task 20: Player and timeline views, live highlight
 
 **Files:**
-- Create in `.Avalonia/Views/`: `DialoguePlayerView.axaml(.cs)`, `DialogueTimelineView.axaml(.cs)`, `DialogueTimelineControl.cs` (Saga's `SagaTimelineControl` is the model), `PlayBrushes.cs`; update `YarnScriptEditorViewModel` (`PlayMark` of cards, current line) and `YarnTextPane` (current line marker)
-- Test: `tests/ColorRise.Skein.Editor.Tests/Player/PlayMarksTests.cs`
+- In `.Avalonia/Views/`: `DialoguePlayerView.axaml(.cs)`, `DialogueTimelineView.axaml(.cs)`, `DialogueTimelineControl.cs`, `PlayBrushes.cs`; in `.Avalonia/Text/`: `YarnPlayLineRenderer.cs`; updated `YarnScriptEditorViewModel` (`PlayMark` of the cards, `PlayLine`), `DialoguePlayerService.NodesOf`, `YarnTextPane` (`PlayLine`), `YarnScriptEditorView` (Play button, "Play from here"), `SkeinEditorAvaloniaPlugin` (the views of the two panels)
+- Test: `tests/ColorRise.Skein.Editor.Tests/Player/PlayMarksTests.cs`, `tests/ColorRise.Skein.Editor.Avalonia.Tests/PlayerViewTests.cs` (with `PanelView.cs`)
 
-- [ ] **Step 1:** Tests: while a run is at node `Odile`, the open editor's card `Odile` has `PlayMark == Current`, the nodes of `NodePath` have `Visited`, and `Reset()` clears them; the marks follow `GoTo`.
-- [ ] **Step 2:** Implement the two panels (registered in the neutral plugin, views in the Avalonia one) and the marks. Screenshots under Xvfb: a run, a rewind, a replay after an edit, "why this node". Commit `feat(skein): dialogue player and timeline panels`, push.
+**As built:**
+- Script editor: the card of the node the run is in has the class `current` (a thick blue border), the cards of the nodes it went through `visited`; of the nodes of a node group, the one that was picked. `YarnScriptEditorViewModel.PlayLine` is the line of the run in the script (null when the run is in another script, or when the scripts changed since the run: the line is of another text). The text pane lights that line and brings it into view when it moves, unless the user is typing in the pane or the line is of a node the pane does not show. The marks follow the cursor of the timeline, and an editor opened during a run shows them.
+- A "▶ Play" button in the toolbar of the script editor plays the selected node (else the first), and the menu of a card has "Play from here".
+- Dialogue player view: the project and the node to play, Play, Stop, the language, "Waits", Replay, Timeline; a band for the status; the transcript (speakers in colour, commands and nodes faint, a dot on what the last replay changed, and under each pick its candidates with their score or the condition that ruled them out: "why this node"); the variables and the answers given, to change; at the bottom the question of a function of the game (two buttons for true or false, else a box), the options (greyed when their condition fails), or Continue.
+- Dialogue timeline view: Back, Forward, Replay, the status, what the step at the cursor did, and `DialogueTimelineControl`: a column per step and a row per lane, drawn. A click on a column, the arrows, Home and End move the run; the tooltip tells what is under the pointer.
+- The colours (`PlayBrushes`) read on a light and on a dark background.
+- The text of a pick of a line group is now "The line group picks ..." (its node is the step's).
+- View tests give their inputs to the player as jobs of the UI thread, as the views do: the test kit's dispatcher context and Avalonia's are two, and a run started in one and continued in the other does not finish inside the call.
+
+- [x] **Step 1:** Tests: while a run is at node `Odile`, the open editor's card `Odile` has `PlayMark == Current`, the nodes of `NodePath` have `Visited`, and `Reset()` clears them; the marks follow `GoTo`.
+- [x] **Step 2:** Implement the two panels (registered in the neutral plugin, views in the Avalonia one) and the marks. Checked in Game Studio under Xvfb: a run with "why this node", a rewind, a replay after an edit (screenshots `task20-player-run.png`, `task20-player-rewind.png`, `task20-player-replay.png` in the project files, `yarn-spinner/screens/`). Commit `feat(skein): dialogue player and timeline panels`, push.
 
 ### Task 21: Commands, templates, entity factory
 

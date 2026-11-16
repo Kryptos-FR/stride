@@ -59,6 +59,12 @@ This section follows the work: it says what can be tried at the current commit.
   - *Export strings* writes the strings file of a language (Yarn Spinner's CSV: the lines in the base language, to translate in place) as `Strings/<project>.<language>.csv` in the folder of the project, and sets it in the project's localisations. It never writes over the file of a translation.
   - *Update strings files* brings each file up to date with the scripts: new lines are added without a text, lines that are gone are removed, and the translation of a line that changed is marked `(NEEDS UPDATE)`.
   - Saving a project writes a `.yarnproject` file beside it (and a `.ysls.json` file of the game's commands and functions once the game is built), so that Yarn Spinner's Visual Studio Code extension and command line see the same project. What another tool keeps in the file stays.
+- The dialogue player plays a node of a Yarn project from its scripts as they are in memory: nothing needs saving or building. "▶ Play" in the toolbar of the script editor, or "Play from here" in the menu of a card, opens the *Dialogue player* panel (also in the *View* menu) and starts.
+  - The panel shows what the dialogue says, waits after each line (*Continue*) and at the options (those whose condition fails are greyed). Commands go on at once, and show in the transcript. When the scripts call a function of the game (`has_item("oil")`), the panel asks for the answer and remembers it for that call. The variables can be set by hand, and an answer changed. When a node group or a line group picks, the transcript tells why: each candidate with its score, or the condition that ruled it out.
+  - The script editor follows the run: the card of the node the run is in has a blue border, the nodes it went through a paler one, and the text lights the line.
+  - *Timeline* opens the *Dialogue timeline* panel: a column per step, and lanes for the nodes, the lines, the choices, what the game did and the variables. A click on a step (or the arrows) moves the run back and forth; the player, the variables and the script editor show that step. Going on from an earlier step with another choice drops what followed.
+  - After an edit of the scripts, *Replay* plays the same inputs on the new scripts: a dot marks the steps that are new or read differently, and the replay stops with the reason before a choice that no longer exists.
+  - With several languages, the panel plays in the one chosen (from the strings files as they are on the disk).
 - Covered by tests only: the runtime (the dialogue system, the dialogue runner component, presenters, actors, commands and functions in C#, variable storage) and the UI presenters. Yarn Spinner's own 32 test plans pass against Skein's dialogue session.
 - The sample game "Brinemoor" is an empty scene with one script and one project, to open in Game Studio:
 
@@ -71,7 +77,7 @@ This section follows the work: it says what can be tried at the current commit.
 
 ### Not yet
 
-Everything else of the design: the dialogue player, the commands in Game Studio's command palette, the templates of *Add entity*, and the story of the sample game.
+Everything else of the design: the commands in Game Studio's command palette, the templates of *Add entity*, and the story of the sample game.
 
 ## Tied to the fork
 

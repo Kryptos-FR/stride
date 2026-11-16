@@ -6,8 +6,8 @@ using ColorRise.Skein.Editor.Player;
 namespace ColorRise.Skein.Editor.Avalonia.Views;
 
 /// <summary>
-/// The colours of a played dialogue, in the dialogue player, in the timeline and in the script editor, for the dark look
-/// of Game Studio.
+/// The colours of a played dialogue, in the dialogue player, in the timeline and in the script editor: tones that read
+/// on a light and on a dark background.
 /// </summary>
 public static class PlayBrushes
 {
@@ -39,7 +39,12 @@ public static class PlayBrushes
     /// <summary>
     /// The text of what is not said: a node entered, a command, a pick.
     /// </summary>
-    public static readonly IBrush Faint = Brush(0xFF, 0xA8, 0xA8, 0xA8);
+    public static readonly IBrush Faint = Brush(0xFF, 0x8A, 0x8A, 0x8A);
+
+    /// <summary>
+    /// The name of who says a line.
+    /// </summary>
+    public static readonly IBrush Speaker = Brush(0xFF, 0x2F, 0x8F, 0xD0);
 
     /// <summary>
     /// The lanes of the timeline at odd ranks.
@@ -57,13 +62,13 @@ public static class PlayBrushes
     public static readonly IBrush Header = Brush(0xFF, 0x2B, 0x2B, 0x2F);
 
     private static readonly IBrush Node = Brush(0xFF, 0x3F, 0x58, 0x66);
-    private static readonly IBrush Pick = Brush(0xFF, 0xB3, 0x9D, 0xDB);
-    private static readonly IBrush Line = Brush(0xFF, 0x8F, 0xC7, 0xE8);
-    private static readonly IBrush Choice = Brush(0xFF, 0xFF, 0xB7, 0x4D);
-    private static readonly IBrush Command = Brush(0xFF, 0x81, 0xC7, 0x84);
-    private static readonly IBrush Answer = Brush(0xFF, 0xCE, 0x93, 0xD8);
-    private static readonly IBrush Set = Brush(0xFF, 0xF4, 0x8F, 0xB1);
-    private static readonly IBrush Variable = Brush(0xFF, 0x90, 0xA4, 0xAE);
+    private static readonly IBrush Pick = Brush(0xFF, 0x7E, 0x62, 0xC9);
+    private static readonly IBrush Line = Brush(0xFF, 0x2F, 0x8F, 0xD0);
+    private static readonly IBrush Choice = Brush(0xFF, 0xD0, 0x82, 0x1C);
+    private static readonly IBrush Command = Brush(0xFF, 0x3F, 0x9E, 0x4D);
+    private static readonly IBrush Answer = Brush(0xFF, 0xA8, 0x5C, 0xBF);
+    private static readonly IBrush Set = Brush(0xFF, 0xD0, 0x55, 0x80);
+    private static readonly IBrush Variable = Brush(0xFF, 0x70, 0x86, 0x91);
     private static readonly IBrush Error = Brush(0xFF, 0xE5, 0x53, 0x4B);
 
     /// <summary>

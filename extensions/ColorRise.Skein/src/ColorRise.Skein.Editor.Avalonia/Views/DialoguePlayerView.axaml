@@ -115,18 +115,18 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="player:PlayerTranscriptItem">
                 <StackPanel Margin="0,2">
-                  <Grid ColumnDefinitions="Auto,Auto,Auto,*">
-                    <Ellipse Grid.Column="0" Width="6" Height="6" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{x:Static views:PlayBrushes.Changed}"
+                  <Grid ColumnDefinitions="9,Auto,Auto,*">
+                    <Ellipse Grid.Column="0" Width="6" Height="6" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,6,0,0" Fill="{x:Static views:PlayBrushes.Changed}"
                              IsVisible="{Binding Changed}" ToolTip.Tip="{sd:LocalizeString New or different since the last replay, Context=ToolTip}"/>
                     <TextBlock Grid.Column="1" Classes="faint" Margin="0,0,5,0" Text="{Binding Kind, Converter={x:Static views:DialoguePlayerView.StepSign}}"
                                IsVisible="{Binding $self.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <TextBlock Grid.Column="2" Margin="0,0,6,0" FontWeight="Bold" Foreground="#FF8FC7E8" Text="{Binding Speaker}"
+                    <TextBlock Grid.Column="2" Margin="0,0,6,0" FontWeight="Bold" Foreground="{x:Static views:PlayBrushes.Speaker}" Text="{Binding Speaker}"
                                IsVisible="{Binding Speaker, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     <SelectableTextBlock Grid.Column="3" TextWrapping="Wrap" Text="{Binding Text}"
                                          Foreground="{Binding Kind, Converter={x:Static views:PlayBrushes.StepBrush}}"/>
                   </Grid>
                   <!-- Why a pick chose what it chose: each candidate with its score, or the condition that ruled it out -->
-                  <ItemsControl Margin="16,1,0,2" ItemsSource="{Binding Candidates}" IsVisible="{Binding !!Candidates.Count}">
+                  <ItemsControl Margin="25,1,0,2" ItemsSource="{Binding Candidates}" IsVisible="{Binding !!Candidates.Count}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="player:PlayerCandidate">
                         <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{Binding, Converter={x:Static views:PlayBrushes.CandidateBrush}}">

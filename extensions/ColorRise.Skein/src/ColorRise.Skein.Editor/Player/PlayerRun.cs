@@ -324,7 +324,8 @@ internal sealed class PlayerRun : IDialogueResponder, IDialogueClock, IDisposabl
             candidates.Add(new PlayerCandidate(Name(candidate.Name), candidate.Name == pick.Chosen, candidate.Passed, detail));
         }
 
-        var text = $"{build.TitleOf(pick.Group)} picks {(pick.Chosen is { } chosen ? Name(chosen) : "nothing")}";
+        // A node group is known by its title; a line group has no name, and its node is the step's
+        var text = $"{(pick.IsLineGroup ? "The line group" : build.TitleOf(pick.Group))} picks {(pick.Chosen is { } chosen ? Name(chosen) : "nothing")}";
         Steps.Add(NewStep(PlayerStepKind.Saliency, text, pick.IsLineGroup ? pick.Chosen : null) with { Pick = pick, Candidates = candidates });
 
         // A line of a line group is named by its text, a node by its name in the program

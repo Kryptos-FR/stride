@@ -55,8 +55,8 @@ public sealed class DialogueTimelineControl : Control
 
     internal const double TitleWidth = 84;
     internal const double StepWidth = 72;
-    internal const double HeaderHeight = 36;
-    internal const double LaneHeight = 24;
+    internal const double HeaderHeight = 34;
+    internal const double LaneHeight = 21;
     private const double MarkSize = 9;
 
     private ScrollViewer? scroll;
@@ -238,8 +238,8 @@ public sealed class DialogueTimelineControl : Control
 
         var text = step.IsFuture ? PlayBrushes.Faint : foreground;
         var weight = step.Index == CurrentStep ? FontWeight.Bold : FontWeight.Normal;
-        DrawText(context, step.Index.ToString(CultureInfo.CurrentCulture), new Rect(x, top + 2, StepWidth, 14), text, typeface, 10, weight, TextAlignment.Center);
-        DrawText(context, step.Glyph, new Rect(x, top + 15, StepWidth, 18), text, typeface, 14, weight, TextAlignment.Center);
+        DrawText(context, step.Index.ToString(CultureInfo.CurrentCulture), new Rect(x, top + 1, StepWidth, 14), text, typeface, 10, weight, TextAlignment.Center);
+        DrawText(context, step.Glyph, new Rect(x, top + 14, StepWidth, 18), text, typeface, 14, weight, TextAlignment.Center);
         if (step.Changed)
             context.DrawEllipse(PlayBrushes.Changed, null, new Point(x + StepWidth - 10, top + 9), 3.5, 3.5);
 
