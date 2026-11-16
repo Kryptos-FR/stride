@@ -1,0 +1,228 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:vm="using:ColorRise.Skein.Editor.ViewModels"
+             xmlns:compilation="using:ColorRise.Skein.Assets.Compilation"
+             xmlns:views="using:ColorRise.Skein.Editor.Avalonia.Views"
+             x:Class="ColorRise.Skein.Editor.Avalonia.Views.YarnProjectEditorView"
+             x:DataType="vm:YarnProjectEditorViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style Selector="TextBlock.column">
+      <Setter Property="Opacity" Value="0.6"/>
+      <Setter Property="FontSize" Value="11"/>
+    </Style>
+    <Style Selector="TextBlock.number">
+      <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="TextBlock.faint">
+      <Setter Property="Opacity" Value="0.6"/>
+    </Style>
+    <Style Selector="ListBox.rows">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBox.rows ListBoxItem">
+      <Setter Property="Padding" Value="8,3"/>
+      <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="Grid.header">
+      <Setter Property="Margin" Value="8,0,8,2"/>
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="18,14" Spacing="18" MaxWidth="1100" HorizontalAlignment="Left">
+
+      <!-- The project in a few numbers -->
+      <StackPanel Spacing="2">
+        <TextBlock FontSize="20" FontWeight="SemiBold" Text="{Binding Asset.Name}"/>
+        <TextBlock Classes="faint" Text="{Binding Summary}"/>
+      </StackPanel>
+
+      <!-- The scripts the project includes; a double click opens one -->
+      <StackPanel Grid.IsSharedSizeScope="True">
+        <TextBlock Classes="section" Text="{sd:LocalizeString Scripts, Context=Title}"/>
+        <Grid Classes="header">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="ScriptNodes" MinWidth="70"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="ScriptErrors" MinWidth="70"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Classes="column" Text="{sd:LocalizeString Script, Context=Column}"/>
+          <TextBlock Grid.Column="1" Classes="column number" Text="{sd:LocalizeString Nodes, Context=Column}"/>
+          <TextBlock Grid.Column="2" Classes="column number" Text="{sd:LocalizeString Errors, Context=Column}"/>
+        </Grid>
+        <ListBox x:Name="ScriptList" Classes="rows" ItemsSource="{Binding Scripts}" DoubleTapped="OnRowDoubleTapped">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:YarnProjectScriptItem">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="ScriptNodes"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="ScriptErrors"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Grid.Column="1" Classes="number" Text="{Binding NodeCount}"/>
+                <TextBlock Grid.Column="2" Classes="number" Text="{Binding ErrorCount}"
+                           Foreground="{Binding ErrorCount, Converter={x:Static views:YarnConverters.ErrorCountBrush}}"/>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <TextBlock Classes="faint" Margin="8,2" IsVisible="{Binding !Scripts.Count}"
+                   Text="{sd:LocalizeString The project includes no script: see its source files in the property grid., Context=Label}"/>
+      </StackPanel>
+
+      <!-- The variables of the project; a double click shows the declaration -->
+      <StackPanel Grid.IsSharedSizeScope="True" IsVisible="{Binding !!Variables.Count}">
+        <TextBlock Classes="section" Text="{sd:LocalizeString Variables, Context=Title}"/>
+        <Grid Classes="header">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="VariableName" MinWidth="120"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="VariableType" MinWidth="70"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="VariableDefault" MinWidth="90"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="VariableWhere"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Classes="column" Text="{sd:LocalizeString Name, Context=Column}"/>
+          <TextBlock Grid.Column="1" Classes="column" Text="{sd:LocalizeString Type, Context=Column}"/>
+          <TextBlock Grid.Column="2" Classes="column" Text="{sd:LocalizeString Starts as, Context=Column}"/>
+          <TextBlock Grid.Column="3" Classes="column" Text="{sd:LocalizeString Description, Context=Column}"/>
+          <TextBlock Grid.Column="4" Classes="column" Text="{sd:LocalizeString Declared in, Context=Column}"/>
+        </Grid>
+        <ListBox x:Name="VariableList" Classes="rows" ItemsSource="{Binding Variables}" DoubleTapped="OnRowDoubleTapped">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:YarnProjectVariableItem">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="VariableName"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="VariableType"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="VariableDefault"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="VariableWhere"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Margin="0,0,14,0" FontFamily="Cascadia Code,Consolas,Menlo,DejaVu Sans Mono,monospace" Text="{Binding Name}"/>
+                <TextBlock Grid.Column="1" Margin="0,0,14,0" Text="{Binding Type}"/>
+                <Panel Grid.Column="2" Margin="0,0,14,0">
+                  <TextBlock Text="{Binding Default}" TextTrimming="CharacterEllipsis" MaxWidth="220" IsVisible="{Binding !IsSmart}"/>
+                  <TextBlock Classes="faint" FontStyle="Italic" Text="{sd:LocalizeString computed, Context=Label}" IsVisible="{Binding IsSmart}"
+                             ToolTip.Tip="{sd:LocalizeString A smart variable: the story computes it from its expression, Context=ToolTip}"/>
+                </Panel>
+                <Panel Grid.Column="3" Margin="0,0,14,0">
+                  <TextBlock Text="{Binding Description}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Description}" IsVisible="{Binding IsDeclared}"/>
+                  <TextBlock Classes="faint" FontStyle="Italic" Text="{sd:LocalizeString not declared: its type is guessed from its use, Context=Label}"
+                             IsVisible="{Binding !IsDeclared}"/>
+                </Panel>
+                <TextBlock Grid.Column="4" Classes="faint">
+                  <Run Text="{Binding File}"/><Run Text="("/><Run Text="{Binding Line}"/><Run Text=")"/>
+                </TextBlock>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </StackPanel>
+
+      <!-- The languages, their strings files, and the commands on the lines -->
+      <StackPanel Grid.IsSharedSizeScope="True">
+        <TextBlock Classes="section" Text="{sd:LocalizeString Languages, Context=Title}"/>
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
+          <Button x:Name="AddLineIdsButton" Content="{sd:LocalizeString Add line ids, Context=Button}" Command="{Binding AddLineIdsCommand}"
+                  ToolTip.Tip="{sd:LocalizeString Give a #line: id to each line that has none: a line needs one to be translated, Context=ToolTip}"/>
+          <Button x:Name="UpdateStringsButton" Content="{sd:LocalizeString Update strings files, Context=Button}" Command="{Binding UpdateStringsCommand}"
+                  ToolTip.Tip="{sd:LocalizeString Bring the strings file of each language up to date with the scripts: new lines are added\, lines that are gone are removed\, and the translations of lines that changed are marked, Context=ToolTip}"/>
+          <Button Content="{sd:LocalizeString Read the files again, Context=Button}" Command="{Binding RefreshCommand}"
+                  ToolTip.Tip="{sd:LocalizeString Count again what the strings files hold\, after a translator changed them, Context=ToolTip}"/>
+          <TextBlock VerticalAlignment="Center" Margin="8,0,0,0" Text="{Binding LineIdNotice}"/>
+        </StackPanel>
+        <Grid Classes="header">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageCode" MinWidth="110"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageLines" MinWidth="70"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageTranslated" MinWidth="80"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageToUpdate" MinWidth="80"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageMissing" MinWidth="80"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageExport"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Classes="column" Text="{sd:LocalizeString Language, Context=Column}"/>
+          <TextBlock Grid.Column="1" Classes="column number" Text="{sd:LocalizeString Lines, Context=Column}"/>
+          <TextBlock Grid.Column="2" Classes="column number" Text="{sd:LocalizeString Translated, Context=Column}"/>
+          <TextBlock Grid.Column="3" Classes="column number" Text="{sd:LocalizeString To update, Context=Column}"/>
+          <TextBlock Grid.Column="4" Classes="column number" Text="{sd:LocalizeString Missing, Context=Column}"/>
+          <TextBlock Grid.Column="5" Classes="column" Margin="18,0,0,0" Text="{sd:LocalizeString Strings file, Context=Column}"/>
+        </Grid>
+        <ItemsControl x:Name="LanguageList" ItemsSource="{Binding Languages}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:YarnProjectLanguageItem">
+              <Grid Margin="8,3">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageCode"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageLines"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageTranslated"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageToUpdate"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageMissing"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageExport"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <TextBlock FontWeight="SemiBold" Text="{Binding Language}"/>
+                  <TextBlock Classes="faint" Text="{sd:LocalizeString (base), Context=Label}" IsVisible="{Binding IsBase}"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1" Classes="number" VerticalAlignment="Center" Text="{Binding Lines}"/>
+                <TextBlock Grid.Column="2" Classes="number" VerticalAlignment="Center" Text="{Binding Translated}"/>
+                <TextBlock Grid.Column="3" Classes="number" VerticalAlignment="Center" Text="{Binding ToUpdate}"/>
+                <TextBlock Grid.Column="4" Classes="number" VerticalAlignment="Center" Text="{Binding Missing}"/>
+                <StackPanel Grid.Column="5" Margin="18,0,12,0" VerticalAlignment="Center">
+                  <TextBlock Classes="faint" Text="{Binding File}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding File}"/>
+                  <TextBlock Foreground="#FFE5534B" Text="{Binding Problem}" TextWrapping="Wrap" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                </StackPanel>
+                <Button Grid.Column="6" Padding="8,2" Content="{sd:LocalizeString Export strings, Context=Button}" IsVisible="{Binding CanExport}" Click="OnExportClick"
+                        ToolTip.Tip="{sd:LocalizeString Write the strings file of this language: the lines that have an id\, in the base language\, to translate in place, Context=ToolTip}"/>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- What the last command did -->
+        <Border Margin="0,8,0,0" Padding="8,4" Background="#304C9AE8" CornerRadius="3" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <SelectableTextBlock x:Name="MessageText" Text="{Binding Message}" TextWrapping="Wrap"/>
+        </Border>
+      </StackPanel>
+
+      <!-- What the compiler and the build say of the project; a double click shows the place -->
+      <StackPanel>
+        <TextBlock Classes="section" Text="{sd:LocalizeString Problems, Context=Title}"/>
+        <TextBlock Classes="faint" Margin="8,2" Text="{sd:LocalizeString The compiler has nothing to say., Context=Label}"
+                   IsVisible="{sd:MultiBinding {Binding !Diagnostics.Count}, {Binding !Warnings.Count}, Converter={sd:AndMulti}}"/>
+        <ListBox x:Name="ProblemList" Classes="rows" ItemsSource="{Binding Diagnostics}" IsVisible="{Binding !!Diagnostics.Count}" DoubleTapped="OnRowDoubleTapped">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="compilation:YarnDiagnostic">
+              <Grid ColumnDefinitions="Auto,Auto,*">
+                <Ellipse Grid.Column="0" Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center"
+                         Fill="{Binding Severity, Converter={x:Static views:YarnConverters.SeverityBrush}}"/>
+                <TextBlock Grid.Column="1" Margin="0,0,8,0" Opacity="0.7">
+                  <Run Text="{Binding File}"/><Run Text="("/><Run Text="{Binding Line}"/><Run Text=")"/>
+                </TextBlock>
+                <TextBlock Grid.Column="2" Text="{Binding Message}" TextWrapping="Wrap"/>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <ItemsControl x:Name="WarningList" ItemsSource="{Binding Warnings}" IsVisible="{Binding !!Warnings.Count}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <Grid ColumnDefinitions="Auto,*" Margin="8,3">
+                <Ellipse Grid.Column="0" Width="8" Height="8" Margin="0,5,6,0" VerticalAlignment="Top"
+                         Fill="{Binding Source={x:Static compilation:YarnSeverity.Warning}, Converter={x:Static views:YarnConverters.SeverityBrush}}"/>
+                <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap"/>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

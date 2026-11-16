@@ -45,6 +45,8 @@ public sealed class ProjectEditorTests
         var missing = Assert.Single(editor.Diagnostics, d => d.Code == "YS0012");
         Assert.Equal(("Dialogue/Act2.yarn", 5), (missing.File, missing.Line));
         Assert.Equal((5, 3), (editor.LineCount, editor.LinesWithoutId));
+        Assert.Equal("2 scripts  ·  3 nodes  ·  5 lines  ·  2 variables", editor.Summary);
+        Assert.Equal("3 lines have no id and cannot be translated.", editor.LineIdNotice);
         var english = Assert.Single(editor.Languages);
         Assert.Equal(("en", true, 2, 2), (english.Language, english.IsBase, english.Lines, english.Translated));
 

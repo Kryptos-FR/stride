@@ -1,4 +1,5 @@
 using System.Globalization;
+using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
@@ -42,4 +43,9 @@ public static class YarnConverters
     /// The brush of the severity of a message of the compiler.
     /// </summary>
     public static readonly IValueConverter SeverityBrush = new FuncValueConverter<YarnSeverity, IBrush>(YarnPalette.OfSeverity);
+
+    /// <summary>
+    /// The colour of a count of errors: the one of an error when there are some, the text's own otherwise.
+    /// </summary>
+    public static readonly IValueConverter ErrorCountBrush = new FuncValueConverter<int, object>(count => count > 0 ? YarnPalette.OfSeverity(YarnSeverity.Error) : AvaloniaProperty.UnsetValue);
 }

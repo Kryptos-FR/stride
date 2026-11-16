@@ -58,6 +58,8 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
     private IReadOnlyList<YarnDiagnostic> diagnostics = [];
     private IReadOnlyList<YarnProjectLanguageItem> languages = [];
     private IReadOnlyList<string> warnings = [];
+    private string summary = "";
+    private string? lineIdNotice;
     private int nodeCount;
     private int lineCount;
     private int linesWithoutId;
@@ -104,6 +106,16 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
     /// The languages of the project, the base one first.
     /// </summary>
     public IReadOnlyList<YarnProjectLanguageItem> Languages { get => languages; private set => SetValue(ref languages, value); }
+
+    /// <summary>
+    /// The project in a few numbers: its scripts, nodes, lines and variables.
+    /// </summary>
+    public string Summary { get => summary; private set => SetValue(ref summary, value); }
+
+    /// <summary>
+    /// How many lines have no id, in words; null when every line has one.
+    /// </summary>
+    public string? LineIdNotice { get => lineIdNotice; private set => SetValue(ref lineIdNotice, value); }
 
     /// <summary>
     /// The nodes of the project.
@@ -291,6 +303,13 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
         NodeCount = current.Nodes.Count;
         LineCount = compilation.Lines.Count;
         LinesWithoutId = compilation.Lines.Count(l => l.Value.IsImplicitId);
+        Summary = string.Join("  ·  ", Count(Scripts.Count, "script"), Count(NodeCount, "node"), Count(LineCount, "line"), Count(Variables.Count, "variable"));
+        LineIdNotice = LinesWithoutId switch
+        {
+            0 => null,
+            1 => "1 line has no id and cannot be translated.",
+            var count => $"{count} lines have no id and cannot be translated.",
+        };
         RefreshLanguages();
     }
 
