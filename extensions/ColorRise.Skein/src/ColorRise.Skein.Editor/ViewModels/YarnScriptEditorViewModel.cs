@@ -207,6 +207,9 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
                 {
                     card.GroupValue = groupBy is null ? null : card.Span.Header(groupBy);
                 }
+
+                // The cards without a place of their own are placed by section, and the sections changed
+                Place();
             }
         }
     }
@@ -533,12 +536,13 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     }
 
     /// <summary>
-    /// Writes a place for every card: along the jumps, in rows of the nodes nothing jumps to.
+    /// Writes a place for every card: along the jumps, in rows of the nodes nothing jumps to, each frame of
+    /// <see cref="GroupBy"/> (else each cluster) in a block of its own.
     /// </summary>
     public void Layout()
     {
         var current = Synchronize();
-        var places = YarnGraphLayout.Compute(Cards.Count, CardLinks(), NodeGroups(Cards));
+        var places = YarnGraphLayout.Compute(Cards.Count, CardLinks(), NodeGroups(Cards), Sections(Cards));
         var edits = Cards.Select((card, i) => YarnTextPatcher.SetPosition(current, card.Span, places[i].X, places[i].Y)).ToArray();
         Apply("Lay out nodes", edits);
     }
@@ -974,6 +978,21 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     }
 
     // The nodes of a node group, which have one title, stay together in a layout
+    /// <summary>
+    /// The frame each card is laid out in: its value of <see cref="GroupBy"/> when the cards are grouped, else its cluster.
+    /// A stub goes with the card it is a stub of.
+    /// </summary>
+    private List<string?> Sections(IEnumerable<object> cards)
+    {
+        string? Of(YarnNodeCardViewModel card) => groupBy is null ? card.Cluster : card.GroupValue;
+        return [.. cards.Select(c => c switch
+        {
+            YarnNodeCardViewModel card => Of(card),
+            YarnStubCardViewModel stub => Of(stub.Source),
+            _ => null,
+        })];
+    }
+
     private static List<int> NodeGroups(IEnumerable<object> cards)
     {
         var numbers = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -1005,7 +1024,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         free.AddRange(Cards.Where(c => !c.HasPosition));
         free.AddRange(Stubs.Where(s => !s.Source.HasPosition));
         var links = Links.Select(l => (free.IndexOf(l.Source), free.IndexOf(l.Target))).ToList();
-        var places = YarnGraphLayout.Compute(free.Count, links, NodeGroups(free));
+        var places = YarnGraphLayout.Compute(free.Count, links, NodeGroups(free), Sections(free));
         var top = Cards.Where(c => c.HasPosition).Select(c => c.Span.Position!.Value.Y + YarnGraphLayout.RowHeight).DefaultIfEmpty(0).Max();
 
         foreach (var card in Cards)

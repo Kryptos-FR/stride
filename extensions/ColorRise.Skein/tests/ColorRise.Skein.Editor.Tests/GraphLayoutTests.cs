@@ -60,6 +60,43 @@ public sealed class GraphLayoutTests
     }
 
     [Fact]
+    public void The_nodes_of_a_section_are_a_block_of_their_own()
+    {
+        // 0 jumps to 1, and 2 jumps to 3: the jumps cross the sections. 4 has no section, and 5 is in the group of 3
+        string?[] sections = ["harbour", "lighthouse", "harbour", "lighthouse", null, "harbour"];
+        var places = YarnGraphLayout.Compute(6, [(0, 1), (2, 3)], [-1, -1, -1, 0, -1, 0], sections);
+
+        // The group of 3 is in the section of 3, its first node
+        var blocks = new[] { new[] { 0, 2 }, [1, 3, 5], [4] }.Select(Bounds).ToList();
+        for (var i = 0; i < blocks.Count; i++)
+        {
+            for (var j = i + 1; j < blocks.Count; j++)
+            {
+                Assert.False(blocks[i].IntersectsWith(blocks[j]), $"Blocks {i} and {j} overlap.");
+            }
+        }
+
+        // Inside a block, the layout is the one of the block alone, from the top left of the block
+        Assert.Equal((places[1].X + W, places[1].Y), (places[3].X, places[3].Y));
+        Assert.Equal(places[3].X, places[5].X);
+        Assert.Equal(places[3].Y + H, places[5].Y);
+
+        // The bounds of a block's cards, with the room the frames take around them
+        System.Drawing.Rectangle Bounds(int[] nodes)
+        {
+            var (left, top) = (nodes.Min(n => places[n].X), nodes.Min(n => places[n].Y));
+            var (right, bottom) = (nodes.Max(n => places[n].X) + W, nodes.Max(n => places[n].Y) + H);
+            return System.Drawing.Rectangle.FromLTRB(left, top, right, bottom);
+        }
+    }
+
+    [Fact]
+    public void Without_a_section_the_layout_is_the_one_of_the_jumps()
+    {
+        Assert.Equal(YarnGraphLayout.Compute(4, [(0, 1), (0, 2), (1, 3)]), YarnGraphLayout.Compute(4, [(0, 1), (0, 2), (1, 3)], null, [null, "", null, null]));
+    }
+
+    [Fact]
     public void No_node_has_no_place()
     {
         Assert.Empty(YarnGraphLayout.Compute(0, []));

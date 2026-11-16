@@ -505,6 +505,40 @@ public sealed class ScriptEditorTests
     }
 
     [Fact]
+    public async Task Grouped_cards_are_placed_and_laid_out_in_a_block_for_each_value()
+    {
+        // The jumps cross the quests, and no node has a place of its own
+        const string text = "title: A\nquest: lamp\n---\n<<jump B>>\n===\ntitle: B\nquest: nets\n---\n<<jump C>>\n===\n"
+            + "title: C\nquest: lamp\n---\n<<jump D>>\n===\ntitle: D\nquest: nets\n---\nThe end.\n===\ntitle: E\n---\nAlone.\n===\n";
+        await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", text));
+        var editor = session.Edit("Dialogue/Act1");
+        await session.Analysis.WhenIdle();
+        var card = editor.Cards.ToDictionary(c => c.Title);
+
+        // Along the jumps, A B C D are one strand: the quests are mixed
+        Assert.True(Overlap(["A", "C"], ["B", "D"]));
+
+        editor.GroupBy = "quest";
+        Assert.False(Overlap(["A", "C"], ["B", "D"]));
+        Assert.False(Overlap(["A", "C"], ["E"]));
+        Assert.False(Overlap(["B", "D"], ["E"]));
+
+        // Laid out, the places written in the text are those blocks
+        editor.Layout();
+        var places = editor.Cards.Select(c => c.Span.Position).ToList();
+        Assert.Equal(editor.Cards.Select(c => ((int, int)?)(c.Position.X, c.Position.Y)), places);
+        Assert.False(Overlap(["A", "C"], ["B", "D"]));
+
+        bool Overlap(string[] first, string[] second) => Bounds(first).IntersectsWith(Bounds(second));
+
+        System.Drawing.Rectangle Bounds(string[] titles)
+        {
+            var points = titles.Select(t => card[t].Position).ToList();
+            return System.Drawing.Rectangle.FromLTRB(points.Min(p => p.X), points.Min(p => p.Y), points.Max(p => p.X) + YarnGraphLayout.ColumnWidth, points.Max(p => p.Y) + YarnGraphLayout.RowHeight);
+        }
+    }
+
+    [Fact]
     public async Task Cards_are_grouped_by_a_header_and_searched()
     {
         await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", Act1));

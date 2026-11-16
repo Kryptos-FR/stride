@@ -66,7 +66,7 @@ How the graph looks is written in the script itself, with headers that Yarn Spin
 | What | How | In the file |
 |---|---|---|
 | Place a card | Drag it | `position: 300,0` |
-| Place every card along the jumps | *Layout* | new `position:` headers |
+| Place every card along the jumps, one block for each frame of *Group by* | *Layout* | new `position:` headers |
 | Colour a card | Menu of the card, *Colour* | `color: red` (red, orange, yellow, green, blue, purple) |
 | A note for the writers | *+ Note*, or *Add note here* | a node with `style: note` that nothing jumps to |
 | See everything | Right click, *Show all the nodes* | |
@@ -79,7 +79,7 @@ A story of some size needs more than one flat graph. Skein has three ways to gro
 
 **Clusters.** A node with a `cluster:` header is drawn in a frame with the other nodes of the same cluster. Set it in the property grid. A cluster is only a drawing: the story does not know it.
 
-**Group by a header.** *Group by* in the toolbar frames the nodes by the value of any header: pick `act`, and each act has its frame. This is how a story is cut in acts, scenarios and quests without any feature of the language: give the nodes the headers that fit your story, and look at the graph by one or the other.
+**Group by a header.** *Group by* in the toolbar frames the nodes by the value of any header: pick `act`, and each act has its frame. This is how a story is cut in acts, scenarios and quests without any feature of the language: give the nodes the headers that fit your story, and look at the graph by one or the other. The cards that have no `position:` are placed with one block for each value, so the frames do not overlap; *Layout* does the same and writes the places. Without *Group by*, the blocks are the clusters.
 
 **Node groups.** Several nodes with the same title and a `when:` header each are a node group, a feature of Yarn Spinner 3: a jump to the title plays the best node whose conditions are true. The graph stacks them in one frame under their title. *Add a node to its node group* in the menu of a card adds one.
 
