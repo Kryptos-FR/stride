@@ -52,6 +52,8 @@ public sealed class AvaloniaUISystem : GameSystemBase,
 
     private InputManager? input;
     private SpriteBatch? spriteBatch;
+    private GraphicsDevice? attachedDevice;
+    private bool renderOnGpu = true;
 
     // The view under the pointer, the one that got a button press (it keeps the pointer until all buttons are released),
     // and the one that gets the keyboard
@@ -105,18 +107,39 @@ public sealed class AvaloniaUISystem : GameSystemBase,
         }
     }
 
+    /// <summary>
+    /// Gets or sets whether Skia renders the views on the game's graphics device when it can share it (Vulkan), rather
+    /// than on the CPU. A change takes effect at the next frame.
+    /// </summary>
+    public bool RenderOnGpu
+    {
+        get => renderOnGpu;
+        set
+        {
+            if (renderOnGpu == value)
+                return;
+            renderOnGpu = value;
+            // Applied now once the graphics content is loaded, otherwise when it loads
+            if (spriteBatch != null)
+                UpdateGraphicsDevice();
+        }
+    }
+
+    /// <summary>
+    /// Gets whether Skia renders the views on the game's graphics device.
+    /// </summary>
+    public bool IsRenderingOnGpu => attachedDevice != null;
+
     protected override void LoadContent()
     {
         base.LoadContent();
         spriteBatch = new SpriteBatch(GraphicsDevice);
+        UpdateGraphicsDevice();
     }
 
     protected override void UnloadContent()
     {
-        foreach (var view in views)
-            view.ReleaseTexture();
-        spriteBatch?.Dispose();
-        spriteBatch = null;
+        ReleaseGraphics();
         base.UnloadContent();
     }
 
@@ -133,13 +156,37 @@ public sealed class AvaloniaUISystem : GameSystemBase,
         textInputEnabled = false;
 
         // The processor disposes the views; the textures of those still here go now
-        foreach (var view in views)
-            view.ReleaseTexture();
+        ReleaseGraphics();
         views.Clear();
-        spriteBatch?.Dispose();
-        spriteBatch = null;
 
         base.Destroy();
+    }
+
+    // Skia renders the views on the game's device, or on the CPU, the way RenderOnGpu says
+    private void UpdateGraphicsDevice()
+    {
+        if (renderOnGpu && attachedDevice == null)
+        {
+            if (StrideAvaloniaPlatform.AttachGraphicsDevice(GraphicsDevice))
+                attachedDevice = GraphicsDevice;
+        }
+        else if (!renderOnGpu && attachedDevice != null)
+        {
+            StrideAvaloniaPlatform.DetachGraphicsDevice(attachedDevice);
+            attachedDevice = null;
+        }
+    }
+
+    private void ReleaseGraphics()
+    {
+        foreach (var view in views)
+            view.ReleaseTexture();
+        // Skia releases what it has on the device while the device is still there
+        if (attachedDevice != null)
+            StrideAvaloniaPlatform.DetachGraphicsDevice(attachedDevice);
+        attachedDevice = null;
+        spriteBatch?.Dispose();
+        spriteBatch = null;
     }
 
     internal void AddView(AvaloniaUIView view) => views.Add(view);
@@ -181,21 +228,22 @@ public sealed class AvaloniaUISystem : GameSystemBase,
             view.Layout(backBuffer.Width, backBuffer.Height);
         }
 
-        // Layout and composition (dispatcher jobs), then rendering of the views that changed
+        // Layout and composition (dispatcher jobs), then rendering of the views that changed: on the GPU, Skia submits
+        // its commands now, ahead of the command list of this frame
         StrideAvaloniaPlatform.Pump();
         StrideAvaloniaPlatform.Render();
 
         var graphicsContext = Game.GraphicsContext;
         var commandList = graphicsContext.CommandList;
 
-        // Avalonia renders sRGB colors: an sRGB texture keeps them right on an sRGB back buffer (linear color space)
-        var format = backBuffer.Format.IsSRgb ? PixelFormat.R8G8B8A8_UNorm_SRgb : PixelFormat.R8G8B8A8_UNorm;
+        // Avalonia renders sRGB colors: sampled as sRGB, they stay right on an sRGB back buffer (linear color space)
+        var srgb = backBuffer.Format.IsSRgb;
         var anyShown = false;
         foreach (var view in SortedViews())
         {
             if (!view.Component.Enabled)
                 continue;
-            view.Upload(device, commandList, format);
+            view.PrepareFrame(device, commandList, srgb);
             anyShown |= view.IsShown;
         }
         if (!anyShown)

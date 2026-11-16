@@ -2,21 +2,24 @@
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Avalonia;
-using Avalonia.Controls.Embedding.Offscreen;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
 using Avalonia.Platform;
 using Avalonia.Platform.Surfaces;
-using Avalonia.Rendering;
+using Avalonia.Rendering.Composition;
+using Stride.AvaloniaUI.Platform.Gpu;
+using Texture = Stride.Graphics.Texture;
 
 namespace Stride.AvaloniaUI.Platform;
 
 /// <summary>
-/// The window of an Avalonia UI in a game: an offscreen top level whose frames Skia renders on the CPU into memory the
-/// game uploads to a texture.
+/// The window of an Avalonia UI in a game: an offscreen top level whose frames Skia renders, on the game's graphics
+/// device into a texture when it can (<see cref="StrideSkiaGpu"/>), otherwise on the CPU into memory the game uploads to a texture.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -27,12 +30,14 @@ namespace Stride.AvaloniaUI.Platform;
 /// Everything runs on the game thread, which is Avalonia's UI thread and render thread.
 /// </para>
 /// </remarks>
-internal sealed unsafe class StrideTopLevelImpl : OffscreenTopLevelImplBase, IFramebufferPlatformSurface
+internal sealed unsafe class StrideTopLevelImpl : ITopLevelImpl, IFramebufferPlatformSurface
 {
     private readonly IPlatformRenderSurface[] surfaces;
     private readonly IKeyboardDevice keyboard;
     private readonly MouseDevice mouseDevice;
     private readonly Stopwatch clock = Stopwatch.StartNew();
+    private double scaling = 1;
+    private Size clientSize;
 
     private byte* pixels;
     private PixelSize pixelSize;
@@ -40,14 +45,46 @@ internal sealed unsafe class StrideTopLevelImpl : OffscreenTopLevelImplBase, IFr
 
     public StrideTopLevelImpl()
     {
+        // The surface Skia renders to, on the GPU or on the CPU
         surfaces = [this];
         keyboard = AvaloniaLocator.Current.GetRequiredService<IKeyboardDevice>();
         mouseDevice = new MouseDevice(new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true));
+        Compositor = StrideAvaloniaPlatform.Compositor;
     }
 
-    public override IPlatformRenderSurface[] Surfaces => surfaces;
+    public IPlatformRenderSurface[] Surfaces => surfaces;
 
-    public override IMouseDevice MouseDevice => mouseDevice;
+    public IMouseDevice MouseDevice => mouseDevice;
+
+    public Compositor Compositor { get; }
+
+    public IInputRoot? InputRoot { get; private set; }
+
+    public double DesktopScaling => scaling;
+
+    public IPlatformHandle? Handle => null;
+
+    public Size ClientSize => clientSize;
+
+    public double RenderScaling => scaling;
+
+    public Action<RawInputEventArgs>? Input { get; set; }
+
+    public Action<Rect>? Paint { get; set; }
+
+    public Action<Size, WindowResizeReason>? Resized { get; set; }
+
+    public Action<double>? ScalingChanged { get; set; }
+
+    public Action<WindowTransparencyLevel>? TransparencyLevelChanged { get; set; }
+
+    public Action? Closed { get; set; }
+
+    public Action? LostFocus { get; set; }
+
+    public WindowTransparencyLevel TransparencyLevel => WindowTransparencyLevel.None;
+
+    public AcrylicPlatformCompensationLevels AcrylicCompensationLevels { get; } = new(1, 1, 1);
 
     /// <summary>
     /// Gets a number that changes each time Avalonia renders a frame of this top level.
@@ -60,42 +97,92 @@ internal sealed unsafe class StrideTopLevelImpl : OffscreenTopLevelImplBase, IFr
     public StandardCursorType Cursor { get; private set; } = StandardCursorType.Arrow;
 
     /// <summary>
+    /// Gets the texture of the last frame when Skia rendered it on the game's graphics device, or <c>null</c> when it
+    /// rendered it on the CPU (<see cref="TryGetFrame"/>).
+    /// </summary>
+    public Texture? GpuFrame { get; private set; }
+
+    /// <summary>
     /// Sets the size of the top level in pixels and its scaling (pixels per logical unit).
     /// </summary>
     public void Resize(PixelSize size, double scaling)
     {
-        if (RenderScaling != scaling)
-            RenderScaling = scaling;
-        var clientSize = size.ToSize(scaling);
-        if (ClientSize != clientSize)
-            ClientSize = clientSize;
+        if (this.scaling != scaling)
+        {
+            this.scaling = scaling;
+            ScalingChanged?.Invoke(scaling);
+        }
+        var newClientSize = size.ToSize(scaling);
+        if (clientSize != newClientSize)
+        {
+            clientSize = newClientSize;
+            Resized?.Invoke(newClientSize, WindowResizeReason.Unspecified);
+        }
     }
 
     /// <summary>
-    /// Gets the last rendered frame: premultiplied RGBA, 4 bytes a pixel, rows packed.
+    /// Gets the last frame Skia rendered on the CPU: premultiplied RGBA, 4 bytes a pixel, rows packed.
     /// </summary>
-    /// <returns><c>false</c> before the first frame.</returns>
+    /// <returns><c>false</c> before the first frame, and when the last one was rendered on the GPU.</returns>
     public bool TryGetFrame(out IntPtr data, out PixelSize size, out int rowPitch)
     {
         data = (IntPtr)pixels;
         size = pixelSize;
         rowPitch = pixelSize.Width * 4;
-        return FrameVersion > 0 && pixels != null;
+        return FrameVersion > 0 && pixels != null && GpuFrame == null;
     }
 
-    public override void SetCursor(ICursorImpl? cursor)
+    /// <summary>
+    /// Takes a frame Skia rendered into a texture on the game's graphics device.
+    /// </summary>
+    internal void OnGpuFrameRendered(Texture texture)
+    {
+        if (GpuFrame == null)
+            FreePixels();
+        GpuFrame = texture;
+        FrameVersion++;
+    }
+
+    /// <summary>
+    /// Forgets the texture of the GPU frames when it goes (the graphics device went, or the size changed).
+    /// </summary>
+    internal void OnGpuFrameReleased(Texture texture)
+    {
+        if (ReferenceEquals(GpuFrame, texture))
+            GpuFrame = null;
+    }
+
+    public void SetInputRoot(IInputRoot inputRoot) => InputRoot = inputRoot;
+
+    public Point PointToClient(PixelPoint point) => point.ToPoint(1);
+
+    public PixelPoint PointToScreen(Point point) => PixelPoint.FromPoint(point, 1);
+
+    public void SetCursor(ICursorImpl? cursor)
     {
         Cursor = (cursor as StrideCursorFactory.CursorImpl)?.Type ?? StandardCursorType.Arrow;
     }
 
-    public override void Dispose()
+    public IPopupImpl? CreatePopup() => null;
+
+    public void SetTransparencyLevelHint(IReadOnlyList<WindowTransparencyLevel> transparencyLevels)
     {
-        base.Dispose();
+    }
+
+    public void SetFrameThemeVariant(PlatformThemeVariant? themeVariant)
+    {
+    }
+
+    public object? TryGetFeature(Type featureType) => null;
+
+    public void Dispose()
+    {
         FreePixels();
+        GpuFrame = null;
     }
 
     IFramebufferRenderTarget IFramebufferPlatformSurface.CreateFramebufferRenderTarget()
-        => new FuncFramebufferRenderTarget(Lock, retainsFrameContents: true);
+        => new FramebufferRenderTarget(this, StrideAvaloniaPlatform.CurrentGpu);
 
     private ILockedFramebuffer Lock(IRenderTarget.RenderTargetSceneInfo sceneInfo, out FramebufferLockProperties properties)
     {
@@ -118,6 +205,7 @@ internal sealed unsafe class StrideTopLevelImpl : OffscreenTopLevelImplBase, IFr
     private void OnFrameRendered()
     {
         previousFrameRetained = true;
+        GpuFrame = null;
         FrameVersion++;
     }
 
@@ -132,6 +220,24 @@ internal sealed unsafe class StrideTopLevelImpl : OffscreenTopLevelImplBase, IFr
     }
 
     private ulong Timestamp => (ulong)clock.ElapsedMilliseconds;
+
+    /// <summary>
+    /// The render target of the CPU frames. Skia renders on the CPU when the GPU it was created for has no device: it
+    /// is corrupted once that GPU is lost, so Avalonia creates the render target again, on the game's device if one came.
+    /// </summary>
+    private sealed class FramebufferRenderTarget(StrideTopLevelImpl topLevel, StrideSkiaGpu? gpu) : IFramebufferRenderTarget
+    {
+        public bool RetainsFrameContents => true;
+
+        public PlatformRenderTargetState State => gpu?.IsLost == true ? PlatformRenderTargetState.Corrupted : PlatformRenderTargetState.Ready;
+
+        public ILockedFramebuffer Lock(IRenderTarget.RenderTargetSceneInfo sceneInfo, out FramebufferLockProperties properties)
+            => topLevel.Lock(sceneInfo, out properties);
+
+        public void Dispose()
+        {
+        }
+    }
 
     public void RaisePointer(RawPointerEventType type, Point position, RawInputModifiers modifiers)
     {

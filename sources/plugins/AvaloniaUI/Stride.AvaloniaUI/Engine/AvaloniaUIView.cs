@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Embedding;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
+using Avalonia.Media;
 using Stride.AvaloniaUI.Platform;
 using Stride.Core.Diagnostics;
 using Stride.Core.Reflection;
@@ -19,7 +20,7 @@ using Vector2 = Stride.Core.Mathematics.Vector2;
 namespace Stride.AvaloniaUI;
 
 /// <summary>
-/// The Avalonia top level of an <see cref="AvaloniaUIComponent"/>, and the texture its frames are uploaded to.
+/// The Avalonia top level of an <see cref="AvaloniaUIComponent"/>, and the texture the game draws its frames from.
 /// </summary>
 internal sealed class AvaloniaUIView : IDisposable
 {
@@ -27,7 +28,9 @@ internal sealed class AvaloniaUIView : IDisposable
 
     private readonly StrideTopLevelImpl impl = new();
     private readonly EmbeddableControlRoot root;
-    private Texture? texture;
+    // The texture the CPU frames are uploaded to, and the sRGB view of the texture of the GPU frames
+    private Texture? uploadTexture;
+    private Texture? gpuFrameView;
     private int uploadedVersion;
     private string? failedViewType;
     private bool disposed;
@@ -41,6 +44,8 @@ internal sealed class AvaloniaUIView : IDisposable
             Background = null,
             TransparencyBackgroundFallback = null!,
         };
+        // The view is drawn over the game: subpixel text needs an opaque background
+        TextOptions.SetTextRenderingMode(root, TextRenderingMode.Antialias);
         root.Prepare();
         root.StartRendering();
         component.TopLevel = root;
@@ -51,9 +56,14 @@ internal sealed class AvaloniaUIView : IDisposable
     public StrideTopLevelImpl Impl => impl;
 
     /// <summary>
-    /// Gets the last frame of the view, once uploaded.
+    /// Gets the texture of the last frame of the view, once Skia rendered it on the GPU or it was uploaded.
     /// </summary>
-    public Texture? Texture => texture;
+    public Texture? Texture { get; private set; }
+
+    /// <summary>
+    /// Gets whether Skia rendered the last frame on the game's graphics device rather than on the CPU.
+    /// </summary>
+    public bool IsRenderedOnGpu => impl.GpuFrame != null;
 
     /// <summary>
     /// Gets whether the view is shown and gets the input: its component is enabled and Avalonia rendered a frame of it.
@@ -142,35 +152,80 @@ internal sealed class AvaloniaUIView : IDisposable
     public void RaiseLeave(RawInputModifiers modifiers) => impl.RaisePointer(RawPointerEventType.LeaveWindow, new Point(-1, -1), modifiers);
 
     /// <summary>
-    /// Uploads the last frame to the texture if it changed since the last upload (game thread, during the draw).
+    /// Gets the last frame ready for the draw (game thread, during the draw): a frame Skia rendered on the GPU is moved
+    /// to the shader resource layout, one it rendered on the CPU is uploaded if it changed since the last upload.
     /// </summary>
-    public unsafe void Upload(GraphicsDevice device, CommandList commandList, PixelFormat format)
+    /// <param name="srgb">Whether the frame is sampled as sRGB, as the colors of a linear back buffer.</param>
+    public unsafe void PrepareFrame(GraphicsDevice device, CommandList commandList, bool srgb)
     {
-        if (!impl.TryGetFrame(out var data, out var size, out var rowPitch))
-            return;
-
-        var stale = texture == null || texture.Width != size.Width || texture.Height != size.Height || texture.Format != format;
-        if (!stale && impl.FrameVersion == uploadedVersion)
-            return;
-
-        if (stale)
+        if (impl.GpuFrame is { } gpuFrame)
         {
-            texture?.Dispose();
-            texture = Texture.New2D(device, size.Width, size.Height, format);
+            ReleaseUploadTexture();
+            commandList.ResourceBarrierTransition(gpuFrame, BarrierLayout.ShaderResource);
+            Texture = srgb ? GetSrgbView(gpuFrame) : gpuFrame;
+            return;
         }
 
-        texture!.SetData(commandList, new ReadOnlySpan<byte>((void*)data, rowPitch * size.Height));
-        commandList.ResourceBarrierTransition(texture, BarrierLayout.ShaderResource);
-        uploadedVersion = impl.FrameVersion;
+        ReleaseGpuFrameView();
+        if (!impl.TryGetFrame(out var data, out var size, out var rowPitch))
+        {
+            Texture = null;
+            return;
+        }
+
+        var format = srgb ? PixelFormat.R8G8B8A8_UNorm_SRgb : PixelFormat.R8G8B8A8_UNorm;
+        var stale = uploadTexture == null || uploadTexture.Width != size.Width || uploadTexture.Height != size.Height || uploadTexture.Format != format;
+        if (stale)
+        {
+            uploadTexture?.Dispose();
+            uploadTexture = Texture.New2D(device, size.Width, size.Height, format);
+        }
+
+        if (stale || impl.FrameVersion != uploadedVersion)
+        {
+            uploadTexture!.SetData(commandList, new ReadOnlySpan<byte>((void*)data, rowPitch * size.Height));
+            commandList.ResourceBarrierTransition(uploadTexture, BarrierLayout.ShaderResource);
+            uploadedVersion = impl.FrameVersion;
+        }
+        Texture = uploadTexture;
     }
 
     /// <summary>
-    /// Releases the texture (graphics content unloaded); the next upload creates it again.
+    /// Releases the textures of the view (graphics content unloaded); the next frame creates them again.
     /// </summary>
     public void ReleaseTexture()
     {
-        texture?.Dispose();
-        texture = null;
+        ReleaseUploadTexture();
+        ReleaseGpuFrameView();
+        Texture = null;
+    }
+
+    // Skia draws UNorm colors, which are sRGB: a view of them as sRGB gives the linear colors
+    private Texture GetSrgbView(Texture gpuFrame)
+    {
+        if (gpuFrameView?.ParentTexture != gpuFrame)
+        {
+            ReleaseGpuFrameView();
+            gpuFrameView = gpuFrame.ToTextureView(new TextureViewDescription
+            {
+                Type = ViewType.Full,
+                Format = PixelFormat.R8G8B8A8_UNorm_SRgb,
+                Flags = TextureFlags.ShaderResource,
+            });
+        }
+        return gpuFrameView;
+    }
+
+    private void ReleaseUploadTexture()
+    {
+        uploadTexture?.Dispose();
+        uploadTexture = null;
+    }
+
+    private void ReleaseGpuFrameView()
+    {
+        gpuFrameView?.Dispose();
+        gpuFrameView = null;
     }
 
     public void Dispose()
