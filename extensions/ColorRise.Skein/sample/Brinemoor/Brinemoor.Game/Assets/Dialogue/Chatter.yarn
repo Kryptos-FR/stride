@@ -1,0 +1,34 @@
+title: PierChatter
+act: Arrival
+scenario: The harbour dues
+when: $act == Act.Arrival
+---
+// What the fishers say to each other on the pier. The game plays this group on a second dialogue runner, as captions,
+// while the courier is near: it never stops the courier's own dialogue.
+=> Maud: Twelve shillings. For a mooring ring and a hard look. #line:0f8973d
+=> Joss: Let him say twelve to my face. #mood:angry #line:0fff164
+=> Maud: The lamp was dark again last night. #line:0474001
+=> Joss: Wind is backing. Rain by morning. #line:017a461
+===
+
+title: PierChatter
+act: Wreck
+scenario: Salvage
+when: $act == Act.Wreck
+---
+=> Maud: Forty crates. I counted them twice. #line:04da0e9
+=> Joss: Brandt counted them three times. #line:08ea30a
+=> Maud: Odile would know what to do. <<if not $odile_here>> #line:08f1ae2
+=> Joss: That passenger keeps looking at the lighthouse. #line:022d49c
+===
+
+title: PierChatter
+act: HighTide
+scenario: The vote
+when: $act == Act.HighTide
+---
+=> Maud: No causeway today. We are an island again. #line:0b77fae
+=> Joss: A vote. As if the sea cared who holds the key. #line:076d041
+=> Maud: Three hands on the rope. That is all it takes. #line:00564d9
+=> Joss: Did you see her? Odile is back! <<if $odile_here>> #line:0841922
+===

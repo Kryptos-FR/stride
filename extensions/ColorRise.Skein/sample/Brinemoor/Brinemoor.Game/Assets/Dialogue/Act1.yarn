@@ -1,47 +1,262 @@
+title: ActOneNotes
+act: Arrival
+style: note
+---
+Act I, one day. The courier arrives with three letters. Brandt has the key and Maud the oil: the lamp must burn before the night, or the ship of Act II strikes the rocks. The dues and the cat are deeds that the vote of Act III remembers. #line:0a9fe37
+===
+
 title: Events
 act: Arrival
 scenario: The dark lamp
+quest: letters
 when: once
 when: $act == Act.Arrival
 ---
-The causeway to Brinemoor is open at low tide. You cross it with the post bag on your back.
-The lighthouse stands dark over the town.
+The causeway to Brinemoor is open at low tide. You cross it with the post bag on your back. #line:033f504
+Three letters for the island: one for the harbourmaster, one for a fisher called Maud, one for Odile, who keeps the light. #line:020005d
+The lighthouse stands dark over the town. #line:06d6ed6
+<<give letter 3>>
+<<set $quest_letters = QuestState.Active>>
+<<quest_changed letters>>
+===
+
+title: LettersLeft
+act: All
+quest: letters
+---
+// Said after each letter is handed over
+<<if item_count("letter") > 0>>
+    You have [plural value={item_count("letter")} one="one letter" other="% letters" /] left in the bag. #line:049ffa0
+<<else>>
+    The bag is empty. Every letter found its hands. #line:039eb4b
+    <<set $quest_letters = QuestState.Succeeded>>
+    <<quest_changed letters>>
+<<endif>>
+===
+
+title: Brandt
+act: All
+quest: letters
+when: not $letter_brandt
+---
+<<take letter>>
+<<set $letter_brandt = true>>
+Brandt: From the bank. They never write to say thank you. #line:0695abb
+<<detour LettersLeft>>
 ===
 
 title: Brandt
 act: Arrival
 scenario: The dark lamp
-when: $quest_lamp == QuestState.Active and not has_item("key")
+quest: lamp
+when: $act == Act.Arrival
+when: $quest_lamp == QuestState.Active and not has_item("key") and not $lamp_lit
 ---
-Brandt: The keeper is gone, and the lamp with her. Odile left me the spare key.
--> I will light the lamp. Give me the key.
-    Brandt: Take it. Bring it back.
+Brandt: The keeper has been gone three days, and the lamp with her. She left me the spare key. #line:058d769
+-> I will light the lamp. Give me the key. #line:06d1280
+    Brandt: Take it. And bring it back. #line:0540aea
     <<give key>>
--> It is not my lamp.
-    Brandt: It will be everyone's, tonight.
+-> It is not my lamp. #line:00e9487
+    Brandt: It will be everyone's, tonight. #line:0d70b7a
+    -> Then give me the key. #line:brandt_key_after_all
+        Brandt: Take it. And bring it back. #line:brandt_key_given_after_all
+        <<give key>>
+    -> Good day. #line:brandt_key_refused
 ===
 
 title: Brandt
 act: Arrival
+scenario: The harbour dues
+when: $act == Act.Arrival
+when: $dues_asked and not $dues_settled
+---
+Brandt: Joss sent you? The dues are {$dues} shillings a boat now. The harbour has debts. #line:0d7121b
+-> Twelve is too much. The boats cannot pay it. #line:0793d5b
+    // Eleven at most, less with luck
+    <<set $dues = round(11 - dice(6) / 2)>>
+    <<set $dues_cut = true>>
+    Brandt: You are worse than the bank. [pause=600 /]{$dues}, then. #mood:angry #line:0f244fd
+    Brandt: Half before midsummer: {format("{0:0.0}", $dues / 2)} shillings a boat, and not a day late. #line:0b402c7
+-> It is your harbour. #line:0d4253e
+    Brandt: It is. Good day. #line:07ebff8
+<<set $dues_settled = true>>
+===
+
+title: Brandt
+act: All
 when: always
 ---
-Brandt: Harbour office. Mind the tide.
+<<if $act == Act.Arrival>>
+    Brandt: Post goes in the box. Boats pay at the desk. #line:0e69836
+<<elseif $act == Act.Wreck>>
+    Brandt: The cargo is counted. Every crate. #line:0fa1983
+<<else>>
+    Brandt: The bell rings at nightfall. Then we will see. #line:02a62d4
+<<endif>>
+Brandt: Mind the tide. #line:mind_the_tide
+===
+
+title: Maud
+act: All
+quest: letters
+when: not $letter_maud
+---
+<<take letter>>
+<<set $letter_maud = true>>
+Maud: My sister. Every spring she asks me to leave the island. Every spring I mend the nets. #line:01696c0
+<<detour LettersLeft>>
 ===
 
 title: Maud
 act: Arrival
 scenario: The dark lamp
+quest: lamp
+when: $act == Act.Arrival
 when: $quest_lamp == QuestState.Active and not $oil_allowed
 ---
-Maud: A lamp needs oil. Take a can from my shed, by the pier.
+Maud: Odile never let that lamp go dry. Something is wrong up there. #line:052df87
+Maud: A lamp needs oil. Take a can from my shed, by the pier. #line:06c56f0
 <<set $oil_allowed = true>>
 ===
 
 title: Maud
-act: Arrival
+act: All
 when: always
 ---
-Maud: The fish don't wait, courier.
+=> Maud: The fish don't wait, courier. #line:0e7e4a4
+=> Maud: Mind the nets. They cost more than the boat. #line:0dd1149
+=> Maud: Odile used to wave from up there. Every evening. <<if not $odile_here>> #line:021102c
+=> Maud: Look at that. Somebody in the lamp room again. <<if $odile_here>> #line:031db8b
+===
+
+title: Joss
+act: Arrival
+scenario: The harbour dues
+when: $act == Act.Arrival and not $dues_asked
+---
+Joss: Twelve shillings a boat! It was eight at Candlemas. #mood:angry #line:0239596
+Joss: Brandt will not hear it from us. But the post walks into that office every day. #line:0a30e6a
+-> I will speak to him. #line:0dea67d
+    Joss: Do that, and I owe you a fish. #line:08424c1
+-> I only carry letters. #line:0a0b72e
+    Joss: Then carry this one: twelve is too much. #line:08dab30
+<<set $dues_asked = true>>
+===
+
+title: Joss
+act: All
+when: always
+---
+<<if $dues_cut>>
+    <<once>>
+        Joss: {$dues} shillings! You got him down. Nobody gets him down. #mood:glad #line:0159224
+    <<endonce>>
+<<endif>>
+Joss: What can I do for the post? #line:04ef25c
+// With nothing left to ask, the options are passed over
+-> Have you a fish to spare? It is for a cat. <<if $quest_cat == QuestState.Active and not has_item("fish") and not $cat_down>> #line:048bf45
+    Joss: For Biscuit? Take a herring. That cat eats better than I do. #line:0b68f89
+    <<give fish>>
+-> How is the catch? <<if not visited("JossCatch")>> #line:06ed0dd
+    <<detour JossCatch>>
+Joss: Back to the nets, then. #line:040c64d
+===
+
+title: JossCatch
+act: All
+---
+Joss: Herring, mostly. And a sea boot, once. I threw it back. #line:0d05338
+===
+
+title: Pim
+act: All
+quest: cat
+when: $quest_cat == QuestState.NotStarted
+---
+Pim: Biscuit went up the roof of the inn and he won't come down. He's been there since breakfast. #mood:sad #line:022a326
+-> I will get him down. #line:0653a38
+    <<set $quest_cat = QuestState.Active>>
+    Pim: He likes herring. Joss has herring. #line:0c0f5a6
+-> I have letters to carry. #line:0db9361
+    <<set $quest_cat = QuestState.Offered>>
+    Pim: He'll still be there. He's stubborn. #line:0491787
+<<quest_changed cat>>
+===
+
+title: Pim
+act: All
+quest: cat
+when: $quest_cat == QuestState.Offered
+---
+Pim: Did you change your mind? About Biscuit? #line:04da65d
+-> Yes. I will get him down. #line:04c10a5
+    <<set $quest_cat = QuestState.Active>>
+    <<quest_changed cat>>
+    Pim: Herring! He likes herring. Joss has some. #line:0fa9bc7
+-> Not yet. #line:068587b
+    Pim: All right. #line:0c14fe5
+===
+
+title: Pim
+act: All
+when: always
+---
+<<if $cat_down>>
+    => Pim: Biscuit says thank you. He says it by sitting on your bag. #mood:glad #line:0f1a2ba
+    => Pim: He only went up there to look at the sea, I think. #line:09d75c7
+<<elseif $quest_cat == QuestState.Active>>
+    Pim: Herring. Joss has herring. #line:0a72a20
+<<else>>
+    => Pim: Gran says the lamp is the island's eye. #line:02769d5
+    => Pim: I can count every boat from here. Do you want to hear? #line:0e66da4
+<<endif>>
+===
+
+title: Cat
+act: All
+quest: cat
+when: $quest_cat == QuestState.Active and has_item("fish")
+---
+<<take fish>>
+You hold up the herring. [pause=700 /]The cat thinks about it. [pause=700 /]Then it walks down the drainpipe as if it had meant to all along. #line:0794d95
+<<walk Pim Cat>>
+Pim: Biscuit! #mood:glad #line:0f68b14
+<<set $cat_down = true>>
+<<set $quest_cat = QuestState.Succeeded>>
+<<quest_changed cat>>
+===
+
+title: Cat
+act: All
+quest: cat
+when: not $cat_down
+---
+<<once>>
+    A ginger cat looks down at you from the roof of the inn. It is not coming down. #line:09ddecf
+<<else>>
+    The cat blinks. Still not coming down. #line:0cf5206
+<<endonce>>
+===
+
+title: Tam
+act: All
+when: always
+---
+Tam: [select value={time_of_day()} morning="Morning" afternoon="Afternoon" evening="Evening" night="Late" /], courier. The Anchor is open. #line:0613ee5
+-> What is cooking? #line:0a27db2
+    <<detour InnMenu>>
+-> Nothing, thank you. #line:0308330
+Tam: Mind the step. #line:0646de0
+===
+
+title: InnMenu
+act: All
+---
+<<if visited("InnMenu")>>
+    Tam: You again? Still stew. You have asked [plural value={visited_count("InnMenu")} one="once" other="% times" /] already. #line:0fa2ec0
+<<else>>
+    Tam: Stew. It is always stew. With fish in it, when Joss is lucky. #line:022c9d9
+<<endif>>
 ===
 
 title: OilCan
@@ -49,48 +264,92 @@ act: Arrival
 quest: lamp
 when: $oil_allowed and not $oil_taken
 ---
-You take a can of lamp oil.
+You take a can of lamp oil from Maud's shed. #line:09cd9a8
 <<give oil>>
 <<set $oil_taken = true>>
 ===
 
-title: LighthouseDoor
+title: OilCan
 act: Arrival
 quest: lamp
-when: $quest_lamp == QuestState.NotStarted
+when: not $oil_allowed and not $oil_taken
 ---
-You knock. Nobody answers. High above, the lamp room is dark.
+Cans of lamp oil, in somebody's shed. Not yours to take. #line:05566b4
+===
+
+title: LighthouseDoor
+act: Arrival
+scenario: The dark lamp
+quest: lamp
+when: $act == Act.Arrival and $quest_lamp == QuestState.NotStarted
+---
+You knock. Nobody answers. Odile's letter stays in the bag. #line:09fa220
+High above, the lamp room is dark. Night will come, and ships with it. #line:0253eee
 <<set $quest_lamp = QuestState.Active>>
 <<quest_changed lamp>>
 ===
 
 title: LighthouseDoor
 act: Arrival
+scenario: The dark lamp
 quest: lamp
 when: $quest_lamp == QuestState.Active and $lamp_can_be_lit
 ---
-The key turns. You climb, fill the lamp and light it.
+The key turns. You climb the stair, fill the lamp and light it. #line:0007cf9
 <<take oil>>
 <<set $lamp_lit = true>>
 <<set $quest_lamp = QuestState.Succeeded>>
 <<quest_changed lamp>>
+The beam swings out over the water. #line:0462f0b
+===
+
+title: LighthouseDoor
+act: Arrival
+scenario: The dark lamp
+quest: lamp
+when: $quest_lamp == QuestState.Active and not $lamp_can_be_lit
+---
+<<if has_item("key")>>
+    The key fits. But the lamp is dry: it needs oil. #line:0a27745
+<<elseif has_item("oil")>>
+    You have oil, and a locked door. #line:025a73b
+<<else>>
+    Locked. Someone on the island must have a spare key. #line:0b046a4
+<<endif>>
+===
+
+title: Bell
+act: Arrival
+when: $act == Act.Arrival
+---
+The town bell. Ring it without a reason and Brandt will find you one. #line:00f2eca
 ===
 
 title: Events
 act: Arrival
 scenario: The dark lamp
+when: $act == Act.Arrival
 when: $is_night
-when: $quest_lamp == QuestState.Active
+when: $lamp_lit
 ---
-Night falls on a dark lamp.
-<<set $quest_lamp = QuestState.Failed>>
-<<quest_changed lamp>>
+Night. The lamp turns over Brinemoor, and far out a ship turns with it. #line:01ec186
+She finds the channel and drops anchor in the bay. #line:033a916
+<<set $ship_anchored = true>>
+<<jump ActTwo>>
 ===
 
-title: PierChatter
+title: Events
 act: Arrival
-when: always
+scenario: The dark lamp
+quest: lamp
+when: $act == Act.Arrival
+when: $is_night
+when: not $lamp_lit
 ---
-Maud: Dues up again, they say.
-Joss: Let them say it to my face.
+Night falls on a dark lamp. #line:0d3b30f
+Far out, a ship looks for the channel and finds the rocks. #line:0b0d4a9
+<<set $wreck_aground = true>>
+<<set $quest_lamp = QuestState.Failed>>
+<<quest_changed lamp>>
+<<jump ActTwo>>
 ===

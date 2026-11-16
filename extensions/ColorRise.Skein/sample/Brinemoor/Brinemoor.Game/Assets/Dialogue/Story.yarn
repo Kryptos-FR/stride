@@ -1,9 +1,11 @@
 title: Story
+act: All
 cluster: Story
 color: yellow
 ---
 // The state of the story. The acts and the quests are variables: the nodes read them in their "when:" headers, and
-// the game shows them on its screen.
+// the game shows them on its screen. What the courier carries and the time of the day are the game's: the scripts ask
+// for them with functions (has_item, item_count, time_of_day) and change them with commands (give, take, end_day).
 <<enum Act>>
     <<case Arrival>>
     <<case Wreck>>
@@ -18,29 +20,131 @@ color: yellow
     <<case Failed>>
 <<endenum>>
 
+<<enum Side>>
+    <<case Neither>>
+    <<case Fishers>>
+    <<case Harbour>>
+<<endenum>>
+
+<<enum Candidate>>
+    <<case Undecided>>
+    <<case Nobody>>
+    <<case Odile>>
+    <<case Brandt>>
+    <<case Wren>>
+<<endenum>>
+
 /// The act the story is in.
 <<declare $act = Act.Arrival>>
 
+// The quests. The game writes a quest in its journal when a script says quest_changed with its id.
+
+/// Carry the three letters to their hands.
+<<declare $quest_letters = QuestState.NotStarted>>
 /// Light the lamp of the lighthouse before the night.
 <<declare $quest_lamp = QuestState.NotStarted>>
+/// Get Pim's cat down from the roof of the inn.
+<<declare $quest_cat = QuestState.NotStarted>>
+/// Say at the town meeting who should have the cargo.
+<<declare $quest_salvage = QuestState.NotStarted>>
+/// Find the three signs of Odile before the night.
+<<declare $quest_trail = QuestState.NotStarted>>
+/// Take Tam's stew to the stranger.
+<<declare $quest_meal = QuestState.NotStarted>>
+/// Open the grate of the cave.
+<<declare $quest_odile = QuestState.NotStarted>>
+/// Choose who keeps the light.
+<<declare $quest_vote = QuestState.NotStarted>>
 
+// Act I
+
+/// Brandt has his letter.
+<<declare $letter_brandt = false>>
+/// Maud has her letter.
+<<declare $letter_maud = false>>
+/// Odile has her letter.
+<<declare $letter_odile = false>>
 /// The lamp of the lighthouse burns. The game shows its light.
 <<declare $lamp_lit = false>>
-
 /// Maud said the courier can take a can of oil from her shed.
 <<declare $oil_allowed = false>>
-
 /// The can of oil is taken. The game hides it.
 <<declare $oil_taken = false>>
+/// What a boat pays the harbour, in shillings.
+<<declare $dues = 12>>
+/// Joss asked the courier to speak to Brandt about the dues.
+<<declare $dues_asked = false>>
+/// The courier spoke to Brandt about the dues, one way or the other.
+<<declare $dues_settled = false>>
+/// The courier got the dues down. Joss remembers it at the vote.
+<<declare $dues_cut = false>>
+/// The cat is down from the roof. The game hides it. Pim remembers it at the vote.
+<<declare $cat_down = false>>
+
+// Act II
+
+/// The ship found the channel, because the lamp was lit. The game shows her in the bay.
+<<declare $ship_anchored = false>>
+/// The ship struck the rocks, because the lamp was dark. The game shows her wreck.
+<<declare $wreck_aground = false>>
+/// The stranger is on the island. The game shows her.
+<<declare $wren_here = false>>
+/// The courier spoke to Wren.
+<<declare $wren_met = false>>
+/// How much Wren trusts the courier. At two, she says who she is.
+<<declare $wren_trust = 0>>
+/// Who the courier spoke for at the town meeting. Maud remembers it at the vote.
+<<declare $side = Side.Neither>>
+/// The boot is found. The game hides it.
+<<declare $clue_boot = false>>
+/// The pages of the ledger are found.
+<<declare $clue_ledger = false>>
+/// The lantern is found. The game hides it.
+<<declare $clue_lantern = false>>
+/// How many signs of Odile the courier found.
+<<declare $clues_found = 0>>
+
+// Act III
+
+/// Odile is back in the town and stands at the vote. The game shows her.
+<<declare $odile_here = false>>
+/// Odile left the island.
+<<declare $odile_gone = false>>
+/// Wren said who she is.
+<<declare $wren_asked = false>>
+/// Wren stands at the vote.
+<<declare $wren_stands = false>>
+/// The courier spoke to Brandt about the ledger.
+<<declare $brandt_faced = false>>
+/// The name the courier gave to someone who asked who to ring for.
+<<declare $named = Candidate.Undecided>>
+/// Who Maud rings for.
+<<declare $vote_maud = Candidate.Undecided>>
+/// Who Joss rings for.
+<<declare $vote_joss = Candidate.Undecided>>
+/// Who Tam rings for.
+<<declare $vote_tam = Candidate.Undecided>>
+/// Who Pim rings for, with her grandmother's vote.
+<<declare $vote_pim = Candidate.Undecided>>
+/// The hands on the rope for Odile.
+<<declare $votes_odile = 0>>
+/// The hands on the rope for Brandt. His own is the first.
+<<declare $votes_brandt = 0>>
+/// The hands on the rope for Wren.
+<<declare $votes_wren = 0>>
+
+// Facts that follow from others: smart variables, computed each time they are read.
 
 /// The courier has what the lamp needs.
 <<declare $lamp_can_be_lit = has_item("oil") and has_item("key")>>
-
 /// The night has fallen.
 <<declare $is_night = time_of_day() == "night">>
+/// The three signs of Odile are found.
+<<declare $trail_complete = $clues_found >= 3>>
 ===
 
 title: Interface
+act: All
 cluster: Story
 color: yellow
 ---
@@ -70,11 +174,32 @@ to do #line:state_active
 done #line:state_succeeded
 failed #line:state_failed
 
+Letters for Brinemoor #line:quest_letters
 Light the lamp #line:quest_lamp
+The cat on the roof #line:quest_cat
+Salvage or seize #line:quest_salvage
+Follow the trail #line:quest_trail
+A warm meal #line:quest_meal
+Free Odile #line:quest_odile
+Swing the vote #line:quest_vote
 
+letter #line:item_letter
 lamp oil #line:item_oil
 the lighthouse key #line:item_key
+a herring #line:item_fish
+a bowl of stew #line:item_stew
+ledger pages #line:item_pages
 
 try the lighthouse door #line:use_door
 take a can of oil #line:use_oil
+ring the bell #line:use_bell
+look at the cat #line:use_cat
+go into the cave #line:use_cave
+look under the rocks #line:use_lantern
+look at the boot #line:use_boot
+
+Odile keeps the light. It burns every night, and Brinemoor sleeps. #line:ending_keeper
+Brandt keeps the light. It burns on the nights that suit him. #line:ending_harbourmaster
+Wren keeps the light until spring, and writes everything down. #line:ending_stranger
+Nobody keeps the light. The lamp stays dark, and ships learn to fear Brinemoor. #line:ending_dark
 ===

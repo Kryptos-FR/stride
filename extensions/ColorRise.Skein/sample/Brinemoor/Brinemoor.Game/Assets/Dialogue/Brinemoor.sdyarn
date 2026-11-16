@@ -6,7 +6,10 @@ SourceFiles:
     4bec41178e55c0f6e6f6fc3d8c1b841b: '**/*.yarn'
 ExcludedFiles: {}
 BaseLanguage: en
-Localisations: {}
+Localisations:
+    7c1e5a0b93d24f68a1b7e2c4d5f60718:
+        Language: fr
+        Strings: !file Strings/Brinemoor.fr.csv
 LineIdStyle: Random
 Saliency: RandomBestLeastRecentlyViewed
 DiagnosticSeverities:

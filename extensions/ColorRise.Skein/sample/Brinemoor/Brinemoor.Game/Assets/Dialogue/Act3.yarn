@@ -1,0 +1,330 @@
+title: ActThreeNotes
+act: HighTide
+style: note
+---
+Act III, one day. The island is cut off and votes at nightfall: three hands of five on the bell rope make a keeper. Brandt rings for himself. Maud, Joss, Tam and Pim each listen to the courier only if a deed of Acts I and II moved them. Four endings: keeper, harbourmaster, stranger, dark. #line:09cea36
+===
+
+title: ActThree
+act: HighTide
+scenario: The vote
+quest: vote
+---
+// The night event of Act II jumps here
+<<set $act = Act.HighTide>>
+<<end_day>>
+Morning. The spring tide has covered the causeway. Nobody leaves Brinemoor today, and nobody comes. #line:0fee7bb
+Brandt has called a vote for nightfall: who keeps the light. #line:0463684
+<<set $votes_brandt = 1>>
+<<set $quest_vote = QuestState.Active>>
+<<quest_changed vote>>
+<<if $quest_trail == QuestState.Succeeded>>
+    And the ledge to the cave is dry. #line:0db3c5f
+    <<set $quest_odile = QuestState.Active>>
+    <<quest_changed odile>>
+<<endif>>
+===
+
+title: Cave
+act: HighTide
+scenario: The cave
+quest: odile
+when: $act == Act.HighTide and $quest_odile == QuestState.Active
+---
+At the back of the cave, behind an iron grate, a woman sits on a crate and trims a lamp wick that has no lamp. #line:0a44184
+Odile: The post. Of course. The post gets everywhere. #line:0cd94a2
+Odile: Brandt took money to keep my lamp dark on certain nights. Boats came in here, by the green lantern. I wrote it all down. #line:0aa9019
+Odile: His friends found me before I found the mainland. #mood:angry #line:077c441
+<<if has_item("letter")>>
+    <<take letter>>
+    <<set $letter_odile = true>>
+    You pass her the last letter through the bars. #line:0773f4f
+    Odile: From the lighthouse board. "An inspector will call." [pause=600 /]Late, as always. #line:04cde8f
+    <<detour LettersLeft>>
+<<endif>>
+The grate is held shut by one rusted pin. #line:04c264d
+-> Pull the pin. "Come back and keep the light." #line:0f786ce
+    <<set $odile_here = true>>
+    Odile: Then let them look me in the eye at the bell. #mood:glad #line:0cfcbe2
+-> Pull the pin. "Take their boat and go." #line:05e7b01
+    <<set $odile_gone = true>>
+    Odile: The mainland will hear all of it. Keep the lamp for me, if you can. #mood:sad #line:0b8b415
+<<set $quest_odile = QuestState.Succeeded>>
+<<quest_changed odile>>
+===
+
+title: Cave
+act: All
+scenario: The cave
+when: $quest_odile != QuestState.Active
+---
+<<if $quest_odile == QuestState.Succeeded>>
+    An empty cave, an open grate, and a green lantern that nobody will light again. #line:0751ee3
+<<elseif $act == Act.HighTide>>
+    A cave mouth under the rocks. Without a trail to follow, it is only a hole full of sea. #line:06c44d8
+<<else>>
+    A cave mouth under the north rocks. The sea is in it up to the roof. #line:097abb6
+<<endif>>
+===
+
+title: Odile
+act: HighTide
+when: always
+---
+=> Odile: Four days on a crate. I have decided that I like stairs. #line:00b7c16
+=> Odile: The lamp wants trimming. It always wants trimming. #line:05e399b
+=> Odile: Whatever the bell says, thank you for the pin. #line:0cfd10d
+===
+
+title: Wren
+act: HighTide
+scenario: The vote
+when: $act == Act.HighTide and $wren_trust >= 2 and not $wren_asked
+---
+<<set $wren_asked = true>>
+Wren: You were straight with me, so I will be straight with you. The lighthouse board sent me. I am their inspector. #line:098653a
+Wren: A dark lamp, a missing keeper, a harbourmaster with new money. I have seen enough. #line:036b3a3
+Wren: I could keep this light myself, until the board sends someone. If the island will have a stranger. #line:0611923
+-> Stand at the bell. I will speak for you. #line:0a34cc3
+    <<set $wren_stands = true>>
+    Wren: Then I stand. #line:080be42
+-> The island should choose one of its own. #line:00a358f
+    Wren: That is fair. I will watch, then, and write it down. #line:029cf7f
+===
+
+title: Brandt
+act: HighTide
+scenario: The vote
+when: $act == Act.HighTide and has_item("pages") and not $brandt_faced
+---
+<<set $brandt_faced = true>>
+Brandt: You have that look. Somebody has been reading. #mood:afraid #line:0b47753
+-> Show him the ledger pages. #line:00803e5
+    Brandt: [pause=800 /]The harbour had debts. The lamp was dark a few nights, no more. Nobody was meant to be hurt. #mood:afraid #line:034397b
+    Brandt: I will still ring for myself. Somebody has to pay the bills. #line:0c74837
+-> Say nothing. #line:0e16d6f
+    Brandt: Good. #line:0a85204
+    Brandt: Mind the tide. #shadow:mind_the_tide
+===
+
+title: AskVote
+act: HighTide
+scenario: The vote
+quest: vote
+cluster: The vote
+color: purple
+---
+// The courier names someone, or nobody; the node that detours here reads $named
+-> Ring for Odile. <<if $odile_here>> #line:05b3e57
+    <<set $named = Candidate.Odile>>
+-> Ring for Wren. <<if $wren_stands>> #line:07397c2
+    <<set $named = Candidate.Wren>>
+-> Ring for Brandt. #line:0065f92
+    <<set $named = Candidate.Brandt>>
+-> Ring for nobody. #line:00a3613
+    <<set $named = Candidate.Nobody>>
+===
+
+title: CastVote
+act: HighTide
+scenario: The vote
+quest: vote
+cluster: The vote
+color: purple
+---
+// Adds a hand on the rope for $named
+<<if $named == Candidate.Odile>>
+    <<set $votes_odile = $votes_odile + 1>>
+<<elseif $named == Candidate.Brandt>>
+    <<set $votes_brandt = $votes_brandt + 1>>
+<<elseif $named == Candidate.Wren>>
+    <<set $votes_wren = $votes_wren + 1>>
+<<endif>>
+===
+
+title: Maud
+act: HighTide
+scenario: The vote
+quest: vote
+when: $act == Act.HighTide and $vote_maud == Candidate.Undecided
+---
+<<if $side == Side.Fishers>>
+    Maud: You stood with the boats when it cost you something. Who should I ring for? #line:0da8ff9
+    <<detour AskVote>>
+    Maud: Then that is how I ring. #line:0e58950
+<<elseif $odile_here>>
+    Maud: I will not take your word on anything, courier. But Odile is back, and I ring for Odile. #line:0f49a70
+    <<set $named = Candidate.Odile>>
+<<else>>
+    Maud: I will not take your word, and nobody up there is worth the rope. My hands stay in my pockets. #line:0180614
+    <<set $named = Candidate.Nobody>>
+<<endif>>
+<<set $vote_maud = $named>>
+<<detour CastVote>>
+===
+
+title: Joss
+act: HighTide
+scenario: The vote
+quest: vote
+when: $act == Act.HighTide and $vote_joss == Candidate.Undecided
+---
+<<if $dues_cut>>
+    Joss: You got the dues down. Your word is good on this pier. Who is it to be? #line:08002d5
+    <<detour AskVote>>
+    Joss: Done. #line:021933b
+<<else>>
+    Joss: A bell never lowered a due. I am going fishing. #mood:angry #line:02925e7
+    <<set $named = Candidate.Nobody>>
+<<endif>>
+<<set $vote_joss = $named>>
+<<detour CastVote>>
+===
+
+title: Tam
+act: HighTide
+scenario: The vote
+quest: vote
+when: $act == Act.HighTide and $vote_tam == Candidate.Undecided
+---
+<<if $quest_meal == QuestState.Succeeded>>
+    Tam: She ate the stew. All of it. You have a way with people, courier. Who would you ring for? #line:046cd12
+    <<detour AskVote>>
+    Tam: I will tell the rope. #line:0153dbd
+<<else>>
+    Tam: Brandt pays his slate at the Anchor. That is more than most. I ring for Brandt. #line:0934661
+    <<set $named = Candidate.Brandt>>
+<<endif>>
+<<set $vote_tam = $named>>
+<<detour CastVote>>
+===
+
+title: Pim
+act: HighTide
+scenario: The vote
+quest: vote
+when: $act == Act.HighTide and $vote_pim == Candidate.Undecided
+---
+Pim: Gran cannot walk down to the bell. I ring for her. #line:08d6202
+<<if $cat_down>>
+    Pim: She says: ask the one who got Biscuit down. So who? #line:03f90b4
+    <<detour AskVote>>
+    Pim: I will tell Gran. She will say she thought so. #line:0c6c522
+<<else>>
+    Pim: She says the harbourmaster, like always. #line:0a70264
+    <<set $named = Candidate.Brandt>>
+<<endif>>
+<<set $vote_pim = $named>>
+<<detour CastVote>>
+===
+
+title: Bell
+act: HighTide
+scenario: The vote
+quest: vote
+when: $act == Act.HighTide
+---
+The rope hangs still. Ring it, and the island votes with whatever it has in mind now. #line:0fdbb48
+-> Ring the bell. #line:03dc236
+    <<jump Count>>
+-> Not yet. #line:0e1ccb3
+===
+
+title: Events
+act: HighTide
+scenario: The vote
+quest: vote
+when: $act == Act.HighTide
+when: $is_night
+---
+Night comes whether the post is ready or not. The bell is already ringing. #line:0a67751
+<<jump Count>>
+===
+
+title: Count
+act: HighTide
+scenario: The vote
+quest: vote
+cluster: The vote
+color: purple
+---
+// Those the courier did not speak to ring as they would have
+<<if $vote_maud == Candidate.Undecided>>
+    <<if $odile_here>>
+        <<set $named = Candidate.Odile>>
+    <<else>>
+        <<set $named = Candidate.Nobody>>
+    <<endif>>
+    <<set $vote_maud = $named>>
+    <<detour CastVote>>
+<<endif>>
+<<if $vote_joss == Candidate.Undecided>>
+    <<set $vote_joss = Candidate.Nobody>>
+<<endif>>
+<<if $vote_tam == Candidate.Undecided>>
+    <<set $named = Candidate.Brandt>>
+    <<set $vote_tam = $named>>
+    <<detour CastVote>>
+<<endif>>
+<<if $vote_pim == Candidate.Undecided>>
+    <<set $named = Candidate.Brandt>>
+    <<set $vote_pim = $named>>
+    <<detour CastVote>>
+<<endif>>
+
+<<walk Brandt Bell>>
+<<if $wren_stands>>
+    <<walk Wren Bell>>
+<<endif>>
+The island stands around the bell. The rope goes from hand to hand. #line:0575247
+<<wait 1>>
+Brandt: For the harbourmaster: [plural value={$votes_brandt} one="one hand" other="% hands" /]. #line:094217f
+<<if $odile_here>>
+    Odile: For the keeper: [plural value={$votes_odile} one="one hand" other="% hands" /]. #line:01ffd06
+<<endif>>
+<<if $wren_stands>>
+    Wren: For the stranger: [plural value={$votes_wren} one="one hand" other="% hands" /]. #line:0f592ff
+<<endif>>
+
+<<if $votes_odile >= 3>>
+    Odile is on the lighthouse stair before the bell has stopped. #line:02e4675
+    <<detour Epilogue>>
+    <<set $quest_vote = QuestState.Succeeded>>
+    <<quest_changed vote>>
+    <<ending keeper>>
+<<elseif $votes_brandt >= 3>>
+    Brandt takes the key from his own pocket and holds it up, as if someone had given it to him. #line:0267258
+    <<detour Epilogue>>
+    <<set $quest_vote = QuestState.Succeeded>>
+    <<quest_changed vote>>
+    <<ending harbourmaster>>
+<<elseif $votes_wren >= 3>>
+    Wren looks at the rope as if it might be a mistake. Then she asks where the oil is kept. #line:020e964
+    <<detour Epilogue>>
+    <<set $quest_vote = QuestState.Succeeded>>
+    <<quest_changed vote>>
+    <<ending stranger>>
+<<else>>
+    Three hands make a keeper, and nobody has three. The rope swings empty. #line:0c5bf5d
+    <<detour Epilogue>>
+    <<set $quest_vote = QuestState.Failed>>
+    <<quest_changed vote>>
+    <<ending dark>>
+<<endif>>
+===
+
+title: Epilogue
+act: HighTide
+scenario: The vote
+cluster: The vote
+color: purple
+---
+// Two line groups: each says the one line that fits what the courier did
+=> Biscuit moves into the lamp room, where it is warm. <<if $cat_down and $votes_odile >= 3>> #line:0f4f9dd
+=> Biscuit sleeps on the post bag, and will not be moved. <<if $cat_down>> #line:0f37468
+=> On the roof of the Anchor, a ginger cat watches the bell and does not come down. <<if not $cat_down>> #line:01c0564
+The tide goes out again, as it does. #line:09acb43
+=> The boats share out the cargo, crate by crate. <<if $side == Side.Fishers>> #line:0adc5f2
+=> The cargo pays the harbour's debts, or some of them. <<if $side == Side.Harbour>> #line:052ebff
+=> The cargo sits in the harbour store, and nobody says whose it is. <<if $side == Side.Neither>> #line:064c81a
+===

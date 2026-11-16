@@ -1,6 +1,7 @@
 using ColorRise.Skein;
 using ColorRise.Skein.Assets;
 using ColorRise.Skein.Assets.Compilation;
+using ColorRise.Skein.Assets.Localisation;
 using Stride.Core.Diagnostics;
 
 namespace Brinemoor.Tests;
@@ -26,21 +27,36 @@ internal sealed class TestStory
     {
     }
 
-    public TestStory(IReadOnlyList<(string FileName, string Text)> scripts, int? seed = 1)
+    /// <param name="scripts">The scripts of the story.</param>
+    /// <param name="seed">The seed of what the story leaves to chance.</param>
+    /// <param name="language">The language to play in, when not the base language; <paramref name="translation"/> has its lines.</param>
+    /// <param name="translation">The rows of the strings file of <paramref name="language"/>.</param>
+    public TestStory(IReadOnlyList<(string FileName, string Text)> scripts, int? seed = 1, string? language = null, IReadOnlyList<YarnStringRow>? translation = null)
     {
         Actions.RegisterType(typeof(StoryCommands));
         var functions = Actions.Describe().Where(a => a.Kind == YarnActionKind.Function).Select(YarnFunctionDeclaration.From).ToList();
 
-        Build = YarnProjectBuilder.Build(new YarnProjectAsset(), "Test", scripts, functions);
+        var asset = new YarnProjectAsset();
+        Dictionary<string, IReadOnlyList<YarnStringRow>>? translations = null;
+        if (language is not null && translation is not null)
+        {
+            asset.Localisations.Add(new YarnLocalisation { Language = language });
+            translations = new() { [language] = translation };
+        }
+
+        Build = YarnProjectBuilder.Build(asset, "Test", scripts, functions, translations);
         Assert.Empty(Build.Compilation.Diagnostics.Where(d => d.Severity == YarnSeverity.Error).Select(d => d.ToString()));
         var project = Build.Project!;
-        var strings = Build.BaseStrings!;
+        var tables = Build.Translations.Append(Build.BaseStrings!).ToDictionary(t => t.Language);
 
-        Lines = new TextLineProvider(language => language == strings.Language ? strings : null, project.BaseLanguage, Log)
+        Lines = new TextLineProvider(tables.GetValueOrDefault, project.BaseLanguage, Log)
         {
             LineMetadata = project.LineMetadata,
             ShadowLines = project.ShadowLines,
         };
+        if (language is not null)
+            Lines.Language = language;
+
         Variables = new VariableStorage(Log);
         Session = new DialogueSession(project.GetProgram(), Variables, Lines, Actions, Reader, new DialogueSessionOptions
         {
@@ -53,6 +69,14 @@ internal sealed class TestStory
         Director = new StoryDirector(new SessionStage(Session), Variables, Log);
         StoryCommands.Story = Director;
     }
+
+    /// <summary>
+    /// The story of the sample, from the scripts of the game's assets.
+    /// </summary>
+    /// <param name="seed">The seed of what the story leaves to chance.</param>
+    /// <param name="language">The language to play in, when not English: its strings file is read from the assets.</param>
+    public static TestStory Brinemoor(int? seed = 1, string? language = null)
+        => new(StoryFiles.Scripts(), seed, language, language is null ? null : StoryFiles.Strings(language));
 
     public YarnProjectBuild Build { get; }
 
@@ -83,6 +107,59 @@ internal sealed class TestStory
         Transcript.Clear();
         return lines;
     }
+
+    /// <summary>
+    /// Plays the events that have something to say, as the game does when it starts.
+    /// </summary>
+    public Task Start() => Director.RunEvents();
+
+    /// <summary>
+    /// Talks to a person or uses a thing, as the courier does, and picks the given options in order.
+    /// </summary>
+    public async Task Talk(string node, params string[] choices)
+    {
+        foreach (var choice in choices)
+        {
+            Reader.Choices.Enqueue(choice);
+        }
+
+        Assert.True(Director.CanTalk(node), $"'{node}' has nothing to say now.");
+        Assert.True(await Director.Talk(node));
+        Assert.True(Reader.Choices.Count == 0, $"'{node}' did not offer: {string.Join(" | ", Reader.Choices)}");
+        Assert.Empty(Errors);
+    }
+
+    /// <summary>
+    /// Lets one part of the day pass, as the courier does, and plays the events that follow.
+    /// </summary>
+    public async Task PassTime()
+    {
+        Director.Clock.Advance();
+        await Director.RunEvents();
+        Assert.Empty(Errors);
+    }
+
+    /// <summary>
+    /// Lets time pass until the night's events brought the next morning, or the story ended.
+    /// </summary>
+    public async Task UntilNextDay()
+    {
+        var day = Director.Clock.Day;
+        while (Director.Clock.Day == day && Director.Ending is null)
+        {
+            await PassTime();
+        }
+    }
+
+    /// <summary>
+    /// A true or false variable of the story.
+    /// </summary>
+    public bool Flag(string variable) => Variables.TryGetValue<bool>(variable, out var value) && value;
+
+    /// <summary>
+    /// A number of the story, or the rank of an enum.
+    /// </summary>
+    public int Number(string variable) => Variables.TryGetValue<float>(variable, out var value) ? (int)value : 0;
 
     /// <summary>
     /// A session as the stage of the director, the way the game gives it its dialogue runner.

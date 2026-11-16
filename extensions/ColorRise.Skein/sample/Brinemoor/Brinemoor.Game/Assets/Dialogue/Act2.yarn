@@ -1,0 +1,285 @@
+title: ActTwoNotes
+act: Wreck
+style: note
+---
+Act II, one day. A ship came in the night: at anchor if the lamp burned, on the rocks if not. The town meets at the bell (a hub that detours into each topic). The courier takes a side on the cargo, follows three signs of Odile, and may win the trust of the stranger. #line:0c4256b
+===
+
+title: ActTwo
+act: Wreck
+scenario: Salvage
+quest: salvage
+---
+// The night events of Act I jump here
+<<set $act = Act.Wreck>>
+<<set $wren_here = true>>
+<<end_day>>
+<<if $wreck_aground>>
+    Morning. The ship lies broken on the north rocks, and her crates ride the surf. Her crew is safe at the inn, and one passenger with them. #line:0d6e514
+<<else>>
+    Morning. The ship rides at anchor in the bay. The boats brought her cargo ashore before the gale, and one passenger with it. #line:0f30fff
+<<endif>>
+The bell by the harbour office is ringing: a town meeting. #line:06bdbaa
+<<set $quest_salvage = QuestState.Active>>
+<<quest_changed salvage>>
+===
+
+title: Bell
+act: Wreck
+scenario: Salvage
+when: $act == Act.Wreck
+---
+<<jump TownMeeting>>
+===
+
+title: TownMeeting
+act: Wreck
+scenario: Salvage
+cluster: Town meeting
+color: green
+---
+<<if visited("TownMeeting")>>
+    The meeting has not ended. It may never end. #line:03e94d7
+<<else>>
+    Half the island stands around the bell. Everyone is talking. Nobody is listening. #line:0cbbd01
+<<endif>>
+<<jump MeetingTopics>>
+===
+
+title: MeetingTopics
+act: Wreck
+scenario: Salvage
+cluster: Town meeting
+color: green
+---
+// The hub of the meeting: each topic is a detour that comes back here
+-> Ask about the cargo. <<if $side == Side.Neither>> #line:06ca130
+    <<detour MeetingCargo>>
+    <<jump MeetingTopics>>
+-> Ask about the keeper. <<if not visited("MeetingKeeper")>> #line:023f405
+    <<detour MeetingKeeper>>
+    <<jump MeetingTopics>>
+-> Ask about the stranger. <<if not visited("MeetingStranger")>> #line:0380bca
+    <<detour MeetingStranger>>
+    <<jump MeetingTopics>>
+-> Leave them to it. #line:0b3eb43
+===
+
+title: MeetingCargo
+act: Wreck
+scenario: Salvage
+quest: salvage
+cluster: Town meeting
+color: green
+---
+<<if $wreck_aground>>
+    Maud: Wreck goods belong to whoever pulls them from the sea. That is the custom, and we pulled. #line:028a3b1
+    Brandt: The debts are older than the custom. The harbour takes the cargo. #line:02345af
+<<else>>
+    Maud: We rowed that cargo ashore in a gale. We are owed for it. #line:08cd5fb
+    Brandt: Her captain owes the harbour first. The cargo stays under my lock. #line:0c29c0b
+<<endif>>
+Maud: Ask the post. The post has no boat and no desk. #line:051c593
+-> The boats should have it. #line:0c2b616
+    <<set $side = Side.Fishers>>
+    Maud: There. Thank you, courier. #mood:glad #line:0c2c6d9
+    Brandt: The post should carry letters. #mood:angry #line:09c623d
+-> The harbour should hold it. #line:0b45ecd
+    <<set $side = Side.Harbour>>
+    Brandt: Sense, at last. #line:03ce77a
+    Maud: I thought better of you. #mood:angry #line:03b69fc
+-> I carry letters. I take no side. #line:01fea03
+    Maud: Then come back when you have one. #line:0f5801f
+<<if $side != Side.Neither>>
+    <<set $quest_salvage = QuestState.Succeeded>>
+    <<quest_changed salvage>>
+<<endif>>
+===
+
+title: MeetingKeeper
+act: Wreck
+scenario: Odile's trail
+quest: trail
+cluster: Town meeting
+color: green
+---
+Tam: Four days now. Odile does not just leave. #mood:afraid #line:0e316ea
+Joss: Somebody saw her walk north along the shore, the night before the lamp went dark. #line:0397f86
+Tam: You walk everywhere, courier. Look for her. Look for anything of hers. #line:0ca764a
+<<if $quest_trail == QuestState.NotStarted>>
+    <<set $quest_trail = QuestState.Active>>
+    <<quest_changed trail>>
+<<endif>>
+===
+
+title: MeetingStranger
+act: Wreck
+scenario: The stranger
+cluster: Town meeting
+color: green
+---
+Joss: The passenger? Wren, she calls herself. Came off that ship with one bag and no reason. #line:00a7ae2
+Tam: She is outside the Anchor. She has not eaten, and she watches the lighthouse. #line:0f6e0a6
+===
+
+title: Brandt
+act: Wreck
+scenario: Salvage
+quest: salvage
+when: $act == Act.Wreck and $side == Side.Neither
+---
+Brandt: That cargo pays the harbour's debts. Say so at the bell, courier, and I will remember it. #line:02d0a03
+===
+
+title: Maud
+act: Wreck
+scenario: Salvage
+quest: salvage
+when: $act == Act.Wreck and $side == Side.Neither
+---
+Maud: Brandt wants the cargo for his ledgers. Speak for the boats at the bell. #line:0e92fd0
+===
+
+title: Boot
+act: Wreck
+scenario: Odile's trail
+quest: trail
+when: $act == Act.Wreck and not $clue_boot
+---
+A sea boot, wedged in the rocks above the tide line. There is lamp soot on the leather: a keeper's boot. #line:0c03b93
+<<set $clue_boot = true>>
+<<detour ClueFound>>
+===
+
+title: Lantern
+act: Wreck
+scenario: Odile's trail
+quest: trail
+when: $act == Act.Wreck and not $clue_lantern
+---
+A signal lantern with green glass, hidden under the north rocks. Someone has been calling boats in, where there is no harbour. #line:0a32297
+<<set $clue_lantern = true>>
+<<detour ClueFound>>
+===
+
+title: LighthouseDoor
+act: Wreck
+scenario: Odile's trail
+quest: trail
+when: $act == Act.Wreck and not $clue_ledger
+---
+The door stands open. Somebody searched the place in the night. #line:05a61cb
+On the stair, pages torn from a ledger, in Odile's hand. Dates, and beside each one: "lamp out, by order. B." #line:05a5fa3
+<<give pages>>
+<<set $clue_ledger = true>>
+<<detour ClueFound>>
+===
+
+title: ClueFound
+act: Wreck
+scenario: Odile's trail
+quest: trail
+---
+// Said after each sign is found
+<<set $clues_found = $clues_found + 1>>
+<<if $quest_trail == QuestState.NotStarted>>
+    <<set $quest_trail = QuestState.Active>>
+    <<quest_changed trail>>
+<<endif>>
+That is the [ordinal value={$clues_found} one="%st" two="%nd" few="%rd" other="%th" /] sign of Odile. #line:048d074
+===
+
+title: Events
+act: Wreck
+scenario: Odile's trail
+quest: trail
+when: $act == Act.Wreck
+when: $trail_complete and $quest_trail == QuestState.Active
+---
+A boot, a ledger, a green lantern. They point the same way: the cave under the north rocks. #line:0128805
+The ledge to the cave is under water until tomorrow. #line:04d5bda
+<<set $quest_trail = QuestState.Succeeded>>
+<<quest_changed trail>>
+===
+
+title: Wren
+act: Wreck
+scenario: The stranger
+when: $act == Act.Wreck and not $wren_met
+---
+<<set $wren_met = true>>
+<<if $wreck_aground>>
+    Wren: You are the post. I was on that ship when she struck. I would like to know why. #line:05082f1
+<<else>>
+    Wren: You are the post. I watched your lamp from the deck last night. It came on late. #line:0b3f112
+<<endif>>
+Wren: Who lit the lamp last night? Or who did not? #line:0eea3ce
+-> I lit it myself. The keeper is missing. <<if $lamp_lit>> #line:0abd2da
+    <<set $wren_trust = $wren_trust + 1>>
+    Wren: The post lights the lamp. Then somebody here is honest. #line:0731753
+-> Nobody did. I was too late. <<if not $lamp_lit>> #line:06c9ae0
+    <<set $wren_trust = $wren_trust + 1>>
+    Wren: That is not an easy thing to say. Thank you for saying it. #line:0acaf3d
+-> Ask the harbourmaster. #line:04da9d1
+    Wren: I will. I wanted to ask someone else first. #line:0340960
+===
+
+title: Wren
+act: All
+scenario: The stranger
+quest: meal
+when: $quest_meal == QuestState.Active and has_item("stew")
+---
+<<take stew>>
+Wren: From the innkeeper? [pause=500 /]He asks a great many questions. You only brought stew. #line:0020874
+<<set $wren_trust = $wren_trust + 1>>
+<<set $quest_meal = QuestState.Succeeded>>
+<<quest_changed meal>>
+===
+
+title: Wren
+act: All
+when: always
+---
+<<if $wren_stands>>
+    Wren: I will ring for myself. It feels strange. #line:01f880d
+<<else>>
+    => Wren: I am watching the lighthouse. It is my work, in a way. #line:05a1a71
+    => Wren: It is a small island. Everyone knows everything, and nobody says it. #line:0fe3500
+<<endif>>
+===
+
+title: Tam
+act: Wreck
+scenario: The stranger
+quest: meal
+when: $act == Act.Wreck and $quest_meal == QuestState.NotStarted
+---
+Tam: That passenger has not eaten since she came ashore. She will not take a bowl from me. #line:07d8112
+Tam: I asked where she was from. And why. And for how long. #mood:sad #line:08c8bfb
+-> Give me the bowl. I will take it to her. #line:077ed21
+    <<give stew>>
+    <<set $quest_meal = QuestState.Active>>
+    <<quest_changed meal>>
+    Tam: Tell her it is fish. It is nearly fish. #line:08969ad
+-> She will eat when she is hungry. #line:03620cb
+    Tam: That is what I am afraid of. #line:03aea79
+===
+
+title: Events
+act: Wreck
+when: $act == Act.Wreck
+when: $is_night
+---
+<<if $quest_trail == QuestState.Active>>
+    Night. The trail of Odile goes cold in the dark. #line:00c1198
+    <<set $quest_trail = QuestState.Failed>>
+    <<quest_changed trail>>
+<<endif>>
+<<if $quest_salvage == QuestState.Active>>
+    While the town sleeps, Brandt has the cargo carried to the harbour store. #line:017333a
+    <<set $quest_salvage = QuestState.Failed>>
+    <<quest_changed salvage>>
+<<endif>>
+<<jump ActThree>>
+===
