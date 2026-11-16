@@ -329,15 +329,19 @@ As built (2026-11-15).
 ### Task 17: Property grid — node headers and the node picker
 
 **Files:**
-- Create in `src/ColorRise.Skein.Editor/`: `ViewModels/YarnNodeHeadersViewModel.cs` (from Task 3), `PropertyGrid/YarnNodeUpdater.cs`, `PropertyGrid/YarnNodeKeys.cs`; in `.Avalonia`: `Views/YarnNodeTemplateProvider.cs`, `Views/YarnNodePicker.axaml`
-- Test: `tests/ColorRise.Skein.Editor.Tests/NodeHeadersTests.cs`, `NodePickerTests.cs`
+- In `src/ColorRise.Skein.Editor/`: `ViewModels/YarnNodeHeadersViewModel.cs` (from Task 3), `Nodes/YarnNodeHeadersText.cs`, `PropertyGrid/YarnNodeHeadersSelection.cs`, `PropertyGrid/YarnNodeUpdater.cs`, `PropertyGrid/YarnNodeKeys.cs`, `YarnAnalysisService.NodeNamesOf(project)`, and on `YarnScriptEditorViewModel`: `SelectedHeaders`, `ShowNodeProperties()`, `Refreshed`
+- In `src/ColorRise.Skein.Editor.Avalonia/`: `Views/YarnNodePicker.cs`, `Views/YarnNodeTemplateProvider.cs`, `Views/YarnPropertyTemplates.axaml(.cs)`
+- Test: `tests/ColorRise.Skein.Editor.Tests/NodeHeadersTests.cs`, `NodePickerTests.cs`; `tests/ColorRise.Skein.Editor.Avalonia.Tests/NodePickerTests.cs`
 
-**Interfaces:**
-- Consumes: `YarnScriptEditorViewModel`, `YarnTextPatcher`, `[YarnNode]`, `YarnAnalysisService`.
-- Produces: selecting cards selects their `YarnNodeHeadersViewModel` in the session's property grid; a change in the grid is the matching patch (`SetHeader`, `RemoveHeader`, rename through `YarnRenameService`). `YarnNodeUpdater` (a node presenter updater) attaches to a string member marked `[YarnNode(nameof(X))]` the node names of the project referenced by member `X` of the same object, under `YarnNodeKeys.NodeNames`; the Avalonia template shows a searchable drop-down.
+**As built:**
+- Selecting cards on the graph gives the session's property grid their headers ("Yarn node" or "Yarn note", "2 Yarn nodes selected"): Title, Tags, Color, Cluster, When, Others (the free headers; `position:` is the graph's and is not there). With no card selected the grid goes back to the script. A click on the graph takes the grid back when the user had selected something else.
+- A change in the grid is a change of the text, in the grid's own undo step ("Update property Cluster"): `YarnNodeHeadersText.Write` gives the edits, a new title is a rename across the project. What the text refuses (a title another node has, a free header named as one that has its own place) changes nothing, makes no step, shows its reason in the editor's bar, and the grid shows the text again. The text stays the truth: the grid follows what is typed in a header, and undo.
+- `YarnNodeUpdater` gives a string member marked `[YarnNode(nameof(X))]` the node names of the project that member `X` of the same object references, as one list that follows the scripts as they are typed (`YarnAnalysisService.NodeNamesOf`: distinct titles, sorted, without the notes), under `YarnNodeKeys.NodeNames`. It works for the runner's `StartNode` and for a component of the game. With no project, or an attribute that names no member, the member is a plain text.
+- `YarnNodePicker` is the editor of such a member: a box whose list opens with every node, filters as the user types, and sets the node on a click in the list, on Enter (the first node shown) or when the focus leaves; Escape shows the node again. A title that is not in the list is accepted: the node may come later.
+- Cards are not in the back/forward history of the property grid's selection: a selection scope needs an id the cards do not have (finding 16).
 
-- [ ] **Step 1:** Tests: selecting a card shows its headers; setting `Cluster` to `Pier` writes `cluster: Pier` in the text in one step; clearing it removes the header; changing `Title` renames across the project; the runner's `StartNode` presenter of an entity whose `Project` is set carries the project's node names, updated after a script edit, and none when `Project` is null.
-- [ ] **Step 2:** Implement (or the fallback form decided in Task 3), run → pass, screenshot in Game Studio. Commit `feat(skein): property grid for node headers and node pickers`, push.
+- [x] **Step 1:** Tests: selecting cards shows their headers; setting `Cluster` writes `cluster:` in one step, clearing it removes the header; `Title` renames across the project; a refused title or header leaves no step; the grid follows the text and does not take the grid back from the asset view; the runner's `StartNode` carries the project's node names, updated after a script edit, and none when `Project` is null; a component of the game with `[YarnNode]`; the picker on Enter, Escape, a click in the list and the focus leaving.
+- [x] **Step 2:** Checked in Game Studio under Xvfb on the sample with a script made for it and a runner written into the scene file for the check (the cross-platform Game Studio cannot add a component yet: finding 17): screenshots [task-17-node-headers.png](/mnt/project-files/yarn-spinner/screens/task-17-node-headers.png), [task-17-node-picker.png](/mnt/project-files/yarn-spinner/screens/task-17-node-picker.png). Fixed from the check: a click on a node of the list was not stored, and the list opened with only the node the box showed.
 
 ### Task 18: Project overview
 
