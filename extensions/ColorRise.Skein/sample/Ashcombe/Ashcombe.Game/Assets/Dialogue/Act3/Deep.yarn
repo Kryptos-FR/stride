@@ -5,8 +5,8 @@ scenario: The collapse
 when: once
 when: here() == "Gallery"
 ---
-The old gallery. Timbers lie across the floor like dropped matches, and the air is thick with dust.
-Three ways lead on into the dark: the old shaft, the flooded gallery, and the long way round.
+The old gallery. Timbers lie across the floor like dropped matches, and the air is thick with dust. #line:Events.cb2a808c_0100
+Three ways lead on into the dark: the old shaft, the flooded gallery, and the long way round. #line:Events.cb2a808c_0200
 ===
 
 title: Events
@@ -16,8 +16,8 @@ scenario: The lights
 when: once
 when: here() == "Deep" and $oil > 0
 ---
-The deep level. A seam of rock glows green along the far wall, and under it, carvings, line after line of them.
-The lantern folk. Not ghosts. A border, written in stone.
+The deep level. A seam of rock glows green along the far wall, and under it, carvings, line after line of them. #line:Events.1f25ef16_0100
+The lantern folk. Not ghosts. A border, written in stone. #line:Events.1f25ef16_0200
 ===
 
 title: Events
@@ -29,9 +29,9 @@ when: once
 when: here() == "Deep" and $oil <= 0 and $quest_jory == QuestState.Active
 ---
 // The long way took the last of the oil: the cartographer reaches the deep level in the dark.
-Your lamp gutters and goes out. The dark is total.
-Somewhere close, a man coughs. You call, and he calls back, but in the dark the voice comes from everywhere at once.
-You feel your way back along the wall to the lift, and ride it up.
+Your lamp gutters and goes out. The dark is total. #line:Events.4a46c54a_0100
+Somewhere close, a man coughs. You call, and he calls back, but in the dark the voice comes from everywhere at once. #line:Events.4a46c54a_0200
+You feel your way back along the wall to the lift, and ride it up. #line:Events.4a46c54a_0300
 <<set $quest_jory to QuestState.Failed>>
 <<quest_changed jory>>
 <<go DeepLift>>
@@ -44,13 +44,13 @@ scenario: The collapse
 quest: jory
 ---
 <<if has_item("rope")>>
-    You tie Bram's old rope to a timber and climb down the shaft, hand over hand.
+    You tie Bram's old rope to a timber and climb down the shaft, hand over hand. #line:OldShaft_0100
     <<if $way == WayDown.None>>
         <<set $way to WayDown.Rope>>
     <<endif>>
     <<go OldShaft>>
 <<else>>
-    The old shaft drops straight into the dark. Without a rope, it is a grave.
+    The old shaft drops straight into the dark. Without a rope, it is a grave. #line:OldShaft_0200
 <<endif>>
 ===
 
@@ -61,12 +61,12 @@ scenario: The collapse
 quest: jory
 ---
 <<if has_item("remedy")>>
-    You drink Nan's remedy. It burns all the way down, and then you are warm, warm enough for black water.
+    You drink Nan's remedy. It burns all the way down, and then you are warm, warm enough for black water. #line:FloodedPassage_0100
     <<take remedy>>
     <<go FloodedPassage>>
 <<else>>
-    The flooded gallery is black and still. You put a hand in the water and your fingers go numb at once.
-    Not without something against the cold.
+    The flooded gallery is black and still. You put a hand in the water and your fingers go numb at once. #line:FloodedPassage_0200
+    Not without something against the cold. #line:FloodedPassage_0300
 <<endif>>
 ===
 
@@ -77,7 +77,7 @@ scenario: The collapse
 quest: jory
 when: $way == WayDown.None
 ---
-You wade on, chest-deep, holding the lamp over your head, until the floor rises under your feet.
+You wade on, chest-deep, holding the lamp over your head, until the floor rises under your feet. #line:FloodedOn.dd8dfe76_0100
 <<set $way to WayDown.Flooded>>
 <<go FloodedOn>>
 ===
@@ -90,13 +90,13 @@ quest: jory
 ---
 // The long way burns a measure of oil more: with none left after it, the cartographer arrives in the dark.
 <<if $oil <= 0>>
-    The long way winds off into the dark. Without oil, you would never come back.
+    The long way winds off into the dark. Without oil, you would never come back. #line:LongWay_0100
 <<else>>
     <<set $oil to $oil - 1>>
     <<if $oil > 0>>
-        The long way winds down and down, through galleries nobody has walked in forty years. Your lamp burns low.
+        The long way winds down and down, through galleries nobody has walked in forty years. Your lamp burns low. #line:LongWay_0200
     <<else>>
-        The long way winds down and down. Halfway, your lamp begins to gutter.
+        The long way winds down and down. Halfway, your lamp begins to gutter. #line:LongWay_0300
     <<endif>>
     <<if $way == WayDown.None>>
         <<set $way to WayDown.Long>>
@@ -114,33 +114,33 @@ when: here() == "Gallery" and $corvin_in_mine
 when: $corvin_fate == CorvinFate.Unmet
 ---
 // The fifth fork: the steward, pinned under a timber in the gallery.
-Corvin is on the floor of the gallery, a timber across his legs, his lamp broken beside him.
+Corvin is on the floor of the gallery, a timber across his legs, his lamp broken beside him. #line:Corvin.0c7a3922_0100
 <<if $offer == Offer.Proof>>
-    Corvin: You. With my letter in your pocket. Come to watch? #mood:angry
+    Corvin: You. With my letter in your pocket. Come to watch? #mood:angry #line:Corvin.0c7a3922_0200_Corvin
 <<elseif $offer == Offer.Refused>>
-    Corvin: The honest cartographer. Help me, or go away. #mood:angry
+    Corvin: The honest cartographer. Help me, or go away. #mood:angry #line:Corvin.0c7a3922_0300_Corvin
 <<else>>
-    Corvin: Thank the saints. Get this off me.
+    Corvin: Thank the saints. Get this off me. #line:Corvin.0c7a3922_0400_Corvin
 <<endif>>
-Corvin: I came to see the carvings before you did. That's all. A steward's curiosity.
-A notebook sticks out of his coat. You can see a border drawn in it, and the same border copied again, older-looking each time.
--> Lift the timber. <<if $oil > 0>>
-    It takes a long time, and your lamp burns low while you work. But the timber moves.
+Corvin: I came to see the carvings before you did. That's all. A steward's curiosity. #line:Corvin.0c7a3922_0500_Corvin
+A notebook sticks out of his coat. You can see a border drawn in it, and the same border copied again, older-looking each time. #line:Corvin.0c7a3922_0600
+-> Lift the timber. <<if $oil > 0>> #line:Corvin.0c7a3922_0700
+    It takes a long time, and your lamp burns low while you work. But the timber moves. #line:Corvin.0c7a3922_0800
     <<set $oil to $oil - 1>>
     <<set $corvin_fate to CorvinFate.Helped>>
-    Corvin: I won't forget this. I don't say that often.
+    Corvin: I won't forget this. I don't say that often. #line:Corvin.0c7a3922_0900_Corvin
     <<set $corvin_in_mine to false>>
--> Lift the timber, and take the notebook while he is dazed. <<if $oil > 0>>
-    You free him, and while he gasps on the floor, the notebook goes into your coat.
+-> Lift the timber, and take the notebook while he is dazed. <<if $oil > 0>> #line:Corvin.0c7a3922_1000
+    You free him, and while he gasps on the floor, the notebook goes into your coat. #line:Corvin.0c7a3922_1100
     <<set $oil to $oil - 1>>
     <<set $corvin_fate to CorvinFate.Robbed>>
     <<give notebook>>
     <<set $corvin_in_mine to false>>
-    Corvin: My thanks. And my notebook? No? It must have fallen. #mood:angry
--> Leave him for the miners.
+    Corvin: My thanks. And my notebook? No? It must have fallen. #mood:angry #line:Corvin.0c7a3922_1200_Corvin
+-> Leave him for the miners. #line:Corvin.0c7a3922_1300
     <<set $corvin_fate to CorvinFate.Left>>
-    Corvin: You can't leave me here! Cartographer! #mood:angry
-    The miners will dig him out, in a day or two. After the fair.
+    Corvin: You can't leave me here! Cartographer! #mood:angry #line:Corvin.0c7a3922_1400_Corvin
+    The miners will dig him out, in a day or two. After the fair. #line:Corvin.0c7a3922_1500
 <<set $quest_corvin to QuestState.Succeeded>>
 <<quest_changed corvin>>
 ===
@@ -152,7 +152,7 @@ scenario: The follower
 when: here() == "Gallery" and $corvin_in_mine
 when: $corvin_fate == CorvinFate.Left
 ---
-Corvin says nothing now. He is saving his breath for the miners.
+Corvin says nothing now. He is saving his breath for the miners. #line:Corvin.08bf5546_0100
 ===
 
 title: Jory
@@ -162,14 +162,14 @@ scenario: The collapse
 quest: jory
 when: $quest_jory == QuestState.Active and $oil > 0
 ---
-Jory: A light! Over here! My leg's caught in the rails.
-You work his foot free. He can walk, slowly.
-Jory: I followed the green light down. Thought it was the lantern folk come to take me. It's only a wall. Look at it.
+Jory: A light! Over here! My leg's caught in the rails. #line:Jory.c932b1e8_0100_Jory
+You work his foot free. He can walk, slowly. #line:Jory.c932b1e8_0200
+Jory: I followed the green light down. Thought it was the lantern folk come to take me. It's only a wall. Look at it. #line:Jory.c932b1e8_0300_Jory
 <<set $jory_found to true>>
 <<set $quest_jory to QuestState.Succeeded>>
 <<quest_changed jory>>
 <<walk Jory DeepLift>>
-Jory: I'll wait at the lift. Don't be long. The oil won't be.
+Jory: I'll wait at the lift. Don't be long. The oil won't be. #line:Jory.c932b1e8_0400_Jory
 ===
 
 title: Jory
@@ -178,9 +178,9 @@ location: Deep
 scenario: The collapse
 when: $jory_found
 ---
-=> Jory: At the lift when you're ready.
-=> Jory: My mother will kill me. Then she'll feed me.
-=> Jory: The carvings go on for twenty paces. I counted them, in the dark, by hand.
+=> Jory: At the lift when you're ready. #line:Jory.f62c36a4_0100_Jory
+=> Jory: My mother will kill me. Then she'll feed me. #line:Jory.f62c36a4_0200_Jory
+=> Jory: The carvings go on for twenty paces. I counted them, in the dark, by hand. #line:Jory.f62c36a4_0300_Jory
 ===
 
 title: Carvings
@@ -191,13 +191,13 @@ quest: carvings
 when: $quest_carvings == QuestState.Active
 ---
 <<if $oil <= 0>>
-    It is too dark to see the carvings, let alone copy them.
+    It is too dark to see the carvings, let alone copy them. #line:Carvings.0e0873aa_0100
 <<else>>
-    You copy the carvings into the map, line by line. A mason's mark at each end: a circle with a line through it.
+    You copy the carvings into the map, line by line. A mason's mark at each end: a circle with a line through it. #line:Carvings.0e0873aa_0200
     <<if $quest_page == QuestState.Succeeded>>
-        They match the charter's page. From the bridge stone, north under the hill, to the abbey's well. The true border.
+        They match the charter's page. From the bridge stone, north under the hill, to the abbey's well. The true border. #line:Carvings.0e0873aa_0300
     <<else>>
-        A border, clearly. Where it runs above ground, you can only guess, but the stones by the bridge carry the same mark.
+        A border, clearly. Where it runs above ground, you can only guess, but the stones by the bridge carry the same mark. #line:Carvings.0e0873aa_0400
     <<endif>>
     <<survey carvings>>
     <<set $carvings_copied to true>>
@@ -212,7 +212,7 @@ location: Deep
 scenario: The lights
 when: $quest_carvings != QuestState.Active
 ---
-The carvings glow faintly in the green light. They are on your map now, or lost to it.
+The carvings glow faintly in the green light. They are on your map now, or lost to it. #line:Carvings.ce2153f0_0100
 ===
 
 title: DeepLift
@@ -221,8 +221,8 @@ location: Deep
 scenario: The lights
 when: $quest_carvings == QuestState.Active and $oil > 0
 ---
-The carvings are not on your map yet. Go up anyway?
--> Go up.
+The carvings are not on your map yet. Go up anyway? #line:DeepLift.55846690_0100
+-> Go up. #line:DeepLift.55846690_0200
     <<go DeepLift>>
--> Stay.
+-> Stay. #line:DeepLift.55846690_0300
 ===

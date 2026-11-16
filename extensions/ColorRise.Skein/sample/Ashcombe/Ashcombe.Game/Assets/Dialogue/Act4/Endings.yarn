@@ -4,8 +4,8 @@ location: Fair
 scenario: Accounts
 when: $outcome == "true_around"
 ---
-The true border goes into the charter, and the new road goes around the mill, the long way, the old way.
-Bram's wheel turns all summer. The steward's carts curse the corner, and take it anyway.
+The true border goes into the charter, and the new road goes around the mill, the long way, the old way. #line:Epilogue.4b47e708_0100
+Bram's wheel turns all summer. The steward's carts curse the corner, and take it anyway. #line:Epilogue.4b47e708_0200
 <<detour Accounts>>
 ===
 
@@ -15,8 +15,8 @@ location: Fair
 scenario: Accounts
 when: $outcome == "true_through"
 ---
-The true border goes into the charter. But the road goes straight, as the steward wanted, and the mill is in its way.
-Bram grinds his last sack at midsummer and gives the millstones to the chapel.
+The true border goes into the charter. But the road goes straight, as the steward wanted, and the mill is in its way. #line:Epilogue.52c1d3fb_0100
+Bram grinds his last sack at midsummer and gives the millstones to the chapel. #line:Epilogue.52c1d3fb_0200
 <<detour Accounts>>
 ===
 
@@ -26,11 +26,11 @@ location: Fair
 scenario: Accounts
 when: $outcome == "forged"
 ---
-The steward's border goes into the charter. The abbey loses its meadows, and nobody can say quite why.
+The steward's border goes into the charter. The abbey loses its meadows, and nobody can say quite why. #line:Epilogue.07a2f9a7_0100
 <<if $offer == Offer.Accepted>>
-    You leave the valley with forty crowns and a map you will never show anyone.
+    You leave the valley with forty crowns and a map you will never show anyone. #line:Epilogue.07a2f9a7_0200
 <<else>>
-    Corvin bows to you as he passes. It is not a friendly bow.
+    Corvin bows to you as he passes. It is not a friendly bow. #line:Epilogue.07a2f9a7_0300
 <<endif>>
 <<detour Accounts>>
 ===
@@ -41,8 +41,8 @@ location: Fair
 scenario: Accounts
 when: $outcome == "exposed"
 ---
-By evening the steward is two valleys away, and the true border is in the charter.
-The Countess asks you to stay on as the valley's cartographer. The abbey sends a cheese.
+By evening the steward is two valleys away, and the true border is in the charter. #line:Epilogue.ce4a3029_0100
+The Countess asks you to stay on as the valley's cartographer. The abbey sends a cheese. #line:Epilogue.ce4a3029_0200
 <<detour Accounts>>
 ===
 
@@ -52,8 +52,8 @@ location: Fair
 scenario: Accounts
 when: $outcome == "walked"
 ---
-The border follows the path the village walks, stone to stone. Nobody is pleased, and nobody fights.
-Every spring after, the children of Ashcombe and the novices of the abbey walk it together, and argue all the way.
+The border follows the path the village walks, stone to stone. Nobody is pleased, and nobody fights. #line:Epilogue.9fec7611_0100
+Every spring after, the children of Ashcombe and the novices of the abbey walk it together, and argue all the way. #line:Epilogue.9fec7611_0200
 <<detour Accounts>>
 ===
 
@@ -63,8 +63,8 @@ location: Fair
 scenario: Accounts
 when: $outcome == "failed"
 ---
-The hearing breaks up without a border. The valley goes home and keeps the quarrel for another generation.
-You fold the map with its holes and take the road over the hill.
+The hearing breaks up without a border. The valley goes home and keeps the quarrel for another generation. #line:Epilogue.b9369c5a_0100
+You fold the map with its holes and take the road over the hill. #line:Epilogue.b9369c5a_0200
 <<detour Accounts>>
 ===
 
@@ -78,24 +78,24 @@ scenario: Accounts
     <<set $quest_border to QuestState.Succeeded>>
     <<quest_changed border>>
 <<endif>>
-=> Jory dances at the fair on his crutch, and his mother doesn't let go of his sleeve all day. <<if $jory_found>>
-=> Jory buys the first cider of the fair for the whole camp, and the camp drinks it twice. <<if $jory_found>>
-=> Under the hill, Gudrun's miners are still digging for Jory. They say they hear him singing. <<if not $jory_found>>
-=> Nobody under the hill says Jory's name aloud, in case the hill hears. <<if not $jory_found>>
+=> Jory dances at the fair on his crutch, and his mother doesn't let go of his sleeve all day. <<if $jory_found>> #line:Accounts_0100
+=> Jory buys the first cider of the fair for the whole camp, and the camp drinks it twice. <<if $jory_found>> #line:Accounts_0200
+=> Under the hill, Gudrun's miners are still digging for Jory. They say they hear him singing. <<if not $jory_found>> #line:Accounts_0300
+=> Nobody under the hill says Jory's name aloud, in case the hill hears. <<if not $jory_found>> #line:Accounts_0400
 <<if $quest_recipe == QuestState.Succeeded>>
-    Hedda's fair cake, from her mother's recipe, is gone before noon.
+    Hedda's fair cake, from her mother's recipe, is gone before noon. #line:Accounts_0500
 <<endif>>
 <<if $quest_lio_map == QuestState.Succeeded>>
-    Lio's first map hangs behind Hedda's bar, framed, with the old line in red.
+    Lio's first map hangs behind Hedda's bar, framed, with the old line in red. #line:Accounts_0600
 <<endif>>
 <<if $feast_served>>
-    The cook of Varne castle still talks about the feast.
+    The cook of Varne castle still talks about the feast. #line:Accounts_0700
 <<endif>>
 <<if $pell_trust >= 1>>
-    Pell's cart goes over the hill with your story painted on its side.
+    Pell's cart goes over the hill with your story painted on its side. #line:Accounts_0800
 <<endif>>
 <<if $echo_answered>>
-    The echo of the deep level never asks another riddle.
+    The echo of the deep level never asks another riddle. #line:Accounts_0900
 <<endif>>
 <<ending {$outcome}>>
 ===

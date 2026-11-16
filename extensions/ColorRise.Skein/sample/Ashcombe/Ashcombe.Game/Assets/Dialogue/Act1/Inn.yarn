@@ -5,15 +5,15 @@ quest: recipe
 when: $act == Act.Survey
 when: $quest_recipe == QuestState.NotStarted
 ---
-Hedda: Welcome to the Drowned Bell. Hedda Brune. You'll be the map maker the whole valley is talking about.
-Hedda: The bell? It's at the bottom of the well in my cellar. Fell in a hundred years ago, and the inn kept the name.
-Hedda: And while you're here, you haven't seen a little brass box, have you? My mother's recipe for the fair cake is in it.
-Hedda: I had it in the cellar last autumn, and now I can't find it anywhere.
--> I will look for it.
-    Hedda: Bless you. If it's anywhere, it's down there among the barrels.
+Hedda: Welcome to the Drowned Bell. Hedda Brune. You'll be the map maker the whole valley is talking about. #line:Hedda.de92aedd_0100_Hedda
+Hedda: The bell? It's at the bottom of the well in my cellar. Fell in a hundred years ago, and the inn kept the name. #line:Hedda.de92aedd_0200_Hedda
+Hedda: And while you're here, you haven't seen a little brass box, have you? My mother's recipe for the fair cake is in it. #line:Hedda.de92aedd_0300_Hedda
+Hedda: I had it in the cellar last autumn, and now I can't find it anywhere. #line:Hedda.de92aedd_0400_Hedda
+-> I will look for it. #line:Hedda.de92aedd_0500
+    Hedda: Bless you. If it's anywhere, it's down there among the barrels. #line:Hedda.de92aedd_0600_Hedda
     <<set $quest_recipe to QuestState.Active>>
--> I am here for the map.
-    Hedda: Of course. Maps first, cakes after.
+-> I am here for the map. #line:Hedda.de92aedd_0700
+    Hedda: Of course. Maps first, cakes after. #line:Hedda.de92aedd_0800_Hedda
     <<set $quest_recipe to QuestState.Offered>>
 <<quest_changed recipe>>
 ===
@@ -25,8 +25,8 @@ quest: recipe
 when: has_item("recipe")
 when: $quest_recipe == QuestState.Active
 ---
-Hedda: My mother's box! Where was it?
-Hedda: Behind the barrels. Of course it was. I'll make the cake for the fair, and you'll have the first slice.
+Hedda: My mother's box! Where was it? #line:Hedda.35ed47c9_0100_Hedda
+Hedda: Behind the barrels. Of course it was. I'll make the cake for the fair, and you'll have the first slice. #line:Hedda.35ed47c9_0200_Hedda
 <<take recipe>>
 <<set $quest_recipe to QuestState.Succeeded>>
 <<quest_changed recipe>>
@@ -40,15 +40,15 @@ when: not $cellar_allowed
 ---
 // The dialogue goes on while the cellar loads: Hedda walks to the stairs, the cartographer goes down, and she calls
 // after them from the inn above.
-Hedda: That's my cellar. Nobody goes down there without me.
--> Could you show me the cellar? The old well is a landmark.
-    Hedda: The well? Nobody has measured that since my grandfather. Come on, then.
+Hedda: That's my cellar. Nobody goes down there without me. #line:CellarStairs.635224e9_0100_Hedda
+-> Could you show me the cellar? The old well is a landmark. #line:CellarStairs.635224e9_0200
+    Hedda: The well? Nobody has measured that since my grandfather. Come on, then. #line:CellarStairs.635224e9_0300_Hedda
     <<set $cellar_allowed to true>>
     <<walk Hedda CellarStairs>>
     <<go CellarStairs>>
-    Hedda: Mind the third step! It moves.
-    Hedda: And don't touch the wine.
--> Never mind.
+    Hedda: Mind the third step! It moves. #line:CellarStairs.635224e9_0400_Hedda
+    Hedda: And don't touch the wine. #line:CellarStairs.635224e9_0500_Hedda
+-> Never mind. #line:CellarStairs.635224e9_0600
 ===
 
 title: Well
@@ -57,9 +57,9 @@ location: Cellar
 quest: survey
 ---
 <<if surveyed("well")>>
-    The well is on your map. Far down, something gleams. The drowned bell, maybe.
+    The well is on your map. Far down, something gleams. The drowned bell, maybe. #line:Well_0100
 <<else>>
-    An old well in the middle of the cellar, older than the inn. You drop a line to measure it, and set it down.
+    An old well in the middle of the cellar, older than the inn. You drop a line to measure it, and set it down. #line:Well_0200
     <<survey well>>
     <<detour SurveyCheck>>
 <<endif>>
@@ -72,7 +72,7 @@ quest: recipe
 when: not $recipe_found
 ---
 <<if $quest_recipe == QuestState.Active or $quest_recipe == QuestState.Offered>>
-    Behind the barrels, a little brass box. Inside, a card in faded ink. Hedda's mother's recipe.
+    Behind the barrels, a little brass box. Inside, a card in faded ink. Hedda's mother's recipe. #line:RecipeBox.8111df5f_0100
     <<give recipe>>
     <<set $recipe_found to true>>
     <<if $quest_recipe == QuestState.Offered>>
@@ -80,7 +80,7 @@ when: not $recipe_found
         <<quest_changed recipe>>
     <<endif>>
 <<else>>
-    A little brass box behind the barrels. It isn't yours.
+    A little brass box behind the barrels. It isn't yours. #line:RecipeBox.8111df5f_0200
 <<endif>>
 ===
 
@@ -91,10 +91,10 @@ quest: herbs
 when: not $hollyroot_taken
 ---
 <<if $quest_herbs == QuestState.Active>>
-    Hollyroot grows pale in the dark, between the stones of the wall. You cut a piece.
+    Hollyroot grows pale in the dark, between the stones of the wall. You cut a piece. #line:Hollyroot.8c89c126_0100
     <<give hollyroot>>
     <<set $hollyroot_taken to true>>
 <<else>>
-    Something pale grows between the stones of the wall.
+    Something pale grows between the stones of the wall. #line:Hollyroot.8c89c126_0200
 <<endif>>
 ===

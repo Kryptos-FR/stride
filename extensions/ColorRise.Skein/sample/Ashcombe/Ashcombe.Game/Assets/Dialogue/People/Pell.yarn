@@ -4,7 +4,7 @@ location: Anywhere
 scenario: The peddler
 style: note
 ---
-Pell travels with his cart. He is in the village in Acts I and IV and at the castle in Act II, the same actor named Pell in two root scenes. His nodes are one node group, told apart by where the cartographer is (here) and by the act. His small talk plays only when no other node of the group can: Yarn's saliency prefers the content seen the least, so a fallback that could play beside a node already seen once would win over it. The smart variable $pell_has_errand says when another node can play.
+Pell travels with his cart. He is in the village in Acts I and IV and at the castle in Act II, the same actor named Pell in two root scenes. His nodes are one node group, told apart by where the cartographer is (here) and by the act. His small talk plays only when no other node of the group can: Yarn's saliency prefers the content seen the least, so a fallback that could play beside a node already seen once would win over it. The smart variable $pell_has_errand says when another node can play. #line:PellNotes_0100
 ===
 
 title: Pell
@@ -14,8 +14,8 @@ scenario: The peddler
 when: here() == "Village" and $act == Act.Survey
 when: not $pell_met
 ---
-Pell: Pell! Needles, ribbons, buttons, gears, and news from three valleys. What do you lack?
-Pell: A map maker. Then you'll want to know that the abbey's monks have been walking their meadows with a rope. Measuring.
+Pell: Pell! Needles, ribbons, buttons, gears, and news from three valleys. What do you lack? #line:Pell.bd063034_0100_Pell
+Pell: A map maker. Then you'll want to know that the abbey's monks have been walking their meadows with a rope. Measuring. #line:Pell.bd063034_0200_Pell
 <<set $pell_met to true>>
 ===
 
@@ -27,12 +27,12 @@ quest: wheel
 when: here() == "Village" and $act == Act.Survey
 when: $pell_met and $quest_wheel == QuestState.Active and not $gear_bought
 ---
-Pell: A gear? For Bram's wheel? I have just the one. Iron, from a mill that burned in the north.
-Pell: I don't want money. I want a story. Where have you been, that I haven't?
--> Tell him about the salt flats in the south.
-    Pell: White to the edge of the world? I'll sell that story twice. Here.
--> Tell him about the city where the bridges open at night.
-    Pell: Bridges that open! I knew it. Here, take it.
+Pell: A gear? For Bram's wheel? I have just the one. Iron, from a mill that burned in the north. #line:Pell.523413f1_0100_Pell
+Pell: I don't want money. I want a story. Where have you been, that I haven't? #line:Pell.523413f1_0200_Pell
+-> Tell him about the salt flats in the south. #line:Pell.523413f1_0300
+    Pell: White to the edge of the world? I'll sell that story twice. Here. #line:Pell.523413f1_0400_Pell
+-> Tell him about the city where the bridges open at night. #line:Pell.523413f1_0500
+    Pell: Bridges that open! I knew it. Here, take it. #line:Pell.523413f1_0600_Pell
 <<set $gear_bought to true>>
 <<set $pell_trust to $pell_trust + 1>>
 <<give gear>>
@@ -45,8 +45,8 @@ scenario: The peddler
 when: here() == "Village" and $act == Act.Survey
 when: $pell_met and $culprit == Culprit.Pell
 ---
-Pell: The sergeant says I move stones at night. Me! With these arms. #mood:angry
-Pell: You were out there. You saw who it was. Didn't you? #mood:angry
+Pell: The sergeant says I move stones at night. Me! With these arms. #mood:angry #line:Pell.6ec2403e_0100_Pell
+Pell: You were out there. You saw who it was. Didn't you? #mood:angry #line:Pell.6ec2403e_0200_Pell
 ===
 
 title: Pell
@@ -55,10 +55,10 @@ location: Anywhere
 scenario: The peddler
 when: not $pell_has_errand
 ---
-=> Pell: Buttons? No? Nobody ever wants buttons.
-=> Pell: Every valley thinks its border is the oldest one.
-=> Pell: The castle's carts pay well. The castle's steward does not. <<if here() == "Castle">>
-=> Pell: You came back! Nobody comes back. <<if $act == Act.Fair>>
+=> Pell: Buttons? No? Nobody ever wants buttons. #line:Pell.95a252be_0100_Pell
+=> Pell: Every valley thinks its border is the oldest one. #line:Pell.95a252be_0200_Pell
+=> Pell: The castle's carts pay well. The castle's steward does not. <<if here() == "Castle">> #line:Pell.95a252be_0300_Pell
+=> Pell: You came back! Nobody comes back. <<if $act == Act.Fair>> #line:Pell.95a252be_0400_Pell
 ===
 
 title: Pell
@@ -70,26 +70,26 @@ when: here() == "Castle" and $act == Act.Castle
 when: $quest_wares == QuestState.NotStarted
 ---
 <<if $culprit == Culprit.Pell>>
-    Pell: Oh. You. The one who saw nobody. #mood:angry
-    Pell: They let me go when the stones moved again with me in the Lockup. No thanks to you.
-    -> I am sorry. I should have spoken.
+    Pell: Oh. You. The one who saw nobody. #mood:angry #line:Pell.63541c7c_0100_Pell
+    Pell: They let me go when the stones moved again with me in the Lockup. No thanks to you. #line:Pell.63541c7c_0200_Pell
+    -> I am sorry. I should have spoken. #line:Pell.63541c7c_0300
         <<set $pell_trust to $pell_trust + 1>>
-        Pell: Yes, you should. Well. A sorry is worth something. Not much.
-    -> It was not my business.
-        Pell: Then my wares are not your business either.
+        Pell: Yes, you should. Well. A sorry is worth something. Not much. #line:Pell.63541c7c_0400_Pell
+    -> It was not my business. #line:Pell.63541c7c_0500
+        Pell: Then my wares are not your business either. #line:Pell.63541c7c_0600_Pell
         <<set $quest_wares to QuestState.Failed>>
         <<quest_changed wares>>
         <<stop>>
 <<else>>
-    Pell: My map maker! The castle's cook buys my pepper and the Countess's maids buy my ribbons.
+    Pell: My map maker! The castle's cook buys my pepper and the Countess's maids buy my ribbons. #line:Pell.63541c7c_0700_Pell
 <<endif>>
-Pell: A ribbon for you? Castle blue. It will make you look like you belong here.
--> Trade him a story for the ribbon.
-    Pell: Another story! You are my best customer.
+Pell: A ribbon for you? Castle blue. It will make you look like you belong here. #line:Pell.63541c7c_0800_Pell
+-> Trade him a story for the ribbon. #line:Pell.63541c7c_0900
+    Pell: Another story! You are my best customer. #line:Pell.63541c7c_1000_Pell
     <<give ribbon>>
     <<set $quest_wares to QuestState.Succeeded>>
--> No, thank you.
-    Pell: Your loss. It was a very blue ribbon.
+-> No, thank you. #line:Pell.63541c7c_1100
+    Pell: Your loss. It was a very blue ribbon. #line:Pell.63541c7c_1200_Pell
     <<set $quest_wares to QuestState.Failed>>
 <<quest_changed wares>>
 ===
@@ -102,13 +102,13 @@ quest: last_sale
 when: here() == "Village" and $act == Act.Fair
 when: $quest_last_sale == QuestState.NotStarted
 ---
-Pell: Last day of the fair, last day in Ashcombe. Tomorrow the cart goes over the hill.
+Pell: Last day of the fair, last day in Ashcombe. Tomorrow the cart goes over the hill. #line:Pell.16198d62_0100_Pell
 <<if $pell_trust >= 1>>
-    Pell: For you, my last sale is a gift. An old compass, from a ship that never came back. It points true. Mostly.
+    Pell: For you, my last sale is a gift. An old compass, from a ship that never came back. It points true. Mostly. #line:Pell.16198d62_0200_Pell
 <<elseif $pell_trust <= -1>>
-    Pell: For you, my last sale is an old compass. Full price. It points away from me, which suits us both. #mood:angry
+    Pell: For you, my last sale is an old compass. Full price. It points away from me, which suits us both. #mood:angry #line:Pell.16198d62_0300_Pell
 <<else>>
-    Pell: My last sale. An old compass, fair price. It points true, which is more than most things here.
+    Pell: My last sale. An old compass, fair price. It points true, which is more than most things here. #line:Pell.16198d62_0400_Pell
 <<endif>>
 <<set $quest_last_sale to QuestState.Succeeded>>
 <<quest_changed last_sale>>

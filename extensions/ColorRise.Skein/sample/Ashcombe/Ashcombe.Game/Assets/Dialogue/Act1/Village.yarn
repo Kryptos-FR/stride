@@ -6,14 +6,14 @@ quest: stones
 when: $act == Act.Survey
 when: $quest_stones == QuestState.NotStarted
 ---
-Maren: Sergeant Maren, the watch. Such as it is. You are the Countess's map maker?
-Maren: Then you can do me a service. Somebody moves the boundary stones by the bridge. At night, every night, a pace or two.
-Maren: The hearing is in a week, and the stones walk. Watch them for me, after dark, and tell me who it is.
--> I will watch them.
-    Maren: Good. I need a name, not a story.
+Maren: Sergeant Maren, the watch. Such as it is. You are the Countess's map maker? #line:Maren.16dbcb8b_0100_Maren
+Maren: Then you can do me a service. Somebody moves the boundary stones by the bridge. At night, every night, a pace or two. #line:Maren.16dbcb8b_0200_Maren
+Maren: The hearing is in a week, and the stones walk. Watch them for me, after dark, and tell me who it is. #line:Maren.16dbcb8b_0300_Maren
+-> I will watch them. #line:Maren.16dbcb8b_0400
+    Maren: Good. I need a name, not a story. #line:Maren.16dbcb8b_0500_Maren
     <<set $quest_stones to QuestState.Active>>
--> Stones are your business, not mine.
-    Maren: They are on your map, aren't they? Think about it.
+-> Stones are your business, not mine. #line:Maren.16dbcb8b_0600
+    Maren: They are on your map, aren't they? Think about it. #line:Maren.16dbcb8b_0700_Maren
     <<set $quest_stones to QuestState.Offered>>
 <<quest_changed stones>>
 ===
@@ -26,13 +26,13 @@ quest: stones
 when: $act == Act.Survey
 when: $quest_stones == QuestState.Offered
 ---
-Maren: Changed your mind about the stones?
--> I will watch them tonight.
-    Maren: Good.
+Maren: Changed your mind about the stones? #line:Maren.fec2ae5c_0100_Maren
+-> I will watch them tonight. #line:Maren.fec2ae5c_0200
+    Maren: Good. #line:Maren.fec2ae5c_0300_Maren
     <<set $quest_stones to QuestState.Active>>
     <<quest_changed stones>>
--> No.
-    Maren: Then don't stand in the light.
+-> No. #line:Maren.fec2ae5c_0400
+    Maren: Then don't stand in the light. #line:Maren.fec2ae5c_0500_Maren
 ===
 
 title: Maren
@@ -43,7 +43,7 @@ quest: stones
 when: $act == Act.Survey
 when: $quest_stones == QuestState.Active and not $saw_lio
 ---
-Maren: The stones move after dark. You won't see anything standing here at noon.
+Maren: The stones move after dark. You won't see anything standing here at noon. #line:Maren.1b4b693c_0100_Maren
 ===
 
 title: Maren
@@ -55,16 +55,16 @@ when: $act == Act.Survey
 when: $quest_stones == QuestState.Active and $saw_lio
 ---
 // The second fork: name the child, or let the sergeant blame the stranger.
-Maren: Well? You were out by the bridge last night. Who moves my stones?
--> It was Lio, the miller's child.
+Maren: Well? You were out by the bridge last night. Who moves my stones? #line:Maren.4aed2f04_0100_Maren
+-> It was Lio, the miller's child. #line:Maren.4aed2f04_0200
     <<set $culprit to Culprit.Lio>>
-    Maren: The miller's own. That will please the steward.
-    Maren: I'll have a word with Bram. A quiet word. The child gets a fright, and the stones stay put.
--> I saw nobody.
+    Maren: The miller's own. That will please the steward. #line:Maren.4aed2f04_0300_Maren
+    Maren: I'll have a word with Bram. A quiet word. The child gets a fright, and the stones stay put. #line:Maren.4aed2f04_0400_Maren
+-> I saw nobody. #line:Maren.4aed2f04_0500
     <<set $culprit to Culprit.Pell>>
     <<set $pell_trust to $pell_trust - 2>>
-    Maren: Nobody. Then it's the peddler. He came the same week as the stones started walking.
-    Maren: Strangers always. #mood:angry
+    Maren: Nobody. Then it's the peddler. He came the same week as the stones started walking. #line:Maren.4aed2f04_0600_Maren
+    Maren: Strangers always. #mood:angry #line:Maren.4aed2f04_0700_Maren
 <<set $quest_stones to QuestState.Succeeded>>
 <<quest_changed stones>>
 ===
@@ -75,14 +75,14 @@ location: Village
 scenario: The road
 when: $act != Act.Survey or $quest_stones == QuestState.Succeeded or $quest_stones == QuestState.Failed
 ---
-=> Maren: The inn is the place to hear things. Hedda hears everything.
-=> Maren: The castle wants a straight road. The mill wants to keep standing. I want a quiet fair.
-=> Maren: Your map had better be right. People will fight over it. <<if survey_count() > 0>>
-=> Maren: The Lockup is empty. Let us keep it that way. <<if $culprit != Culprit.Pell>>
-=> Maren: The peddler sat in the Lockup a night, and the stones moved anyway. I don't like being wrong. <<if $culprit == Culprit.Pell and $act != Act.Survey>>
-=> Maren: Back from the castle already? <<if $act == Act.Castle>>
-=> Maren: Jory's mother hasn't slept. <<if $act == Act.Fair and not $jory_found>>
-=> Maren: The fair has a hearing this year. I have twice the watch and half the patience. <<if $act == Act.Fair>>
+=> Maren: The inn is the place to hear things. Hedda hears everything. #line:Maren.0167d0b8_0100_Maren
+=> Maren: The castle wants a straight road. The mill wants to keep standing. I want a quiet fair. #line:Maren.0167d0b8_0200_Maren
+=> Maren: Your map had better be right. People will fight over it. <<if survey_count() > 0>> #line:Maren.0167d0b8_0300_Maren
+=> Maren: The Lockup is empty. Let us keep it that way. <<if $culprit != Culprit.Pell>> #line:Maren.0167d0b8_0400_Maren
+=> Maren: The peddler sat in the Lockup a night, and the stones moved anyway. I don't like being wrong. <<if $culprit == Culprit.Pell and $act != Act.Survey>> #line:Maren.0167d0b8_0500_Maren
+=> Maren: Back from the castle already? <<if $act == Act.Castle>> #line:Maren.0167d0b8_0600_Maren
+=> Maren: Jory's mother hasn't slept. <<if $act == Act.Fair and not $jory_found>> #line:Maren.0167d0b8_0700_Maren
+=> Maren: The fair has a hearing this year. I have twice the watch and half the patience. <<if $act == Act.Fair>> #line:Maren.0167d0b8_0800_Maren
 ===
 
 title: Corvin
@@ -92,9 +92,9 @@ scenario: The road
 when: $act == Act.Survey
 when: not $met_corvin
 ---
-Corvin: You must be the cartographer. Corvin Hale, steward to the Countess.
-Corvin: The new road will come down from the castle, straight across the bridge, past the mill and on to the market towns.
-Corvin: Draw it so, and the castle will remember you kindly.
+Corvin: You must be the cartographer. Corvin Hale, steward to the Countess. #line:Corvin.d3f61feb_0100_Corvin
+Corvin: The new road will come down from the castle, straight across the bridge, past the mill and on to the market towns. #line:Corvin.d3f61feb_0200_Corvin
+Corvin: Draw it so, and the castle will remember you kindly. #line:Corvin.d3f61feb_0300_Corvin
 <<set $met_corvin to true>>
 ===
 
@@ -106,13 +106,13 @@ when: $act == Act.Survey
 when: $met_corvin
 ---
 <<if $road == Road.Corvin>>
-    Corvin: A straight road and a sensible map. We understand each other.
+    Corvin: A straight road and a sensible map. We understand each other. #line:Corvin.a8c2e55b_0100_Corvin
 <<elseif $road == Road.Miller>>
-    Corvin: The miller's friend. I hope his flour pays better than the castle. #mood:angry
+    Corvin: The miller's friend. I hope his flour pays better than the castle. #mood:angry #line:Corvin.a8c2e55b_0200_Corvin
 <<elseif $road == Road.NoSide>>
-    Corvin: Still drawing nothing at all? A map is a decision, cartographer.
+    Corvin: Still drawing nothing at all? A map is a decision, cartographer. #line:Corvin.a8c2e55b_0300_Corvin
 <<else>>
-    Corvin: Have you spoken to the miller yet? He will tell you a sad story about a wheel.
+    Corvin: Have you spoken to the miller yet? He will tell you a sad story about a wheel. #line:Corvin.a8c2e55b_0400_Corvin
 <<endif>>
 ===
 
@@ -123,9 +123,9 @@ scenario: The road
 when: $act == Act.Survey
 when: not $met_bram
 ---
-Bram: Bram Oster. The mill is mine, and my father's, and his father's.
-Bram: Now the steward wants his road straight through my yard, and the mill down, so his carts don't have to turn a corner.
-Bram: And on top of it the wheel is stuck. A cracked gear. If the mill can't grind, it might as well come down.
+Bram: Bram Oster. The mill is mine, and my father's, and his father's. #line:Bram.e3b5468f_0100_Bram
+Bram: Now the steward wants his road straight through my yard, and the mill down, so his carts don't have to turn a corner. #line:Bram.e3b5468f_0200_Bram
+Bram: And on top of it the wheel is stuck. A cracked gear. If the mill can't grind, it might as well come down. #line:Bram.e3b5468f_0300_Bram
 <<set $met_bram to true>>
 <<set $quest_wheel to QuestState.Offered>>
 <<quest_changed wheel>>
@@ -139,13 +139,13 @@ quest: wheel
 when: $act == Act.Survey
 when: $met_bram and $quest_wheel == QuestState.Offered
 ---
-Bram: A gear, that is all the wheel wants. The peddler might have one in his cart, if you can make him part with it.
--> I will find you a gear.
-    Bram: Then you are a better friend than the steward.
+Bram: A gear, that is all the wheel wants. The peddler might have one in his cart, if you can make him part with it. #line:Bram.dcabc1c3_0100_Bram
+-> I will find you a gear. #line:Bram.dcabc1c3_0200
+    Bram: Then you are a better friend than the steward. #line:Bram.dcabc1c3_0300_Bram
     <<set $quest_wheel to QuestState.Active>>
     <<quest_changed wheel>>
--> Not now.
-    Bram: Nobody ever has time for a wheel.
+-> Not now. #line:Bram.dcabc1c3_0400
+    Bram: Nobody ever has time for a wheel. #line:Bram.dcabc1c3_0500_Bram
 ===
 
 title: Bram
@@ -154,12 +154,12 @@ location: Village
 scenario: The road
 when: not $bram_has_errand
 ---
-=> Bram: Lio is in the mill. Shy, but sharp. Sharper than me with numbers.
-=> Bram: My grandmother said the old border ran under the hill. Nobody listens to grandmothers.
-=> Bram: The wheel turns. Listen to it! <<if $wheel_mended>>
-=> Bram: Lio has been quiet since the sergeant came round. <<if $culprit == Culprit.Lio>>
-=> Bram: Fair day. The whole valley will hear where the road goes. <<if $act == Act.Fair>>
-=> Bram: Thank you for speaking up. Whatever comes of it. <<if $spoke_for_mill>>
+=> Bram: Lio is in the mill. Shy, but sharp. Sharper than me with numbers. #line:Bram.d5f8f1e5_0100_Bram
+=> Bram: My grandmother said the old border ran under the hill. Nobody listens to grandmothers. #line:Bram.d5f8f1e5_0200_Bram
+=> Bram: The wheel turns. Listen to it! <<if $wheel_mended>> #line:Bram.d5f8f1e5_0300_Bram
+=> Bram: Lio has been quiet since the sergeant came round. <<if $culprit == Culprit.Lio>> #line:Bram.d5f8f1e5_0400_Bram
+=> Bram: Fair day. The whole valley will hear where the road goes. <<if $act == Act.Fair>> #line:Bram.d5f8f1e5_0500_Bram
+=> Bram: Thank you for speaking up. Whatever comes of it. <<if $spoke_for_mill>> #line:Bram.d5f8f1e5_0600_Bram
 ===
 
 title: Stones
@@ -171,11 +171,11 @@ when: $quest_stones == QuestState.Active and not $saw_lio
 when: time_of_day() == "night"
 ---
 // Only at night: the cartographer waits by the stones and sees who moves them.
-You wait in the dark by the bridge. The river talks to itself.
-A small figure comes down from the mill with a lantern under a coat. It is Lio, the miller's child.
-Lio puts a shoulder to the nearest stone and rolls it two paces up the bank.
-Lio: There. Where grandmother said. The old line runs under the hill, not along the river.
-Lio sees you, and runs.
+You wait in the dark by the bridge. The river talks to itself. #line:Stones.80d1cc09_0100
+A small figure comes down from the mill with a lantern under a coat. It is Lio, the miller's child. #line:Stones.80d1cc09_0200
+Lio puts a shoulder to the nearest stone and rolls it two paces up the bank. #line:Stones.80d1cc09_0300
+Lio: There. Where grandmother said. The old line runs under the hill, not along the river. #line:Stones.80d1cc09_0400_Lio
+Lio sees you, and runs. #line:Stones.80d1cc09_0500
 <<set $saw_lio to true>>
 ===
 
@@ -186,7 +186,7 @@ scenario: The moving stones
 quest: survey
 when: not surveyed("stones")
 ---
-Five grey boundary stones in a row along the bank, each with a mason's mark. One of them has fresh earth around it.
+Five grey boundary stones in a row along the bank, each with a mason's mark. One of them has fresh earth around it. #line:Stones.ad692b09_0100
 <<survey stones>>
 <<detour SurveyCheck>>
 ===
@@ -197,8 +197,8 @@ location: Village
 scenario: The moving stones
 when: always
 ---
-=> The boundary stones lean towards the river. One of them has moved again.
-=> Each stone carries the same mason's mark: a circle with a line through it.
+=> The boundary stones lean towards the river. One of them has moved again. #line:Stones.d9fd53f9_0100
+=> Each stone carries the same mason's mark: a circle with a line through it. #line:Stones.d9fd53f9_0200
 ===
 
 title: BridgeMark
@@ -208,9 +208,9 @@ scenario: The commission
 quest: survey
 ---
 <<if surveyed("bridge")>>
-    The bridge's height mark is already on your map.
+    The bridge's height mark is already on your map. #line:BridgeMark_0100
 <<else>>
-    A mason cut a line in the bridge to mark the flood of the bad year. You take its height and its place.
+    A mason cut a line in the bridge to mark the flood of the bad year. You take its height and its place. #line:BridgeMark_0200
     <<survey bridge>>
     <<detour SurveyCheck>>
 <<endif>>
@@ -223,11 +223,11 @@ quest: survey
 ---
 // Said after each landmark is put on the map.
 <<if $quest_survey == QuestState.Active and surveyed("bell") and surveyed("well") and surveyed("loft") and surveyed("bridge") and surveyed("stones")>>
-    The fifth landmark. The village is on your map, every stone of it.
+    The fifth landmark. The village is on your map, every stone of it. #line:SurveyCheck_0100
     <<set $quest_survey to QuestState.Succeeded>>
     <<quest_changed survey>>
 <<elseif $quest_survey == QuestState.Active>>
-    [plural value={survey_count()} one="One landmark" other="% landmarks" /] out of five on the map.
+    [plural value={survey_count()} one="One landmark" other="% landmarks" /] out of five on the map. #line:SurveyCheck_0200
 <<endif>>
 ===
 
@@ -238,9 +238,9 @@ scenario: The road
 quest: wheel
 when: $quest_wheel == QuestState.Active and has_item("gear")
 ---
-You fit Pell's gear to the shaft, and lean on the spokes. The wheel groans, and turns, and the river takes it.
-Bram: It turns! Listen to it!
-Bram: Here, take my old rope. It held the sacks for twenty years. It will hold you anywhere you need to climb.
+You fit Pell's gear to the shaft, and lean on the spokes. The wheel groans, and turns, and the river takes it. #line:Wheel.fb9ae057_0100
+Bram: It turns! Listen to it! #line:Wheel.fb9ae057_0200_Bram
+Bram: Here, take my old rope. It held the sacks for twenty years. It will hold you anywhere you need to climb. #line:Wheel.fb9ae057_0300_Bram
 <<take gear>>
 <<give rope>>
 <<set $wheel_mended to true>>
@@ -255,9 +255,9 @@ scenario: The road
 when: always
 ---
 <<if $wheel_mended>>
-    The wheel turns, and the mill hums behind it.
+    The wheel turns, and the mill hums behind it. #line:Wheel.f2c9d071_0100
 <<else>>
-    The wheel is stuck. One of the gears on the shaft is cracked through.
+    The wheel is stuck. One of the gears on the shaft is cracked through. #line:Wheel.f2c9d071_0200
 <<endif>>
 ===
 
@@ -268,11 +268,11 @@ quest: herbs
 when: not $nettle_taken
 ---
 <<if $quest_herbs == QuestState.Active>>
-    You pick the nettle with your sleeve over your hand.
+    You pick the nettle with your sleeve over your hand. #line:Nettle.2748e52e_0100
     <<give nettle>>
     <<set $nettle_taken to true>>
 <<else>>
-    Nettles. Somebody might want them, but not you.
+    Nettles. Somebody might want them, but not you. #line:Nettle.2748e52e_0200
 <<endif>>
 ===
 
@@ -283,11 +283,11 @@ quest: herbs
 when: not $dewcup_taken
 ---
 <<if $quest_herbs != QuestState.Active>>
-    A dew-cup by the river, its blue cup full of water.
+    A dew-cup by the river, its blue cup full of water. #line:DewCup.93f0c1fe_0100
 <<elseif time_of_day() != "morning">>
-    The dew-cup has closed. They only open in the morning.
+    The dew-cup has closed. They only open in the morning. #line:DewCup.93f0c1fe_0200
 <<else>>
-    You pick the dew-cup while it is still open and wet.
+    You pick the dew-cup while it is still open and wet. #line:DewCup.93f0c1fe_0300
     <<give dewcup>>
     <<set $dewcup_taken to true>>
 <<endif>>

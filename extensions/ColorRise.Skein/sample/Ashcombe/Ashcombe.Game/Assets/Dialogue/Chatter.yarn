@@ -6,11 +6,11 @@ when: $act == Act.Survey
 ---
 // What the regulars of the inn say to each other. The game plays this group on a runner of the inn's own scene, as
 // captions, while the cartographer is near: it stops when the cartographer leaves the inn and the inn's scene goes.
-=> Wim: That cow was in my field.
-=> Saul: That cow was in my field first.
-=> Wim: The steward drinks alone. Never trust a man who drinks alone.
-=> Saul: The stones walked again. Hedda says it's ghosts.
-=> Wim: Map maker's been in the cellar. <<if $cellar_allowed>>
+=> Wim: That cow was in my field. #line:InnChatter.b13fff2c_0100_Wim
+=> Saul: That cow was in my field first. #line:InnChatter.b13fff2c_0200_Saul
+=> Wim: The steward drinks alone. Never trust a man who drinks alone. #line:InnChatter.b13fff2c_0300_Wim
+=> Saul: The stones walked again. Hedda says it's ghosts. #line:InnChatter.b13fff2c_0400_Saul
+=> Wim: Map maker's been in the cellar. <<if $cellar_allowed>> #line:InnChatter.b13fff2c_0500_Wim
 ===
 
 title: InnChatter
@@ -19,9 +19,9 @@ location: Inn
 scenario: The feast
 when: $act == Act.Castle
 ---
-=> Wim: The castle is having a feast. With our ale.
-=> Saul: With our flour, too, if Bram has any.
-=> Wim: The peddler's gone up to the castle. More money there.
+=> Wim: The castle is having a feast. With our ale. #line:InnChatter.3106f2a1_0100_Wim
+=> Saul: With our flour, too, if Bram has any. #line:InnChatter.3106f2a1_0200_Saul
+=> Wim: The peddler's gone up to the castle. More money there. #line:InnChatter.3106f2a1_0300_Wim
 ===
 
 title: InnChatter
@@ -30,10 +30,10 @@ location: Inn
 scenario: The hearing
 when: $act == Act.Fair or $act == Act.Mine
 ---
-=> Wim: The hearing's at noon. I'll be at the front.
-=> Saul: You'll be asleep at the back.
-=> Wim: They say the map maker went down the mine. <<if $act == Act.Fair>>
-=> Saul: They say Jory came up singing. <<if $jory_found>>
+=> Wim: The hearing's at noon. I'll be at the front. #line:InnChatter.6465d8fd_0100_Wim
+=> Saul: You'll be asleep at the back. #line:InnChatter.6465d8fd_0200_Saul
+=> Wim: They say the map maker went down the mine. <<if $act == Act.Fair>> #line:InnChatter.6465d8fd_0300_Wim
+=> Saul: They say Jory came up singing. <<if $jory_found>> #line:InnChatter.6465d8fd_0400_Saul
 ===
 
 title: CampChatter
@@ -43,9 +43,9 @@ scenario: The collapse
 when: $act == Act.Mine
 ---
 // The miners at the camp fire, on the camp's own runner.
-=> Miner: Jory knew the old galleries better than anyone.
-=> Miner: The lantern folk. I saw them once. Green, like a cat's eyes.
-=> Miner: Three measures of oil. That's one shift, if you're careful.
-=> Miner: The steward came by. Went down without a word to Gudrun. <<if $corvin_in_mine>>
-=> Miner: He's up! Jory's up! <<if $jory_found>>
+=> Miner: Jory knew the old galleries better than anyone. #line:CampChatter.20917d3b_0100_Miner
+=> Miner: The lantern folk. I saw them once. Green, like a cat's eyes. #line:CampChatter.20917d3b_0200_Miner
+=> Miner: Three measures of oil. That's one shift, if you're careful. #line:CampChatter.20917d3b_0300_Miner
+=> Miner: The steward came by. Went down without a word to Gudrun. <<if $corvin_in_mine>> #line:CampChatter.20917d3b_0400_Miner
+=> Miner: He's up! Jory's up! <<if $jory_found>> #line:CampChatter.20917d3b_0500_Miner
 ===

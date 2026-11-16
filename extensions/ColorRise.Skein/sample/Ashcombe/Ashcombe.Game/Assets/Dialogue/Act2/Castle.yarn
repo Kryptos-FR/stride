@@ -4,7 +4,7 @@ location: Castle
 scenario: The audience
 style: note
 ---
-Act II, one day at the castle, a separate root scene with no child. The Countess wants the survey and the old border. A page of the charter is missing, with three clues (the library, the tomb in the castle's chapel, the steward's desk). The steward offers money for a map with his border. The cook's feast sends the cartographer back to the village and back. The act ends when the page is found, or in the evening, with news of a collapse in the mine.
+Act II, one day at the castle, a separate root scene with no child. The Countess wants the survey and the old border. A page of the charter is missing, with three clues (the library, the tomb in the castle's chapel, the steward's desk). The steward offers money for a map with his border. The cook's feast sends the cartographer back to the village and back. The act ends when the page is found, or in the evening, with news of a collapse in the mine. #line:098aec5
 ===
 
 title: Events
@@ -16,13 +16,13 @@ when: once
 when: $act == Act.Castle
 when: here() == "Castle"
 ---
-The gate of Varne castle stands open. Corvin waits in the yard, with his hands behind his back.
+The gate of Varne castle stands open. Corvin waits in the yard, with his hands behind his back. #line:0dcb17c
 <<if $road == Road.Corvin>>
-    Corvin: Our cartographer! The one with a sensible eye. The Countess is waiting in the great hall.
+    Corvin: Our cartographer! The one with a sensible eye. The Countess is waiting in the great hall. #line:0aaddec
 <<elseif $road == Road.Miller>>
-    Corvin: The miller's friend. The Countess is in the great hall. Try not to draw her a mill. #mood:angry
+    Corvin: The miller's friend. The Countess is in the great hall. Try not to draw her a mill. #mood:angry #line:0c97df0
 <<else>>
-    Corvin: The Countess is in the great hall. She has been waiting since morning.
+    Corvin: The Countess is in the great hall. She has been waiting since morning. #line:00b2645
 <<endif>>
 <<set $quest_audience to QuestState.Active>>
 <<quest_changed audience>>
@@ -37,9 +37,9 @@ when: $act == Act.Castle
 when: ($quest_audience == QuestState.Succeeded and $quest_page == QuestState.Succeeded) or time_of_day() == "evening" or time_of_day() == "night"
 ---
 // The end of the second act: news from the mine. The path to the mine is a journey, from the castle or the village.
-A boy runs in, black with dust to the eyebrows.
-Boy: The old gallery fell in! Foreman Gudrun says Jory is under the hill, and the lamps won't reach him.
-Boy: She says the map maker knows the old ways. Will you come?
+A boy runs in, black with dust to the eyebrows. #line:0369dec
+Boy: The old gallery fell in! Foreman Gudrun says Jory is under the hill, and the lamps won't reach him. #line:014d7b4
+Boy: She says the map maker knows the old ways. Will you come? #line:0f9cd02
 <<if $quest_audience != QuestState.Succeeded>>
     <<set $quest_audience to QuestState.Failed>>
     <<quest_changed audience>>
@@ -67,25 +67,25 @@ quest: audience
 when: here() == "Castle" and $act == Act.Castle
 when: $quest_audience == QuestState.Active
 ---
-Ysolde: The cartographer. Show me what you have.
+Ysolde: The cartographer. Show me what you have. #line:0542d55
 <<if $quest_survey == QuestState.Succeeded>>
-    Ysolde: Five landmarks, every one where it should be. My grandfather would have liked you.
+    Ysolde: Five landmarks, every one where it should be. My grandfather would have liked you. #line:0527875
 <<else>>
-    Ysolde: [plural value={survey_count()} one="One landmark" other="% landmarks" /]. I paid for five. #mood:angry
+    Ysolde: [plural value={survey_count()} one="One landmark" other="% landmarks" /]. I paid for five. #mood:angry #line:0906b4e
 <<endif>>
--> Tell her about the stones. <<if $culprit != Culprit.Unknown>>
+-> Tell her about the stones. <<if $culprit != Culprit.Unknown>> #line:08dbd53
     <<if $culprit == Culprit.Lio>>
-        Ysolde: The miller's child moves them back? To where?
-        Ysolde: Under the hill. That is what my grandfather said, too, when nobody listened.
+        Ysolde: The miller's child moves them back? To where? #line:052f5a0
+        Ysolde: Under the hill. That is what my grandfather said, too, when nobody listened. #line:0cc36af
     <<else>>
-        Ysolde: The sergeant blamed the peddler. How convenient for everyone.
+        Ysolde: The sergeant blamed the peddler. How convenient for everyone. #line:00fe527
     <<endif>>
--> Tell her about the road. <<if $road != Road.Undecided>>
-    Ysolde: The road is Corvin's concern, and the hearing's. The border is mine.
--> Say nothing more.
-Ysolde: Here is my concern. My grandfather's charter describes the old border between Varne and the abbey. Four pages.
-Ysolde: The third page is missing. It is the one that says where the border runs.
-Ysolde: Find it, and the hearing is ours. Ottilie, in the library, will help you.
+-> Tell her about the road. <<if $road != Road.Undecided>> #line:01525f5
+    Ysolde: The road is Corvin's concern, and the hearing's. The border is mine. #line:03ffdb7
+-> Say nothing more. #line:061bac3
+Ysolde: Here is my concern. My grandfather's charter describes the old border between Varne and the abbey. Four pages. #line:00c6450
+Ysolde: The third page is missing. It is the one that says where the border runs. #line:008f1ee
+Ysolde: Find it, and the hearing is ours. Ottilie, in the library, will help you. #line:0861a16
 <<set $quest_audience to QuestState.Succeeded>>
 <<quest_changed audience>>
 <<set $quest_page to QuestState.Active>>
@@ -101,9 +101,9 @@ when: here() == "Castle" and $act == Act.Castle
 when: $quest_page == QuestState.Active
 ---
 <<if $clue_library or $clue_tomb or $clue_desk>>
-    Ysolde: You are on its trail. I can see it in your face.
+    Ysolde: You are on its trail. I can see it in your face. #line:0927682
 <<else>>
-    Ysolde: The library first. Ottilie has kept those shelves for thirty years.
+    Ysolde: The library first. Ottilie has kept those shelves for thirty years. #line:08f7714
 <<endif>>
 ===
 
@@ -115,10 +115,10 @@ quest: page
 when: here() == "Castle" and $act == Act.Castle
 when: $quest_page == QuestState.Succeeded
 ---
-Ysolde: In Corvin's desk. My own steward.
-Ysolde: The border is carved under the hill. The miners call them the lantern folk. Nobody has been down there in forty years.
+Ysolde: In Corvin's desk. My own steward. #line:0c6dc13
+Ysolde: The border is carved under the hill. The miners call them the lantern folk. Nobody has been down there in forty years. #line:02fa4eb
 <<if $feast_served>>
-    Ysolde: And you fed my table, too. I will not forget it.
+    Ysolde: And you fed my table, too. I will not forget it. #line:03fd92b
 <<endif>>
 ===
 
@@ -128,10 +128,10 @@ location: Anywhere
 scenario: The audience
 when: $act != Act.Castle
 ---
-=> Ysolde: The abbey wants our meadows. My grandfather would have laughed at them.
-=> Ysolde: Corvin is useful. Useful people are dangerous. <<if here() == "Castle">>
-=> Ysolde: Draw it true, cartographer. That is all I ask today. <<if $act == Act.Fair>>
-=> Ysolde: The whole valley is watching that table. <<if $act == Act.Fair>>
+=> Ysolde: The abbey wants our meadows. My grandfather would have laughed at them. #line:0aaea68
+=> Ysolde: Corvin is useful. Useful people are dangerous. <<if here() == "Castle">> #line:05ca9cd
+=> Ysolde: Draw it true, cartographer. That is all I ask today. <<if $act == Act.Fair>> #line:08f06f7
+=> Ysolde: The whole valley is watching that table. <<if $act == Act.Fair>> #line:0a0a232
 ===
 
 title: Ottilie
@@ -141,9 +141,9 @@ scenario: The archive
 quest: page
 when: $quest_page == QuestState.Active and not $clue_library
 ---
-Ottilie: The charter? Four pages, in my keeping since I was a girl. Three of them.
-Ottilie: The third page went out of this library once. The old chaplain, Brother Aldric, borrowed it the winter he died.
-Ottilie: He is buried in the castle's chapel. Perhaps he took it with him. Chaplains are like that.
+Ottilie: The charter? Four pages, in my keeping since I was a girl. Three of them. #line:02ae819
+Ottilie: The third page went out of this library once. The old chaplain, Brother Aldric, borrowed it the winter he died. #line:0e0f8dc
+Ottilie: He is buried in the castle's chapel. Perhaps he took it with him. Chaplains are like that. #line:01fcee9
 <<set $clue_library to true>>
 <<detour PageClue>>
 ===
@@ -154,9 +154,9 @@ location: Castle
 scenario: The archive
 when: always
 ---
-=> Ottilie: Mind the dust. It's older than both of us.
-=> Ottilie: Maps and charters, cartographer. The two lies a valley tells about itself.
-=> Ottilie: You found it! Corvin has been borrowing my keys, then. <<if $quest_page == QuestState.Succeeded>>
+=> Ottilie: Mind the dust. It's older than both of us. #line:0d65321
+=> Ottilie: Maps and charters, cartographer. The two lies a valley tells about itself. #line:0fca15c
+=> Ottilie: You found it! Corvin has been borrowing my keys, then. <<if $quest_page == QuestState.Succeeded>> #line:0b6c2d3
 ===
 
 title: Shelves
@@ -164,7 +164,7 @@ act: All
 location: Castle
 scenario: The archive
 ---
-Rolls of parchment, bound ledgers, a box of seals. On one shelf, an old map of the valley with the mine drawn as a little lantern.
+Rolls of parchment, bound ledgers, a box of seals. On one shelf, an old map of the valley with the mine drawn as a little lantern. #line:000f84d
 ===
 
 title: Tomb
@@ -174,9 +174,9 @@ scenario: The archive
 quest: page
 when: $quest_page == QuestState.Active and not $clue_tomb
 ---
-Brother Aldric's tomb, in the castle's chapel. On the lid, carved under his name:
-"I gave back what I borrowed, to the steward of my day. The border runs where the light sleeps under the hill."
-The steward of his day. The steward's desk, then.
+Brother Aldric's tomb, in the castle's chapel. On the lid, carved under his name: #line:0bdd189
+"I gave back what I borrowed, to the steward of my day. The border runs where the light sleeps under the hill." #line:016bea0
+The steward of his day. The steward's desk, then. #line:037eee7
 <<set $clue_tomb to true>>
 <<detour PageClue>>
 ===
@@ -187,7 +187,7 @@ location: Castle
 scenario: The archive
 when: always
 ---
-The chaplain's tomb. Somebody leaves fresh flowers here.
+The chaplain's tomb. Somebody leaves fresh flowers here. #line:0a66bde
 ===
 
 title: Desk
@@ -198,13 +198,13 @@ quest: page
 when: $quest_page == QuestState.Active and not $clue_desk
 ---
 <<if $clue_library and $clue_tomb>>
-    The steward's desk. In the bottom drawer, under ledgers of the castle's flour, a page of old parchment.
-    The third page of the charter. "From the bridge stone, the border runs north under the hill, as the carvings show, to the abbey's well."
-    Corvin's own seal is on the wax that held it shut.
+    The steward's desk. In the bottom drawer, under ledgers of the castle's flour, a page of old parchment. #line:032af29
+    The third page of the charter. "From the bridge stone, the border runs north under the hill, as the carvings show, to the abbey's well." #line:095fbfb
+    Corvin's own seal is on the wax that held it shut. #line:08554be
     <<set $clue_desk to true>>
     <<detour PageClue>>
 <<else>>
-    The steward's desk, neat as a new grave. You don't know what to look for yet.
+    The steward's desk, neat as a new grave. You don't know what to look for yet. #line:0cf88be
 <<endif>>
 ===
 
@@ -214,7 +214,7 @@ location: Castle
 scenario: The archive
 when: $quest_page != QuestState.Active or $clue_desk
 ---
-Ledgers, quills, and a little bottle from Nan's cottage, labelled "for sleep".
+Ledgers, quills, and a little bottle from Nan's cottage, labelled "for sleep". #line:0e3eb36
 ===
 
 title: PageClue
@@ -224,11 +224,11 @@ quest: page
 ---
 // Said after each clue to the missing page.
 <<if $clue_library and $clue_tomb and $clue_desk>>
-    You have the missing page.
+    You have the missing page. #line:07b5a1e
     <<set $quest_page to QuestState.Succeeded>>
     <<quest_changed page>>
 <<else>>
-    One more clue to the missing page.
+    One more clue to the missing page. #line:0e39be7
 <<endif>>
 ===
 
@@ -239,7 +239,7 @@ scenario: The steward's offer
 when: here() == "Castle" and $act == Act.Castle
 when: $quest_audience != QuestState.Succeeded
 ---
-Corvin: The Countess first, cartographer. Then come and see me in my study.
+Corvin: The Countess first, cartographer. Then come and see me in my study. #line:0ad1f6a
 ===
 
 title: Corvin
@@ -251,24 +251,24 @@ when: here() == "Castle" and $act == Act.Castle
 when: $quest_audience == QuestState.Succeeded and $offer == Offer.NotMade
 ---
 // The third fork: the steward's money, refused, or refused with his letter kept as proof.
-Corvin: Sit. You have seen the Countess, and she has told you about her grandfather's border. Under the hill, and so on.
-Corvin: Here is a more useful border. The abbey's meadows on our side of the line. The road straight through the village.
-Corvin: Draw it so, and it is worth {$bribe} crowns to you. The terms are in this letter. Read it.
+Corvin: Sit. You have seen the Countess, and she has told you about her grandfather's border. Under the hill, and so on. #line:08e81ab
+Corvin: Here is a more useful border. The abbey's meadows on our side of the line. The road straight through the village. #line:071f59c
+Corvin: Draw it so, and it is worth {$bribe} crowns to you. The terms are in this letter. Read it. #line:0ac980a
 <<set $quest_offer to QuestState.Active>>
 <<quest_changed offer>>
--> Take the crowns. Draw his border.
+-> Take the crowns. Draw his border. #line:0ccdf70
     <<set $offer to Offer.Accepted>>
     <<give crowns {$bribe}>>
     <<give false_map>>
-    Corvin: A sensible cartographer. Here is the line I want. Make it look old.
--> Refuse.
+    Corvin: A sensible cartographer. Here is the line I want. Make it look old. #line:0f68ebd
+-> Refuse. #line:0043981
     <<set $offer to Offer.Refused>>
-    Corvin: Then we will see whose map the hearing believes. #mood:angry
--> Refuse, and keep the letter.
+    Corvin: Then we will see whose map the hearing believes. #mood:angry #line:009c3f6
+-> Refuse, and keep the letter. #line:002866f
     <<set $offer to Offer.Proof>>
     <<give letter>>
-    Corvin: My letter, if you please.
-    Corvin: No? Keep it, then. Paper burns. #mood:angry
+    Corvin: My letter, if you please. #line:0886ee4
+    Corvin: No? Keep it, then. Paper burns. #mood:angry #line:0814c7a
 <<set $quest_offer to QuestState.Succeeded>>
 <<quest_changed offer>>
 ===
@@ -281,11 +281,11 @@ when: here() == "Castle" and $act == Act.Castle
 when: $offer != Offer.NotMade
 ---
 <<if $offer == Offer.Accepted>>
-    Corvin: Old ink, cartographer. Brown, not black. Nobody believes a new map.
+    Corvin: Old ink, cartographer. Brown, not black. Nobody believes a new map. #line:00c6469
 <<elseif $quest_page == QuestState.Succeeded>>
-    Corvin: You have been in my desk. That page proves nothing. Paper says what you want it to. #mood:angry
+    Corvin: You have been in my desk. That page proves nothing. Paper says what you want it to. #mood:angry #line:0718f77
 <<else>>
-    Corvin: Still here? The castle is not short of people who say no to me.
+    Corvin: Still here? The castle is not short of people who say no to me. #line:066335d
 <<endif>>
 ===
 
@@ -296,5 +296,5 @@ scenario: The feast
 when: $act == Act.Castle
 when: $quest_feast != QuestState.Active
 ---
-The road goes down to the village. The Countess expects you here today.
+The road goes down to the village. The Countess expects you here today. #line:0513f7e
 ===

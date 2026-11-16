@@ -330,5 +330,5 @@ location: Anywhere
 scenario: The state of the story
 style: note
 ---
-Four acts. Act I is the village and its houses (child scenes), for two days. Act II is the castle (a separate scene), for one day, and the feast sends the cartographer back to the village and back. Act III is the mine (a separate scene with its levels as child scenes), for one shift, with the lamp oil as the clock. Act IV is the village again, with the fair (a child scene loaded by the story) and the hearing, which gives one of six endings.
+Four acts. Act I is the village and its houses (child scenes), for two days. Act II is the castle (a separate scene), for one day, and the feast sends the cartographer back to the village and back. Act III is the mine (a separate scene with its levels as child scenes), for one shift, with the lamp oil as the clock. Act IV is the village again, with the fair (a child scene loaded by the story) and the hearing, which gives one of six endings. #line:StoryNotes_0100
 ===

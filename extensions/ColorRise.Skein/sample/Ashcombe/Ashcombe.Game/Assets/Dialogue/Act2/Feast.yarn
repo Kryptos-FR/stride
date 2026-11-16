@@ -6,14 +6,14 @@ quest: feast
 when: $act == Act.Castle
 when: $quest_feast == QuestState.NotStarted
 ---
-Agathe: Out of my kitchen! Oh. The map maker. Sit, then, if you must.
-Agathe: The Countess wants a feast tonight for the abbey's men, and I have no ale and no flour. The village has both.
-Agathe: Hedda's ale and Bram's flour. Bring me those, and you'll eat at the high table.
--> I will go down to the village for you.
-    Agathe: Quick, then. The road is an hour each way.
+Agathe: Out of my kitchen! Oh. The map maker. Sit, then, if you must. #line:Agathe.1e21c573_0100_Agathe
+Agathe: The Countess wants a feast tonight for the abbey's men, and I have no ale and no flour. The village has both. #line:Agathe.1e21c573_0200_Agathe
+Agathe: Hedda's ale and Bram's flour. Bring me those, and you'll eat at the high table. #line:Agathe.1e21c573_0300_Agathe
+-> I will go down to the village for you. #line:Agathe.1e21c573_0400
+    Agathe: Quick, then. The road is an hour each way. #line:Agathe.1e21c573_0500_Agathe
     <<set $quest_feast to QuestState.Active>>
--> I have work here.
-    Agathe: Everybody has work here. Nobody has flour.
+-> I have work here. #line:Agathe.1e21c573_0600
+    Agathe: Everybody has work here. Nobody has flour. #line:Agathe.1e21c573_0700_Agathe
     <<set $quest_feast to QuestState.Offered>>
 <<quest_changed feast>>
 ===
@@ -26,12 +26,12 @@ quest: feast
 when: $act == Act.Castle
 when: $quest_feast == QuestState.Offered
 ---
-Agathe: Well? Ale and flour?
--> I will fetch them.
+Agathe: Well? Ale and flour? #line:Agathe.36448d52_0100_Agathe
+-> I will fetch them. #line:Agathe.36448d52_0200
     <<set $quest_feast to QuestState.Active>>
     <<quest_changed feast>>
-    Agathe: Quick, then.
--> Not yet.
+    Agathe: Quick, then. #line:Agathe.36448d52_0300_Agathe
+-> Not yet. #line:Agathe.36448d52_0400
 ===
 
 title: Agathe
@@ -43,22 +43,22 @@ when: $act == Act.Castle
 when: $quest_feast == QuestState.Active
 ---
 <<if has_item("ale") and has_item("flour")>>
-    Agathe: Ale! Flour! You beautiful creature.
+    Agathe: Ale! Flour! You beautiful creature. #line:Agathe.42d0f5a2_0100_Agathe
     <<take ale>>
     <<take flour>>
     <<if $quest_recipe == QuestState.Succeeded>>
-        Agathe: And Hedda sent her mother's fair cake? She's never let that recipe out of the inn. You must have charmed her.
+        Agathe: And Hedda sent her mother's fair cake? She's never let that recipe out of the inn. You must have charmed her. #line:Agathe.42d0f5a2_0200_Agathe
     <<endif>>
     <<set $feast_served to true>>
     <<set $quest_feast to QuestState.Succeeded>>
     <<quest_changed feast>>
 <<else>>
     <<if has_item("ale")>>
-        Agathe: Still no flour? The abbey's men will eat the tablecloth.
+        Agathe: Still no flour? The abbey's men will eat the tablecloth. #line:Agathe.42d0f5a2_0300_Agathe
     <<elseif has_item("flour")>>
-        Agathe: Still no ale? The abbey's men will drink the well.
+        Agathe: Still no ale? The abbey's men will drink the well. #line:Agathe.42d0f5a2_0400_Agathe
     <<else>>
-        Agathe: Nothing yet? Hedda's ale and Bram's flour. It isn't hard.
+        Agathe: Nothing yet? Hedda's ale and Bram's flour. It isn't hard. #line:Agathe.42d0f5a2_0500_Agathe
     <<endif>>
 <<endif>>
 ===
@@ -69,9 +69,9 @@ location: Castle
 scenario: The feast
 when: $quest_feast != QuestState.NotStarted and $quest_feast != QuestState.Offered and $quest_feast != QuestState.Active
 ---
-=> Agathe: Everything in this castle is cold except my kitchen.
-=> Agathe: Corvin eats standing up. Never trust a man who eats standing up.
-=> Agathe: The feast was a triumph. The abbot's men cried into the soup. <<if $feast_served>>
+=> Agathe: Everything in this castle is cold except my kitchen. #line:Agathe.911485a8_0100_Agathe
+=> Agathe: Corvin eats standing up. Never trust a man who eats standing up. #line:Agathe.911485a8_0200_Agathe
+=> Agathe: The feast was a triumph. The abbot's men cried into the soup. <<if $feast_served>> #line:Agathe.911485a8_0300_Agathe
 ===
 
 title: Events
@@ -85,12 +85,12 @@ when: here() == "Village" and been_to("Castle")
 ---
 // The village after a day away: what changed while the cartographer was at the castle. Not before the castle: the
 // summons sets the act in the village, and the journey waits for the end of the dialogue and of its events.
-The village looks smaller after the castle.
-Pell's cart is gone from the green. He went up the hill to sell to the castle.
+The village looks smaller after the castle. #line:Events.1676df30_0100
+Pell's cart is gone from the green. He went up the hill to sell to the castle. #line:Events.1676df30_0200
 <<if $culprit == Culprit.Lio>>
-    The boundary stones stand where the sergeant left them. Nobody moved them last night.
+    The boundary stones stand where the sergeant left them. Nobody moved them last night. #line:Events.1676df30_0300
 <<else>>
-    The boundary stones have moved again. One more pace up the bank.
+    The boundary stones have moved again. One more pace up the bank. #line:Events.1676df30_0400
 <<endif>>
 ===
 
@@ -102,10 +102,10 @@ quest: feast
 when: $act == Act.Castle
 when: $quest_feast == QuestState.Active and not has_item("ale")
 ---
-Hedda: Ale for the castle? Agathe sent you? She'd send the river if it could carry a cask.
+Hedda: Ale for the castle? Agathe sent you? She'd send the river if it could carry a cask. #line:Hedda.cb91d0c3_0100_Hedda
 <<give ale>>
 <<if $quest_recipe == QuestState.Succeeded>>
-    Hedda: And take this cake for the high table. My mother's recipe. Tell Agathe whose it is.
+    Hedda: And take this cake for the high table. My mother's recipe. Tell Agathe whose it is. #line:Hedda.cb91d0c3_0200_Hedda
 <<endif>>
 ===
 
@@ -115,14 +115,14 @@ location: Inn
 scenario: The feast
 when: always
 ---
-=> Hedda: Soup's on. It's always on.
-=> Hedda: The regulars are Wim and Saul. They have argued about the same cow for nine years. <<if $act == Act.Survey>>
-=> Hedda: Corvin drinks here when the castle is too quiet for him. He pays, I'll give him that. <<if $act == Act.Survey>>
-=> Hedda: Lio was out late again. I saw the lantern go down to the river. <<if $act == Act.Survey and not $saw_lio>>
-=> Hedda: Bram will lose the mill if the road goes straight. He won't say it, but he's afraid. <<if $act == Act.Survey>>
-=> Hedda: The castle has you running errands? That's a castle for you. <<if $act == Act.Castle>>
-=> Hedda: The cake is in the oven for the fair. <<if $quest_recipe == QuestState.Succeeded>>
-=> Hedda: The regulars talk of nothing but Jory. <<if $act == Act.Fair>>
+=> Hedda: Soup's on. It's always on. #line:Hedda.9a83e94e_0100_Hedda
+=> Hedda: The regulars are Wim and Saul. They have argued about the same cow for nine years. <<if $act == Act.Survey>> #line:Hedda.9a83e94e_0200_Hedda
+=> Hedda: Corvin drinks here when the castle is too quiet for him. He pays, I'll give him that. <<if $act == Act.Survey>> #line:Hedda.9a83e94e_0300_Hedda
+=> Hedda: Lio was out late again. I saw the lantern go down to the river. <<if $act == Act.Survey and not $saw_lio>> #line:Hedda.9a83e94e_0400_Hedda
+=> Hedda: Bram will lose the mill if the road goes straight. He won't say it, but he's afraid. <<if $act == Act.Survey>> #line:Hedda.9a83e94e_0500_Hedda
+=> Hedda: The castle has you running errands? That's a castle for you. <<if $act == Act.Castle>> #line:Hedda.9a83e94e_0600_Hedda
+=> Hedda: The cake is in the oven for the fair. <<if $quest_recipe == QuestState.Succeeded>> #line:Hedda.9a83e94e_0700_Hedda
+=> Hedda: The regulars talk of nothing but Jory. <<if $act == Act.Fair>> #line:Hedda.9a83e94e_0800_Hedda
 ===
 
 title: Bram
@@ -134,10 +134,10 @@ when: $act == Act.Castle
 when: $quest_feast == QuestState.Active and not has_item("flour")
 ---
 <<if $wheel_mended>>
-    Bram: Flour for the castle's feast? The wheel ground all night. Take a sack, and tell the Countess it's Oster flour.
+    Bram: Flour for the castle's feast? The wheel ground all night. Take a sack, and tell the Countess it's Oster flour. #line:Bram.b6d66cd3_0100_Bram
     <<give flour>>
 <<else>>
-    Bram: Flour? With the wheel stuck? I have none to give, not even to a Countess. #mood:sad
+    Bram: Flour? With the wheel stuck? I have none to give, not even to a Countess. #mood:sad #line:Bram.b6d66cd3_0200_Bram
 <<endif>>
 ===
 
@@ -150,9 +150,9 @@ quest: portraits
 <<if visited_count("PortraitFounder") == 0>>
     <<set $portraits_seen to $portraits_seen + 1>>
     <<detour PortraitSeen>>
-    The founder of the house of Varne, in gold armour, with a map unrolled at his feet. The border on it runs under a hill.
+    The founder of the house of Varne, in gold armour, with a map unrolled at his feet. The border on it runs under a hill. #line:PortraitFounder_0100
 <<else>>
-    The founder again. He looks at you as if you owe him rent.
+    The founder again. He looks at you as if you owe him rent. #line:PortraitFounder_0200
 <<endif>>
 ===
 
@@ -165,9 +165,9 @@ quest: portraits
 <<if visited_count("PortraitTwins") == 0>>
     <<set $portraits_seen to $portraits_seen + 1>>
     <<detour PortraitSeen>>
-    Two sisters, the same face twice. One of them married an abbot's brother, and the border moved a mile.
+    Two sisters, the same face twice. One of them married an abbot's brother, and the border moved a mile. #line:PortraitTwins_0100
 <<else>>
-    The twins. One of them is smiling. You are not sure it was the same one last time.
+    The twins. One of them is smiling. You are not sure it was the same one last time. #line:PortraitTwins_0200
 <<endif>>
 ===
 
@@ -182,9 +182,9 @@ quest: portraits
     <<detour PortraitSeen>>
 <<endif>>
 // The castle's runner chooses among line groups with its own saliency strategy: the lines come round in order
-=> A pale lady in blue, holding a lantern. The plate says "Saint of the Deep Ways".
-=> The lantern in the painting is green, like no flame you have ever seen.
-=> The lady in blue again. Her lantern lights a carved wall behind her.
+=> A pale lady in blue, holding a lantern. The plate says "Saint of the Deep Ways". #line:PortraitSaint_0100
+=> The lantern in the painting is green, like no flame you have ever seen. #line:PortraitSaint_0200
+=> The lady in blue again. Her lantern lights a carved wall behind her. #line:PortraitSaint_0300
 ===
 
 title: PortraitHound
@@ -196,11 +196,11 @@ quest: portraits
 <<if visited_count("PortraitHound") == 0>>
     <<set $portraits_seen to $portraits_seen + 1>>
     <<detour PortraitSeen>>
-    A hound. Just a hound. The plate says "Biscuit, who found the well".
+    A hound. Just a hound. The plate says "Biscuit, who found the well". #line:PortraitHound_0100
 <<elseif visited_count("PortraitHound") == 1>>
-    Biscuit again. A good dog. A great dog, by the look of the frame.
+    Biscuit again. A good dog. A great dog, by the look of the frame. #line:PortraitHound_0200
 <<else>>
-    You have looked at this dog [plural value={visited_count("PortraitHound") + 1} one="% time" other="% times" /] now.
+    You have looked at this dog [plural value={visited_count("PortraitHound") + 1} one="% time" other="% times" /] now. #line:PortraitHound_0300
 <<endif>>
 ===
 

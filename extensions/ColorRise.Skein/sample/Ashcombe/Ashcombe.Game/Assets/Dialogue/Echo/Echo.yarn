@@ -21,10 +21,10 @@ when: not $echo_answered
 ---
 <<set $echo_riddles to $echo_riddles + 1>>
 <<if $echo_riddles == 1>>
-    Echo: Who calls? Who calls? Who calls?
-    Echo: Answer, and I will be quiet. Fail, and I will say your name all night.
+    Echo: Who calls? Who calls? Who calls? #line:Echo.0eec2c8c_0100_Echo
+    Echo: Answer, and I will be quiet. Fail, and I will say your name all night. #line:Echo.0eec2c8c_0200_Echo
 <<else>>
-    Echo: Back again. The [ordinal value={$echo_riddles} one="%st" two="%nd" few="%rd" other="%th" /] riddle, then.
+    Echo: Back again. The [ordinal value={$echo_riddles} one="%st" two="%nd" few="%rd" other="%th" /] riddle, then. #line:Echo.0eec2c8c_0300_Echo
 <<endif>>
 <<jump EchoRiddle>>
 ===
@@ -38,28 +38,28 @@ quest: echo
 <<declare $echo_roll = 0>>
 <<set $echo_roll to dice(3)>>
 <<if $echo_roll == 1>>
-    Echo: I have a bed but never sleep, a mouth but never eat. What am I?
-    -> A river.
+    Echo: I have a bed but never sleep, a mouth but never eat. What am I? #line:EchoRiddle_0100_Echo
+    -> A river. #line:EchoRiddle_0200
         <<jump EchoRight>>
-    -> A mine.
+    -> A mine. #line:EchoRiddle_0300
         <<jump EchoWrong>>
-    -> A lantern.
+    -> A lantern. #line:EchoRiddle_0400
         <<jump EchoWrong>>
 <<elseif $echo_roll == 2>>
-    Echo: The more you take, the more you leave behind. What are they?
-    -> Footsteps.
+    Echo: The more you take, the more you leave behind. What are they? #line:EchoRiddle_0500_Echo
+    -> Footsteps. #line:EchoRiddle_0600
         <<jump EchoRight>>
-    -> Coins.
+    -> Coins. #line:EchoRiddle_0700
         <<jump EchoWrong>>
-    -> Years.
+    -> Years. #line:EchoRiddle_0800
         <<jump EchoWrong>>
 <<else>>
-    Echo: I speak without a tongue and hear without ears. What am I?
-    -> A bell.
+    Echo: I speak without a tongue and hear without ears. What am I? #line:EchoRiddle_0900_Echo
+    -> A bell. #line:EchoRiddle_1000
         <<jump EchoWrong>>
-    -> An echo.
+    -> An echo. #line:EchoRiddle_1100
         <<jump EchoRight>>
-    -> A ghost.
+    -> A ghost. #line:EchoRiddle_1200
         <<jump EchoWrong>>
 <<endif>>
 ===
@@ -69,8 +69,8 @@ act: Mine
 location: Deep
 quest: echo
 ---
-Echo: Right. Right. Right...
-The voice fades into the stone, and the deep level is quiet.
+Echo: Right. Right. Right... #line:EchoRight_0100_Echo
+The voice fades into the stone, and the deep level is quiet. #line:EchoRight_0200
 <<set $echo_answered to true>>
 ===
 
@@ -79,8 +79,8 @@ act: Mine
 location: Deep
 quest: echo
 ---
-Echo: Wrong. Wrong. Wrong...
-The echo laughs, far away. It will ask again.
+Echo: Wrong. Wrong. Wrong... #line:EchoWrong_0100_Echo
+The echo laughs, far away. It will ask again. #line:EchoWrong_0200
 ===
 
 title: Echo
@@ -89,6 +89,6 @@ location: Deep
 quest: echo
 when: $echo_answered
 ---
-=> The hole in the rock is quiet.
-=> Something drips, far down. The echo says nothing.
+=> The hole in the rock is quiet. #line:Echo.4757ee5d_0100
+=> Something drips, far down. The echo says nothing. #line:Echo.4757ee5d_0200
 ===
