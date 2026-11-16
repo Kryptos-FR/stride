@@ -3,6 +3,7 @@ Id: 5acadda1-37d7-58e0-b466-9253b6ac2437
 SerializedVersion: {Stride: 3.1.0.1}
 Tags: []
 ChildrenIds: []
+Parent: a46d5918-9052-5bd3-9de7-88031a03e608:Places/Mine
 Offset: {X: 200.0, Y: 0.0, Z: 0.0}
 Hierarchy:
     RootParts:

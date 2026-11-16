@@ -3,6 +3,7 @@ Id: b5e54c12-3e14-5a0f-a270-df0856d100b9
 SerializedVersion: {Stride: 3.1.0.1}
 Tags: []
 ChildrenIds: []
+Parent: 1f2007c3-02f0-5bb8-a596-c297863e1676:Places/Village/Inn
 Offset: {X: 0.0, Y: 0.0, Z: -60.0}
 Hierarchy:
     RootParts:

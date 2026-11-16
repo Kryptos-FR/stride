@@ -4,6 +4,7 @@ SerializedVersion: {Stride: 3.1.0.1}
 Tags: []
 ChildrenIds: 
     - b5e54c12-3e14-5a0f-a270-df0856d100b9
+Parent: 5a64658e-d3e2-5e00-bd43-c93cb050ecc6:Places/Village
 Offset: {X: 200.0, Y: 0.0, Z: 0.0}
 Hierarchy:
     RootParts:
