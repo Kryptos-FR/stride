@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/Skein/">
+    <Project Path="../../src/ColorRise.Skein.Assets/ColorRise.Skein.Assets.csproj" />
+    <Project Path="../../src/ColorRise.Skein.Editor.Avalonia/ColorRise.Skein.Editor.Avalonia.csproj" />
+    <Project Path="../../src/ColorRise.Skein.Editor/ColorRise.Skein.Editor.csproj" />
+    <Project Path="../../src/ColorRise.Skein.UI/ColorRise.Skein.UI.csproj" />
+    <Project Path="../../src/ColorRise.Skein/ColorRise.Skein.csproj" />
+  </Folder>
+  <Project Path="Ashcombe.Game/Ashcombe.Game.csproj" />
+  <Project Path="Ashcombe.Linux/Ashcombe.Linux.csproj" DefaultStartup="true" />
+  <Project Path="Ashcombe.Tests/Ashcombe.Tests.csproj" />
+  <Project Path="Ashcombe.Windows/Ashcombe.Windows.csproj" />
+</Solution>
