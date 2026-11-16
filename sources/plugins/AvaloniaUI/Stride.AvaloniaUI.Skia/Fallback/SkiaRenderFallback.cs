@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using System;
 using Avalonia.Media;
 using Avalonia.Platform;
 using Stride.AvaloniaUI.Rendering.Bitmaps;
@@ -70,4 +71,7 @@ internal sealed class SkiaRenderFallback : IRenderFallback
     }
 
     public IGeometryImpl BuildGlyphRunGeometry(GlyphRun glyphRun) => Skia.BuildGlyphRunGeometry(glyphRun);
+
+    public IFallbackCanvas CreateCanvas(FallbackTarget target)
+        => throw new NotSupportedException("The Skia fallback has no canvas.");
 }
