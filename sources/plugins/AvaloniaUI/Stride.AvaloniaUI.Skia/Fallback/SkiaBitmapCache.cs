@@ -12,13 +12,16 @@ namespace Stride.AvaloniaUI.Skia.Fallback;
 /// </summary>
 internal sealed class SkiaBitmapCache : IDisposable
 {
-    private IBitmapImpl? bitmap;
+    private SkiaBitmapReference? bitmap;
     private int version;
 
     /// <summary>
     /// Gets Skia's copy of the pixels the bitmap has now, or <c>null</c> when it has none (0×0).
     /// </summary>
-    public IBitmapImpl? Get(IPlatformRenderInterface skia, StrideBitmap source)
+    /// <remarks>
+    /// The copy stays alive, and the same, until the bitmap's version changes or the cache is disposed.
+    /// </remarks>
+    public SkiaBitmapReference? Get(IPlatformRenderInterface skia, StrideBitmap source)
     {
         using (source.EnterReadScope())
         {
@@ -29,7 +32,7 @@ internal sealed class SkiaBitmapCache : IDisposable
             if (source.Address == IntPtr.Zero)
                 return null;
 
-            bitmap = skia.LoadBitmap(source.Format, source.AlphaFormat, source.Address, source.PixelSize, source.Dpi, source.RowBytes);
+            bitmap = new SkiaBitmapReference(skia.LoadBitmap(source.Format, source.AlphaFormat, source.Address, source.PixelSize, source.Dpi, source.RowBytes));
             version = source.Version;
             return bitmap;
         }
