@@ -32,8 +32,9 @@ The native renderer, Stride's own, is opt-in: such a game sets Avalonia up with 
 
 ## Status and limits
 
-This is the design in the analysis document up to Skia on Stride's own Vulkan device; Skia on Direct3D 12 comes next, then a native Stride renderer as research.
+This is the design in the analysis document up to Skia on Stride's own Vulkan device; Skia on Direct3D 12 comes next. The native Stride renderer has its first step.
 
+- The native renderer is opt-in (`AvaloniaUIRenderer.Native`). In this step it records Avalonia's drawing with Stride's own geometry, bitmaps and text, and draws it through the Skia package on the CPU, so it needs that package and draws the same pixels as Skia on the CPU.
 - Skia renders on the GPU with Vulkan only. With Direct3D 11 or 12 and OpenGL, it renders on the CPU and each changed frame is uploaded whole.
 - Avalonia has one GPU in a process: it follows the device of the last game that loaded its graphics content.
 - Avalonia's Skia GPU interface is internal: the platform implements it with runtime code generation, so where there is none (NativeAOT) Skia renders on the CPU.
@@ -47,3 +48,11 @@ This is the design in the analysis document up to Skia on Stride's own Vulkan de
 ## Tests
 
 `Stride.AvaloniaUI.Tests` runs a headless game with simulated input for the layout, rendering and input capture, and games on the GPU (Lavapipe on CI) that check the view is drawn over the scene and takes its clicks with Skia on the device and on the CPU, that both draw the same frame, and that the view is drawn again when it moves between them. `Stride.AvaloniaUI.Native.Tests` runs games with the native renderer, as Avalonia has one renderer per process. With `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`, the Vulkan validation layer fails the GPU tests on any error.
+
+Both projects draw the reference views (`Stride.AvaloniaUI.Tests/Shared/ReferenceViews.cs`: nine pages of 640x480 pixels, from the Fluent controls to shapes, text, gradients, images, paths, clips, opacity and effects) and compare each frame with its gold image, `tests/baselines/<project>/<platform>.<API>/<device>/ReferenceViewTests.<Page>.png`. The golds are the frames of the whole-frame Skia renderer on the CPU. The native project holds copies of them, and `GoldTests` checks that they are the same files, so the native renderer is held to Skia's frames. Golds exist for Linux with Vulkan (Lavapipe); the Direct3D 11 and 12 golds are made on Windows.
+
+To make the golds again, after a page or the Skia renderer changed:
+
+1. Run the Skia project's reference views: `dotnet test sources/plugins/AvaloniaUI/Stride.AvaloniaUI.Tests --filter "FullyQualifiedName~ReferenceViewTests"` (on Linux, with `-p:StridePlatforms=Linux -p:StrideGraphicsApis=Vulkan`). The frames that have no gold, or that differ from it, are written under `tests/local/Stride.AvaloniaUI.Tests/`.
+2. Look at each image. A page shows nothing that animates, so two runs give the same files.
+3. Copy the `.png` and `.metadata.json` files to the same folder under both `tests/baselines/Stride.AvaloniaUI.Tests/` and `tests/baselines/Stride.AvaloniaUI.Native.Tests/`, and commit them with the change that made them.
