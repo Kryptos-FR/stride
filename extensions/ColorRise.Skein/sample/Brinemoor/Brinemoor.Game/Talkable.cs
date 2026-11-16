@@ -31,9 +31,9 @@ public sealed class Talkable : StartupScript
     public bool IsThing { get; set; }
 
     /// <summary>
-    /// For a thing, the id of the line of the story that says what using it does ("light the lamp"), shown after "E:".
+    /// For a thing, the id of the line of the story that says what using it does ("light the lamp"), shown after the key "E".
     /// </summary>
-    /// <userdoc>For a thing: the id of the line that says what using it does, as in line:use_lamp. The screen shows it after "E:".</userdoc>
+    /// <userdoc>For a thing: the id of the line that says what using it does, as in line:use_lamp. The screen shows it after the key "E".</userdoc>
     [DataMember(30)]
     public string Label { get; set; } = "";
 

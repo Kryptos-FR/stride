@@ -16,6 +16,8 @@ It lives on this branch of a Stride fork only to build against the engine's deve
 
 The runtime declares the last three as its companions: whoever loads a game that references `ColorRise.Skein` (the asset compiler, Game Studio) loads them too. A game never references them itself.
 
+Two guides say how to use it: [docs/guide-writers.md](docs/guide-writers.md) for who writes the story (the script editor, the dialogue player, line ids and translations, working with Visual Studio Code on the same files), and [docs/guide-developers.md](docs/guide-developers.md) for who programs the game (the packages, the dialogue runner, presenters, commands and functions, variables and saves, languages).
+
 The design is in [docs/design.md](docs/design.md), the plan of the work in [docs/plan.md](docs/plan.md), and what Skein found in Stride's plugin model in [docs/plugin-findings.md](docs/plugin-findings.md).
 
 ## Try it
@@ -40,11 +42,14 @@ dotnet test extensions/ColorRise.Skein/ColorRise.Skein.slnx
 
 To build against another Stride version, copy `Directory.Build.local.props.example` to `Directory.Build.local.props` (git-ignored) and set `SkeinStrideVersion`.
 
+**3. Use it in a game of your own.** `dotnet pack extensions/ColorRise.Skein/ColorRise.Skein.slnx` puts the five packages in `extensions/ColorRise.Skein/bin/packages`. The first section of the [developers' guide](docs/guide-developers.md) has the two references and the `nuget.config` a game needs.
+
 ### What works today
 
 This section follows the work: it says what can be tried at the current commit.
 
-- The five packages build and pack.
+- The five packages build and pack, with the documentation of their public types. A small game in a folder outside the Stride checkout, with only the two package references of the developers' guide, restores, builds its Yarn project and plays it (on Linux here, the asset compiler first failed to restore the companion packages: finding 21 of [docs/plugin-findings.md](docs/plugin-findings.md)).
+- The C# and the Yarn of the two guides are compiled by the tests.
 - A `.yarn` file of an asset folder is an asset, "Yarn script": the asset view shows it, *Add asset > Dialogue > Yarn script* makes one, and saving, renaming and moving it in Game Studio keep it a plain Yarn file (UTF-8, no byte order mark unless the file came with one).
 - A double click on a script opens the script editor: the graph of its nodes on the left, its text on the right, the compiler's messages below.
   - Graph: a card for each node (title, speakers, first lines, options, tags), a link for each jump, a stub for a node of another script (a double click opens it), a red stub for a node that does not exist. Drag a card to place it (`position:` in the text), drag from a card's "jump" or "detour" connector to another card to add the jump, double click or F2 to rename (the jumps of every script of the project follow), right click for the menus (add a node or a note, duplicate, delete, colour, add to a node group, layout). Clusters, node groups and the values of the "Group by" header are frames; the search dims the cards that do not match.
@@ -87,6 +92,7 @@ This section follows the work: it says what can be tried at the current commit.
   - What it shows of Skein in a game: a dialogue runner with the line presenter, the options presenter (numbered) and the line advancer; a presenter of the game's own (`MoodPresenter`); a second runner whose lines are captions (`Chatter`); commands and functions in C# (`StoryCommands`, and `walk` on a `Talkable`); a node group `Events` that the game plays whenever one of its nodes has something to say (`StoryDirector`); the screen's own words taken from line ids, so that they are translated with the story; a save of the variables with the game's state (`SaveSlot`).
   - The story in short: light the lamp of the lighthouse before the first night, or a ship strikes the rocks; take a side at the town meeting and follow the trail of the missing keeper; on the third day the island votes who keeps the light, and each voter listens to the courier only if a deed of the first two days moved them.
   - Its tests (`Brinemoor.Tests`) need no running game: they play the story to each of its four endings, in English and in French, and check that the scripts use each feature of Yarn Spinner and that every line is translated.
+  - Yarn Spinner's own tools read the story as it is: `Brinemoor.yarnproject` and `Brinemoor.ysls.json` beside the Yarn project are the files Skein writes, a test compiles the scripts with Yarn Spinner's compiler from that project file alone, and Yarn Spinner's command line (`ysc compile Brinemoor.yarnproject`, version 3.2.2) compiles it without a message.
   - Open it in Game Studio:
 
     ```sh
@@ -98,7 +104,9 @@ This section follows the work: it says what can be tried at the current commit.
 
 ### Not yet
 
-The guides for writers and for programmers, and the packages for a game outside this tree.
+- A check on Windows: everything here was built and run on Linux. The WPF Game Studio gets none of Skein's views, and was not opened with a game that uses Skein.
+- Yarn Spinner's Visual Studio Code extension was not run on the files Skein writes: its compiler and its command line were.
+- A trimmed or ahead-of-time build of a game (the developers' guide says what it needs).
 
 ## Tied to the fork
 
@@ -106,6 +114,7 @@ What still depends on the checkout Skein sits in, and what removes it:
 
 - `nuget.config` takes the Stride packages from `../../bin/packages`, the output of a local engine build. Once a released Stride has the plugin model, nuget.org serves them and that source goes.
 - `Directory.Build.targets` tells the build where the engine's asset compiler is when Skein is built in another configuration than the engine (a Release pack after a Debug engine build). It only acts against a local engine build, and goes with it.
+- The packages have the version 0.1.0 and depend on a development version of Stride, so `dotnet pack` warns (NU5104).
 
 ## Credits and licenses
 

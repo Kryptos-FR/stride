@@ -28,6 +28,7 @@ Based on `feature/xplat/plugin-follow-ups` (17f6ee7d7, 2026-11-15).
 | 18 | Asset templates (`TemplateManager`) | A generator for the "Yarn project" template that also creates a first script (`AssetFactoryTemplateGenerator` with its own `CreateAssets`) | It works, but generators are registered with the static `TemplateManager.Register`, which the plugin context does not offer: nothing takes a generator back when its plugin leaves, and the generator that runs is the last registered that supports the template, so the order of registration decides | Skein registers its generator in `InitializeSession`, after Stride's own, and takes it back in `context.OnClose` | A registry of template generators on the plugin context, emptied with the plugin; or a template (`.sdtpl`) that names its generator. |
 | 19 | Entity factories (`[Display(order, name, category)]` on an `EntityFactory`) | A category of its own, "Dialogue", in *Add entity* | The scan finds the factory and makes its category. A category whose order nobody registered goes first, before Stride's own; the order is set with the static `EntityFactoryCategory.RegisterCategory`, from a module initializer (`[Stride.Core.ModuleInitializer]`), and stays when the plugin leaves | Skein registers the order 5 from a module initializer, as Stride's own plugins do: "Dialogue" goes after "Model" | A category without an order could go last; the order could be declared with an attribute, and go with the plugin. |
 | 20 | A game's UI with the default graphics compositor | A dialogue box of a library (Stride UI: light text on a dark panel) in a game made from the template's compositor | The UI is drawn in the transparent stage, before the post effects: tone mapping and bloom change its colours (white text turns grey, a dark panel turns paler). Colours also blend in linear space, so a panel lets more through than its alpha says (alpha 225 looks like 160 in a paint program) | The sample's compositor has a stage for the UI, drawn after the post effects (a `SingleStageRenderer` after the forward renderer); Skein's default look has panels of alpha 248 | The template's compositor could draw the UI after the post effects, as a game's screen expects; a library cannot change the compositor of the game that uses it |
+| 21 | Companion packages of a game outside the tree (`PackageSession.CompanionPackages`, `NugetStore.RestorePackage`) | A game in a folder outside the checkout, with two references (`ColorRise.Skein` and `ColorRise.Skein.UI` 0.1.0) and a `nuget.config` that names nuget.org and the two local feeds, built with `dotnet build` on Linux | The restore of the game passes. Then the asset compiler restores the companion `ColorRise.Skein.Assets` by itself and fails: `Could not restore package [ColorRise.Skein.Assets] version [0.1.0]`, `The repository primary signature's signing certificate is not trusted by the trust provider`. That restore does not leave out the packages the framework already has, as the SDK does, so it downloads old `System.*` 4.3.0 packages that the game's restore never asked for, and it checks their signatures against the certificates of the machine. Seen in a sandbox whose certificates are those of a proxy; not tried on a plain Linux machine. Saga's finding 7, still there on 17f6ee7d7. Once those packages are in the global packages folder, the game builds its Yarn project and plays it | None in Skein: a library cannot change how the asset compiler restores. For the check, a throwaway project that references `ColorRise.Skein.Assets` with `RestoreEnablePackagePruning` off was restored once with `dotnet restore`, which checks the signatures its own way and fills the folder | The companion restore could prune the framework's packages as the SDK does (option A of the study of Saga's finding 7), and its error could name the package whose signature failed |
 
 ## Tied to the fork
 
@@ -37,6 +38,7 @@ Skein is meant to move to a repository of its own. What still depends on the che
 |---|---|---|---|
 | T1 | `nuget.config` has a source `stride-dev` pointing at `../../bin/packages` | The Stride packages with the plugin model exist only as the output of a local engine build | A released Stride has the plugin model; nuget.org then serves the packages |
 | T2 | `Directory.Build.targets` names the asset compiler under `$(StrideRoot)sources/assets/Stride.AssetCompiler/bin/` | Finding 1. Only in dev-redirect builds, from properties the dev package stubs set; nothing is read from the tree by Skein itself | Finding 1 is fixed, or Skein builds against published packages |
+| T3 | Skein's packages have a stable version (0.1.0) and depend on a prerelease Stride (4.5.3-dev): `dotnet pack` warns NU5104 for each | No released Stride has the plugin model | A released Stride, or a prerelease version for Skein until then (open, for Nicolas) |
 
 ## Saga's findings that the follow-ups fixed
 
@@ -44,3 +46,19 @@ Checked off when Skein uses the fix (the numbers are those of ColorRise.Saga's f
 
 | Saga # | Finding | Fix used by Skein |
 |---|---|---|
+| 5 | No editor test kit for a third party | `Stride.Assets.Editor.Testing`: the tests of Skein's editor open their sessions with `StrideEditorTestSession`. Findings 5, 8, 9 and 12 above are about the kit itself |
+| 6 | The node graph neither keeps the place of a node nor says that the user moved one | `NodeGraphNode.Position` holds the place of a card, and `NodesMoved` makes the "Move node" step of the history |
+| 9 | A double click on a node comes from the graph, not from the node | `NodeDoubleClicked` renames a card, or opens the script of a stub |
+| 10 | No reload offer after a change of a view | Nothing to do in Skein: the watcher now counts `.axaml` files. Not tried again with a change of one of Skein's views |
+| 13 | A node cannot have a context menu of its own | A right click on a card selects it and opens the menu of the card |
+
+Still open, and met again by Skein with the same workaround as Saga:
+
+| Saga # | Finding | In Skein |
+|---|---|---|
+| 1 | A companion project without an `.sdpkg` is packed with the engine's version | Each of the five projects has its own `.sdpkg` |
+| 2 | The extension builds only in the configuration of the engine | Finding 1 and T2 |
+| 3 | On Linux and macOS, a plain project gets the Windows platform and Direct3D11 | `Directory.Build.props` sets `StrideGraphicsApi` to Vulkan off Windows |
+| 7 | The companion restore cannot check the signatures of nuget.org packages | Finding 21 |
+| 8 | A game that references the runtime project gets the companions only if their projects are in its solution | The solution of the sample holds the five projects of Skein |
+| 17 | A panel's `PanelId` constant hides `PanelViewModel.PanelId` | `public new const string PanelId` on the two panels |
