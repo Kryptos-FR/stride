@@ -43,6 +43,7 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
     private readonly YarnHighlighter highlighter;
     private readonly YarnDiagnosticRenderer diagnostics;
     private readonly YarnHiddenLines hidden;
+    private readonly YarnPlayLineRenderer playLine;
     private YarnScriptEditorViewModel? observedEditor;
 
     // True while the pane and the buffer are brought in line, so that the change is not sent back where it came from
@@ -66,6 +67,8 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
         diagnostics = new YarnDiagnosticRenderer(Document);
         TextArea.TextView.LineTransformers.Add(highlighter);
         TextArea.TextView.BackgroundRenderers.Add(diagnostics);
+        playLine = new YarnPlayLineRenderer(Document);
+        TextArea.TextView.BackgroundRenderers.Add(playLine);
         hidden = new YarnHiddenLines(TextArea.TextView);
         TextArea.TextView.ElementGenerators.Add(hidden);
         TextArea.ReadOnlySectionProvider = hidden;
@@ -104,6 +107,11 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
     /// </summary>
     /// <param name="line">The number of the line, from 1.</param>
     public bool IsLineShown(int line) => line >= 1 && line <= Document.LineCount && !hidden.Hides(line);
+
+    /// <summary>
+    /// The line, from 1, the pane lights as the one the run of the dialogue player is at, or null.
+    /// </summary>
+    public int? PlayLine => playLine.Line;
 
     /// <summary>
     /// The kind of the token at a place of the text, as the pane colours it, or null where the text is plain.
@@ -267,6 +275,24 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
             RequestShownLines();
             OnPlaceRequested();
         }
+
+        ShowPlayLine(follow: false);
+    }
+
+    // The line of the run is lit, and comes into view when it moves, unless the user is typing in the pane or the line is
+    // of a node the pane does not show
+    private void ShowPlayLine(bool follow)
+    {
+        var line = observedEditor?.PlayLine;
+        if (line == playLine.Line)
+            return;
+
+        playLine.Line = line;
+        TextArea.TextView.InvalidateLayer(KnownLayer.Background);
+        if (follow && line is { } number && !IsKeyboardFocusWithin && IsLineShown(number))
+        {
+            ScrollTo(number, 1);
+        }
     }
 
     private void OnEditorPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -279,6 +305,9 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
                 break;
             case nameof(YarnScriptEditorViewModel.ShowWholeFile):
                 RequestShownLines();
+                break;
+            case nameof(YarnScriptEditorViewModel.PlayLine):
+                ShowPlayLine(follow: true);
                 break;
         }
     }

@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:player="using:ColorRise.Skein.Editor.Player"
+             xmlns:views="using:ColorRise.Skein.Editor.Avalonia.Views"
+             x:Class="ColorRise.Skein.Editor.Avalonia.Views.DialogueTimelineView"
+             x:DataType="player:DialogueTimelineViewModel">
+  <UserControl.Styles>
+    <Style Selector="Button.step">
+      <Setter Property="Padding" Value="8,1"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel Margin="6">
+    <!-- Back and forth through the steps, the replay after an edit, and where the run is -->
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+      <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
+        <Button x:Name="BackButton" Classes="step" Content="◀" Command="{Binding BackCommand}" ToolTip.Tip="{sd:LocalizeString Back one step, Context=ToolTip}"/>
+        <Button x:Name="ForwardButton" Classes="step" Content="▶" Command="{Binding ForwardCommand}" ToolTip.Tip="{sd:LocalizeString Forward one step, Context=ToolTip}"/>
+        <Button x:Name="ReplayButton" Content="{sd:LocalizeString Replay, Context=Button}" Command="{Binding ReplayCommand}"
+                ToolTip.Tip="{sd:LocalizeString Play the run again on the scripts as they are now, Context=ToolTip}"/>
+      </StackPanel>
+      <TextBlock x:Name="StatusText" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" Text="{Binding Status}"/>
+    </DockPanel>
+
+    <!-- What the step at the cursor did: for a pick, each candidate with why it was or was not chosen -->
+    <ScrollViewer DockPanel.Dock="Right" Width="300" Margin="6,0,0,0" HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl x:Name="DetailsList" ItemsSource="{Binding Details}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="x:String">
+            <SelectableTextBlock Margin="0,1" TextWrapping="Wrap" Text="{Binding}"/>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <!-- The steps and the lanes; a click moves the run to a step -->
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <views:DialogueTimelineControl x:Name="TimelineControl" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                     Steps="{Binding Steps}" Lanes="{Binding Lanes}" CurrentStep="{Binding Cursor}"
+                                     GoToStepCommand="{Binding GoToStepCommand}"
+                                     Background="{DynamicResource SystemControlBackgroundAltHighBrush}"/>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

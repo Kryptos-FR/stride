@@ -227,6 +227,7 @@ public sealed partial class YarnScriptEditorView : UserControl, IAssetEditorView
         var onStub = menuNode is YarnStubCardViewModel { IsBroken: false };
         var onGraph = menuNode is null;
         OpenItem.IsVisible = onStub;
+        PlayItem.IsVisible = menuNode is YarnNodeCardViewModel { IsNote: false };
         RenameItem.IsVisible = onCard;
         DuplicateItem.IsVisible = onCard;
         DeleteItem.IsVisible = onCard;
@@ -247,6 +248,14 @@ public sealed partial class YarnScriptEditorView : UserControl, IAssetEditorView
         if (menuNode is YarnStubCardViewModel stub)
         {
             editor?.OpenTargetCommand.Execute(stub);
+        }
+    }
+
+    private void OnPlayClick(object? sender, RoutedEventArgs e)
+    {
+        if (menuNode is YarnNodeCardViewModel card)
+        {
+            editor?.PlayFromHereCommand.Execute(card);
         }
     }
 

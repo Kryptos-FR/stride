@@ -1,4 +1,5 @@
 using ColorRise.Skein.Editor.Avalonia.Views;
+using ColorRise.Skein.Editor.Player;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Editor.Avalonia;
 
@@ -17,5 +18,8 @@ public sealed class SkeinEditorAvaloniaPlugin : StrideAssetsAvaloniaPlugin
 
         // The picker of a Yarn node joins the property grid
         RegisterResourceDictionary(context, new YarnPropertyTemplates());
+
+        context.ViewTypes.Register(typeof(DialoguePlayerViewModel), typeof(DialoguePlayerView));
+        context.ViewTypes.Register(typeof(DialogueTimelineViewModel), typeof(DialogueTimelineView));
     }
 }

@@ -1,0 +1,199 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:vm="using:ColorRise.Skein.Editor.ViewModels"
+             xmlns:player="using:ColorRise.Skein.Editor.Player"
+             xmlns:views="using:ColorRise.Skein.Editor.Avalonia.Views"
+             x:Class="ColorRise.Skein.Editor.Avalonia.Views.DialoguePlayerView"
+             x:DataType="player:DialoguePlayerViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Margin" Value="0,8,0,4"/>
+    </Style>
+    <Style Selector="TextBlock.faint">
+      <Setter Property="Foreground" Value="{x:Static views:PlayBrushes.Faint}"/>
+    </Style>
+    <Style Selector="TextBlock.error">
+      <Setter Property="Foreground" Value="#FFE5534B"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="Button.small">
+      <Setter Property="Padding" Value="6,1"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel Margin="8">
+    <!-- What to play: a node of a Yarn project -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto">
+      <ComboBox x:Name="ProjectBox" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Stretch"
+                ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject}"
+                PlaceholderText="{sd:LocalizeString Pick a Yarn project, Context=Placeholder}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:YarnProjectViewModel">
+            <TextBlock Text="{Binding Url}"/>
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <ComboBox x:Name="NodeBox" Grid.Row="1" Grid.Column="0" Margin="0,4,0,0" HorizontalAlignment="Stretch"
+                ItemsSource="{Binding Nodes}" SelectedItem="{Binding SelectedNode}"
+                PlaceholderText="{sd:LocalizeString Pick a node, Context=Placeholder}"
+                ToolTip.Tip="{sd:LocalizeString The node the dialogue starts at, Context=ToolTip}"/>
+      <Button x:Name="StartButton" Grid.Row="1" Grid.Column="1" Margin="4,4,0,0" Content="{sd:LocalizeString ▶ Play, Context=Button}" Command="{Binding StartCommand}"
+              ToolTip.Tip="{sd:LocalizeString Play the node from its start\, on the scripts as they are now, Context=ToolTip}"/>
+      <Button x:Name="ResetButton" Grid.Row="1" Grid.Column="2" Margin="4,4,0,0" Content="{sd:LocalizeString Stop, Context=Button}" Command="{Binding ResetCommand}"
+              ToolTip.Tip="{sd:LocalizeString Stop the dialogue and forget the run, Context=ToolTip}"/>
+      <DockPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,4,0,0" LastChildFill="False">
+        <ComboBox x:Name="LanguageBox" DockPanel.Dock="Left" MinWidth="70" ItemsSource="{Binding Languages}" SelectedItem="{Binding Language}"
+                  IsVisible="{Binding !!Languages.Count}"
+                  ToolTip.Tip="{sd:LocalizeString The language the lines show in, Context=ToolTip}"/>
+        <CheckBox x:Name="WaitBox" DockPanel.Dock="Left" Margin="8,0,0,0" Content="{sd:LocalizeString Waits, Context=Label}" IsChecked="{Binding HonourWait}"
+                  ToolTip.Tip="{sd:LocalizeString Whether a wait of the scripts takes its time, Context=ToolTip}"/>
+        <Button x:Name="TimelineButton" DockPanel.Dock="Right" Margin="4,0,0,0" Content="{sd:LocalizeString Timeline, Context=Button}" Command="{Binding ShowTimelineCommand}"
+                ToolTip.Tip="{sd:LocalizeString Show the steps of the run to go back and forth through them, Context=ToolTip}"/>
+        <Button x:Name="ReplayButton" DockPanel.Dock="Right" Content="{sd:LocalizeString Replay, Context=Button}" Command="{Binding ReplayCommand}"
+                ToolTip.Tip="{sd:LocalizeString Play the run again on the scripts as they are now, Context=ToolTip}"/>
+      </DockPanel>
+    </Grid>
+
+    <!-- Why the dialogue did not start, where a replay stopped, or that the scripts changed -->
+    <Border DockPanel.Dock="Top" Margin="0,6,0,0" Padding="8,3" Background="#40E0A83A"
+            IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <TextBlock x:Name="StatusText" Text="{Binding Status}" TextWrapping="Wrap"/>
+    </Border>
+
+    <!-- What the run waits for: the answer of a function of the game, a choice, or to go on after a line -->
+    <StackPanel DockPanel.Dock="Bottom" Margin="0,6,0,0" IsVisible="{Binding IsPlaying}">
+      <ContentControl x:Name="QuestionHost" Content="{Binding Question}">
+        <ContentControl.ContentTemplate>
+          <DataTemplate x:DataType="player:ManualFunctionViewModel">
+            <Border Padding="8,5" Margin="0,0,0,4" CornerRadius="3" Background="#30CE93D8">
+              <StackPanel Spacing="4">
+                <TextBlock TextWrapping="Wrap">
+                  <Run Text="{sd:LocalizeString The scripts ask the game:, Context=Label}"/>
+                  <Run Text="{Binding Call}" FontWeight="Bold"/>
+                </TextBlock>
+                <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsBool}">
+                  <Button Content="true" Command="{Binding AnswerTrueCommand}"/>
+                  <Button Content="false" Command="{Binding AnswerFalseCommand}"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding !IsBool}">
+                  <TextBox Grid.Column="0" Text="{Binding Answer}" PlaceholderText="{Binding ReturnType}">
+                    <TextBox.KeyBindings>
+                      <KeyBinding Gesture="Enter" Command="{Binding ApplyCommand}"/>
+                    </TextBox.KeyBindings>
+                  </TextBox>
+                  <Button Grid.Column="1" Margin="4,0,0,0" Content="{sd:LocalizeString Answer, Context=Button}" Command="{Binding ApplyCommand}"/>
+                </Grid>
+                <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ContentControl.ContentTemplate>
+      </ContentControl>
+      <ItemsControl x:Name="OptionsList" ItemsSource="{Binding Options}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="player:PlayerOptionViewModel">
+            <Button Margin="0,2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Command="{Binding ChooseCommand}">
+              <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Button x:Name="ContinueButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+              Content="{sd:LocalizeString Continue, Context=Button}" Command="{Binding ContinueCommand}"
+              IsVisible="{Binding $self.IsEffectivelyEnabled}"/>
+    </StackPanel>
+
+    <Grid RowDefinitions="3*,5,2*">
+      <!-- What the dialogue said up to the cursor -->
+      <Panel Grid.Row="0" Margin="0,6,0,0">
+        <TextBlock Classes="faint" TextWrapping="Wrap" IsVisible="{Binding !IsPlaying}"
+                   Text="{sd:LocalizeString Pick a node and press Play\, or use Play on a node of a script. The scripts play as they are in memory: nothing needs saving or building., Context=Label}"/>
+        <ScrollViewer x:Name="TranscriptScroll" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding IsPlaying}">
+          <ItemsControl x:Name="TranscriptList" ItemsSource="{Binding Transcript}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="player:PlayerTranscriptItem">
+                <StackPanel Margin="0,2">
+                  <Grid ColumnDefinitions="Auto,Auto,Auto,*">
+                    <Ellipse Grid.Column="0" Width="6" Height="6" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{x:Static views:PlayBrushes.Changed}"
+                             IsVisible="{Binding Changed}" ToolTip.Tip="{sd:LocalizeString New or different since the last replay, Context=ToolTip}"/>
+                    <TextBlock Grid.Column="1" Classes="faint" Margin="0,0,5,0" Text="{Binding Kind, Converter={x:Static views:DialoguePlayerView.StepSign}}"
+                               IsVisible="{Binding $self.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Grid.Column="2" Margin="0,0,6,0" FontWeight="Bold" Foreground="#FF8FC7E8" Text="{Binding Speaker}"
+                               IsVisible="{Binding Speaker, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <SelectableTextBlock Grid.Column="3" TextWrapping="Wrap" Text="{Binding Text}"
+                                         Foreground="{Binding Kind, Converter={x:Static views:PlayBrushes.StepBrush}}"/>
+                  </Grid>
+                  <!-- Why a pick chose what it chose: each candidate with its score, or the condition that ruled it out -->
+                  <ItemsControl Margin="16,1,0,2" ItemsSource="{Binding Candidates}" IsVisible="{Binding !!Candidates.Count}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="player:PlayerCandidate">
+                        <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{Binding, Converter={x:Static views:PlayBrushes.CandidateBrush}}">
+                          <Run Text="{Binding, Converter={x:Static views:PlayBrushes.CandidateSign}}"/>
+                          <Run Text="{Binding Name}"/><Run Text=": "/><Run Text="{Binding Detail}"/>
+                        </TextBlock>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Panel>
+
+      <GridSplitter Grid.Row="1" ResizeDirection="Rows"/>
+
+      <!-- The game by hand: the variables of the scripts, and the answers given for its functions -->
+      <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel IsVisible="{Binding IsPlaying}">
+          <TextBlock Classes="section" Text="{sd:LocalizeString Variables, Context=Label}" IsVisible="{Binding !!Variables.Count}"/>
+          <ItemsControl x:Name="VariablesList" ItemsSource="{Binding Variables}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="player:PlayerVariableViewModel">
+                <StackPanel Margin="0,1">
+                  <Grid ColumnDefinitions="*,*">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Name}">
+                      <ToolTip.Tip>
+                        <StackPanel>
+                          <TextBlock><Run Text="{Binding Name}" FontWeight="Bold"/><Run Text=": "/><Run Text="{Binding Type}"/></TextBlock>
+                          <TextBlock Text="{Binding Description}" TextWrapping="Wrap" MaxWidth="320"
+                                     IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                          <TextBlock Classes="faint" Text="{sd:LocalizeString A smart variable: its value comes from this expression, Context=ToolTip}" IsVisible="{Binding IsSmart}"/>
+                        </StackPanel>
+                      </ToolTip.Tip>
+                    </TextBlock>
+                    <TextBox Grid.Column="1" Text="{Binding Value, UpdateSourceTrigger=LostFocus}" IsReadOnly="{Binding IsSmart}"/>
+                  </Grid>
+                  <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Classes="section" Text="{sd:LocalizeString Answers for the functions of the game, Context=Label}" IsVisible="{Binding !!Answers.Count}"/>
+          <ItemsControl x:Name="AnswersList" ItemsSource="{Binding Answers}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="player:ManualFunctionViewModel">
+                <StackPanel Margin="0,1">
+                  <Grid ColumnDefinitions="*,*,Auto">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Call}" ToolTip.Tip="{Binding Call}"/>
+                    <TextBox Grid.Column="1" Text="{Binding Answer}">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding ApplyCommand}"/>
+                      </TextBox.KeyBindings>
+                    </TextBox>
+                    <Button Grid.Column="2" Classes="small" Margin="4,0,0,0" Content="{sd:LocalizeString Change, Context=Button}" Command="{Binding ApplyCommand}"
+                            ToolTip.Tip="{sd:LocalizeString Answer this from the step shown on: what the dialogue said after it plays again, Context=ToolTip}"/>
+                  </Grid>
+                  <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>

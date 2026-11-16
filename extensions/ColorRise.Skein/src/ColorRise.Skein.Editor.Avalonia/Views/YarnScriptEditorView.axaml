@@ -58,6 +58,8 @@
               ToolTip.Tip="{sd:LocalizeString Add a note for the writers: a node the story never runs, Context=ToolTip}"/>
       <Button DockPanel.Dock="Left" Classes="tool" Content="{sd:LocalizeString Layout, Context=Button}" Command="{Binding LayoutCommand}"
               ToolTip.Tip="{sd:LocalizeString Place every node anew along the jumps, Context=ToolTip}"/>
+      <Button x:Name="PlayButton" DockPanel.Dock="Left" Classes="tool" Margin="10,0,2,0" Content="{sd:LocalizeString ▶ Play, Context=Button}" Command="{Binding PlayFromHereCommand}"
+              ToolTip.Tip="{sd:LocalizeString Play the selected node in the dialogue player\, on the scripts as they are now, Context=ToolTip}"/>
       <TextBlock DockPanel.Dock="Left" Margin="12,0,4,0" VerticalAlignment="Center" Text="{sd:LocalizeString Group by, Context=Label}"/>
       <ComboBox x:Name="GroupByBox" DockPanel.Dock="Left" MinWidth="110" VerticalAlignment="Center" SelectionChanged="OnGroupBySelectionChanged"
                 ToolTip.Tip="{sd:LocalizeString Frame the nodes that have the same value of a header, Context=ToolTip}"/>
@@ -113,6 +115,7 @@
           <sd:NodeGraphControl.ContextMenu>
             <ContextMenu x:Name="GraphMenu" Opening="OnGraphMenuOpening">
               <MenuItem x:Name="OpenItem" Header="{sd:LocalizeString Open its script, Context=Menu}" Click="OnOpenClick"/>
+              <MenuItem x:Name="PlayItem" Header="{sd:LocalizeString Play from here, Context=Menu}" Click="OnPlayClick"/>
               <MenuItem x:Name="RenameItem" Header="{sd:LocalizeString Rename..., Context=Menu}" InputGesture="F2" Click="OnRenameClick"/>
               <MenuItem x:Name="DuplicateItem" Header="{sd:LocalizeString Duplicate, Context=Menu}" Command="{Binding DuplicateCommand}"/>
               <MenuItem x:Name="DeleteItem" Header="{sd:LocalizeString Delete, Context=Menu}" InputGesture="{x:Static sd:EditCommands.DeleteGesture}"
