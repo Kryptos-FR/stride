@@ -33,6 +33,13 @@
     <PackageOutputPath>$(MSBuildThisFileDirectory)bin/packages/</PackageOutputPath>
   </PropertyGroup>
 
+  <!-- The packages carry the documentation of their public types -->
+  <PropertyGroup Condition="$(MSBuildProjectDirectory.Replace('\', '/').Contains('/src/'))">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- A parameter whose name says it all has no tag, and the constructor of a view or of a service no summary -->
+    <NoWarn>$(NoWarn);CS1573;CS1591</NoWarn>
+  </PropertyGroup>
+
   <!--
     Without a RuntimeIdentifier, Stride picks the Windows platform and Direct3D11, even on Linux or macOS. An engine built on
     those hosts has only the Vulkan Stride.Graphics, so the projects here would load assemblies that need a Vortice.Vulkan they
