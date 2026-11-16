@@ -3,6 +3,7 @@ using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Editor.ViewModels;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Presentation.ViewModels;
+using Stride.Core.Presentation.Collections;
 using Stride.Core.Reflection;
 
 namespace ColorRise.Skein.Editor.Services;
@@ -19,6 +20,8 @@ public sealed class YarnAnalysisService
 {
     private readonly ISessionViewModel session;
     private readonly Dictionary<AssetId, Unit> units = [];
+    // Asked for from the threads that build the property grid
+    private readonly Dictionary<AssetId, ObservableList<string>> nodeNames = [];
     private readonly CancellationTokenSource closing = new();
     private CancellationTokenSource delay = new();
     private Task pump = Task.CompletedTask;
@@ -82,6 +85,44 @@ public sealed class YarnAnalysisService
         }
 
         return unit.Latest;
+    }
+
+    /// <summary>
+    /// The titles of the nodes of a project that a dialogue can start, sorted. The list is kept current: it changes, on
+    /// the UI thread, after each analysis of the project. Safe from any thread.
+    /// </summary>
+    public ObservableList<string> NodeNamesOf(YarnProjectViewModel project)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+
+        ObservableList<string>? names;
+        lock (nodeNames)
+        {
+            if (!nodeNames.TryGetValue(project.Id, out names))
+            {
+                nodeNames.Add(project.Id, names = []);
+            }
+        }
+
+        if (session.Dispatcher.CheckAccess())
+        {
+            Fill();
+        }
+        else if (!closing.IsCancellationRequested)
+        {
+            session.Dispatcher.InvokeAsync(Fill);
+        }
+
+        return names;
+
+        // Asking for the analysis makes the service compile the project when it did not yet
+        void Fill()
+        {
+            if (!closing.IsCancellationRequested && !project.IsDeleted && AnalysisOf(project) is { } analysis)
+            {
+                ShowNodeNames(names, analysis);
+            }
+        }
     }
 
     /// <summary>
@@ -224,7 +265,33 @@ public sealed class YarnAnalysisService
                 Nodes = unit.GoodNodes ?? build.Compilation.Nodes,
                 Actions = gameActions,
             };
+            ObservableList<string>? names;
+            lock (nodeNames)
+            {
+                nodeNames.TryGetValue(unit.Owner.Id, out names);
+            }
+
+            if (names is not null)
+            {
+                ShowNodeNames(names, unit.Latest);
+            }
+
             Changed?.Invoke(unit.Latest);
+        }
+    }
+
+    // A note of the writer is a node the story never runs
+    private static void ShowNodeNames(ObservableList<string> names, YarnProjectAnalysis analysis)
+    {
+        List<string> titles = [.. analysis.Nodes
+            .Where(n => !n.Headers.Any(h => h.Key == "style" && h.Value == "note"))
+            .Select(n => n.Title)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)];
+        if (!names.SequenceEqual(titles))
+        {
+            names.Clear();
+            names.AddRange(titles);
         }
     }
 

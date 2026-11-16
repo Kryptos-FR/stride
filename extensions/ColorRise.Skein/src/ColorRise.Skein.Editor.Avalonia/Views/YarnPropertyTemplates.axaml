@@ -1,0 +1,17 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:caec="using:Stride.Core.Assets.Editor.Avalonia.Converters"
+                    xmlns:caev="using:Stride.Core.Assets.Editor.Avalonia.Views"
+                    xmlns:cpqvm="using:Stride.Core.Presentation.Quantum.ViewModels"
+                    xmlns:views="using:ColorRise.Skein.Editor.Avalonia.Views"
+                    x:Class="ColorRise.Skein.Editor.Avalonia.Views.YarnPropertyTemplates">
+
+  <!-- A property that names a Yarn node: a list of the nodes of its project that filters as the user types -->
+  <views:YarnNodeTemplateProvider x:Key="YarnNodeTemplateProvider" caev:PropertyViewHelper.TemplateCategory="PropertyEditor" OverrideRule="All">
+    <DataTemplate DataType="cpqvm:NodeViewModel">
+      <views:YarnNodePicker Text="{Binding NodeValue, Converter={caec:DifferentValuesToString}, UpdateSourceTrigger=Explicit}"
+                            ItemsSource="{ReflectionBinding [NodeNames]}"
+                            PlaceholderText="Pick a node"/>
+    </DataTemplate>
+  </views:YarnNodeTemplateProvider>
+</ResourceDictionary>

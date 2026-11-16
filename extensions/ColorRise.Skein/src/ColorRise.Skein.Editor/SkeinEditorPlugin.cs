@@ -1,3 +1,4 @@
+using ColorRise.Skein.Editor.PropertyGrid;
 using ColorRise.Skein.Editor.Services;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Editor;
@@ -29,5 +30,7 @@ public sealed class SkeinEditorPlugin : StrideAssetsPlugin
         var externalChanges = new YarnExternalChangeService(context.Session);
         context.Services.Register(externalChanges);
         context.OnClose(externalChanges.Close);
+
+        context.NodePresenterUpdaters.Register(new YarnNodeUpdater(context.Session));
     }
 }
