@@ -7,8 +7,8 @@
     <OutputType>Exe</OutputType>
     <!-- A program that is not a game: Stride's asset compiler, which the editor packages bring, has no assets to build for it -->
     <StrideCompilerSkipBuild>true</StrideCompilerSkipBuild>
-    <!-- The editor's experimental plugin API, as in the editor packages -->
-    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006;STREXP010</NoWarn>
+    <!-- The editor's experimental plugin API, as in the editor packages, and its test kit (STREXP011) -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006;STREXP010;STREXP011</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />

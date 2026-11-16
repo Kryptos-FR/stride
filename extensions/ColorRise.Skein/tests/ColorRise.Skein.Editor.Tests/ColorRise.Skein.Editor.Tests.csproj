@@ -3,8 +3,8 @@
     <RootNamespace>ColorRise.Skein.Editor.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <!-- The editor's experimental plugin API, as in the editor packages -->
-    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006</NoWarn>
+    <!-- The editor's experimental plugin API, as in the editor packages, and its test kit (STREXP011) -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006;STREXP011</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />

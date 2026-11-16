@@ -2,7 +2,7 @@
 
 What Skein met in Stride's plugin model while being built as a third party would build it. Skein never patches Stride: a gap is written here with what Skein tried, what happened, the workaround kept inside Skein, and the change suggested to Stride. A finding that blocks a feature leaves the feature out.
 
-Based on `feature/xplat/plugin-follow-ups` (17f6ee7d7, 2026-11-15).
+Found on `feature/xplat/plugin-follow-ups` (17f6ee7d7, 2026-11-15). Skein now builds on Stride's `master` (a62ed3b64, 2026-11-16), which has the follow-ups: its tests silence STREXP011, the mark of the editor test kit as experimental. The findings were not checked again on `master`.
 
 ## Findings
 
