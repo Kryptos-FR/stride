@@ -3,6 +3,8 @@ using ColorRise.Skein.Editor.Nodes;
 using ColorRise.Skein.Editor.ViewModels;
 using Stride.Core.Extensions;
 using Stride.Core.Presentation.Quantum;
+using Stride.Core.Presentation.Services;
+using Stride.Core.Transactions;
 
 namespace ColorRise.Skein.Editor.PropertyGrid;
 
@@ -18,6 +20,7 @@ internal sealed class YarnNodeHeadersSelection : IDisposable
     // The last request made to the grid: until it is served, the grid's selection is still the one before
     private Task request = Task.CompletedTask;
     private bool writing;
+    private int lastAsked;
 
     public YarnNodeHeadersSelection(YarnScriptEditorViewModel editor)
     {
@@ -115,7 +118,36 @@ internal sealed class YarnNodeHeadersSelection : IDisposable
         }
 
         ShowName();
-        request = editor.EditorProperties.GenerateSelectionPropertiesAsync(shown.Select(s => (IPropertyProviderViewModel)s.Headers));
+        request = AskGridAsync([.. shown.Select(s => (IPropertyProviderViewModel)s.Headers)]);
+    }
+
+    private async Task AskGridAsync(IReadOnlyList<IPropertyProviderViewModel> headers)
+    {
+        var asked = ++lastAsked;
+
+        // The grid waits for the end of the transaction in progress on a task that a nested transaction replaces, and
+        // then waits for ever (finding 23 of docs/plugin-findings.md): it is asked once the transaction is over
+        var undoRedo = editor.ServiceProvider.Get<IUndoRedoService>();
+        if (undoRedo.TransactionInProgress)
+        {
+            var over = new TaskCompletionSource();
+            void OnDone(object? sender, TransactionEventArgs e) => over.TrySetResult();
+            undoRedo.Done += OnDone;
+            try
+            {
+                await over.Task;
+            }
+            finally
+            {
+                undoRedo.Done -= OnDone;
+            }
+
+            // The text changed again in the transaction: the headers to show are others
+            if (asked != lastAsked)
+                return;
+        }
+
+        await editor.EditorProperties.GenerateSelectionPropertiesAsync(headers);
     }
 
     private void ShowName()

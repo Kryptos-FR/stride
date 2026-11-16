@@ -1,4 +1,5 @@
 using ColorRise.Skein.Assets.Text;
+using ColorRise.Skein.Editor.Graph;
 using ColorRise.Skein.Editor.Nodes;
 using ColorRise.Skein.Editor.Text;
 using Stride.Core.Assets.Editor.Testing;
@@ -128,6 +129,28 @@ public sealed class NodeHeadersTests
         Assert.Equal("'title' is not a free header: it has a place of its own.", editor.Problem);
         grid = await GridAsync(session);
         Assert.Equal("quest", Child(grid, "Others").Children.Single().Children.First().NodeValue);
+    }
+
+    [Fact]
+    public async Task A_rename_on_the_graph_shows_in_the_grid()
+    {
+        await using var session = await OpenAsync();
+        var editor = session.Edit("Dialogue/Act1");
+        await session.Analysis.WhenIdle();
+        editor.Select("Arrival");
+        await GridAsync(session);
+
+        Assert.True(editor.Rename((YarnNodeCardViewModel)editor.SelectedCards[0], "Landing"));
+
+        var grid = await GridAsync(session);
+        Assert.Equal("Landing", session.Session.ActiveProperties.Name);
+        Assert.Equal("Landing", Child(grid, "Title").NodeValue);
+
+        editor.Select("Pier");
+        await GridAsync(session);
+        Assert.True(editor.Rename((YarnNodeCardViewModel)editor.SelectedCards[0], "Jetty"));
+        grid = await GridAsync(session);
+        Assert.Equal("Jetty", Child(grid, "Title").NodeValue);
     }
 
     [Fact]
