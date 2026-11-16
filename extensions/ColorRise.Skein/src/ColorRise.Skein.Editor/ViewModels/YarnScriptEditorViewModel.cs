@@ -2,10 +2,12 @@ using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Assets.Text;
 using ColorRise.Skein.Editor.Graph;
 using ColorRise.Skein.Editor.Nodes;
+using ColorRise.Skein.Editor.Player;
 using ColorRise.Skein.Editor.PropertyGrid;
 using ColorRise.Skein.Editor.Services;
 using ColorRise.Skein.Editor.Text;
 using Stride.Core.Assets.Editor.Annotations;
+using Stride.Core.Assets.Editor.Panels;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Presentation.Collections;
@@ -81,6 +83,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         MoveCommand = new AnonymousCommand<IReadOnlyList<YarnCardMove>>(ServiceProvider, Move);
         LayoutCommand = new AnonymousCommand(ServiceProvider, Layout);
         OpenTargetCommand = new AnonymousTaskCommand<YarnStubCardViewModel>(ServiceProvider, OpenTarget);
+        PlayFromHereCommand = new AnonymousTaskCommand<YarnNodeCardViewModel?>(ServiceProvider, PlayFromHere);
     }
 
     /// <summary>
@@ -290,6 +293,11 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     /// Opens the script of a stub, at its node.
     /// </summary>
     public ICommandBase OpenTargetCommand { get; }
+
+    /// <summary>
+    /// Plays the node of a card in the dialogue player; without a card, the selected node, else the first.
+    /// </summary>
+    public ICommandBase PlayFromHereCommand { get; }
 
     /// <inheritdoc/>
     public override Task<bool> Initialize()
@@ -525,6 +533,34 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         {
             editor.Select(stub.Title);
         }
+    }
+
+    /// <summary>
+    /// Shows the dialogue player and starts a run of the script's project at a node.
+    /// </summary>
+    /// <param name="card">The card of the node; null for the selected node, else the first node of the script.</param>
+    public async Task PlayFromHere(YarnNodeCardViewModel? card)
+    {
+        card ??= SelectedCards.OfType<YarnNodeCardViewModel>().FirstOrDefault(c => !c.IsNote) ?? Cards.FirstOrDefault(c => !c.IsNote);
+        if (card is null)
+            return;
+
+        if (card.IsNote)
+        {
+            Problem = "A note is not part of the story: there is nothing to play.";
+            return;
+        }
+
+        if (analysisService?.ProjectsOf(Asset).FirstOrDefault() is not { } project)
+        {
+            Problem = "The dialogue player plays the nodes of a Yarn project, and this script is in none.";
+            return;
+        }
+
+        ServiceProvider.TryGet<IPanelService>()?.Show(DialoguePlayerViewModel.PanelId);
+        var player = DialoguePlayerService.Of(Session);
+        await player.Start(project, card.Title);
+        Problem = player.Problem;
     }
 
     /// <summary>

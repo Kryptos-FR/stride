@@ -60,9 +60,16 @@ internal sealed class Yarn32Adapter
         Line,
         Options,
         Command,
+        Callback,
     }
 
     public Dialogue Dialogue { get; }
+
+    /// <summary>
+    /// Calls something when the events before it have been delivered: what happens while the dialogue runs ahead is told
+    /// in its order.
+    /// </summary>
+    public void Enqueue(Action callback) => events.Enqueue(new Event(EventKind.Callback, Callback: callback));
 
     /// <summary>
     /// Runs a node to the end of the dialogue, or until the stop is requested.
@@ -115,6 +122,9 @@ internal sealed class Yarn32Adapter
                 case EventKind.Command:
                     await sink.CommandAsync(next.Text!);
                     break;
+                case EventKind.Callback:
+                    next.Callback!();
+                    break;
                 case EventKind.Options:
                     var choice = await sink.OptionsAsync(next.Options);
                     if (!stop.IsCancellationRequested)
@@ -124,5 +134,5 @@ internal sealed class Yarn32Adapter
         }
     }
 
-    private readonly record struct Event(EventKind Kind, string? Text = null, Line Line = default, OptionSet Options = default, IReadOnlyList<string>? LineIds = null);
+    private readonly record struct Event(EventKind Kind, string? Text = null, Line Line = default, OptionSet Options = default, IReadOnlyList<string>? LineIds = null, Action? Callback = null);
 }

@@ -17,6 +17,8 @@ public sealed class SkeinEditorPlugin : StrideAssetsPlugin
     public override void Initialize(IEditorPluginContext context)
     {
         base.Initialize(context);
+        context.Panels.Register(DialoguePlayerViewModel.Panel);
+        context.Panels.Register(DialogueTimelineViewModel.Panel);
     }
 
     /// <inheritdoc />

@@ -222,6 +222,56 @@ public sealed class DialoguePlayerTests
     }
 
     [Fact]
+    public async Task A_function_in_a_condition_of_a_node_group_or_at_the_start_is_asked_too()
+    {
+        await using var session = await OpenAsync("""
+            title: Start
+            ---
+            <<if tide() > 2>>
+                Kye: High water.
+            <<endif>>
+            <<detour Shop>>
+            Kye: Back outside.
+            ===
+            title: Shop
+            when: has_item("oil")
+            ---
+            Kye: Oil, I see.
+            ===
+            title: Shop
+            when: always
+            ---
+            Kye: Nothing to trade.
+            ===
+
+            """);
+        var player = session.Player;
+
+        // The first input of the run asks: no step yet
+        await player.Start(session.ProjectAt("Dialogue/Story"), "Start");
+        Assert.True(player.IsPlaying);
+        Assert.Equal(("tide()", "number"), (player.Question!.Call, player.Question.ReturnType));
+        Assert.Equal((0, -1), (player.Steps.Count, player.Cursor));
+
+        await player.Answer("tide", 3);
+        Assert.Equal([PlayerStepKind.Function, PlayerStepKind.Start, PlayerStepKind.NodeEnter, PlayerStepKind.Line], player.Steps.Select(s => s.Kind));
+        Assert.Equal("Kye: High water.", player.CurrentStep!.Text);
+
+        // The pick of the group needs the function: the question, then the pick with the answer
+        await player.Continue();
+        Assert.Equal("has_item(\"oil\")", player.Question!.Call);
+        Assert.Equal(4, player.Steps.Count);
+        await player.Answer("has_item", true);
+        Assert.Equal("Kye: Oil, I see.", player.CurrentStep!.Text);
+        Assert.Single(player.Steps, s => s.Kind == PlayerStepKind.Saliency);
+
+        // After the detour the run is back in the first node
+        await player.Continue();
+        Assert.Equal(("Kye: Back outside.", "Start"), (player.CurrentStep.Text, player.CurrentNode));
+        Assert.Equal(2, player.NodePath.Count);
+    }
+
+    [Fact]
     public async Task A_variable_set_by_hand_is_a_step_and_survives_going_back_past_it()
     {
         await using var session = await OpenAsync(Lamp);
@@ -376,7 +426,8 @@ public sealed class DialoguePlayerTests
         Assert.Equal(pick.Candidates[1].Name, pick.Chosen);
         Assert.Equal(pick.Chosen, player.CurrentNode);
         Assert.Equal(["Start", pick.Chosen!], player.NodePath);
-        Assert.Contains("$gold > 10", player.Steps[index].Text);
+        Assert.Equal("Greeting picks " + pick.Chosen, player.Steps[index].Text);
+        Assert.Equal([(false, false, "$gold > 10 fails"), (true, true, "score 1")], player.Steps[index].Candidates.Select(c => (c.IsChosen, c.Passed, c.Detail)));
     }
 
     [Fact]

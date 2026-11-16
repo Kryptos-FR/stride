@@ -142,7 +142,8 @@ public sealed class DialogueSession : IYarnDialogueEvents
     }
 
     /// <summary>
-    /// A pick was made among the nodes of a node group or the lines of a line group.
+    /// A pick was made among the nodes of a node group or the lines of a line group. It is told in the order of the
+    /// dialogue: after the start of the nodes entered before the pick, before the node or the line that was picked.
     /// </summary>
     public event Action<SaliencyPick>? SaliencyPicked;
 
@@ -373,7 +374,7 @@ public sealed class DialogueSession : IYarnDialogueEvents
 
     private void OnPicked(IReadOnlyList<ContentSaliencyOption> candidates, ContentSaliencyOption? chosen)
     {
-        if (SaliencyPicked is not { } handler || candidates.Count == 0)
+        if (SaliencyPicked is null || candidates.Count == 0)
             return;
 
         var isLineGroup = candidates[0].ContentType == ContentSaliencyContentType.Line;
@@ -393,7 +394,9 @@ public sealed class DialogueSession : IYarnDialogueEvents
             described.Add(new SaliencyCandidate(candidate.ContentID, candidate.ComplexityScore, passed, failed, saliency.ViewCountOf(candidate)));
         }
 
-        handler(new SaliencyPick(group, isLineGroup, described, chosen?.ContentID));
+        // Told after the nodes the dialogue entered before the pick, and before what was picked
+        var pick = new SaliencyPick(group, isLineGroup, described, chosen?.ContentID);
+        adapter.Enqueue(() => SaliencyPicked?.Invoke(pick));
     }
 
     /// <summary>

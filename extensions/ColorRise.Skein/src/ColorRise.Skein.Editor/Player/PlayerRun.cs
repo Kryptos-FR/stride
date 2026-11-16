@@ -169,24 +169,27 @@ internal sealed class PlayerRun : IDialogueResponder, IDialogueClock, IDisposabl
     }
 
     /// <summary>
-    /// Adds a step to the run at its place.
+    /// Adds a step to the run, with the node and the variables of the moment.
     /// </summary>
-    public void AddStep(PlayerStepKind kind, string text, string? lineId = null, string? speaker = null, IReadOnlyList<PlayerOption>? options = null, SaliencyPick? pick = null)
+    /// <param name="kind">What the step is.</param>
+    /// <param name="text">The step in words.</param>
+    /// <param name="lineId">The line whose place in the scripts is the step's.</param>
+    public void AddStep(PlayerStepKind kind, string text, string? lineId = null) => Steps.Add(NewStep(kind, text, lineId));
+
+    private PlayerStep NewStep(PlayerStepKind kind, string text, string? lineId = null)
     {
         var place = lineId is not null && build.Compilation.Lines.TryGetValue(lineId, out var line) ? line : null;
-        Steps.Add(new PlayerStep
+        return new PlayerStep
         {
             Kind = kind,
             Node = session.CurrentNode ?? node,
             File = place?.File,
             Line = place?.Line,
             Text = text,
-            Speaker = speaker,
-            Options = options ?? [],
-            Pick = pick,
+            Body = text,
             Variables = Snapshot(),
             Input = Input,
-        });
+        };
     }
 
     /// <summary>
@@ -217,14 +220,14 @@ internal sealed class PlayerRun : IDialogueResponder, IDialogueClock, IDisposabl
 
     async ValueTask IDialogueResponder.HandleLineAsync(LocalizedLine line, LineCancellation cancellation)
     {
-        AddStep(PlayerStepKind.Line, line.Text.Text, line.Id, line.CharacterName);
+        Steps.Add(NewStep(PlayerStepKind.Line, line.Text.Text, line.Id) with { Speaker = line.CharacterName, Body = line.TextWithoutCharacterName.Text });
         await WaitAsync(PlayerStop.Line, cancellation.NextLine);
     }
 
     async ValueTask<int?> IDialogueResponder.HandleOptionsAsync(IReadOnlyList<DialogueOption> options, CancellationToken cancellation)
     {
         Offered = [.. options.Select(o => new PlayerOption(o.Index, o.Line.Id, o.Line.Text.Text, o.IsAvailable))];
-        AddStep(PlayerStepKind.Options, string.Join(" / ", Offered.Select(o => o.Text)), Offered.Count > 0 ? Offered[0].LineId : null, options: Offered);
+        Steps.Add(NewStep(PlayerStepKind.Options, string.Join(" / ", Offered.Select(o => o.Text)), Offered.Count > 0 ? Offered[0].LineId : null) with { Options = Offered });
         var choice = await WaitAsync(PlayerStop.Options, cancellation);
         Offered = [];
         return choice;
@@ -314,22 +317,19 @@ internal sealed class PlayerRun : IDialogueResponder, IDialogueClock, IDisposabl
 
     private void OnSaliencyPicked(SaliencyPick pick)
     {
-        var text = $"{build.TitleOf(pick.Group)} picks {(pick.Chosen is { } chosen ? Name(chosen) : "nothing")}";
+        var candidates = new List<PlayerCandidate>(pick.Candidates.Count);
         foreach (var candidate in pick.Candidates)
         {
-            if (candidate.Name == pick.Chosen)
-                continue;
-
-            text += candidate.Passed
-                ? $"; {Name(candidate.Name)} passes (score {candidate.Complexity})"
-                : $"; {Name(candidate.Name)} is out: {candidate.FailedCondition ?? "a condition"} fails";
+            var detail = candidate.Passed ? $"score {candidate.Complexity}" : $"{candidate.FailedCondition ?? "a condition"} fails";
+            candidates.Add(new PlayerCandidate(Name(candidate.Name), candidate.Name == pick.Chosen, candidate.Passed, detail));
         }
 
-        AddStep(PlayerStepKind.Saliency, text, pick.IsLineGroup ? pick.Chosen : null, pick: pick);
+        var text = $"{build.TitleOf(pick.Group)} picks {(pick.Chosen is { } chosen ? Name(chosen) : "nothing")}";
+        Steps.Add(NewStep(PlayerStepKind.Saliency, text, pick.IsLineGroup ? pick.Chosen : null) with { Pick = pick, Candidates = candidates });
 
         // A line of a line group is named by its text, a node by its name in the program
         string Name(string candidate)
-            => pick.IsLineGroup && build.Compilation.Lines.TryGetValue(candidate, out var line) ? $"\"{line.Text}\"" : candidate;
+            => pick.IsLineGroup && build.Compilation.Lines.TryGetValue(candidate, out var line) ? line.Text : candidate;
     }
 
     private IReadOnlyDictionary<string, object> Snapshot()

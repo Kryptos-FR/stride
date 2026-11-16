@@ -32,6 +32,7 @@ internal sealed class PlayerBuild
             titles.TryAdd(node.UniqueTitle, node.Title);
         }
 
+        Variables = [.. Compilation.Variables.Where(v => !v.IsInternal)];
         foreach (var function in Compilation.Functions)
         {
             returnTypes.TryAdd(function.Name, function.ReturnType);
@@ -52,6 +53,11 @@ internal sealed class PlayerBuild
     /// The project as a game loads it.
     /// </summary>
     public YarnProject Content { get; }
+
+    /// <summary>
+    /// The variables the scripts declare or use, Yarn Spinner's own aside.
+    /// </summary>
+    public IReadOnlyList<YarnVariableData> Variables { get; }
 
     /// <summary>
     /// The compiled program.
@@ -90,6 +96,33 @@ internal sealed class PlayerBuild
     /// The type a function gives, as the compiler knows or guessed it: <c>bool</c>, <c>number</c> or <c>string</c>.
     /// </summary>
     public string ReturnTypeOf(string function) => returnTypes.GetValueOrDefault(function, YarnFunctionDeclaration.Bool);
+
+    /// <summary>
+    /// The expression of a smart variable as its declaration writes it, or null when the scripts do not show it.
+    /// </summary>
+    public string? ExpressionOf(YarnVariableData variable)
+    {
+        if (!variable.IsSmart || variable.File is null)
+            return null;
+
+        foreach (var (name, text) in Analysis.Texts)
+        {
+            if (name != variable.File)
+                continue;
+
+            // <<declare $rich = $gold > 10>>
+            var lines = text.Split('\n');
+            if (variable.Line < 1 || variable.Line > lines.Length)
+                return null;
+
+            var declaration = lines[variable.Line - 1];
+            var equals = declaration.IndexOf('=', StringComparison.Ordinal);
+            var close = declaration.LastIndexOf(">>", StringComparison.Ordinal);
+            return equals >= 0 && close > equals ? declaration[(equals + 1)..close].Trim() : null;
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// The declaration of a variable of the scripts, or null.

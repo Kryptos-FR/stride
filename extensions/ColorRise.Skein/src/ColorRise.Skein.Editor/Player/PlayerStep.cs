@@ -88,6 +88,15 @@ public sealed record PlayerQuestion(string Function, string Call, IReadOnlyList<
 public sealed record PlayerAnswer(string Call, object Value, string ReturnType);
 
 /// <summary>
+/// A candidate of a pick, as the player shows it.
+/// </summary>
+/// <param name="Name">The name of the node in the program, or the text of the line.</param>
+/// <param name="IsChosen">Whether the pick chose it.</param>
+/// <param name="Passed">Whether all its conditions held.</param>
+/// <param name="Detail">Its score when it passed, else the condition that ruled it out.</param>
+public sealed record PlayerCandidate(string Name, bool IsChosen, bool Passed, string Detail);
+
+/// <summary>
 /// A step of a played dialogue: what the user did or what the dialogue said, and the state after it.
 /// </summary>
 public sealed record PlayerStep
@@ -114,7 +123,7 @@ public sealed record PlayerStep
 
     /// <summary>
     /// The step in words: the line with its speaker, the option chosen, the command, the title of the node, the answer,
-    /// the variable and its value, the pick and what ruled the others out, the failure.
+    /// the variable and its value, what was picked, the failure.
     /// </summary>
     public string Text { get; init; } = "";
 
@@ -122,6 +131,11 @@ public sealed record PlayerStep
     /// Who says the line, or null.
     /// </summary>
     public string? Speaker { get; init; }
+
+    /// <summary>
+    /// The line without its speaker; <see cref="Text"/> for a step that is not a line.
+    /// </summary>
+    public string Body { get; init; } = "";
 
     /// <summary>
     /// The options offered, for <see cref="PlayerStepKind.Options"/>.
@@ -132,6 +146,11 @@ public sealed record PlayerStep
     /// The pick, for <see cref="PlayerStepKind.Saliency"/>.
     /// </summary>
     public SaliencyPick? Pick { get; init; }
+
+    /// <summary>
+    /// The candidates of the pick in words, for <see cref="PlayerStepKind.Saliency"/>.
+    /// </summary>
+    public IReadOnlyList<PlayerCandidate> Candidates { get; init; } = [];
 
     /// <summary>
     /// Whether the last replay made the step, or made it differ from the run before.

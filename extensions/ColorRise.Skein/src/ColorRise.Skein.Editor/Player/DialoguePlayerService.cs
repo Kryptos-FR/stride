@@ -114,9 +114,10 @@ public sealed class DialoguePlayerService
     }
 
     /// <summary>
-    /// The options offered at the cursor; empty when the step there is not a set of options.
+    /// The options the run waits at, at the cursor: those of the step there, or of the step before the variables set
+    /// and the answers given since. Empty when the run does not wait for a choice there.
     /// </summary>
-    public IReadOnlyList<PlayerOption> Options => CurrentStep is { Kind: PlayerStepKind.Options } step ? step.Options : [];
+    public IReadOnlyList<PlayerOption> Options => OptionsStep()?.Options ?? [];
 
     /// <summary>
     /// Whether <see cref="Continue"/> does something: a later step is recorded, or the run waits after a line.
@@ -125,7 +126,7 @@ public sealed class DialoguePlayerService
     {
         get
         {
-            if (run is null || IsBusy || Question is not null || CurrentStep is null or { Kind: PlayerStepKind.Options })
+            if (run is null || IsBusy || Question is not null || CurrentStep is null || OptionsStep() is not null)
                 return false;
 
             return Cursor < Steps.Count - 1 || run.Stop == PlayerStop.Line;
@@ -161,7 +162,16 @@ public sealed class DialoguePlayerService
     /// <summary>
     /// The variables the scripts of the run declare or use.
     /// </summary>
-    public IReadOnlyList<YarnVariableData> Variables => build is null ? [] : [.. build.Compilation.Variables.Where(v => !v.IsInternal)];
+    public IReadOnlyList<YarnVariableData> Variables => build?.Variables ?? [];
+
+    /// <summary>
+    /// The expression of a smart variable of <see cref="Variables"/> as its declaration writes it, or null.
+    /// </summary>
+    public string? ExpressionOf(YarnVariableData variable)
+    {
+        ArgumentNullException.ThrowIfNull(variable);
+        return build?.ExpressionOf(variable);
+    }
 
     /// <summary>
     /// The languages of the project of the run, the base language first.
@@ -320,7 +330,7 @@ public sealed class DialoguePlayerService
     /// <exception cref="ArgumentException">The option is not offered at the cursor.</exception>
     public async Task Choose(int option)
     {
-        if (run is null || IsBusy || Question is not null || CurrentStep is not { Kind: PlayerStepKind.Options } step)
+        if (run is null || IsBusy || Question is not null || OptionsStep() is not { } step)
             return;
 
         var offered = step.Options.FirstOrDefault(o => o.Index == option)
@@ -588,6 +598,9 @@ public sealed class DialoguePlayerService
 
     private static string? Refusal(YarnProjectAnalysis? latest, YarnProjectViewModel project, string action)
     {
+        if (project.IsDeleted)
+            return $"The project {project.Name} was deleted.";
+
         if (latest is null)
             return $"The scripts of {project.Name} could not be compiled.";
 
@@ -606,6 +619,22 @@ public sealed class DialoguePlayerService
 
         IsStale = true;
         OnChanged();
+    }
+
+    // The options the run waits at: a variable set by hand or an answer changed there does not move the dialogue
+    private PlayerStep? OptionsStep()
+    {
+        for (var i = Math.Min(Cursor, Steps.Count - 1); i >= 0; i--)
+        {
+            var step = Steps[i];
+            if (step.Kind == PlayerStepKind.Options)
+                return step;
+
+            if (step.Kind is not (PlayerStepKind.SetVariable or PlayerStepKind.Function))
+                return null;
+        }
+
+        return null;
     }
 
     private PlayerStep? PlaceStep()
