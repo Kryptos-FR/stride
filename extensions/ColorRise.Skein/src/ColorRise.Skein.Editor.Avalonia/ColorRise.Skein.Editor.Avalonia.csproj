@@ -11,6 +11,9 @@
     <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006;STREXP010</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="ColorRise.Skein.Editor.Avalonia.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Avalonia" Version="$(SkeinAvaloniaVersion)" />
     <PackageReference Include="Avalonia.AvaloniaEdit" Version="$(SkeinAvaloniaEditVersion)" />
     <PackageReference Include="Stride.Assets.Editor.Avalonia" Version="$(SkeinStrideVersion)" />

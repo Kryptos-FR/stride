@@ -1,8 +1,132 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
              xmlns:vm="using:ColorRise.Skein.Editor.ViewModels"
+             xmlns:compilation="using:ColorRise.Skein.Assets.Compilation"
              xmlns:views="using:ColorRise.Skein.Editor.Avalonia.Views"
              x:Class="ColorRise.Skein.Editor.Avalonia.Views.YarnScriptEditorView"
-             x:DataType="vm:YarnScriptEditorViewModel">
-  <views:YarnTextPane x:Name="TextPane" Buffer="{Binding TextBuffer}" FontFamily="Cascadia Code,Consolas,Menlo,DejaVu Sans Mono,monospace" FontSize="13" />
+             x:DataType="vm:YarnScriptEditorViewModel"
+             Focusable="True">
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://ColorRise.Skein.Editor.Avalonia/Themes/SkeinStyles.axaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <Style Selector="Button.tool, ToggleButton.tool">
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="Padding" Value="8,3"/>
+      <Setter Property="Margin" Value="2,0"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <!-- The containers of the graph's nodes: YarnGraphBinding gives them these classes -->
+    <Style Selector="sd|NodeGraphNode.note">
+      <Setter Property="Background" Value="#FF5A5123"/>
+    </Style>
+    <Style Selector="sd|NodeGraphNode.stub">
+      <Setter Property="Background" Value="#FF45454A"/>
+      <Setter Property="CornerRadius" Value="12"/>
+    </Style>
+    <Style Selector="sd|NodeGraphNode.broken">
+      <Setter Property="Background" Value="#FF5A2F2F"/>
+      <Setter Property="BorderBrush" Value="#FFE5534B"/>
+    </Style>
+    <Style Selector="sd|NodeGraphNode.filtered">
+      <Setter Property="Opacity" Value="0.25"/>
+    </Style>
+    <Style Selector="sd|NodeGraphNode.visited">
+      <Setter Property="BorderBrush" Value="#FF90CAF9"/>
+    </Style>
+    <Style Selector="sd|NodeGraphNode.current">
+      <Setter Property="BorderBrush" Value="#FF42A5F5"/>
+      <Setter Property="BorderThickness" Value="3"/>
+    </Style>
+  </UserControl.Styles>
+  <!-- Delete removes the selected nodes when the graph has the focus; in the text it deletes text -->
+  <sd:EditCommands.Bindings>
+    <sd:EditCommandBinding Kind="Delete" Command="{Binding DeleteSelectionCommand}"/>
+  </sd:EditCommands.Bindings>
+
+  <DockPanel>
+    <!-- New nodes, and how the graph and the text show the script -->
+    <DockPanel DockPanel.Dock="Top" Margin="6,5" LastChildFill="False">
+      <Button DockPanel.Dock="Left" Classes="tool" Content="{sd:LocalizeString + Node, Context=Button}" Click="OnAddNodeClick"
+              ToolTip.Tip="{sd:LocalizeString Add a node in the middle of the graph, Context=ToolTip}"/>
+      <Button DockPanel.Dock="Left" Classes="tool" Content="{sd:LocalizeString + Note, Context=Button}" Click="OnAddNoteClick"
+              ToolTip.Tip="{sd:LocalizeString Add a note for the writers: a node the story never runs, Context=ToolTip}"/>
+      <Button DockPanel.Dock="Left" Classes="tool" Content="{sd:LocalizeString Layout, Context=Button}" Command="{Binding LayoutCommand}"
+              ToolTip.Tip="{sd:LocalizeString Place every node anew along the jumps, Context=ToolTip}"/>
+      <TextBlock DockPanel.Dock="Left" Margin="12,0,4,0" VerticalAlignment="Center" Text="{sd:LocalizeString Group by, Context=Label}"/>
+      <ComboBox x:Name="GroupByBox" DockPanel.Dock="Left" MinWidth="110" VerticalAlignment="Center" SelectionChanged="OnGroupBySelectionChanged"
+                ToolTip.Tip="{sd:LocalizeString Frame the nodes that have the same value of a header, Context=ToolTip}"/>
+      <TextBox DockPanel.Dock="Left" Margin="12,0,0,0" Width="200" VerticalAlignment="Center" Text="{Binding Search}"
+               PlaceholderText="{sd:LocalizeString Search titles\, headers and text, Context=Placeholder}"/>
+      <ToggleButton DockPanel.Dock="Right" Classes="tool" Content="{sd:LocalizeString Whole file, Context=Button}" IsChecked="{Binding ShowWholeFile}"
+                    ToolTip.Tip="{sd:LocalizeString Show the text of the whole file instead of the selected nodes, Context=ToolTip}"/>
+    </DockPanel>
+
+    <!-- Where the script stands among the Yarn projects -->
+    <Border DockPanel.Dock="Top" Padding="8,3" Background="#40E0A83A" IsVisible="{Binding Notice, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <TextBlock Text="{Binding Notice}" TextWrapping="Wrap"/>
+    </Border>
+
+    <!-- What the compiler says of the project; a double click shows the place -->
+    <ListBox x:Name="Problems" DockPanel.Dock="Bottom" MaxHeight="130" ItemsSource="{Binding Diagnostics}" IsVisible="{Binding !!Diagnostics.Count}"
+             DoubleTapped="OnProblemDoubleTapped">
+      <ListBox.Styles>
+        <Style Selector="ListBoxItem">
+          <Setter Property="Padding" Value="8,2"/>
+          <Setter Property="MinHeight" Value="0"/>
+        </Style>
+      </ListBox.Styles>
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="compilation:YarnDiagnostic">
+          <Grid ColumnDefinitions="Auto,Auto,*">
+            <Ellipse Grid.Column="0" Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center"
+                     Fill="{Binding Severity, Converter={x:Static views:YarnConverters.SeverityBrush}}"/>
+            <TextBlock Grid.Column="1" Margin="0,0,8,0" Opacity="0.7">
+              <Run Text="{Binding File}"/><Run Text="("/><Run Text="{Binding Line}"/><Run Text=")"/>
+            </TextBlock>
+            <TextBlock Grid.Column="2" Text="{Binding Message}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Message}"/>
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <!-- Why the last thing asked of the graph was not done -->
+    <Border DockPanel.Dock="Bottom" Padding="8,3" Background="#40E5534B" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <TextBlock Text="{Binding Problem}" TextWrapping="Wrap"/>
+    </Border>
+
+    <Grid ColumnDefinitions="3*,4,2*">
+      <!-- The nodes of the script and the jumps between them, over their frames. The view gives the graph its nodes,
+           links and commands (YarnGraphBinding). -->
+      <Panel Grid.Column="0" ClipToBounds="True">
+        <views:YarnGraphDecorations x:Name="Decorations"/>
+        <sd:NodeGraphControl x:Name="Graph" AutoLayout="False" Background="Transparent" LinkThickness="2"
+                             NodeTemplate="{StaticResource SkeinGraphNodeTemplate}">
+          <sd:NodeGraphControl.ContextMenu>
+            <ContextMenu x:Name="GraphMenu" Opening="OnGraphMenuOpening">
+              <MenuItem x:Name="OpenItem" Header="{sd:LocalizeString Open its script, Context=Menu}" Click="OnOpenClick"/>
+              <MenuItem x:Name="RenameItem" Header="{sd:LocalizeString Rename..., Context=Menu}" InputGesture="F2" Click="OnRenameClick"/>
+              <MenuItem x:Name="DuplicateItem" Header="{sd:LocalizeString Duplicate, Context=Menu}" Command="{Binding DuplicateCommand}"/>
+              <MenuItem x:Name="DeleteItem" Header="{sd:LocalizeString Delete, Context=Menu}" InputGesture="{x:Static sd:EditCommands.DeleteGesture}"
+                        Command="{Binding DeleteSelectionCommand}"/>
+              <MenuItem x:Name="ColorItem" Header="{sd:LocalizeString Colour, Context=Menu}"/>
+              <MenuItem x:Name="AddToGroupItem" Header="{sd:LocalizeString Add a node to its node group, Context=Menu}" Click="OnAddToGroupClick"/>
+              <MenuItem x:Name="AddNodeItem" Header="{sd:LocalizeString Add node here, Context=Menu}" Click="OnAddNodeHereClick"/>
+              <MenuItem x:Name="AddNoteItem" Header="{sd:LocalizeString Add note here, Context=Menu}" Click="OnAddNoteHereClick"/>
+              <MenuItem x:Name="LayoutItem" Header="{sd:LocalizeString Lay out the nodes, Context=Menu}" Command="{Binding LayoutCommand}"/>
+              <MenuItem x:Name="FitItem" Header="{sd:LocalizeString Show all the nodes, Context=Menu}" InputGesture="Home" Click="OnFitClick"/>
+            </ContextMenu>
+          </sd:NodeGraphControl.ContextMenu>
+        </sd:NodeGraphControl>
+      </Panel>
+      <GridSplitter Grid.Column="1" ResizeDirection="Columns"/>
+      <views:YarnTextPane x:Name="TextPane" Grid.Column="2" Buffer="{Binding TextBuffer}" Editor="{Binding}"
+                          FontFamily="Cascadia Code,Consolas,Menlo,DejaVu Sans Mono,monospace" FontSize="13"/>
+    </Grid>
+  </DockPanel>
 </UserControl>

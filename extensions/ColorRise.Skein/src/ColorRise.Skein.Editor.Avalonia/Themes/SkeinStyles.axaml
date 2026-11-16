@@ -1,0 +1,112 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+                    xmlns:graph="using:ColorRise.Skein.Editor.Graph"
+                    xmlns:views="using:ColorRise.Skein.Editor.Avalonia.Views">
+  <!-- The look of the graph of a Yarn script; the script editor's view merges this dictionary into its resources. -->
+
+  <SolidColorBrush x:Key="SkeinCardText" Color="#FFE4E4E4"/>
+  <SolidColorBrush x:Key="SkeinCardFaintText" Color="#FFA8A8A8"/>
+  <SolidColorBrush x:Key="SkeinCardTitleText" Color="#FFF4F4F4"/>
+  <SolidColorBrush x:Key="SkeinSpeakerText" Color="#FF8FC7E8"/>
+  <SolidColorBrush x:Key="SkeinWhenText" Color="#FFE3B565"/>
+  <SolidColorBrush x:Key="SkeinErrorBrush" Color="#FFE5534B"/>
+  <SolidColorBrush x:Key="SkeinChipBrush" Color="#40FFFFFF"/>
+
+  <!-- The card of a node: the title on the node's colour with the input, then what the node holds, then the outputs:
+       a detour comes back, a jump does not -->
+  <DataTemplate x:Key="SkeinCardTemplate" x:DataType="graph:YarnNodeCardViewModel">
+    <StackPanel Width="240">
+      <Border CornerRadius="2,2,0,0" Padding="2,3,6,3"
+              Background="{sd:MultiBinding {Binding Color}, {Binding IsNote}, Converter={x:Static views:YarnConverters.HeaderBrush}}">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+          <sd:NodeGraphConnector Grid.Column="0" Margin="1,0,4,0" Slot="{Binding InSlot}" Direction="Input"/>
+          <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="Bold" Foreground="{StaticResource SkeinCardTitleText}"
+                     TextTrimming="CharacterEllipsis" Text="{Binding Title}" ToolTip.Tip="{Binding Title}"/>
+          <Border Grid.Column="2" Margin="4,0,0,0" Padding="5,0" CornerRadius="7" VerticalAlignment="Center" Background="#50000000"
+                  IsVisible="{Binding GroupCount, Converter={x:Static views:YarnConverters.MoreThanOne}}"
+                  ToolTip.Tip="{sd:LocalizeString A node of a node group: the story picks one of the nodes of this title, Context=ToolTip}">
+            <TextBlock FontSize="10" Foreground="{StaticResource SkeinCardTitleText}">
+              <Run Text="{Binding GroupIndex, Converter={x:Static views:YarnConverters.PlusOne}}"/><Run Text="/"/><Run Text="{Binding GroupCount}"/>
+            </TextBlock>
+          </Border>
+          <Border Grid.Column="3" Margin="4,0,0,0" Width="16" Height="16" CornerRadius="8" VerticalAlignment="Center"
+                  Background="{StaticResource SkeinErrorBrush}" IsVisible="{Binding HasError}"
+                  ToolTip.Tip="{sd:LocalizeString This node has errors, Context=ToolTip}">
+            <TextBlock Text="!" FontSize="11" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+        </Grid>
+      </Border>
+      <StackPanel Margin="8,5,8,2" Spacing="3">
+        <ItemsControl ItemsSource="{Binding When}" IsVisible="{Binding !!When.Count}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock FontSize="11" FontStyle="Italic" Foreground="{StaticResource SkeinWhenText}" TextTrimming="CharacterEllipsis">
+                <Run Text="when:"/> <Run Text="{Binding}"/>
+              </TextBlock>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock FontSize="11" Foreground="{StaticResource SkeinSpeakerText}" TextTrimming="CharacterEllipsis"
+                   Text="{Binding Speakers, Converter={x:Static views:YarnConverters.Join}}" IsVisible="{Binding !!Speakers.Count}"/>
+        <TextBlock Foreground="{StaticResource SkeinCardText}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
+                   Text="{Binding Preview}" IsVisible="{Binding Preview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <ItemsControl ItemsSource="{Binding Options}" IsVisible="{Binding !!Options.Count}" MaxHeight="70" ClipToBounds="True">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock FontSize="11" Foreground="{StaticResource SkeinCardFaintText}" TextTrimming="CharacterEllipsis">
+                <Run Text="&#x2192;"/> <Run Text="{Binding}"/>
+              </TextBlock>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <WrapPanel Orientation="Horizontal">
+          <Border Margin="0,1,4,1" Padding="5,0" CornerRadius="7" Background="{Binding GroupValue, Converter={x:Static views:YarnConverters.ValueBrush}}"
+                  IsVisible="{Binding GroupValue, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock FontSize="10" Foreground="{StaticResource SkeinCardTitleText}" Text="{Binding GroupValue}"/>
+          </Border>
+          <ItemsControl ItemsSource="{Binding Tags}" IsVisible="{Binding !!Tags.Count}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <Border Margin="0,1,4,1" Padding="5,0" CornerRadius="7" Background="{StaticResource SkeinChipBrush}">
+                  <TextBlock FontSize="10" Foreground="{StaticResource SkeinCardText}">
+                    <Run Text="#"/><Run Text="{Binding}"/>
+                  </TextBlock>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </WrapPanel>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,3" IsVisible="{Binding !IsNote}">
+        <TextBlock VerticalAlignment="Center" FontSize="10" Foreground="{StaticResource SkeinCardFaintText}" Text="{sd:LocalizeString detour, Context=Label}"/>
+        <sd:NodeGraphConnector Margin="3,0,8,0" Slot="{Binding DetourSlot}" Direction="Output"
+                               ToolTip.Tip="{sd:LocalizeString Drag to a node to add a detour: the dialogue goes there and comes back, Context=ToolTip}"/>
+        <TextBlock VerticalAlignment="Center" FontSize="10" Foreground="{StaticResource SkeinCardFaintText}" Text="{sd:LocalizeString jump, Context=Label}"/>
+        <sd:NodeGraphConnector Margin="3,0,1,0" Slot="{Binding OutSlot}" Direction="Output"
+                               ToolTip.Tip="{sd:LocalizeString Drag to a node to add a jump, Context=ToolTip}"/>
+      </StackPanel>
+    </StackPanel>
+  </DataTemplate>
+
+  <!-- The stub of a node of another script, or of a node that is nowhere -->
+  <DataTemplate x:Key="SkeinStubTemplate" x:DataType="graph:YarnStubCardViewModel">
+    <Grid ColumnDefinitions="Auto,*" Margin="2,4,10,4" MaxWidth="220">
+      <sd:NodeGraphConnector Grid.Column="0" Margin="1,0,4,0" Slot="{Binding InSlot}" Direction="Input"/>
+      <StackPanel Grid.Column="1">
+        <TextBlock FontWeight="Bold" Foreground="{StaticResource SkeinCardTitleText}" TextTrimming="CharacterEllipsis" Text="{Binding Title}"/>
+        <TextBlock FontSize="10" Foreground="{StaticResource SkeinCardFaintText}" TextTrimming="CharacterEllipsis" Text="{Binding FileName}"
+                   IsVisible="{Binding !IsBroken}" ToolTip.Tip="{sd:LocalizeString Double-click to open this script, Context=ToolTip}"/>
+        <TextBlock FontSize="10" Foreground="{StaticResource SkeinErrorBrush}" Text="{sd:LocalizeString no node of this title, Context=Label}"
+                   IsVisible="{Binding IsBroken}"/>
+      </StackPanel>
+    </Grid>
+  </DataTemplate>
+
+  <views:YarnGraphNodeTemplate x:Key="SkeinGraphNodeTemplate" Card="{StaticResource SkeinCardTemplate}" Stub="{StaticResource SkeinStubTemplate}"/>
+</ResourceDictionary>

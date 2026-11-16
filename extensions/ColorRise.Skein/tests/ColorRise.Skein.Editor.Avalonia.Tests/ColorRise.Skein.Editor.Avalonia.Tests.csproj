@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Skein.Editor.Avalonia.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- Avalonia's headless tests run on xunit.v3, whose test projects are programs -->
+    <OutputType>Exe</OutputType>
+    <!-- The editor's experimental plugin API, as in the editor packages -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006;STREXP010</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="$(SkeinAvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="$(SkeinAvaloniaVersion)" />
+    <!-- Stride's test kit for the view models of editor plugins: the views of these tests show the editors of its session -->
+    <PackageReference Include="Stride.Assets.Editor.Testing" Version="$(SkeinStrideVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ColorRise.Skein.Editor.Avalonia\ColorRise.Skein.Editor.Avalonia.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The session of the view model tests, with Skein's services -->
+    <Compile Include="..\ColorRise.Skein.Editor.Tests\SkeinTest.cs" Link="SkeinTest.cs" />
+    <Compile Include="..\ColorRise.Skein.Editor.Tests\TestAssemblies.cs" Link="TestAssemblies.cs" />
+  </ItemGroup>
+</Project>
