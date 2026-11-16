@@ -2,7 +2,7 @@ title: ActThreeNotes
 act: HighTide
 style: note
 ---
-Act III, one day. The island is cut off and votes at nightfall: three hands of five on the bell rope make a keeper. Brandt rings for himself. Maud, Joss, Tam and Pim each listen to the courier only if a deed of Acts I and II moved them. Four endings: keeper, harbourmaster, stranger, dark. #line:09cea36
+Act III, one day. The island is cut off and votes at nightfall\: three hands of five on the bell rope make a keeper. Brandt rings for himself. Maud, Joss, Tam and Pim each listen to the courier only if a deed of Acts I and II moved them. Four endings\: keeper, harbourmaster, stranger, dark. #line:09cea36
 ===
 
 title: ActThree
@@ -14,7 +14,7 @@ quest: vote
 <<set $act = Act.HighTide>>
 <<end_day>>
 Morning. The spring tide has covered the causeway. Nobody leaves Brinemoor today, and nobody comes. #line:0fee7bb
-Brandt has called a vote for nightfall: who keeps the light. #line:0463684
+Brandt has called a vote for nightfall\: who keeps the light. #line:0463684
 <<set $votes_brandt = 1>>
 <<set $quest_vote = QuestState.Active>>
 <<quest_changed vote>>

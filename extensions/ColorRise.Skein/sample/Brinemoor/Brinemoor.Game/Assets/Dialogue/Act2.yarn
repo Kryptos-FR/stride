@@ -2,7 +2,7 @@ title: ActTwoNotes
 act: Wreck
 style: note
 ---
-Act II, one day. A ship came in the night: at anchor if the lamp burned, on the rocks if not. The town meets at the bell (a hub that detours into each topic). The courier takes a side on the cargo, follows three signs of Odile, and may win the trust of the stranger. #line:0c4256b
+Act II, one day. A ship came in the night\: at anchor if the lamp burned, on the rocks if not. The town meets at the bell (a hub that detours into each topic). The courier takes a side on the cargo, follows three signs of Odile, and may win the trust of the stranger. #line:0c4256b
 ===
 
 title: ActTwo
@@ -19,7 +19,7 @@ quest: salvage
 <<else>>
     Morning. The ship rides at anchor in the bay. The boats brought her cargo ashore before the gale, and one passenger with it. #line:0f30fff
 <<endif>>
-The bell by the harbour office is ringing: a town meeting. #line:06bdbaa
+The bell by the harbour office is ringing\: a town meeting. #line:06bdbaa
 <<set $quest_salvage = QuestState.Active>>
 <<quest_changed salvage>>
 ===
@@ -146,7 +146,7 @@ scenario: Odile's trail
 quest: trail
 when: $act == Act.Wreck and not $clue_boot
 ---
-A sea boot, wedged in the rocks above the tide line. There is lamp soot on the leather: a keeper's boot. #line:0c03b93
+A sea boot, wedged in the rocks above the tide line. There is lamp soot on the leather\: a keeper's boot. #line:0c03b93
 <<set $clue_boot = true>>
 <<detour ClueFound>>
 ===
@@ -169,7 +169,7 @@ quest: trail
 when: $act == Act.Wreck and not $clue_ledger
 ---
 The door stands open. Somebody searched the place in the night. #line:05a61cb
-On the stair, pages torn from a ledger, in Odile's hand. Dates, and beside each one: "lamp out, by order. B." #line:05a5fa3
+On the stair, pages torn from a ledger, in Odile's hand. Dates, and beside each one\: "lamp out, by order. B." #line:05a5fa3
 <<give pages>>
 <<set $clue_ledger = true>>
 <<detour ClueFound>>
@@ -196,7 +196,7 @@ quest: trail
 when: $act == Act.Wreck
 when: $trail_complete and $quest_trail == QuestState.Active
 ---
-A boot, a ledger, a green lantern. They point the same way: the cave under the north rocks. #line:0128805
+A boot, a ledger, a green lantern. They point the same way\: the cave under the north rocks. #line:0128805
 The ledge to the cave is under water until tomorrow. #line:04d5bda
 <<set $quest_trail = QuestState.Succeeded>>
 <<quest_changed trail>>

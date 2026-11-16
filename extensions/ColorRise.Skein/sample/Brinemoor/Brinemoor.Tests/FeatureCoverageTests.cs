@@ -240,6 +240,24 @@ public sealed class FeatureCoverageTests
         Assert.Equal("Brandt: Pour le maître du port : 2 mains.", line.Text.Text);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("fr")]
+    public void Only_the_people_of_the_island_speak(string? language)
+    {
+        // A colon in a line that nobody says is written "\:", or what is before it would be the name of a speaker
+        string?[] cast = [null, "Brandt", "Maud", "Joss", "Pim", "Tam", "Wren", "Odile"];
+        var lines = TestStory.Brinemoor(language: language).Lines;
+
+        foreach (var (id, info) in Compilation.Lines)
+        {
+            var line = lines.GetLine(id, [.. Enumerable.Repeat("2", Count(info.Text, "{"))]);
+            Assert.Equal(language ?? "en", line.Language);
+            Assert.Contains(line.CharacterName, cast);
+            Assert.DoesNotContain('\\', line.TextWithoutCharacterName.Text);
+        }
+    }
+
     // The first argument of each use of a command in the scripts
     private static List<string> ArgumentsOf(string command)
     {

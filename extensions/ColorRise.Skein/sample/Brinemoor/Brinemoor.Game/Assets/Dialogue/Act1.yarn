@@ -2,7 +2,7 @@ title: ActOneNotes
 act: Arrival
 style: note
 ---
-Act I, one day. The courier arrives with three letters. Brandt has the key and Maud the oil: the lamp must burn before the night, or the ship of Act II strikes the rocks. The dues and the cat are deeds that the vote of Act III remembers. #line:0a9fe37
+Act I, one day. The courier arrives with three letters. Brandt has the key and Maud the oil\: the lamp must burn before the night, or the ship of Act II strikes the rocks. The dues and the cat are deeds that the vote of Act III remembers. #line:0a9fe37
 ===
 
 title: Events
@@ -13,7 +13,7 @@ when: once
 when: $act == Act.Arrival
 ---
 The causeway to Brinemoor is open at low tide. You cross it with the post bag on your back. #line:033f504
-Three letters for the island: one for the harbourmaster, one for a fisher called Maud, one for Odile, who keeps the light. #line:020005d
+Three letters for the island\: one for the harbourmaster, one for a fisher called Maud, one for Odile, who keeps the light. #line:020005d
 The lighthouse stands dark over the town. #line:06d6ed6
 <<give letter 3>>
 <<set $quest_letters = QuestState.Active>>
@@ -310,7 +310,7 @@ quest: lamp
 when: $quest_lamp == QuestState.Active and not $lamp_can_be_lit
 ---
 <<if has_item("key")>>
-    The key fits. But the lamp is dry: it needs oil. #line:0a27745
+    The key fits. But the lamp is dry\: it needs oil. #line:0a27745
 <<elseif has_item("oil")>>
     You have oil, and a locked door. #line:025a73b
 <<else>>
