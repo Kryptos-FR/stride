@@ -96,6 +96,29 @@ public sealed class DialogueSessionTests
     }
 
     [Fact]
+    public async Task A_choice_of_an_unavailable_option_fails_the_run()
+    {
+        var dialogue = new TestDialogue("""
+            title: Start
+            ---
+            <<declare $gold = 0>>
+            -> Bribe the guard <<if $gold > 5>>
+                Guard: Thank you.
+            -> Walk away
+                Guard: Good day.
+            ===
+            """);
+        dialogue.Responder.Choices.Enqueue(0);
+
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => dialogue.RunAsync());
+
+        Assert.Contains("option 0", failure.Message);
+        Assert.Contains("not available", failure.Message);
+        Assert.DoesNotContain("line: Guard: Thank you.", dialogue.Transcript);
+        Assert.False(dialogue.Session.IsRunning);
+    }
+
+    [Fact]
     public async Task A_choice_that_was_not_offered_fails_the_run_and_leaves_the_session_free()
     {
         var dialogue = new TestDialogue(Post);

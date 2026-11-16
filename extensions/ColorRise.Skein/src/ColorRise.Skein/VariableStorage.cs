@@ -41,7 +41,7 @@ public sealed class VariableStorage : IVariableStorage
     public event Action<string, object?>? VariableChanged;
 
     /// <summary>
-    /// The program of the dialogue that reads this storage: Yarn Spinner sets it. Its variables are <see cref="Declare"/>d.
+    /// The program of the dialogue that reads this storage: Yarn Spinner sets it. Its variables are <see cref="Declare(Program)"/>d.
     /// </summary>
     public Program? Program
     {
@@ -67,6 +67,15 @@ public sealed class VariableStorage : IVariableStorage
     /// <summary>
     /// Makes the variables of a project known: their defaults are read, their types checked when one is set, and
     /// <see cref="Load"/> keeps them. A storage serves every project that was declared to it.
+    /// </summary>
+    public void Declare(YarnProject project)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        Declare(project.GetProgram());
+    }
+
+    /// <summary>
+    /// Tells the storage the variables of a compiled program, as <see cref="Declare(YarnProject)"/> does for a project.
     /// </summary>
     public void Declare(Program project)
     {

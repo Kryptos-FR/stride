@@ -148,10 +148,16 @@ public sealed class LampLight : SyncScript
 {
     private VariableStorage? variables;
 
+    public YarnProject? Story { get; set; }
+
     public override void Start()
     {
         variables = Services.GetSafeServiceAs<DialogueSystem>().Variables;
         variables.VariableChanged += OnVariableChanged;
+
+        // The storage learns a story when a runner of it starts: a script that may start first tells it
+        if (Story is not null)
+            variables.Declare(Story);
 
         // A variable that was never set reads the default its script declares
         if (variables.TryGetValue<bool>("$lamp_lit", out var lit))

@@ -248,6 +248,10 @@ public sealed class YarnLocalisationService
         if (!isBase && File.Exists(path))
             return new YarnStringsFileResult { Language = language, File = file, Problem = $"The strings file of '{language}' is there already: {path}. \"Update strings files\" brings it up to date and keeps its translations." };
 
+        // The file of the base language is written again from the scripts, over a strings file only
+        if (isBase && File.Exists(path) && !await IsStringsFileAsync(path))
+            return new YarnStringsFileResult { Language = language, File = file, Problem = $"The file the project names for the strings of '{language}' is there and is not a strings file: {path}. It was left as it is." };
+
         var (compilation, problem) = await CompileStringsAsync(project);
         if (compilation is null)
             return new YarnStringsFileResult { Language = language, File = file, Problem = problem };
@@ -267,6 +271,19 @@ public sealed class YarnLocalisationService
         }
 
         return new YarnStringsFileResult { Language = language, File = file, Written = true, Rows = rows.Count };
+    }
+
+    private static async Task<bool> IsStringsFileAsync(string path)
+    {
+        try
+        {
+            YarnStringsCsv.Read(await File.ReadAllTextAsync(path));
+            return true;
+        }
+        catch (Exception exception) when (exception is FormatException or IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private async Task<IReadOnlyList<YarnStringsFileResult>> UpdateStringsAsync(YarnProjectViewModel project)

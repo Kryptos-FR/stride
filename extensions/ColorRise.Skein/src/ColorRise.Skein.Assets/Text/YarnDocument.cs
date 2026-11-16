@@ -200,23 +200,62 @@ public sealed class YarnDocument
     }
 
     /// <summary>
-    /// Where the comment of a line starts, or the end of the line: <c>//</c>, unless a backslash escapes it.
+    /// Where the comment of a line starts, or the end of the line: <c>//</c>, unless a backslash escapes it or it is
+    /// in a string of an expression.
     /// </summary>
-    internal static int CommentStart(string text, int start, int end)
+    /// <param name="header">Whether the line is a header: the value of a <c>when:</c> header is an expression.</param>
+    internal static int CommentStart(string text, int start, int end, bool header = false)
     {
-        for (var i = start; i + 1 < end; i++)
+        // Yarn Spinner reads a string only where it reads an expression: in a command, between braces, after "when:"
+        var code = header && IsWhenHeader(text, start, end) ? 1 : 0;
+        var inString = false;
+        for (var i = start; i < end; i++)
         {
-            if (text[i] == '\\')
+            var c = text[i];
+            var next = i + 1 < end ? text[i + 1] : '\0';
+            if (c == '\\')
             {
                 i++;
             }
-            else if (text[i] == '/' && text[i + 1] == '/')
+            else if (inString)
+            {
+                inString = c != '"';
+            }
+            else if (c == '"' && code > 0)
+            {
+                inString = true;
+            }
+            else if (c == '/' && next == '/')
             {
                 return i;
+            }
+            else if (c == '<' && next == '<')
+            {
+                code++;
+                i++;
+            }
+            else if (c == '{')
+            {
+                code++;
+            }
+            else if (c == '>' && next == '>')
+            {
+                code = Math.Max(code - 1, 0);
+                i++;
+            }
+            else if (c == '}')
+            {
+                code = Math.Max(code - 1, 0);
             }
         }
 
         return end;
+    }
+
+    private static bool IsWhenHeader(string text, int start, int end)
+    {
+        var line = text.AsSpan(start, end - start).TrimStart();
+        return line.StartsWith("when", StringComparison.Ordinal) && line[4..].TrimStart().StartsWith(":", StringComparison.Ordinal);
     }
 
     // What a line says: without its comment and the spaces around it
@@ -225,7 +264,7 @@ public sealed class YarnDocument
 
     private static YarnHeaderSpan Header(string text, int start, int end, int next)
     {
-        var contentEnd = CommentStart(text, start, end);
+        var contentEnd = CommentStart(text, start, end, header: true);
         while (contentEnd > start && char.IsWhiteSpace(text[contentEnd - 1]))
         {
             contentEnd--;

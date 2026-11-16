@@ -122,7 +122,11 @@ public sealed class OptionsPresenter : DialoguePresenter
         if (!shown.Any(o => o.IsAvailable))
             return null;
 
+        // The buttons of the page may be too few for an option that can be chosen
         shown = Fit(shown);
+        if (!shown.Any(o => o.IsAvailable))
+            return null;
+
         offered.Clear();
         clicked = null;
         for (var i = 0; i < buttons.Count; i++)

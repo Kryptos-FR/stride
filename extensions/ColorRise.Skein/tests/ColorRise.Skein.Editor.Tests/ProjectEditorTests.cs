@@ -157,7 +157,19 @@ public sealed class ProjectEditorTests
 
         // The base language is exported too, for the translators to read
         await editor.ExportStrings("en");
-        Assert.Equal(3, YarnStringsCsv.Read(File.ReadAllText(Path.Combine(Path.GetDirectoryName(file)!, "Story.en.csv"))).Count);
+        var english = Path.Combine(Path.GetDirectoryName(file)!, "Story.en.csv");
+        Assert.Equal(3, YarnStringsCsv.Read(File.ReadAllText(english)).Count);
+
+        // Its file is written again from the scripts, but never over a file that is not a strings file
+        File.WriteAllText(english, File.ReadAllText(english).Replace("Narrator: New.", "Edited by hand."));
+        await editor.ExportStrings("en");
+        var exported = File.ReadAllText(english);
+        Assert.Contains("Narrator: New.", exported);
+        File.WriteAllText(english, "Notes of the translator\n");
+        await editor.ExportStrings("en");
+        Assert.Contains("is not a strings file", editor.Message);
+        Assert.Equal("Notes of the translator\n", File.ReadAllText(english));
+        File.WriteAllText(english, exported);
 
         // A script that cannot be read stops the update: its lines would look removed
         act1.TextBuffer.Replace(act1.TextBuffer.Text.Length, 0, "title: Broken\n---\n<<if>>\n", YarnTextBuffer.TypingActionName);

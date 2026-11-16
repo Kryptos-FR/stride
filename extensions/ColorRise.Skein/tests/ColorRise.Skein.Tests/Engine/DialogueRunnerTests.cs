@@ -478,7 +478,7 @@ public sealed class DialogueRunnerTests
     }
 
     [Fact]
-    public void A_failure_of_a_presenter_ends_the_dialogue_and_is_an_error_of_the_game()
+    public void A_failure_of_a_presenter_ends_the_dialogue_and_not_the_game()
     {
         using var harness = new GameHarness();
         var presenter = new RecordingPresenter { LineFailure = new FormatException("no font") };
@@ -488,14 +488,76 @@ public sealed class DialogueRunnerTests
         harness.Step();
 
         var dialogue = runner.StartDialogue("Start");
-        var thrown = Assert.Throws<FormatException>(() => harness.Step());
+        harness.Step(3);
 
-        Assert.Equal("no font", thrown.Message);
         Assert.True(dialogue.IsFaulted);
-        Assert.Same(thrown, dialogue.Exception!.InnerException);
+        Assert.Equal("no font", Assert.IsType<FormatException>(dialogue.Exception!.InnerException).Message);
+        Assert.Contains(harness.Logged(LogMessageType.Error), m => m.Contains("'Runner'") && m.Contains("'Start'") && m.Contains("failed"));
         Assert.Equal(1, ends);
         Assert.False(runner.IsRunning);
         Assert.Equal("completed", presenter.Seen[^1]);
+
+        // The runner is free for the next dialogue
+        presenter.LineFailure = null;
+        presenter.Options = (_, cancellation) => Never(cancellation);
+        var next = runner.StartDialogue("Start");
+        harness.Step();
+        Assert.True(runner.IsRunning);
+        runner.Stop();
+        harness.Step(3);
+        Assert.True(next.IsCompletedSuccessfully);
+    }
+
+    [Fact]
+    public void A_presenter_that_fails_at_the_start_ends_the_dialogue_for_every_presenter()
+    {
+        using var harness = new GameHarness();
+        var first = new RecordingPresenter();
+        var failing = new RecordingPresenter { StartFailure = new FormatException("no page") };
+        var runner = harness.AddRunner(Post, "Runner", first, failing);
+        var ends = 0;
+        runner.DialogueCompleted += () => ends++;
+        harness.Step();
+
+        var dialogue = runner.StartDialogue("Start");
+        harness.Step(3);
+
+        Assert.True(dialogue.IsFaulted);
+        Assert.Equal(["started", "completed"], first.Seen);
+        Assert.Equal(["started", "completed"], failing.Seen);
+        Assert.Contains(harness.Logged(LogMessageType.Error), m => m.Contains("failed and is over"));
+        Assert.Equal(1, ends);
+        Assert.False(runner.IsRunning);
+    }
+
+    [Fact]
+    public void The_variables_know_the_story_from_the_start_of_the_scene()
+    {
+        using var harness = new GameHarness();
+        harness.AddRunner("""
+            title: Start
+            ---
+            <<declare $gold = 5>>
+            <<declare $name = "Odile">>
+            Odile: {$gold} coins.
+            ===
+            """);
+
+        // No dialogue has run: the scene started, with a runner of the project in it
+        harness.Step();
+        var variables = harness.Dialogues.Variables;
+
+        Assert.True(variables.TryGetValue<float>("$gold", out var gold));
+        Assert.Equal(5, gold);
+
+        var save = new VariableSnapshot();
+        save.Numbers["$gold"] = 12f;
+        save.Numbers["$gone"] = 1f;
+        var dropped = variables.Load(save);
+
+        Assert.Equal(["$gone"], dropped);
+        Assert.True(variables.TryGetValue<float>("$gold", out gold));
+        Assert.Equal(12, gold);
     }
 
     [Fact]

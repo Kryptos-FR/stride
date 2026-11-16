@@ -345,6 +345,40 @@ public sealed class PresenterTests
     }
 
     [Fact]
+    public void Buttons_that_leave_no_option_to_choose_show_no_options()
+    {
+        using var harness = new GameHarness();
+        var page = new Page(buttons: 2);
+        var runner = Runner(
+            harness,
+            """
+            title: Start
+            ---
+            <<declare $gold = 0>>
+            -> Pay <<if $gold > 5>>
+                Odile: Thank you.
+            -> Pay more <<if $gold > 50>>
+                Odile: Thank you twice.
+            -> Leave
+                Odile: Go on, then.
+            Odile: Well.
+            ===
+            """,
+            page,
+            new LinePresenter { Typewriter = TypewriterMode.Instant },
+            new OptionsPresenter { Unavailable = UnavailableOptions.Disabled });
+
+        runner.StartDialogue("Start");
+        harness.Step(3);
+
+        // The two buttons would show the two options that cannot be chosen: the player would have no way out
+        Assert.Equal(Visibility.Collapsed, page.Options.Visibility);
+        Assert.Equal("Well.", page.Text.Text);
+        runner.Stop();
+        harness.Step(2);
+    }
+
+    [Fact]
     public void A_stopped_dialogue_hides_its_options()
     {
         using var harness = new GameHarness();

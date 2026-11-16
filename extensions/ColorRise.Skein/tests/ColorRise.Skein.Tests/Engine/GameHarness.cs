@@ -143,6 +143,11 @@ public sealed class RecordingPresenter : DialoguePresenter
     public Exception? LineFailure { get; set; }
 
     /// <summary>
+    /// When set, the start of a dialogue fails with it.
+    /// </summary>
+    public Exception? StartFailure { get; set; }
+
+    /// <summary>
     /// When set, answers the options; else the presenter leaves the choice to another.
     /// </summary>
     public Func<IReadOnlyList<DialogueOption>, CancellationToken, Task<int?>>? Options { get; set; }
@@ -150,7 +155,7 @@ public sealed class RecordingPresenter : DialoguePresenter
     public override Task OnDialogueStartedAsync()
     {
         Seen.Add("started");
-        return Task.CompletedTask;
+        return StartFailure is null ? Task.CompletedTask : Task.FromException(StartFailure);
     }
 
     public override Task OnDialogueCompletedAsync()

@@ -68,7 +68,7 @@ The build knows the functions of the game (section 5): a script that calls one w
 | Start Node, Auto Start | The node (or node group) to play when the scene starts. |
 | Presenters | Who shows the dialogue. A line goes to all of them at once, and the dialogue goes on when all are done. |
 | Saliency | How to pick among the nodes of a node group and the lines of a line group. Empty: what the project says. |
-| Options Fall Through | When no option of a list can be chosen, go on after the list. Off: the dialogue ends there. |
+| Options Fall Through | When no option of a list can be chosen, skip the list and go on after it. Off: the presenters get the list all the same, and the dialogue waits for one of them to answer. |
 
 A script starts a dialogue with `StartDialogue`, which takes a node or a node group:
 
@@ -108,6 +108,8 @@ public sealed class Opening : AsyncScript
 ```
 
 A dialogue runs on the game's thread, as a micro-thread of the script system: presenters and commands are ordinary `async` code, and can `await Script.NextFrame()`.
+
+**When something fails.** An exception of a presenter, of a command (other than `YarnCommandException`, section 5) or of the story ends the dialogue: the presenters are told the end, `DialogueCompleted` is raised, the log has the error, and the task of `StartDialogue` fails with it. The game goes on, and the runner can start another dialogue.
 
 **Several runners** can play at once. Brinemoor has two: the story, and the fishers who talk among themselves on the pier (`Chatter`), whose lines are captions that never stop the player. Runners share the variables of the game unless one is given its own (`VariablesOverride`).
 
@@ -345,10 +347,16 @@ public sealed class LampLight : SyncScript
 {
     private VariableStorage? variables;
 
+    public YarnProject? Story { get; set; }
+
     public override void Start()
     {
         variables = Services.GetSafeServiceAs<DialogueSystem>().Variables;
         variables.VariableChanged += OnVariableChanged;
+
+        // The storage learns a story when a runner of it starts: a script that may start first tells it
+        if (Story is not null)
+            variables.Declare(Story);
 
         // A variable that was never set reads the default its script declares
         if (variables.TryGetValue<bool>("$lamp_lit", out var lit))
@@ -377,7 +385,8 @@ public sealed class LampLight : SyncScript
 
 - Numbers are `float`, and an enum of a script is a number (its case, counted from zero) unless its cases have values.
 - A smart variable (`<<declare $can_pay = coins() >= 3>>`) is computed each time it is read, and cannot be set.
-- Setting a variable no script declares, or with another type than its declaration, is refused with an error in the log.
+- Setting a variable no script declares, or with another type than its declaration, throws `ArgumentException` with the reason.
+- The storage knows the variables of a project from the start of a scene that has a runner of it. Code that reads a variable or loads a save before that (a script that starts before the runner, a menu without a runner) calls `Variables.Declare(project)` first.
 - Where to keep the state of a game is a choice. Brinemoor keeps what the story decides in Yarn variables (`$act`, `$quest_lamp`), and what the world owns in the game (the inventory, the clock), which the story reads with functions and changes with commands. Nothing is in both.
 
 ## 7. Saving
@@ -417,6 +426,7 @@ public sealed class SaveFile
 
 - **Save between two dialogues.** A dialogue that is running is not in the snapshot: where it is in its node cannot be saved. A game refuses to save while a runner `IsRunning`, or saves when the dialogue is over.
 - How often each node was visited, and what each `once` remembers, are variables of the storage (their names start with `$Yarn.Internal.`): they are saved with the rest.
+- Load a save once the storage knows the story (section 6): a storage that knows no project keeps everything it is given, and one that knows another project drops what that project does not declare.
 - A save made with an older story loads: what no script declares any more, or declares with another type, is dropped, with one warning that lists it.
 
 ## 8. Languages

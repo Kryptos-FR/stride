@@ -75,6 +75,39 @@ public sealed class YarnTextPatcherTests
 
     [Theory]
     [MemberData(nameof(YarnFixtures.Variants), MemberType = typeof(YarnFixtures))]
+    public void Two_slashes_in_a_string_of_an_expression_are_not_a_comment(string variant)
+    {
+        const string Strings = """
+            title: Start
+            when: $s == "a//b" // odd
+            note: see http://x
+            ---
+            <<declare $s = "">>
+            <<if $s == "c//d" and visited("Pier")>>
+                Odile: {$s == "e//f"} then {visited("Pier")} // {visited("Pier")}
+            <<endif>>
+            ===
+            title: Pier
+            ---
+            Odile: The pier.
+            ===
+
+            """;
+
+        Check(variant, d => YarnTextPatcher.SetHeader(d, d.Find("Start")!, "when", "$s == \"g//h\""), Strings.Replace("\"a//b\"", "\"g//h\""), Strings);
+
+        // The value of a header that is not an expression ends at the two slashes, as Yarn Spinner reads it
+        Check(variant, d => YarnTextPatcher.SetHeader(d, d.Find("Start")!, "note", "none"), Strings.Replace("see http://x", "none//x"), Strings);
+
+        // What comes after the string on the line is still code: the comment starts at the last two slashes
+        var renamed = Strings
+            .Replace("and visited(\"Pier\")", "and visited(\"Quay\")")
+            .Replace("then {visited(\"Pier\")}", "then {visited(\"Quay\")}");
+        Check(variant, d => YarnTextPatcher.RenameJumps(d, "Pier", "Quay"), renamed, Strings, compiles: false);
+    }
+
+    [Theory]
+    [MemberData(nameof(YarnFixtures.Variants), MemberType = typeof(YarnFixtures))]
     public void A_removed_header_goes_with_its_line(string variant)
     {
         Check(variant, d => YarnTextPatcher.RemoveHeader(d, d.Find("Start")!, "tags"), Script.Replace("tags: intro  act1   \n", ""));

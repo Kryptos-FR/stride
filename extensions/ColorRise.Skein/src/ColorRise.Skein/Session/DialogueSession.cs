@@ -319,7 +319,11 @@ public sealed class DialogueSession : IYarnDialogueEvents
         foreach (var option in offered)
         {
             if (option.Index == choice)
-                return choice.Value;
+            {
+                return option.IsAvailable
+                    ? choice.Value
+                    : throw new InvalidOperationException($"The responder chose the option {choice}, which is not available: its condition is false. Only an option whose IsAvailable is true can be chosen.");
+            }
         }
 
         throw new InvalidOperationException($"The responder chose the option {choice}, which was not offered: the choice is the Index of one of the {offered.Count} options, or null.");

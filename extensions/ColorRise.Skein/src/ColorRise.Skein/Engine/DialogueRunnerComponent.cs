@@ -1,4 +1,3 @@
-using System.Runtime.ExceptionServices;
 using Stride.Core;
 using Stride.Engine;
 
@@ -130,6 +129,10 @@ public sealed class DialogueRunnerComponent : StartupScript
     /// <inheritdoc />
     public override void Start()
     {
+        // The variables know the story from the start of the scene, before any dialogue: their defaults, and what a save may hold
+        if (Project is { } project)
+            Variables.Declare(project);
+
         if (!AutoStart)
             return;
 
@@ -153,7 +156,10 @@ public sealed class DialogueRunnerComponent : StartupScript
     /// Starts a dialogue at a node, or at a node of a node group.
     /// </summary>
     /// <param name="node">The title of the node or of the node group.</param>
-    /// <returns>A task that completes when the dialogue is over, a stop included.</returns>
+    /// <returns>
+    /// A task that completes when the dialogue is over, a stop included. It fails when a presenter, a command or the
+    /// story fails: the dialogue is over then too, and the log has the error.
+    /// </returns>
     /// <exception cref="InvalidOperationException">The runner is already running a dialogue, has no project, or is not in a running scene.</exception>
     /// <exception cref="ArgumentException">The project has no node of this name.</exception>
     public Task StartDialogue(string node)
@@ -228,7 +234,8 @@ public sealed class DialogueRunnerComponent : StartupScript
 
     private async Task RunAsync(Run current, string node)
     {
-        ExceptionDispatchInfo? failure = null;
+        Exception? failure = null;
+        var ran = false;
         try
         {
             foreach (var presenter in Presenters)
@@ -239,11 +246,25 @@ public sealed class DialogueRunnerComponent : StartupScript
 
             DialogueStarted?.Invoke();
             await All(p => p.OnDialogueStartedAsync());
+            ran = true;
             await current.Session.RunAsync(node, current.Stopping.Token);
         }
         catch (Exception exception)
         {
-            failure = ExceptionDispatchInfo.Capture(exception);
+            failure = exception;
+        }
+
+        // The session tells the presenters the end of what it ran. A dialogue that failed before that ends for them too
+        if (!ran)
+        {
+            try
+            {
+                await All(p => p.OnDialogueCompletedAsync());
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"A presenter of the dialogue runner of '{Entity?.Name}' failed at the end of a dialogue that did not start.", exception);
+            }
         }
 
         // Free before the end is told: who listens can start the next dialogue
@@ -255,7 +276,7 @@ public sealed class DialogueRunnerComponent : StartupScript
         }
         catch (Exception exception)
         {
-            failure ??= ExceptionDispatchInfo.Capture(exception);
+            failure ??= exception;
         }
 
         if (failure is null)
@@ -264,8 +285,11 @@ public sealed class DialogueRunnerComponent : StartupScript
             return;
         }
 
-        current.Completion.SetException(failure.SourceException);
-        failure.Throw();
+        // The failure ends the dialogue, not the game: it is in the log and in the task of StartDialogue, which nobody
+        // has to await
+        Log.Error($"The dialogue of the dialogue runner of '{Entity?.Name}', started at '{node}', failed and is over.", failure);
+        current.Completion.SetException(failure);
+        _ = current.Completion.Task.Exception;
     }
 
     /// <summary>
@@ -323,6 +347,11 @@ public sealed class DialogueRunnerComponent : StartupScript
                 catch (OperationCanceledException)
                 {
                     // It left as asked
+                }
+                catch (Exception exception)
+                {
+                    // Not thrown: it would hide the choice, or the failure that ended the wait
+                    Log.Error($"A presenter of the dialogue runner of '{Entity?.Name}' failed while leaving the options of the node '{CurrentNode}'.", exception);
                 }
             }
         }

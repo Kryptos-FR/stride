@@ -192,7 +192,7 @@ As built (2026-11-15).
   - A line goes to every presenter at once and the runner waits for all. Options go to all; the first non-null answer wins and the others are cancelled and awaited. Options all unavailable are skipped when `OptionsFallThrough`. When no presenter answers, the dialogue goes on as if no choice was made and the log has one error.
   - Targets: the actors whose `EffectiveName` is the word, then the entities of that name in the runner's scene, then in the other scenes from the root scene; among several, the first that is or has the type asked.
   - A command nothing handles raises `UnhandledCommand`; with no listener, one warning per command name (as Yarn Spinner for Unity).
-  - A failure of a presenter or of a command handler ends the dialogue, fails the task of `StartDialogue` and is rethrown in the micro-thread, so the script system treats it like the failure of any script.
+  - A failure of a presenter or of a command handler ends the dialogue, is logged as an error and fails the task of `StartDialogue`. It is not rethrown in the micro-thread: Stride's scheduler rethrows what leaves a micro-thread, which would end the game (changed after the review of Task 25).
   - `DialogueSystem.Actions` registers, at its first use and after each newly registered assembly, the `[YarnCommand]` and `[YarnFunction]` methods of the assemblies Stride registered that reference Skein; a declaration that cannot be registered is one error in the log (logger `ColorRise.Skein`).
   - `GetLineProvider` loads `YarnProject.StringTableUrl(projectUrl, language)` through the game's content manager, one provider per project, and follows `Language`.
 
