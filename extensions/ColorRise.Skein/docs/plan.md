@@ -346,14 +346,24 @@ As built (2026-11-15).
 ### Task 18: Project overview
 
 **Files:**
-- Create: `src/ColorRise.Skein.Editor/ViewModels/YarnProjectEditorViewModel.cs`, `Services/YarnLocalisationService.cs`; `.Avalonia/Views/YarnProjectEditorView.axaml(.cs)`
-- Test: `tests/ColorRise.Skein.Editor.Tests/ProjectEditorTests.cs`
+- In `src/ColorRise.Skein.Assets/Localisation/`: `YarnStringsStatus.cs`, `YarnLineTagger.ExistingIds(texts)`
+- In `src/ColorRise.Skein.Editor/`: `ViewModels/YarnProjectEditorViewModel.cs`, `Services/YarnLocalisationService.cs`, `YarnProjectViewModel.OnSessionSaved`, `YarnAnalysisService.ScriptsOf(project)`, `YarnScriptEditorViewModel.OpenEditor(script)`
+- In `src/ColorRise.Skein.Editor.Avalonia/`: `Views/YarnProjectEditorView.axaml(.cs)`
+- Test: `tests/ColorRise.Skein.Editor.Tests/ProjectEditorTests.cs`, `tests/ColorRise.Skein.Editor.Avalonia.Tests/ProjectEditorViewTests.cs`, more in `YarnStringsCsvTests.cs` and `YarnLineTaggerTests.cs`
 
-**Interfaces:**
-- Produces: `[AssetEditorViewModel<YarnProjectViewModel>] YarnProjectEditorViewModel`: `Scripts` (name, node count), `Variables` (name, type, default, description, file, line; `GoToCommand`), `Diagnostics`, `Languages` (language, lines, translated, to update), commands `AddLineIdsCommand`, `ExportStringsCommand(language)`, `UpdateStringsCommand`. `YarnLocalisationService`: `Task<int> AddLineIds(YarnProjectViewModel project)` (one undo step over all scripts), `Task ExportStrings(...)`, `Task<YarnStringsUpdateResult> UpdateStrings(...)`; writes the `.yarnproject` and `.ysls.json` when the project asset is saved and `WriteYarnProjectFile` is on.
+**As built:**
+- `[AssetEditorViewModel<YarnProjectViewModel>] YarnProjectEditorViewModel`, the page a double click on a project opens: `Summary`, `Scripts` (name, nodes, errors), `Variables` (name, type, default, description, file, line, smart, declared), `Diagnostics` and `Warnings` (what the build would add: lines without an id, a language without strings), `Languages` (lines, translated, to update, missing, strings file, problem), `LineIdNotice`, `Message` (what the last command did). Commands `AddLineIdsCommand`, `ExportStringsCommand(language)`, `UpdateStringsCommand`, `RefreshCommand`, `GoToCommand(item)`: a script, a variable or a message opens the script's editor at its place. It follows the analysis as the scripts are typed; `WhenRefreshed()` for tests.
+- `YarnLocalisationService` (a service of the session):
+  - `Task<YarnLineIdsResult> AddLineIds(project)`: an id on each line that has none, with the project's line id style, in one undo step "Add line ids" over all the scripts. A script that cannot be read is left as it is, with the reason. The ids already there are read from the text of the scripts, so a script with an error does not hide them.
+  - `Task<YarnStringsFileResult> ExportStrings(project, language)`: the lines that have an id, in the base language, as Yarn's CSV. A language without a file gets `Strings/{project}.{language}.csv` in the folder of the project, set in the project's localisations (an undo step "Export strings"). The file of another language than the base one is never written over.
+  - `Task<IReadOnlyList<YarnStringsFileResult>> UpdateStrings(project)`: for each language with a file, new lines are added without a text, the rows of lines that are gone are removed, and the translations of lines that changed are marked `(NEEDS UPDATE)`.
+  - Export and update read the lines with a compilation of the strings only: types and the project's severities do not stop them, a script that cannot be read does, because its lines would look removed and their translations would go.
+  - `LanguagesOf(project, compilation)`: the counts of each language (`YarnStringsStatus`, which the build's warnings use too).
+  - `WriteProjectFiles(project)`: `{project}.yarnproject` beside the asset, merged into the file that is there, and `{project}.ysls.json` when Game Studio knows the game's commands and functions; nothing is written when nothing changed, or when the project has "Yarn project file" off. `YarnProjectViewModel.OnSessionSaved` calls it at each save.
+- The view: the summary, the scripts, the variables, the languages with the buttons Add line ids, Update strings files, Read the files again and one Export strings for each language that can have its file written, the message of the last command, and the problems.
 
-- [ ] **Step 1:** Tests: the overview of a two-script project lists both with their node counts and `$gold` with its description; `AddLineIds` tags every untagged line in one undo step and returns the count; `UpdateStrings` on the sample's French file after a new English line reports one added; saving the project writes a `.yarnproject` that Yarn's `Project.LoadFromFile` reads.
-- [ ] **Step 2:** Implement, run → pass, screenshot. Commit `feat(skein): project overview and localisation commands`, push.
+- [x] **Step 1:** Tests: the overview of a two-script project lists both with their node counts, `$gold` with its description, the missing node, the line counts, and follows typing; a variable and a message open the script at their place; `AddLineIds` tags every line without an id in one undo step and returns the count, a broken script is left with a reason; the strings of a language are exported once, updated after a new and a changed line (one added, one to update), counted in the overview, and not touched when a script cannot be read; saving the session writes a `.yarnproject` that Yarn's `Project.LoadFromFile` reads, keeps what another tool wrote in it, and writes nothing when nothing changed.
+- [x] **Step 2:** Checked in Game Studio under Xvfb on the sample with a script made for it and a French language added for the check: the page, Add line ids (19 ids, one step), Export strings (the file, the project's localisation, one step) and File > Save (the `.yarnproject`). Screenshot [task-18-project-overview.png](/mnt/project-files/yarn-spinner/screens/task-18-project-overview.png).
 
 ### Task 19: The dialogue player service
 

@@ -124,7 +124,7 @@ public sealed class ProjectEditorTests
 
         // The export writes the lines that have an id, in the base language, and sets the file of the language
         await editor.ExportStrings("fr");
-        Assert.Equal($"Exported 2 lines to {file}.", editor.Message);
+        Assert.Equal("Exported 2 lines to Strings/Story.fr.csv, from the folder of the project.", editor.Message);
         var rows = YarnStringsCsv.Read(File.ReadAllText(file));
         Assert.Equal([("fr", "line:here", "Narrator: Here."), ("fr", "line:up", "Keeper: Up.")], rows.Select(r => (r.Language, r.Id, r.Text)));
         Assert.Equal(file, project.Asset.Localisations[0].Strings?.ToOSPath());

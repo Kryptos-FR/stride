@@ -221,7 +221,7 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
     public Task ExportStrings(string language) => Run(async service =>
     {
         var result = await service.ExportStrings(Asset, language);
-        return result.Problem ?? $"Exported {Count(result.Rows, "line")} to {result.File?.ToOSPath()}.";
+        return result.Problem ?? $"Exported {Count(result.Rows, "line")} to {result.File?.MakeRelative(Asset.AssetItem.FullPath.GetFullDirectory())}, from the folder of the project.";
     });
 
     /// <summary>

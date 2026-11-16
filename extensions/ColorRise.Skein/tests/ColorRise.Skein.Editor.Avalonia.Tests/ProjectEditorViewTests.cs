@@ -56,6 +56,10 @@ public sealed class ProjectEditorViewTests
             Assert.Contains(texts, t => t.Contains("1 line has no line id", StringComparison.Ordinal));
             Assert.Contains("1 line has no id and cannot be translated.", texts);
 
+            // The page takes the width of the window, whatever its rows hold
+            var page = view!.GetVisualDescendants().OfType<StackPanel>().First();
+            Assert.InRange(page.Bounds.Width, 930, 1000);
+
             // Both languages can be exported, and the buttons run the editor's commands
             var buttons = view!.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible).ToList();
             Assert.Equal(2, buttons.Count(b => Equals(b.Content, "Export strings")));

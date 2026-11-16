@@ -54,6 +54,11 @@ This section follows the work: it says what can be tried at the current commit.
   - A script another program changed while Game Studio is open (Yarn Spinner's Visual Studio Code extension, a text editor, a pull from version control) is reloaded: at once when it has no unsaved change here, where one undo gives the text of before back, and after a question when it has.
 - A Yarn project is an asset too (`.sdyarn`): *Add asset > Dialogue > Yarn project* makes one, and the property grid edits it: the scripts it includes (glob patterns from its folder, `**/*.yarn` by default), its base language, its saliency strategy, and the severity of the compiler's messages by code. Building the game compiles the project: its data holds the compiled program, the lines of the base language, and the lines of each other language that has a strings file (Yarn Spinner's CSV; a line without a translation shows in the base language, and the build says how many there are). An error in a script fails the build with the script's file, line, column and Yarn Spinner's code (in a new project, a jump to a node that does not exist is an error; Yarn Spinner makes it a warning). A script that no project includes is a warning of the build. The build knows the functions of the game's code (`[YarnFunction("has_item")]` on a static method): a call with the wrong types is an error at its line.
 - A string property that names a node (`[YarnNode(nameof(Project))]` on a member, as the runner's "Start Node" has) is picked in the property grid among the nodes of the project its object references: a box whose list filters as you type. Game Studio's cross-platform version cannot add a component to an entity yet, so a runner has to be in the scene file to see it.
+- A double click on a Yarn project opens its overview: its scripts with their nodes and errors, its variables (a double click shows the declaration), what the compiler says of the whole project, and its languages with their counts (lines, translated, to update, missing). Its buttons:
+  - *Add line ids* gives a `#line:` id to each line that has none, in one step of the history. A line needs an id to be translated.
+  - *Export strings* writes the strings file of a language (Yarn Spinner's CSV: the lines in the base language, to translate in place) as `Strings/<project>.<language>.csv` in the folder of the project, and sets it in the project's localisations. It never writes over the file of a translation.
+  - *Update strings files* brings each file up to date with the scripts: new lines are added without a text, lines that are gone are removed, and the translation of a line that changed is marked `(NEEDS UPDATE)`.
+  - Saving a project writes a `.yarnproject` file beside it (and a `.ysls.json` file of the game's commands and functions once the game is built), so that Yarn Spinner's Visual Studio Code extension and command line see the same project. What another tool keeps in the file stays.
 - Covered by tests only: the runtime (the dialogue system, the dialogue runner component, presenters, actors, commands and functions in C#, variable storage) and the UI presenters. Yarn Spinner's own 32 test plans pass against Skein's dialogue session.
 - The sample game "Brinemoor" is an empty scene with one script and one project, to open in Game Studio:
 
@@ -66,7 +71,7 @@ This section follows the work: it says what can be tried at the current commit.
 
 ### Not yet
 
-Everything else of the design: the commands of Game Studio that add line ids, update the strings files and write Yarn Spinner's own project files (the code behind them is there and tested), the project overview, the dialogue player, and the story of the sample game.
+Everything else of the design: the dialogue player, the commands in Game Studio's command palette, the templates of *Add entity*, and the story of the sample game.
 
 ## Tied to the fork
 

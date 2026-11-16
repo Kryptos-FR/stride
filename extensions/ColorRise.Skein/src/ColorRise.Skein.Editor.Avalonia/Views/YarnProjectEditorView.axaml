@@ -35,7 +35,12 @@
   </UserControl.Styles>
 
   <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Margin="18,14" Spacing="18" MaxWidth="1100" HorizontalAlignment="Left">
+    <!-- The page takes the width it is given, up to a width that still reads well -->
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" MaxWidth="1100"/>
+      </Grid.ColumnDefinitions>
+    <StackPanel Margin="18,14" Spacing="18">
 
       <!-- The project in a few numbers -->
       <StackPanel Spacing="2">
@@ -224,5 +229,6 @@
         </ItemsControl>
       </StackPanel>
     </StackPanel>
+    </Grid>
   </ScrollViewer>
 </UserControl>
