@@ -1,0 +1,18 @@
+{
+    "projectFileVersion": 4,
+    "sourceFiles": [
+        "**/*.yarn"
+    ],
+    "baseLanguage": "en",
+    "localisation": {
+        "fr": {
+            "strings": "Strings/Echo.fr.csv"
+        }
+    },
+    "definitions": "Echo.ysls.json",
+    "compilerOptions": {
+        "diagnosticsSeverity": {
+            "YS0012": "Error"
+        }
+    }
+}

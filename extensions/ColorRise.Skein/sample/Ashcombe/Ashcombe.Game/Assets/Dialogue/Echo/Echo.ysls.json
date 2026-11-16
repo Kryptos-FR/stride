@@ -1,0 +1,232 @@
+{
+    "version": 2,
+    "commands": [
+        {
+            "yarnName": "end_day",
+            "definitionName": "StoryCommands.EndDay",
+            "language": "csharp",
+            "documentation": "Ends the day: the next morning.",
+            "async": false,
+            "parameters": []
+        },
+        {
+            "yarnName": "ending",
+            "definitionName": "StoryCommands.Ending",
+            "language": "csharp",
+            "documentation": "Ends the story with one of its endings: <<ending walked>>.",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "name",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "yarnName": "give",
+            "definitionName": "StoryCommands.Give",
+            "language": "csharp",
+            "documentation": "Gives a thing to the cartographer: <<give gear>>, <<give herb 3>>.",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "item",
+                    "type": "string"
+                },
+                {
+                    "name": "count",
+                    "type": "number",
+                    "defaultValue": "1"
+                }
+            ]
+        },
+        {
+            "yarnName": "go",
+            "definitionName": "Doorway.Go",
+            "language": "csharp",
+            "documentation": "Takes the cartographer through a door, down stairs or on a road: <<go CellarStairs>>. A road to another scene waits for the end of the dialogue.",
+            "async": true,
+            "parameters": [
+                {
+                    "name": "target",
+                    "type": "instance",
+                    "subtype": "Doorway",
+                    "documentation": "The name of the Doorway the command runs on."
+                }
+            ]
+        },
+        {
+            "yarnName": "quest_changed",
+            "definitionName": "StoryCommands.QuestChanged",
+            "language": "csharp",
+            "documentation": "Writes the state of a quest in the journal, after a <<set $quest_...>>: <<quest_changed survey>>.",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "quest",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "yarnName": "survey",
+            "definitionName": "StoryCommands.Survey",
+            "language": "csharp",
+            "documentation": "Puts a landmark on the cartographer's map: <<survey bell>>.",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "landmark",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "yarnName": "take",
+            "definitionName": "StoryCommands.Take",
+            "language": "csharp",
+            "documentation": "Takes a thing from the cartographer: <<take gear>>.",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "item",
+                    "type": "string"
+                },
+                {
+                    "name": "count",
+                    "type": "number",
+                    "defaultValue": "1"
+                }
+            ]
+        },
+        {
+            "yarnName": "walk",
+            "definitionName": "Talkable.Walk",
+            "language": "csharp",
+            "documentation": "Makes someone walk to an entity of its place, and waits: <<walk Hedda Bar>>.",
+            "async": true,
+            "parameters": [
+                {
+                    "name": "target",
+                    "type": "instance",
+                    "subtype": "Talkable",
+                    "documentation": "The name of the Talkable the command runs on."
+                },
+                {
+                    "name": "place",
+                    "type": "any"
+                }
+            ]
+        }
+    ],
+    "functions": [
+        {
+            "yarnName": "been_to",
+            "definitionName": "StoryCommands.BeenTo",
+            "language": "csharp",
+            "documentation": "Whether the cartographer has been to a place: been_to(\"Castle\").",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "place",
+                    "type": "string"
+                }
+            ],
+            "return": {
+                "type": "bool"
+            }
+        },
+        {
+            "yarnName": "day",
+            "definitionName": "StoryCommands.Day",
+            "language": "csharp",
+            "documentation": "The day of the story, 1 at its start.",
+            "async": false,
+            "parameters": [],
+            "return": {
+                "type": "number"
+            }
+        },
+        {
+            "yarnName": "has_item",
+            "definitionName": "StoryCommands.HasItem",
+            "language": "csharp",
+            "documentation": "Whether the cartographer carries a thing: has_item(\"gear\").",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "item",
+                    "type": "string"
+                }
+            ],
+            "return": {
+                "type": "bool"
+            }
+        },
+        {
+            "yarnName": "here",
+            "definitionName": "StoryCommands.Here",
+            "language": "csharp",
+            "documentation": "Where the cartographer is: the short name of the place, as \"Village\", \"Inn\", \"Castle\" or \"Deep\".",
+            "async": false,
+            "parameters": [],
+            "return": {
+                "type": "string"
+            }
+        },
+        {
+            "yarnName": "item_count",
+            "definitionName": "StoryCommands.ItemCount",
+            "language": "csharp",
+            "documentation": "How many of a thing the cartographer carries: item_count(\"herb\").",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "item",
+                    "type": "string"
+                }
+            ],
+            "return": {
+                "type": "number"
+            }
+        },
+        {
+            "yarnName": "survey_count",
+            "definitionName": "StoryCommands.SurveyCount",
+            "language": "csharp",
+            "documentation": "How many landmarks are on the map.",
+            "async": false,
+            "parameters": [],
+            "return": {
+                "type": "number"
+            }
+        },
+        {
+            "yarnName": "surveyed",
+            "definitionName": "StoryCommands.Surveyed",
+            "language": "csharp",
+            "documentation": "Whether a landmark is on the map: surveyed(\"bell\").",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "landmark",
+                    "type": "string"
+                }
+            ],
+            "return": {
+                "type": "bool"
+            }
+        },
+        {
+            "yarnName": "time_of_day",
+            "definitionName": "StoryCommands.TimeOfDay",
+            "language": "csharp",
+            "documentation": "The time of the day: \"morning\", \"afternoon\", \"evening\" or \"night\".",
+            "async": false,
+            "parameters": [],
+            "return": {
+                "type": "string"
+            }
+        }
+    ]
+}

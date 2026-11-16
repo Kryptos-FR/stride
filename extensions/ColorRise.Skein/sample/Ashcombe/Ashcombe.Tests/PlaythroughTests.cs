@@ -165,6 +165,62 @@ public sealed class PlaythroughTests
     public async Task Every_quest_done_once_on_the_way_to_the_true_border()
     {
         var story = TestStory.Ashcombe();
+        await EveryQuest(story);
+
+        Assert.Equal("true_around", story.Director.Ending);
+        foreach (var quest in new[] { "survey", "stones", "wheel", "herbs", "recipe", "audience", "page", "offer", "feast", "portraits", "wares", "jory", "carvings", "corvin", "tally", "echo", "border", "mill", "lio_map", "last_sale" })
+        {
+            Assert.True(story.Quest(quest) == QuestState.Succeeded, $"{quest} is {story.Quest(quest)}");
+        }
+
+        Assert.Empty(story.Errors);
+    }
+
+    [Fact]
+    public async Task Every_quest_done_once_in_French()
+    {
+        var story = TestStory.Ashcombe(language: "fr");
+        await EveryQuest(story);
+
+        Assert.Equal("true_around", story.Director.Ending);
+        Assert.Equal(QuestState.Succeeded, story.Quest("echo"));
+        Assert.Empty(story.Errors);
+        var lines = story.Reader.Said;
+        Assert.Contains("Vous comptez les jetons sur les chevilles. 11 mineurs sont remontés.", lines);
+        Assert.Contains("Une cheville est vide, la 12e. Celle de Jory.", lines);
+        Assert.Contains("Écho: Juste. Juste. Juste...", lines);
+        Assert.Contains("La vraie frontière entre dans la charte, et la nouvelle route contourne le moulin, par le long chemin, l'ancien chemin.", lines);
+        Assert.Contains("Le gâteau de foire d'Hedda, de la recette de sa mère, a disparu avant midi.", lines);
+
+        // Not one line of the story nor of the echo was said in English
+        var english = story.EnglishTexts();
+        Assert.Empty(lines.Where(english.Contains));
+    }
+
+    [Fact]
+    public async Task The_hearing_fails_in_French_with_the_number_of_landmarks()
+    {
+        var story = TestStory.Ashcombe(language: "fr");
+        await Play.ActOneIdle(story);
+        await story.Until(TimeOfDay.Evening);
+        await story.Use("Lift");
+        await story.Talk("Corvin", "Lift the timber.");
+        await story.Use("LongWay");
+
+        story.TakeLines();
+        await story.Talk("Hearing");
+
+        Assert.Equal("failed", story.Director.Ending);
+        var lines = story.TakeLines();
+        Assert.Contains("Vous déroulez votre carte. 0 repère, et du parchemin vierge là où devrait être le reste.", lines);
+        Assert.Contains("Anselm: Une carte trouée n'est pas une carte. L'abbaye ne signera pas ceci.", lines);
+    }
+
+    /// <summary>
+    /// Every quest of the story done once, on the way to the true border with the road around the mill.
+    /// </summary>
+    private static async Task EveryQuest(TestStory story)
+    {
 
         // Act I: the wheel, the herbs, the recipe
         await story.Start();
@@ -230,13 +286,5 @@ public sealed class PlaythroughTests
 
         // The steward was left under the hill: he does not present his map, and the letter is not needed
         await story.Talk("Hearing", "Speak for the mill. The road should go around it.", "Draw the carved border, from the stones under the hill.");
-
-        Assert.Equal("true_around", story.Director.Ending);
-        foreach (var quest in new[] { "survey", "stones", "wheel", "herbs", "recipe", "audience", "page", "offer", "feast", "portraits", "wares", "jory", "carvings", "corvin", "tally", "echo", "border", "mill", "lio_map", "last_sale" })
-        {
-            Assert.True(story.Quest(quest) == QuestState.Succeeded, $"{quest} is {story.Quest(quest)}");
-        }
-
-        Assert.Empty(story.Errors);
     }
 }

@@ -1,0 +1,21 @@
+{
+    "projectFileVersion": 4,
+    "sourceFiles": [
+        "**/*.yarn"
+    ],
+    "excludeFiles": [
+        "Echo/**"
+    ],
+    "baseLanguage": "en",
+    "localisation": {
+        "fr": {
+            "strings": "Strings/Ashcombe.fr.csv"
+        }
+    },
+    "definitions": "Ashcombe.ysls.json",
+    "compilerOptions": {
+        "diagnosticsSeverity": {
+            "YS0012": "Error"
+        }
+    }
+}

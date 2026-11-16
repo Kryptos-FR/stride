@@ -6,7 +6,10 @@ SourceFiles:
     41100342550057b88775f933330975d6: '**/*.yarn'
 ExcludedFiles: {}
 BaseLanguage: en
-Localisations: {}
+Localisations:
+    aa177e33f5d458fe8c996a88f35a2b87:
+        Language: fr
+        Strings: !file Strings/Echo.fr.csv
 LineIdStyle: Descriptive
 Saliency: RandomBestLeastRecentlyViewed
 DiagnosticSeverities:

@@ -105,6 +105,9 @@ internal sealed class TestStory
         };
         if (language is not null)
             Lines.Language = language;
+        this.language = language;
+        if (translation is not null)
+            Reader.Translate(YarnStringsCsv.RowsOf(Build.Compilation, language!), translation);
 
         Variables = new VariableStorage(Log);
         Reader.OnCommand = OnCommand;
@@ -252,13 +255,26 @@ internal sealed class TestStory
     private DialogueSession MakeEcho()
     {
         var functions = Actions.Describe().Where(a => a.Kind == YarnActionKind.Function).Select(YarnFunctionDeclaration.From).ToList();
-        var build = YarnProjectBuilder.Build(new YarnProjectAsset(), "Echo", StoryFiles.EchoScripts(), functions, null);
+        // The echo speaks the story's language, from its own strings file
+        var asset = new YarnProjectAsset();
+        Dictionary<string, IReadOnlyList<YarnStringRow>>? translations = null;
+        if (language is not null)
+        {
+            asset.Localisations.Add(new YarnLocalisation { Language = language });
+            translations = new() { [language] = StoryFiles.Strings(language, echo: true) };
+        }
+
+        var build = YarnProjectBuilder.Build(asset, "Echo", StoryFiles.EchoScripts(), functions, translations);
         Assert.Empty(build.Compilation.Diagnostics.Where(d => d.Severity == YarnSeverity.Error).Select(d => d.ToString()));
+        echoEnglish = YarnStringsCsv.RowsOf(build.Compilation, "en");
+        if (language is not null)
+            Reader.Translate(echoEnglish, translations![language]);
         var project = build.Project!;
-        var lines = new TextLineProvider(new[] { build.BaseStrings! }.ToDictionary(t => t.Language).GetValueOrDefault, project.BaseLanguage, Log)
+        var lines = new TextLineProvider(build.Translations.Append(build.BaseStrings!).ToDictionary(t => t.Language).GetValueOrDefault, project.BaseLanguage, Log)
         {
             LineMetadata = project.LineMetadata,
             ShadowLines = project.ShadowLines,
+            Language = Lines.Language,
         };
         return new DialogueSession(project.GetProgram(), Variables, lines, Actions, Reader, new DialogueSessionOptions
         {
@@ -271,6 +287,17 @@ internal sealed class TestStory
     }
 
     private DialogueSession? echo;
+
+    private IReadOnlyList<YarnStringRow> echoEnglish = [];
+
+    /// <summary>
+    /// The English texts of the story's and the echo's lines that have no value in them, as they are said in English.
+    /// </summary>
+    public HashSet<string> EnglishTexts()
+        => [.. YarnStringsCsv.RowsOf(Build.Compilation, "en").Concat(echoEnglish).Select(r => r.Text).Where(t => !t.Contains('{', StringComparison.Ordinal))];
+
+    // The language the story plays in, when not the base language
+    private readonly string? language;
 
     /// <summary>
     /// Lets one part of the day pass, as the cartographer does, and plays the events that follow.
@@ -386,6 +413,11 @@ internal sealed class Reader : IDialogueResponder
     public List<string> Transcript { get; } = [];
 
     /// <summary>
+    /// Every line said since the story started, which <see cref="TestStory.TakeLines"/> does not clear.
+    /// </summary>
+    public List<string> Said { get; } = [];
+
+    /// <summary>
     /// The options to pick, by their text, in order. With none left, the first option that can be picked.
     /// </summary>
     public Queue<string> Choices { get; } = new();
@@ -394,6 +426,27 @@ internal sealed class Reader : IDialogueResponder
     /// Answers to pick when no choice is queued: the first available option whose text is one of them.
     /// </summary>
     public HashSet<string> Answers { get; } = [];
+
+    /// <summary>
+    /// The texts of the options in the language played, by their English text: the tests name the options in English
+    /// whatever the language.
+    /// </summary>
+    private readonly Dictionary<string, string> translated = [];
+
+    /// <summary>
+    /// Picks options by the translation of their English text, from the rows of the base language and of the language played.
+    /// </summary>
+    public void Translate(IReadOnlyList<YarnStringRow> english, IReadOnlyList<YarnStringRow> translation)
+    {
+        var texts = translation.ToDictionary(r => r.Id, r => r.Text);
+        foreach (var row in english)
+        {
+            if (texts.TryGetValue(row.Id, out var text))
+                translated[row.Text] = text;
+        }
+    }
+
+    private string Local(string english) => translated.GetValueOrDefault(english, english);
 
     /// <summary>
     /// Called with each command the game has not registered.
@@ -405,6 +458,7 @@ internal sealed class Reader : IDialogueResponder
     public ValueTask HandleLineAsync(LocalizedLine line, LineCancellation cancellation)
     {
         Transcript.Add($"line: {line.Text.Text}");
+        Said.Add(line.Text.Text);
         return default;
     }
 
@@ -416,8 +470,9 @@ internal sealed class Reader : IDialogueResponder
         }
 
         if (!Choices.TryDequeue(out var wanted))
-            return new((options.FirstOrDefault(o => o.IsAvailable && Answers.Contains(o.Line.Text.Text)) ?? options.FirstOrDefault(o => o.IsAvailable))?.Index);
+            return new((options.FirstOrDefault(o => o.IsAvailable && Answers.Select(Local).Contains(o.Line.Text.Text)) ?? options.FirstOrDefault(o => o.IsAvailable))?.Index);
 
+        wanted = Local(wanted);
         var chosen = options.FirstOrDefault(o => o.IsAvailable && o.Line.Text.Text == wanted);
         Assert.True(chosen is not null, $"The option '{wanted}' is not offered. Offered: {string.Join(" | ", options.Select(o => o.Line.Text.Text + (o.IsAvailable ? "" : " [unavailable]")))}");
         return new(chosen!.Index);

@@ -7,7 +7,10 @@ SourceFiles:
 ExcludedFiles:
     f07854ff1055d527a4ee9821b51afc97: Echo/**
 BaseLanguage: en
-Localisations: {}
+Localisations:
+    2d35e42b60cc52d58fd37f7d28fcea31:
+        Language: fr
+        Strings: !file Strings/Ashcombe.fr.csv
 LineIdStyle: Descriptive
 Saliency: RandomBestLeastRecentlyViewed
 DiagnosticSeverities:
