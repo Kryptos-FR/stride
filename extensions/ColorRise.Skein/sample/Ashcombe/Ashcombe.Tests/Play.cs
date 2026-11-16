@@ -100,4 +100,48 @@ internal static class Play
     {
         await story.Talk("Corvin", answer);
     }
+
+    /// <summary>
+    /// A second act: the audience, the steward's offer answered, and the page found, which ends the act.
+    /// </summary>
+    public static async Task ActTwo(TestStory story, string offer = "Refuse.")
+    {
+        await story.Talk("Ysolde", "Say nothing more.");
+        await AnswerTheOffer(story, offer);
+        await story.Talk("Ottilie");
+        await story.Talk("Tomb");
+        await story.Talk("Desk");
+        Assert.Equal("Mine", story.Here);
+    }
+
+    /// <summary>
+    /// A third act down the old shaft (the rope), or the flooded gallery (the remedy), or the long way: the steward
+    /// answered when he is there, Jory found, the carvings copied, back up to the camp. It ends at the fair.
+    /// </summary>
+    /// <param name="corvin">The answer to the steward in the gallery, or null to pass him by.</param>
+    public static async Task ActThree(TestStory story, string? corvin = "Leave him for the miners.")
+    {
+        await story.Use("Lift");
+        if (corvin is not null && story.Flag("$corvin_in_mine"))
+            await story.Talk("Corvin", corvin);
+        if (story.Director.Inventory.Has("rope"))
+        {
+            await story.Use("OldShaft");
+        }
+        else if (story.Director.Inventory.Has("remedy"))
+        {
+            await story.Use("FloodedPassage");
+            await story.Use("FloodedOn");
+        }
+        else
+        {
+            await story.Use("LongWay");
+        }
+
+        await story.Talk("Jory");
+        await story.Talk("Carvings");
+        await story.Use("DeepLift");
+        Assert.Equal(3, story.Number("$act"));
+        Assert.Equal("Village", story.Here);
+    }
 }

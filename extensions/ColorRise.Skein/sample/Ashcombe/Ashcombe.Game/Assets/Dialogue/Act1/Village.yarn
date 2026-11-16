@@ -152,13 +152,14 @@ title: Bram
 act: All
 location: Village
 scenario: The road
-when: $met_bram and $quest_wheel != QuestState.Offered
-when: not ($act == Act.Castle and $quest_feast == QuestState.Active and not has_item("flour"))
+when: not $bram_has_errand
 ---
 => Bram: Lio is in the mill. Shy, but sharp. Sharper than me with numbers.
 => Bram: My grandmother said the old border ran under the hill. Nobody listens to grandmothers.
 => Bram: The wheel turns. Listen to it! <<if $wheel_mended>>
 => Bram: Lio has been quiet since the sergeant came round. <<if $culprit == Culprit.Lio>>
+=> Bram: Fair day. The whole valley will hear where the road goes. <<if $act == Act.Fair>>
+=> Bram: Thank you for speaking up. Whatever comes of it. <<if $spoke_for_mill>>
 ===
 
 title: Stones

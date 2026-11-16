@@ -184,6 +184,8 @@ color: yellow
 <<declare $fair_up = false>>
 <<declare $border = Border.None>>
 <<declare $spoke_for_mill = false>>
+/// The ending the hearing gave, as the game names it: true_around, true_through, forged, exposed, walked or failed.
+<<declare $outcome = "">>
 
 // Facts that follow from others: smart variables, computed each time they are read.
 
@@ -197,8 +199,10 @@ color: yellow
 <<declare $road_around = $road != Road.Corvin or $spoke_for_mill>>
 /// Pell has something else to say than small talk: what his node group's other nodes need, together.
 <<declare $pell_has_errand = (here() == "Village" and $act == Act.Survey and (not $pell_met or ($quest_wheel == QuestState.Active and not $gear_bought) or $culprit == Culprit.Pell)) or (here() == "Castle" and $act == Act.Castle and $quest_wares == QuestState.NotStarted) or (here() == "Village" and $act == Act.Fair and $quest_last_sale == QuestState.NotStarted)>>
-/// The map has holes: too few landmarks, and no carvings to make up for them.
-<<declare $map_incomplete = survey_count() < 4 and not $carvings_copied>>
+/// The map has holes: too few landmarks, and neither the carvings nor Lio's map to make up for them.
+<<declare $map_incomplete = survey_count() < 4 and not $carvings_copied and not has_item("lio_map")>>
+/// Bram has something else to say than small talk: what his node group's other nodes need, together.
+<<declare $bram_has_errand = ($act == Act.Survey and (not $met_bram or $quest_wheel == QuestState.Offered)) or ($act == Act.Castle and $quest_feast == QuestState.Active and not has_item("flour")) or ($act == Act.Fair and $quest_mill == QuestState.NotStarted and ($road == Road.Corvin or $road == Road.Miller))>>
 ===
 
 title: Interface

@@ -1,0 +1,101 @@
+title: Epilogue
+act: Fair
+location: Fair
+scenario: Accounts
+when: $outcome == "true_around"
+---
+The true border goes into the charter, and the new road goes around the mill, the long way, the old way.
+Bram's wheel turns all summer. The steward's carts curse the corner, and take it anyway.
+<<detour Accounts>>
+===
+
+title: Epilogue
+act: Fair
+location: Fair
+scenario: Accounts
+when: $outcome == "true_through"
+---
+The true border goes into the charter. But the road goes straight, as the steward wanted, and the mill is in its way.
+Bram grinds his last sack at midsummer and gives the millstones to the chapel.
+<<detour Accounts>>
+===
+
+title: Epilogue
+act: Fair
+location: Fair
+scenario: Accounts
+when: $outcome == "forged"
+---
+The steward's border goes into the charter. The abbey loses its meadows, and nobody can say quite why.
+<<if $offer == Offer.Accepted>>
+    You leave the valley with forty crowns and a map you will never show anyone.
+<<else>>
+    Corvin bows to you as he passes. It is not a friendly bow.
+<<endif>>
+<<detour Accounts>>
+===
+
+title: Epilogue
+act: Fair
+location: Fair
+scenario: Accounts
+when: $outcome == "exposed"
+---
+By evening the steward is two valleys away, and the true border is in the charter.
+The Countess asks you to stay on as the valley's cartographer. The abbey sends a cheese.
+<<detour Accounts>>
+===
+
+title: Epilogue
+act: Fair
+location: Fair
+scenario: Accounts
+when: $outcome == "walked"
+---
+The border follows the path the village walks, stone to stone. Nobody is pleased, and nobody fights.
+Every spring after, the children of Ashcombe and the novices of the abbey walk it together, and argue all the way.
+<<detour Accounts>>
+===
+
+title: Epilogue
+act: Fair
+location: Fair
+scenario: Accounts
+when: $outcome == "failed"
+---
+The hearing breaks up without a border. The valley goes home and keeps the quarrel for another generation.
+You fold the map with its holes and take the road over the hill.
+<<detour Accounts>>
+===
+
+title: Accounts
+act: Fair
+location: Fair
+scenario: Accounts
+---
+// What is left of every quest, whatever the ending. Jory's line is a line group: one of the lines that fit.
+<<if $quest_border == QuestState.Active>>
+    <<set $quest_border to QuestState.Succeeded>>
+    <<quest_changed border>>
+<<endif>>
+=> Jory dances at the fair on his crutch, and his mother doesn't let go of his sleeve all day. <<if $jory_found>>
+=> Jory buys the first cider of the fair for the whole camp, and the camp drinks it twice. <<if $jory_found>>
+=> Under the hill, Gudrun's miners are still digging for Jory. They say they hear him singing. <<if not $jory_found>>
+=> Nobody under the hill says Jory's name aloud, in case the hill hears. <<if not $jory_found>>
+<<if $quest_recipe == QuestState.Succeeded>>
+    Hedda's fair cake, from her mother's recipe, is gone before noon.
+<<endif>>
+<<if $quest_lio_map == QuestState.Succeeded>>
+    Lio's first map hangs behind Hedda's bar, framed, with the old line in red.
+<<endif>>
+<<if $feast_served>>
+    The cook of Varne castle still talks about the feast.
+<<endif>>
+<<if $pell_trust >= 1>>
+    Pell's cart goes over the hill with your story painted on its side.
+<<endif>>
+<<if $echo_answered>>
+    The echo of the deep level never asks another riddle.
+<<endif>>
+<<ending {$outcome}>>
+===

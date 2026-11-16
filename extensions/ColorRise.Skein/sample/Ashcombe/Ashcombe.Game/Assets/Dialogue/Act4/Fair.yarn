@@ -1,0 +1,218 @@
+title: ActFourNotes
+act: Fair
+location: Fair
+scenario: The hearing
+style: note
+---
+Act IV, the day of the fair. The village again, with the fair, a child scene the story loads while $fair_up is true (the cartographer does not move: the stalls and the hearing table are simply there). The steward's figure stands at the fair and the village's is hidden: the same actor never shows twice. Speak for the mill only if the cartographer took a side on the road; Lio's first map only if Lio was not blamed. The hearing gives one of six endings.
+===
+
+title: Events
+act: Fair
+location: Village
+scenario: The hearing
+quest: border
+when: once
+when: $act == Act.Fair
+when: here() == "Village"
+---
+Ashcombe is full. Stalls on the green, flags over the bridge, and half the abbey in grey robes.
+At the far end of the green, a long table: the hearing, at noon. The Countess, the Prior, and an empty chair for the cartographer.
+<<if $jory_found>>
+    Jory is at the front of the crowd, on a crutch, waving at you.
+<<endif>>
+<<set $quest_border to QuestState.Active>>
+<<quest_changed border>>
+===
+
+title: Bram
+act: Fair
+location: Village
+scenario: The road
+quest: mill
+when: $act == Act.Fair
+when: $quest_mill == QuestState.NotStarted and ($road == Road.Corvin or $road == Road.Miller)
+---
+<<if $road == Road.Miller>>
+    Bram: You said it yourself. The road goes around the mill. Will you say it again, at the table, in front of the steward?
+<<else>>
+    Bram: You sided with the steward, I know. But you've seen the mill now. Will you speak for us at the table?
+<<endif>>
+-> I will speak for the mill.
+    Bram: That's all I ask.
+    <<set $quest_mill to QuestState.Active>>
+-> The map speaks for itself.
+    Bram: Maps don't speak. People do. #mood:sad
+    <<set $quest_mill to QuestState.Failed>>
+<<quest_changed mill>>
+===
+
+title: Lio
+act: Fair
+location: Mill
+scenario: Accounts
+quest: lio_map
+when: $act == Act.Fair
+when: $culprit != Culprit.Lio and $quest_lio_map == QuestState.NotStarted
+---
+<<if $culprit == Culprit.Pell>>
+    Lio: They let Pell go. I told Maren it was me, after. She said she knew.
+<<endif>>
+Lio: I made it. My first real map. The stones, the bridge, the river, and the old line, the way grandmother told it.
+Lio: Take it to the table. It's better than nothing, and maybe better than something.
+<<give lio_map>>
+<<set $quest_lio_map to QuestState.Succeeded>>
+<<quest_changed lio_map>>
+===
+
+title: Lio
+act: All
+location: Mill
+scenario: Accounts
+when: $act == Act.Castle or ($act == Act.Fair and ($culprit == Culprit.Lio or $quest_lio_map != QuestState.NotStarted))
+---
+<<if $act == Act.Castle>>
+    Lio: You were at the castle! Is it true they eat off silver?
+<<elseif $culprit == Culprit.Lio>>
+    Lio: Go and draw your border. You know where I'd draw it. #mood:angry
+<<else>>
+    Lio: Is my map on the table? Is it?
+<<endif>>
+===
+
+title: Corvin
+act: Fair
+location: Fair
+scenario: The hearing
+when: $act == Act.Fair
+---
+<<if $offer == Offer.Accepted>>
+    Corvin: You have my border. Old ink, brown, not black. Don't disappoint me.
+<<elseif $corvin_fate == CorvinFate.Helped>>
+    Corvin: The cartographer who pulled me out of the dark. I have a map of my own today. I hope you understand.
+<<elseif $corvin_fate == CorvinFate.Robbed>>
+    Corvin: Somebody took my notebook in the mine. You wouldn't know who, I suppose. #mood:angry
+<<else>>
+    Corvin: Today we see whose map the valley believes.
+<<endif>>
+===
+
+title: Anselm
+act: Fair
+location: Fair
+scenario: The hearing
+when: $act == Act.Fair
+---
+=> Anselm: Prior Anselm, of the abbey. The river has been our border for three hundred years. Rivers do not lie.
+=> Anselm: Your map will be the fourth one I have seen this year. The other three agreed with whoever paid for them.
+=> Anselm: They say you went under the hill. What did you find there? Nothing, I hope. <<if $carvings_copied>>
+===
+
+title: Hearing
+act: Fair
+location: Fair
+scenario: The hearing
+quest: border
+when: $act == Act.Fair and $quest_border == QuestState.Active
+---
+// The sixth fork and the ending: the border drawn at the hearing, with what the other forks left on the table.
+You take the empty chair at the long table. The green goes quiet.
+Ysolde: The cartographer has surveyed the valley at my charge. Let us see the map.
+Anselm: And let us see if it agrees with the river.
+<<if $map_incomplete>>
+    You unroll your map. [plural value={survey_count()} one="One landmark" other="% landmarks" /], and blank parchment where the rest should be.
+    Anselm: A map with holes is no map. The abbey will not sign this.
+    Ysolde: Nor will I. #mood:angry
+    <<set $quest_border to QuestState.Failed>>
+    <<quest_changed border>>
+    <<set $outcome to "failed">>
+    <<jump Epilogue>>
+<<endif>>
+<<if $corvin_presents>>
+    Corvin: The castle has a map of its own. An old one, from the archive. Please. Look at the line.
+    He unrolls a brown, crackling sheet. The border on it runs well inside the abbey's meadows.
+<<endif>>
+<<if $quest_mill == QuestState.Active>>
+    Bram stands at the edge of the crowd, looking at you.
+    -> Speak for the mill. The road should go around it.
+        <<set $spoke_for_mill to true>>
+        Ysolde: The mill has ground the valley's bread for a hundred years. Noted.
+        <<set $quest_mill to QuestState.Succeeded>>
+    -> Say nothing about the mill.
+        Bram turns away.
+        <<set $quest_mill to QuestState.Failed>>
+    <<quest_changed mill>>
+<<endif>>
+-> Draw the carved border, from the stones under the hill. <<if $carvings_copied>>
+    <<set $border to Border.Carved>>
+    You draw the carved line across the map, from the bridge stone north under the hill to the abbey's well.
+    <<if $corvin_presents and $has_proof>>
+        <<jump Exposed>>
+    <<elseif $corvin_presents and $corvin_fate == CorvinFate.Helped>>
+        Corvin looks at your line for a long time.
+        Corvin: You pulled me out of the dark. I won't call you a liar in front of the valley. The castle withdraws its map.
+    <<elseif $corvin_presents>>
+        Anselm: Two old maps, and two borders. The steward's has the castle's seal. Yours has a cartographer's word.
+        Anselm: The abbey would rather have the steward's meadows than a ghost's carvings.
+        <<set $outcome to "forged">>
+        <<jump Epilogue>>
+    <<endif>>
+    <<if $can_draw_true_border>>
+        Anselm: The charter's page says the same. The abbey cannot argue with its own founder's hand.
+    <<else>>
+        Anselm: Carvings in a mine. Well. They are older than the river's last flood, I give you that.
+    <<endif>>
+    <<if $road_around>>
+        <<set $outcome to "true_around">>
+    <<else>>
+        <<set $outcome to "true_through">>
+    <<endif>>
+-> Draw the steward's border. <<if has_item("false_map")>>
+    <<set $border to Border.Forged>>
+    You draw Corvin's line, the one he paid for. Old ink, brown, not black.
+    Corvin smiles for the first time in the whole story.
+    <<set $outcome to "forged">>
+-> Show the proof that the steward's map is forged. <<if $corvin_presents and $has_proof>>
+    <<jump Exposed>>
+-> Draw the path the villagers walk, from stone to stone.
+    <<set $border to Border.Walked>>
+    You draw the line the village walks every spring, beating the bounds from stone to stone. Nobody's, everybody's.
+    <<if has_item("lio_map")>>
+        You lay Lio's map beside it. The two lines agree almost everywhere.
+    <<endif>>
+    Anselm: A compromise. I hate compromises. Very well.
+    <<set $outcome to "walked">>
+<<set $quest_border to QuestState.Succeeded>>
+<<quest_changed border>>
+<<jump Epilogue>>
+===
+
+title: Exposed
+act: Fair
+location: Fair
+scenario: The hearing
+quest: border
+---
+<<if has_item("letter")>>
+    You lay the steward's letter on the table. "Draw it so, and it is worth forty crowns to you." In his own hand.
+<<else>>
+    You lay the steward's notebook on the table, open. The same border, drawn again and again, older-looking each time.
+<<endif>>
+The green goes very quiet.
+Ysolde: Corvin. My study. Now. #mood:angry
+Corvin does not go to her study. He goes to the stables.
+<<set $border to Border.Carved>>
+<<set $outcome to "exposed">>
+<<set $quest_border to QuestState.Succeeded>>
+<<quest_changed border>>
+<<jump Epilogue>>
+===
+
+title: Hearing
+act: All
+location: Fair
+scenario: The hearing
+when: $quest_border != QuestState.Active
+---
+The hearing table is empty now. Somebody has left a cup of cider on it.
+===

@@ -274,6 +274,41 @@ public sealed class SceneTests
     }
 
     [Fact]
+    public void Finding_the_same_actor_in_the_root_scene_and_in_a_place_loaded_with_it_is_one_of_the_two_without_a_word()
+    {
+        // The fair's steward and the village's, both loaded: the story hides one, but a command finds an actor by
+        // name, shown or not
+        var project = new TestProject("Story", """
+            title: Open
+            ---
+            <<declare $fair_up = false>>
+            <<set $fair_up to true>>
+            ===
+            title: Move
+            ---
+            <<walk Pell Stall>>
+            ===
+            """);
+        const string fair = "Places/Village/Fair";
+        using var game = MakeVillage(project, new Recorder(), new Entity("FairGround") { new StoryPlace { Place = new(fair), Variable = "$fair_up" } }, pell: new Vector3(-4, 0, 0));
+        game.Places.Add(fair, () => Make.Interior(new Vector3(0, 0, 30), Make.Person("Pell", "Pell", new Vector3(5, 0, 0)), new Entity("Stall", new Vector3(5, 0, 6))));
+        game.Start(Village);
+        Talk(game, "Open");
+        game.Step();
+        var pells = game.Root.Entities.Where(e => e.Name == "Pell").Concat(game.Root.Children.SelectMany(s => s.Entities).Where(e => e.Name == "Pell")).ToList();
+        Assert.Equal(2, pells.Count);
+        var before = pells.Select(p => p.Transform.Position).ToList();
+
+        Talk(game, "Move");
+
+        // The one of the root scene, loaded first, walks to the fair's stall; nothing says there were two
+        var moved = pells.Where((p, i) => p.Transform.Position != before[i]).Select(p => p.Scene!.Name).ToList();
+        Assert.Equal([Village], moved);
+        Assert.Empty(game.Warnings);
+        Assert.Empty(game.Errors);
+    }
+
+    [Fact]
     public void Spike_an_entity_moved_to_another_root_scene_has_its_scripts_cancelled_and_started_again()
     {
         using var game = new SceneHarness();
