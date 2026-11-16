@@ -212,6 +212,7 @@ public static class YarnCompilerBridge
                 Name = declaration.Name,
                 Type = TypeName(declaration.Type),
                 Default = declaration.IsInlineExpansion ? null : DefaultValue(declaration),
+                Cases = declaration.Type is EnumType type ? CasesOf(type) : [],
                 Description = string.IsNullOrWhiteSpace(declaration.Description) ? null : declaration.Description.Trim(),
                 File = hasPlace ? declaration.SourceFileName : null,
                 Line = hasPlace ? declaration.Range.Start.Line + 1 : 0,
@@ -250,6 +251,18 @@ public static class YarnCompilerBridge
         bool flag => flag,
         var number => number.ToSingle(System.Globalization.CultureInfo.InvariantCulture),
     };
+
+    private static List<YarnEnumCase> CasesOf(EnumType type)
+    {
+        var cases = new List<YarnEnumCase>();
+        foreach (var (name, property) in type.EnumCases)
+        {
+            cases.Add(new YarnEnumCase(name, property.Value is string text ? text : property.Value.ToSingle(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
+        // Numbers in their order; the cases of texts stay as the scripts declare them
+        return [.. cases.OrderBy(c => c.Value as float? ?? 0)];
+    }
 
     private static List<YarnDiagnostic> ReadDiagnostics(CompilationResult result, IReadOnlyDictionary<string, YarnSeverity> severities, List<YarnNodeData> nodes)
     {

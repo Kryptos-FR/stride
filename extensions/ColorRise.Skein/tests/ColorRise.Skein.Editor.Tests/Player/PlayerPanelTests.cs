@@ -45,6 +45,46 @@ public sealed class PlayerPanelTests
         => Assert.IsType<T>(descriptor.CreateViewModel(new PanelContext { Descriptor = descriptor, Session = session.Session, ServiceProvider = session.Session.ServiceProvider }));
 
     [Fact]
+    public async Task A_variable_of_an_enum_shows_its_case_and_takes_one()
+    {
+        await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", """
+            title: Start
+            ---
+            <<enum Act>>
+                <<case Arrival>>
+                <<case Wreck>>
+            <<endenum>>
+            <<declare $act = Act.Arrival>>
+            Odile: The tide is out.
+            Odile: Good night.
+            ===
+
+            """));
+        var panel = Panel<DialoguePlayerViewModel>(session, DialoguePlayerViewModel.Panel);
+        panel.IsShown = true;
+        await session.Analysis.WhenIdle();
+        await panel.Start();
+
+        var act = Assert.Single(panel.Variables);
+        Assert.Equal(("$act", "Act", "Arrival", "Arrival, Wreck"), (act.Name, act.Type, act.Value, act.Cases));
+
+        act.Value = "Wreck";
+        Assert.Equal("", act.Error);
+        Assert.Equal("$act = Act.Wreck", panel.Transcript[^1].Text);
+        Assert.Equal("Wreck", panel.Variables[0].Value);
+
+        // The value of a case is welcome too, and shows as the case
+        act = panel.Variables[0];
+        act.Value = "0";
+        Assert.Equal("", act.Error);
+        Assert.Equal("Arrival", panel.Variables[0].Value);
+
+        act = panel.Variables[0];
+        act.Value = "Dusk";
+        Assert.StartsWith("$act is one of Arrival, Wreck (Act)", act.Error);
+    }
+
+    [Fact]
     public async Task The_player_shows_the_run_at_its_cursor_and_drives_it()
     {
         await using var session = await OpenAsync();

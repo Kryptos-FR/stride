@@ -42,6 +42,14 @@ public sealed class ProjectEditorTests
         Assert.Equal(["$gold", "$lit"], editor.Variables.Select(v => v.Name));
         Assert.Equal(new YarnProjectVariableItem("$gold", "number", "5", "The purse", "Dialogue/Act1.yarn", 4, IsSmart: false, IsDeclared: true), editor.Variables[0]);
         Assert.Equal(("bool", false), (editor.Variables[1].Type, editor.Variables[1].IsDeclared));
+
+        // A variable of an enum starts as a case, written as a script writes it
+        var text = session.ScriptAt("Dialogue/Act1").TextBuffer;
+        text.Replace(text.Text.IndexOf("Narrator: Here.", StringComparison.Ordinal), 0, "<<enum Act>>\n<<case Arrival>>\n<<case Wreck>>\n<<endenum>>\n<<declare $act = Act.Wreck>>\n", YarnTextBuffer.TypingActionName);
+        await editor.WhenRefreshed();
+        Assert.Equal(("$act", "Act", "Act.Wreck"), (editor.Variables[0].Name, editor.Variables[0].Type, editor.Variables[0].Default));
+        session.UndoRedo.Undo();
+        await editor.WhenRefreshed();
         var missing = Assert.Single(editor.Diagnostics, d => d.Code == "YS0012");
         Assert.Equal(("Dialogue/Act2.yarn", 5), (missing.File, missing.Line));
         Assert.Equal((5, 3), (editor.LineCount, editor.LinesWithoutId));

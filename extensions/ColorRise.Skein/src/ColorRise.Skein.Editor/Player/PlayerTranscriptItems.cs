@@ -131,6 +131,7 @@ public sealed class PlayerOptionViewModel : ViewModelBase
 public sealed class PlayerVariableViewModel : ViewModelBase
 {
     private readonly Func<object, string?> apply;
+    private readonly YarnVariableData variable;
     private string value;
     private string error = "";
 
@@ -142,11 +143,13 @@ public sealed class PlayerVariableViewModel : ViewModelBase
         : base(serviceProvider)
     {
         this.apply = apply;
+        this.variable = variable;
         Name = variable.Name;
         Type = variable.Type;
         Description = variable.Description ?? "";
+        Cases = string.Join(", ", variable.Cases.Select(c => c.Name));
         IsSmart = variable.IsSmart;
-        value = variable.IsSmart ? expression ?? "" : PlayerValues.Show(variable.Default);
+        value = variable.IsSmart ? expression ?? "" : Shown(variable.Default);
     }
 
     /// <summary>
@@ -155,9 +158,14 @@ public sealed class PlayerVariableViewModel : ViewModelBase
     public string Name { get; }
 
     /// <summary>
-    /// The type of the variable: <c>bool</c>, <c>number</c> or <c>string</c>.
+    /// The type of the variable: <c>bool</c>, <c>number</c>, <c>string</c> or the name of an enum of the scripts.
     /// </summary>
     public string Type { get; }
+
+    /// <summary>
+    /// The names of the cases of the variable's enum, with commas; empty for the other types.
+    /// </summary>
+    public string Cases { get; }
 
     /// <summary>
     /// What the scripts say of the variable above its declaration, or empty.
@@ -170,8 +178,8 @@ public sealed class PlayerVariableViewModel : ViewModelBase
     public bool IsSmart { get; }
 
     /// <summary>
-    /// The value at the cursor, as a script writes it (a text without its quotes); the expression of a smart variable.
-    /// Setting a value of the variable's type sets the variable in the run, as a step.
+    /// The value at the cursor, as a script writes it (a text without its quotes, a case of an enum by its name); the
+    /// expression of a smart variable. Setting a value of the variable's type sets the variable in the run, as a step.
     /// </summary>
     public string Value
     {
@@ -181,7 +189,7 @@ public sealed class PlayerVariableViewModel : ViewModelBase
             if (IsSmart || !SetValue(ref this.value, value))
                 return;
 
-            Error = PlayerValues.Parse(value, Type) is { } parsed ? apply(parsed) ?? "" : $"{Name} is {PlayerValues.Describe(Type)}.";
+            Error = Parsed(value) is { } parsed ? apply(parsed) ?? "" : $"{Name} is {PlayerValues.Describe(Type)}.";
         }
     }
 
@@ -200,6 +208,18 @@ public sealed class PlayerVariableViewModel : ViewModelBase
 
         error = "";
         OnPropertyChanged(nameof(Error));
-        SetValue(ref value, PlayerValues.Show(current), nameof(Value));
+        SetValue(ref value, Shown(current), nameof(Value));
+    }
+
+    // A case of an enum shows by its name
+    private string Shown(object? current) => variable.CaseOf(current)?.Name ?? PlayerValues.Show(current);
+
+    // A case of an enum is typed by its name or by its value: the run says which cases there are when it is neither
+    private object? Parsed(string text)
+    {
+        if (variable.Cases.Count == 0)
+            return PlayerValues.Parse(text, Type);
+
+        return variable.CaseNamed(text)?.Value ?? PlayerValues.Parse(text, YarnFunctionDeclaration.Number) ?? text;
     }
 }

@@ -434,7 +434,11 @@ public sealed class DialoguePlayerService
         if (variable.IsSmart)
             throw new ArgumentException($"{name} is a smart variable: its value comes from its expression.", nameof(name));
 
-        var typed = Typed(value, variable.Type) ?? throw new ArgumentException($"{name} is a {variable.Type}: {PlayerRun.Format(value)} is not one.", nameof(value));
+        var typed = Typed(value, variable) ?? throw new ArgumentException(
+            variable.Cases.Count > 0
+                ? $"{name} is one of {string.Join(", ", variable.Cases.Select(c => c.Name))} ({variable.Type}): {PlayerRun.Format(value)} is not one."
+                : $"{name} is a {variable.Type}: {PlayerRun.Format(value)} is not one.",
+            nameof(value));
         Branch();
         script.Add(new PlayerInput(PlayerInputKind.SetVariable, name, typed));
         await PlayToEndAsync(live: true);
@@ -525,6 +529,18 @@ public sealed class DialoguePlayerService
     /// <summary>
     /// A value as a variable or a function of a Yarn type holds it, or null when it is of another type.
     /// </summary>
+    // A value for a variable: of its type, or a case of its enum, by its value or by its name
+    private static object? Typed(object? value, YarnVariableData variable)
+    {
+        if (variable.Cases.Count == 0)
+            return Typed(value, variable.Type);
+
+        if (value is string text && variable.CaseNamed(text) is { } named)
+            return named.Value;
+
+        return variable.CaseOf(value)?.Value;
+    }
+
     private static object? Typed(object? value, string type) => (type, value) switch
     {
         (YarnFunctionDeclaration.Bool, bool) => value,
@@ -820,10 +836,10 @@ public sealed class DialoguePlayerService
                 if (build!.VariableOf(input.Name) is not { IsSmart: false } variable)
                     return Diverge($"The scripts no longer have a variable named '{input.Name}' to set.");
 
-                if (Typed(input.Value, variable.Type) is null)
+                if (Typed(input.Value, variable) is not { } set)
                     return Diverge($"{input.Name} is now a {variable.Type}: it cannot be set to {PlayerRun.Format(input.Value)}.");
 
-                current.SetVariable(input.Name, input.Value!);
+                current.SetVariable(input.Name, set, variable.CaseOf(set) is { } named ? $"{variable.Type}.{named.Name}" : null);
                 return Outcome.Played;
 
             default:

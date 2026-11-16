@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace ColorRise.Skein.Assets.Compilation;
 
 /// <summary>
@@ -118,6 +120,13 @@ public sealed record YarnLineData
 }
 
 /// <summary>
+/// A case of an enum the scripts declare.
+/// </summary>
+/// <param name="Name">The name of the case, without its enum.</param>
+/// <param name="Value">What a variable holds for the case: a <see cref="float"/> or a <see cref="string"/>.</param>
+public sealed record YarnEnumCase(string Name, object Value);
+
+/// <summary>
 /// A variable of the scripts.
 /// </summary>
 public sealed record YarnVariableData
@@ -137,6 +146,11 @@ public sealed record YarnVariableData
     /// for a smart variable, whose value is computed.
     /// </summary>
     public object? Default { get; init; }
+
+    /// <summary>
+    /// The cases of the enum that is the type of the variable, in the order of their values; empty for the other types.
+    /// </summary>
+    public IReadOnlyList<YarnEnumCase> Cases { get; init; } = [];
 
     /// <summary>
     /// The <c>///</c> comment above the declaration, or null.
@@ -163,6 +177,40 @@ public sealed record YarnVariableData
     /// Whether no <c>&lt;&lt;declare&gt;&gt;</c> names the variable: the compiler worked its type out from its uses.
     /// </summary>
     public bool IsImplicit { get; init; }
+
+    /// <summary>
+    /// The case of the variable's enum that a value is, or null.
+    /// </summary>
+    public YarnEnumCase? CaseOf(object? value)
+    {
+        foreach (var known in Cases)
+        {
+            var same = known.Value is string text
+                ? value is string other && other == text
+                : value is not (null or string or bool) && value is IConvertible number && number.ToSingle(CultureInfo.InvariantCulture).Equals(known.Value);
+            if (same)
+                return known;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The case of the variable's enum that a text names, or null: the name alone, or as a script writes it
+    /// (<c>Act.Wreck</c>, <c>.Wreck</c>).
+    /// </summary>
+    public YarnEnumCase? CaseNamed(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        var name = text.Trim();
+        if (name.StartsWith(Type + ".", StringComparison.Ordinal))
+            name = name[(Type.Length + 1)..];
+        else if (name.StartsWith('.'))
+            name = name[1..];
+
+        return Cases.FirstOrDefault(c => c.Name == name) ?? Cases.FirstOrDefault(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
 
     /// <summary>
     /// Whether the compiler made the variable for its own use (what a <c>once</c> remembers): saved with the others, never

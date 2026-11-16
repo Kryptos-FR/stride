@@ -160,6 +160,8 @@
                           <TextBlock><Run Text="{Binding Name}" FontWeight="Bold"/><Run Text=": "/><Run Text="{Binding Type}"/></TextBlock>
                           <TextBlock Text="{Binding Description}" TextWrapping="Wrap" MaxWidth="320"
                                      IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                          <TextBlock Classes="faint" TextWrapping="Wrap" MaxWidth="320" Text="{Binding Cases}"
+                                     IsVisible="{Binding Cases, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                           <TextBlock Classes="faint" Text="{sd:LocalizeString A smart variable: its value comes from this expression, Context=ToolTip}" IsVisible="{Binding IsSmart}"/>
                         </StackPanel>
                       </ToolTip.Tip>

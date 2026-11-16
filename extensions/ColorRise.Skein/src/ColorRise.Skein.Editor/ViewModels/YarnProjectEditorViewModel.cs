@@ -387,6 +387,7 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
     private static string DefaultOf(YarnVariableData variable) => variable.Default switch
     {
         null => "",
+        var value when variable.CaseOf(value) is { } named => $"{variable.Type}.{named.Name}",
         bool flag => flag ? "true" : "false",
         string text => $"\"{text}\"",
         IFormattable number => number.ToString(null, CultureInfo.InvariantCulture),

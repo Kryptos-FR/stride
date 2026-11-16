@@ -272,6 +272,48 @@ public sealed class DialoguePlayerTests
     }
 
     [Fact]
+    public async Task A_variable_of_an_enum_is_set_to_a_case_by_its_name_or_by_its_value()
+    {
+        await using var session = await OpenAsync("""
+            title: Start
+            ---
+            <<enum Act>>
+                <<case Arrival>>
+                <<case Wreck>>
+                <<case HighTide>>
+            <<endenum>>
+            <<declare $act = Act.Arrival>>
+            Odile: The tide is out.
+            <<if $act == Act.Wreck>>
+                Odile: A ship is on the rocks.
+            <<endif>>
+            Odile: Good night.
+            ===
+
+            """);
+        var player = session.Player;
+        await player.Start(session.ProjectAt("Dialogue/Story"), "Start");
+
+        await player.SetVariable("$act", "Act.Wreck");
+
+        Assert.Equal((PlayerStepKind.SetVariable, "$act = Act.Wreck"), (player.CurrentStep!.Kind, player.CurrentStep.Text));
+        Assert.Equal(1f, player.CurrentStep.Variables["$act"]);
+        await player.Continue();
+        Assert.Equal("Odile: A ship is on the rocks.", player.CurrentStep.Text);
+
+        await player.SetVariable("$act", 2);
+        Assert.Equal("$act = Act.HighTide", player.CurrentStep.Text);
+        await player.SetVariable("$act", "arrival");
+        Assert.Equal(0f, player.CurrentStep.Variables["$act"]);
+
+        // What is not a case is refused, with the cases
+        var refused = await Assert.ThrowsAsync<ArgumentException>(() => player.SetVariable("$act", 7));
+        Assert.StartsWith("$act is one of Arrival, Wreck, HighTide (Act): 7 is not one.", refused.Message);
+        await Assert.ThrowsAsync<ArgumentException>(() => player.SetVariable("$act", "Dusk"));
+        await Assert.ThrowsAsync<ArgumentException>(() => player.SetVariable("$act", true));
+    }
+
+    [Fact]
     public async Task A_variable_set_by_hand_is_a_step_and_survives_going_back_past_it()
     {
         await using var session = await OpenAsync(Lamp);

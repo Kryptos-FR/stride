@@ -135,7 +135,7 @@ While the dialogue plays, the script editor follows: the card of the current nod
 
 The panel stops and asks for the answer of `has_item("oil")`, then remembers it. The answers are listed in the panel, where each can be changed for the next run.
 
-**Variables.** The panel lists the variables of the project with their values. Change one to try another state of the story without playing up to it. A smart variable shows its value, and cannot be set.
+**Variables.** The panel lists the variables of the project with their values. Change one to try another state of the story without playing up to it. A variable of an enum shows its case: type another case (`Wreck`, or `Act.Wreck` as in a script). A smart variable shows its expression, and cannot be set.
 
 **Why this one?** When a node group or a line group picks, the transcript tells why: each candidate with its score, or the condition that ruled it out.
 

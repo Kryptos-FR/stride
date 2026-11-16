@@ -150,7 +150,8 @@ internal sealed class PlayerRun : IDialogueResponder, IDialogueClock, IDisposabl
     /// <summary>
     /// Sets a variable to a boolean, a number or a text, as a step.
     /// </summary>
-    public void SetVariable(string name, object value)
+    /// <param name="written">The value as a script writes it, when that is not the value itself: a case of an enum.</param>
+    public void SetVariable(string name, object value, string? written = null)
     {
         switch (value)
         {
@@ -165,7 +166,7 @@ internal sealed class PlayerRun : IDialogueResponder, IDialogueClock, IDisposabl
                 break;
         }
 
-        AddStep(PlayerStepKind.SetVariable, $"{name} = {Format(value)}");
+        AddStep(PlayerStepKind.SetVariable, $"{name} = {written ?? Format(value)}");
     }
 
     /// <summary>

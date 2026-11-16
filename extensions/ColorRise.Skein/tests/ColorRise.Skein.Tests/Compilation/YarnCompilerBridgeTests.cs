@@ -295,6 +295,52 @@ public sealed class YarnCompilerBridgeTests
         });
 
     [Fact]
+    public void A_variable_of_an_enum_gives_the_cases_of_the_enum()
+    {
+        const string Story = """
+            title: Start
+            ---
+            <<enum Act>>
+                <<case Arrival>>
+                <<case Wreck>>
+                <<case HighTide>>
+            <<endenum>>
+            <<enum Mood>>
+                <<case Calm = "calm">>
+                <<case Stormy = "storm">>
+            <<endenum>>
+            <<declare $act = Act.Wreck>>
+            <<declare $mood = Mood.Calm>>
+            <<declare $gold = 5>>
+            ===
+
+            """;
+
+        var result = Compile(("Story.yarn", Story));
+
+        Assert.DoesNotContain(result.Diagnostics, d => d.Severity == YarnSeverity.Error);
+        var act = Assert.Single(result.Variables, v => v.Name == "$act");
+        Assert.Equal("Act", act.Type);
+        Assert.Equal(1f, act.Default);
+        Assert.Equal([new YarnEnumCase("Arrival", 0f), new YarnEnumCase("Wreck", 1f), new YarnEnumCase("HighTide", 2f)], act.Cases);
+        Assert.Equal("Wreck", act.CaseOf(act.Default)?.Name);
+        Assert.Equal("HighTide", act.CaseOf(2)?.Name);
+        Assert.Null(act.CaseOf(7f));
+        Assert.Null(act.CaseOf("Wreck"));
+        Assert.Equal(2f, act.CaseNamed("Act.HighTide")?.Value);
+        Assert.Equal(2f, act.CaseNamed(".HighTide")?.Value);
+        Assert.Equal(2f, act.CaseNamed(" hightide ")?.Value);
+        Assert.Null(act.CaseNamed("Mood.Calm"));
+
+        var mood = Assert.Single(result.Variables, v => v.Name == "$mood");
+        Assert.Equal("calm", mood.Default);
+        Assert.Equal([new YarnEnumCase("Calm", "calm"), new YarnEnumCase("Stormy", "storm")], mood.Cases);
+        Assert.Equal("Stormy", mood.CaseOf("storm")?.Name);
+
+        Assert.Empty(Assert.Single(result.Variables, v => v.Name == "$gold").Cases);
+    }
+
+    [Fact]
     public void A_declared_function_type_checks_its_call()
     {
         var result = CompileWithHasItem("\"oil\"");
