@@ -24,7 +24,13 @@ public sealed class LineProviderTests
         ("line:tide", "The tide is [wave]out[/wave]."),
         ("line:lamp", "Kye: Take the lamp."));
 
-    private static readonly YarnStringTable French = Table("fr", ("line:lamp", "Kye : Prends la lampe."), ("line:tide", "La marée est [wave]basse[/wave]."));
+    private static readonly YarnStringTable French = Table(
+        "fr",
+        ("line:lamp", "Kye : Prends la lampe."),
+        ("line:tide", "La marée est [wave]basse[/wave]."),
+        ("line:left", "Odile : Il vous reste [plural value={0} one=\"une lettre\" other=\"% lettres\"/]."),
+        ("line:crates", "[plural value={0} one=\"% caisse\" many=\"% caisses, beaucoup\" other=\"% caisses\"/]"),
+        ("line:sign", "Le [ordinal value={0} one=\"%er\" other=\"%e\"/] signe."));
 
     private static TextLineProvider Provider(ILogger? log = null, List<string>? loads = null) => new(
         language =>
@@ -52,6 +58,24 @@ public sealed class LineProviderTests
         Assert.Equal("en", line.Language);
 
         Assert.Equal("Odile: You have 1 letter.", Provider().GetLine("line:letters", ["1"]).Text.Text);
+    }
+
+    [Fact]
+    public void A_plural_shows_its_other_text_for_a_case_it_does_not_give()
+    {
+        var log = new LoggerResult();
+        var provider = Provider(log);
+        provider.Language = "fr";
+
+        // Yarn Spinner picks "many" for a French number above one
+        Assert.Equal("Odile : Il vous reste 3 lettres.", provider.GetLine("line:left", ["3"]).Text.Text);
+        Assert.Equal("Odile : Il vous reste une lettre.", provider.GetLine("line:left", ["1"]).Text.Text);
+        Assert.Equal("Le 1er signe.", provider.GetLine("line:sign", ["1"]).Text.Text);
+        Assert.Equal("Le 3e signe.", provider.GetLine("line:sign", ["3"]).Text.Text);
+
+        // A case the marker gives is the one shown
+        Assert.Equal("3 caisses, beaucoup", provider.GetLine("line:crates", ["3"]).Text.Text);
+        Assert.Empty(log.Messages);
     }
 
     [Fact]

@@ -30,12 +30,12 @@ public sealed class TextLineProvider : ILineProvider
         this.baseLanguage = baseLanguage;
         this.log = log;
         language = baseLanguage;
-        Markup.RegisterMarkerProcessor("select", Replacer);
-        Markup.RegisterMarkerProcessor("plural", Replacer);
-        Markup.RegisterMarkerProcessor("ordinal", Replacer);
+        Markup.RegisterMarkerProcessor("select", new BuiltInMarkupReplacer());
+        Markup.RegisterMarkerProcessor("plural", Plural);
+        Markup.RegisterMarkerProcessor("ordinal", Plural);
     }
 
-    private static BuiltInMarkupReplacer Replacer { get; } = new();
+    private static PluralMarkup Plural { get; } = new();
 
     /// <inheritdoc />
     public string Language
@@ -59,8 +59,8 @@ public sealed class TextLineProvider : ILineProvider
     public IReadOnlyDictionary<string, string>? ShadowLines { get; init; }
 
     /// <summary>
-    /// Yarn Spinner's markup parser, with <c>select</c>, <c>plural</c> and <c>ordinal</c> registered. A game registers its
-    /// own replacement markers here.
+    /// Yarn Spinner's markup parser, with <c>select</c>, <c>plural</c> and <c>ordinal</c> registered: a plural or an ordinal
+    /// shows its <c>other</c> text for a case it does not give. A game registers its own replacement markers here.
     /// </summary>
     public LineParser Markup { get; } = new();
 
