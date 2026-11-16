@@ -88,4 +88,12 @@ public sealed class YarnLineTaggerTests
 
         Assert.Equal(["line:one"], YarnLineTagger.ExistingIds(compilation));
     }
+
+    [Fact]
+    public void The_ids_of_scripts_are_read_from_their_text_even_when_they_do_not_compile()
+    {
+        var ids = YarnLineTagger.ExistingIds(["title: A\n---\nOne. #line:one #mood:calm\n-> Go #line:go\n<<if>>\n===\n", "Two. #line:two", "#line: \n#line:"]);
+
+        Assert.Equal(["line:go", "line:one", "line:two"], ids.Order());
+    }
 }

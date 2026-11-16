@@ -40,6 +40,8 @@ internal sealed class SkeinSession : IAsyncDisposable
 
     public YarnExternalChangeService ExternalChanges => YarnExternalChangeService.Of(kit.Session);
 
+    public YarnLocalisationService Localisation => YarnLocalisationService.Of(kit.Session);
+
     public IUndoRedoService UndoRedo => kit.Session.ServiceProvider.Get<IUndoRedoService>();
 
     /// <summary>
@@ -56,7 +58,7 @@ internal sealed class SkeinSession : IAsyncDisposable
         {
             Plugins = [new SkeinEditorPlugin()],
             InitializeSession = true,
-            StandInEditors = [typeof(YarnScriptEditorViewModel)],
+            StandInEditors = [typeof(YarnScriptEditorViewModel), typeof(YarnProjectEditorViewModel)],
             Services = services,
         };
         return new SkeinSession(await StrideEditorTestSession.OpenAsync(options, assets));
@@ -78,6 +80,17 @@ internal sealed class SkeinSession : IAsyncDisposable
         var script = ScriptAt(location);
         kit.Session.EditorCollection.OpenAssetEditor(script);
         Assert.True(kit.Session.EditorCollection.TryGetAssetEditor<YarnScriptEditorViewModel>(script, out var editor));
+        return editor;
+    }
+
+    /// <summary>
+    /// Opens the overview of a project, as a double click in the asset view does.
+    /// </summary>
+    public YarnProjectEditorViewModel EditProject(string location)
+    {
+        var project = ProjectAt(location);
+        kit.Session.EditorCollection.OpenAssetEditor(project);
+        Assert.True(kit.Session.EditorCollection.TryGetAssetEditor<YarnProjectEditorViewModel>(project, out var editor));
         return editor;
     }
 

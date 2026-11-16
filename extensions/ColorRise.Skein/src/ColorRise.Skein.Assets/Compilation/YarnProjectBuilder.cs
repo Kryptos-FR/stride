@@ -146,32 +146,16 @@ public static class YarnProjectBuilder
             translated.TryAdd(row.Id, row);
         }
 
-        var missing = 0;
-        var outdated = 0;
         foreach (var line in source)
         {
-            if (!translated.TryGetValue(line.Id, out var row))
+            if (translated.TryGetValue(line.Id, out var row) && YarnStringsStatus.TextOf(row) is { Length: > 0 } text)
             {
-                missing++;
-                continue;
+                table.Strings[line.Id] = text;
             }
-
-            // The mark of a translation to update is for the translator, not for the player
-            var marked = row.Text.StartsWith(YarnStringsCsv.NeedsUpdate, StringComparison.Ordinal);
-            var text = marked ? row.Text[YarnStringsCsv.NeedsUpdate.Length..] : row.Text;
-            if (text.Length == 0)
-            {
-                missing++;
-                continue;
-            }
-
-            if (marked || (row.Lock.Length > 0 && row.Lock != line.Lock))
-                outdated++;
-            table.Strings[line.Id] = text;
         }
 
-        var known = source.Select(l => l.Id).ToHashSet();
-        var dead = translated.Keys.Count(id => !known.Contains(id));
+        var status = YarnStringsStatus.Of(source, rows);
+        var (missing, outdated, dead) = (status.Missing, status.ToUpdate, status.Dead);
         var notes = new List<string>();
         if (missing > 0)
             notes.Add($"{Count(missing, "line has", "lines have")} no translation and {(missing == 1 ? "shows" : "show")} in {baseLanguage}");

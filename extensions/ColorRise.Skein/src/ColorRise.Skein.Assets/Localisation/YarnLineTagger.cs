@@ -64,6 +64,36 @@ public static class YarnLineTagger
         => Utility.TagLines(new CompilationJob.File { FileName = fileName, Source = text }, [.. existingIds], generator);
 
     /// <summary>
+    /// The line ids written in the text of scripts, whether the scripts compile or not; a <c>#line:</c> in a comment
+    /// counts too, which only keeps a new id away from it.
+    /// </summary>
+    public static HashSet<string> ExistingIds(IEnumerable<string> texts)
+    {
+        ArgumentNullException.ThrowIfNull(texts);
+
+        const string Tag = "#line:";
+        var ids = new HashSet<string>();
+        foreach (var text in texts)
+        {
+            for (var at = text.IndexOf(Tag, StringComparison.Ordinal); at >= 0; at = text.IndexOf(Tag, at + Tag.Length, StringComparison.Ordinal))
+            {
+                var end = at + Tag.Length;
+                while (end < text.Length && !char.IsWhiteSpace(text[end]))
+                {
+                    end++;
+                }
+
+                if (end > at + Tag.Length)
+                {
+                    ids.Add(text[(at + 1)..end]);
+                }
+            }
+        }
+
+        return ids;
+    }
+
+    /// <summary>
     /// The line ids the scripts of a compilation give by hand.
     /// </summary>
     public static HashSet<string> ExistingIds(YarnCompilation compilation)

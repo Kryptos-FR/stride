@@ -527,9 +527,15 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         }
     }
 
-    private async Task<YarnScriptEditorViewModel?> OpenEditor(YarnScriptViewModel script)
+    /// <summary>
+    /// Opens the editor of a script, or shows the one that is open.
+    /// </summary>
+    /// <returns>The editor, or null when the session cannot open one.</returns>
+    public static async Task<YarnScriptEditorViewModel?> OpenEditor(YarnScriptViewModel script)
     {
-        if (ServiceProvider.TryGet<IAssetEditorsManager>() is not { } editors)
+        ArgumentNullException.ThrowIfNull(script);
+
+        if (script.ServiceProvider.TryGet<IAssetEditorsManager>() is not { } editors)
             return null;
 
         await editors.OpenAssetEditorAsync(script);

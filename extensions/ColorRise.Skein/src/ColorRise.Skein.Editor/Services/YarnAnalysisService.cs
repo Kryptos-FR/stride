@@ -67,6 +67,25 @@ public sealed class YarnAnalysisService
     }
 
     /// <summary>
+    /// The scripts a project includes that the session has, each with the file name the compiler knows it by.
+    /// </summary>
+    public IReadOnlyList<(string FileName, YarnScriptViewModel Script)> ScriptsOf(YarnProjectViewModel project)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+
+        var scripts = new List<(string, YarnScriptViewModel)>();
+        foreach (var item in YarnProjectFiles.ScriptsOf(project.AssetItem))
+        {
+            if (session.GetAssetById(item.Id) is YarnScriptViewModel script)
+            {
+                scripts.Add((YarnProjectFiles.FileNameOf(item), script));
+            }
+        }
+
+        return scripts;
+    }
+
+    /// <summary>
     /// The last analysis of a project, or of the project of a script (of the script alone when no project includes it).
     /// Null until the first one is there: <see cref="Changed"/> says when.
     /// </summary>
@@ -313,14 +332,7 @@ public sealed class YarnAnalysisService
         }
 
         var project = (YarnProjectViewModel)unit.Owner;
-        var scripts = new List<(string, YarnScriptViewModel)>();
-        foreach (var item in YarnProjectFiles.ScriptsOf(project.AssetItem))
-        {
-            if (session.GetAssetById(item.Id) is YarnScriptViewModel script)
-            {
-                scripts.Add((YarnProjectFiles.FileNameOf(item), script));
-            }
-        }
+        var scripts = ScriptsOf(project);
 
         // A copy: the compilation reads it on another thread while the property grid may change the asset
         var asset = project.Asset;

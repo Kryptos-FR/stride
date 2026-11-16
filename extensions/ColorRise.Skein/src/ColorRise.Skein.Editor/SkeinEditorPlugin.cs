@@ -31,6 +31,8 @@ public sealed class SkeinEditorPlugin : StrideAssetsPlugin
         context.Services.Register(externalChanges);
         context.OnClose(externalChanges.Close);
 
+        context.Services.Register(new YarnLocalisationService(context.Session));
+
         context.NodePresenterUpdaters.Register(new YarnNodeUpdater(context.Session));
     }
 }

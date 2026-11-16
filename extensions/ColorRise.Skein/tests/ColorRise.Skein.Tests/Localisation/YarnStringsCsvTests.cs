@@ -129,4 +129,22 @@ public sealed class YarnStringsCsvTests
         Assert.Equal("(NEEDS UPDATE) Un.", third.Rows[1].Text);
         Assert.Equal("", third.Rows[0].Text);
     }
+
+    [Fact]
+    public void The_status_of_a_strings_file_counts_what_is_translated_and_what_is_not()
+    {
+        var english = YarnStringsCsv.RowsOf(Scripts.Compile("title: Start\n---\nOne. #line:one\nTwo. #line:two\nThree. #line:three\nFour. #line:four\n===\n"), "en");
+        YarnStringRow French(string id, string text, string? of = null)
+            => new() { Language = "fr", Id = id, Text = text, Lock = of is null ? english.Single(r => r.Id == id).Lock : YarnStringsCsv.LockOf(of) };
+
+        // One is current, two was made from another text, three is marked, four is empty, and five is of no line
+        var status = YarnStringsStatus.Of(english, [French("line:one", "Un."), French("line:two", "Deux.", of: "Two?"), French("line:three", "(NEEDS UPDATE) Trois."), French("line:four", ""), new YarnStringRow { Language = "fr", Id = "line:five", Text = "Cinq." }]);
+
+        Assert.Equal(new YarnStringsStatus(Lines: 4, Translated: 1, ToUpdate: 2, Dead: 1), status);
+        Assert.Equal(1, status.Missing);
+
+        // The base language against itself, and against nothing
+        Assert.Equal(new YarnStringsStatus(4, 4, 0, 0), YarnStringsStatus.Of(english, english));
+        Assert.Equal(4, YarnStringsStatus.Of(english, []).Missing);
+    }
 }
