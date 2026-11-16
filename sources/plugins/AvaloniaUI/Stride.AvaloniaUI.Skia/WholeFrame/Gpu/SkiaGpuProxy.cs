@@ -10,7 +10,7 @@ using Avalonia.Platform;
 using Avalonia.Platform.Surfaces;
 using Avalonia.Skia;
 
-namespace Stride.AvaloniaUI.Platform.Gpu;
+namespace Stride.AvaloniaUI.Skia.WholeFrame;
 
 /// <summary>
 /// Gives a <see cref="StrideSkiaGpu"/> to Avalonia as the GPU of its Skia backend.

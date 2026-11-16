@@ -26,7 +26,6 @@
   <ItemGroup>
     <!-- Exact versions: the private APIs can change in any Avalonia release -->
     <PackageReference Include="Avalonia" VersionOverride="[$(AvaloniaVersion)]" />
-    <PackageReference Include="Avalonia.Skia" VersionOverride="[$(AvaloniaVersion)]" />
     <PackageReference Include="Avalonia.HarfBuzz" VersionOverride="[$(AvaloniaVersion)]" />
     <PackageReference Include="Avalonia.Themes.Fluent" VersionOverride="[$(AvaloniaVersion)]" />
     <PackageReference Include="Avalonia.Fonts.Inter" VersionOverride="[$(AvaloniaVersion)]" />
