@@ -342,6 +342,26 @@ public sealed class YarnCompilerBridgeTests
     }
 
     [Fact]
+    public void The_functions_the_scripts_call_give_their_types()
+    {
+        var result = YarnCompilerBridge.Compile(new YarnCompilationRequest
+        {
+            Files = [("A.yarn", "title: A\n---\n<<if has_item(\"oil\")>>\nKye: {standing(\"guild\") + 1}\n<<endif>>\n===\n")],
+            Functions = [new YarnFunctionDeclaration { Name = "standing", ParameterTypes = [YarnFunctionDeclaration.String], ReturnType = YarnFunctionDeclaration.Number }],
+        });
+
+        Assert.DoesNotContain(result.Diagnostics, d => d.Severity == YarnSeverity.Error);
+
+        // One the game declares, and one the compiler guesses from its call
+        var standing = Assert.Single(result.Functions, f => f.Name == "standing");
+        Assert.Equal(["string"], standing.ParameterTypes);
+        Assert.Equal("number", standing.ReturnType);
+        var hasItem = Assert.Single(result.Functions, f => f.Name == "has_item");
+        Assert.Equal(["string"], hasItem.ParameterTypes);
+        Assert.Equal("bool", hasItem.ReturnType);
+    }
+
+    [Fact]
     public void Strings_only_gives_lines_and_nodes_without_a_program()
     {
         var result = YarnCompilerBridge.Compile(new YarnCompilationRequest

@@ -371,7 +371,7 @@ public sealed class YarnLocalisationService
         => session.ServiceProvider.Get<YarnAnalysisService>().ScriptsOf(project);
 
     // A strings file is set from the folder of the project in the asset's file, and as a full path once the session has it
-    private static UFile Absolute(YarnProjectViewModel project, UFile file)
+    internal static UFile Absolute(YarnProjectViewModel project, UFile file)
         => file.IsAbsolute ? file : UPath.Combine(project.AssetItem.FullPath.GetFullDirectory(), file);
 
     private static async Task<string?> WriteAsync(string path, string text)

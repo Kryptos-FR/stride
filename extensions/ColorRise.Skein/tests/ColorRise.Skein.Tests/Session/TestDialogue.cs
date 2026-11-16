@@ -14,7 +14,8 @@ internal sealed class TestDialogue
         VariableStorage? variables = null,
         YarnSaliency saliency = YarnSaliency.RandomBestLeastRecentlyViewed,
         int? seed = null,
-        YarnFunctionDeclaration[]? declarations = null)
+        YarnFunctionDeclaration[]? declarations = null,
+        Func<string, IReadOnlyList<object>, object>? missingFunction = null)
     {
         Actions = actions ?? new YarnActionRegistry();
         Variables = variables ?? new VariableStorage(Log);
@@ -28,6 +29,7 @@ internal sealed class TestDialogue
             Clock = Clock,
             Log = Log,
             Nodes = NodesOf(Compilation),
+            MissingFunction = missingFunction,
         });
     }
 

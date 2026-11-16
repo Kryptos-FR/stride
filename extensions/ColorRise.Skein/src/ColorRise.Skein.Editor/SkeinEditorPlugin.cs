@@ -1,3 +1,4 @@
+using ColorRise.Skein.Editor.Player;
 using ColorRise.Skein.Editor.PropertyGrid;
 using ColorRise.Skein.Editor.Services;
 using Stride.Core.Assets.Editor.Services;
@@ -32,6 +33,10 @@ public sealed class SkeinEditorPlugin : StrideAssetsPlugin
         context.OnClose(externalChanges.Close);
 
         context.Services.Register(new YarnLocalisationService(context.Session));
+
+        var player = DialoguePlayerService.Of(context.Session);
+        context.Services.Register(player);
+        context.OnClose(player.Close);
 
         context.NodePresenterUpdaters.Register(new YarnNodeUpdater(context.Session));
     }

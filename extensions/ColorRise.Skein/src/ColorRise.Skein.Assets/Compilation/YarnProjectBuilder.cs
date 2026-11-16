@@ -135,10 +135,16 @@ public static class YarnProjectBuilder
     }
 
     /// <summary>
-    /// The lines of a language from the rows of its strings file, with one warning for what the file lacks.
+    /// The lines of a language from the rows of its strings file: the lines the scripts have and the file translates.
     /// </summary>
-    private static YarnStringTable Translate(string projectName, string baseLanguage, string language, IReadOnlyList<YarnStringRow> source, IReadOnlyList<YarnStringRow> rows, List<string> warnings)
+    /// <param name="language">The language of the file.</param>
+    /// <param name="source">The lines of the scripts in the base language (<see cref="YarnStringsCsv.RowsOf"/>).</param>
+    /// <param name="rows">The rows of the strings file.</param>
+    public static YarnStringTable TableOf(string language, IReadOnlyList<YarnStringRow> source, IReadOnlyList<YarnStringRow> rows)
     {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(rows);
+
         var table = new YarnStringTable { Language = language };
         var translated = new Dictionary<string, YarnStringRow>();
         foreach (var row in rows)
@@ -154,6 +160,15 @@ public static class YarnProjectBuilder
             }
         }
 
+        return table;
+    }
+
+    /// <summary>
+    /// The lines of a language from the rows of its strings file, with one warning for what the file lacks.
+    /// </summary>
+    private static YarnStringTable Translate(string projectName, string baseLanguage, string language, IReadOnlyList<YarnStringRow> source, IReadOnlyList<YarnStringRow> rows, List<string> warnings)
+    {
+        var table = TableOf(language, source, rows);
         var status = YarnStringsStatus.Of(source, rows);
         var (missing, outdated, dead) = (status.Missing, status.ToUpdate, status.Dead);
         var notes = new List<string>();

@@ -58,6 +58,7 @@ public static class YarnCompilerBridge
             Nodes = nodes,
             Lines = ReadLines(result),
             Variables = ReadVariables(result),
+            Functions = ReadFunctions(result),
             Diagnostics = diagnostics,
         };
     }
@@ -220,6 +221,26 @@ public static class YarnCompilerBridge
         }
 
         return variables;
+    }
+
+    private static List<YarnFunctionDeclaration> ReadFunctions(CompilationResult result)
+    {
+        var functions = new List<YarnFunctionDeclaration>();
+        foreach (var declaration in result.Declarations)
+        {
+            if (declaration.Type is not FunctionType type || type.ReturnType is null)
+                continue;
+
+            functions.Add(new YarnFunctionDeclaration
+            {
+                Name = declaration.Name,
+                ParameterTypes = [.. type.Parameters.Select(TypeName)],
+                VariadicType = type.VariadicParameterType is { } variadic ? TypeName(variadic) : null,
+                ReturnType = TypeName(type.ReturnType),
+            });
+        }
+
+        return functions;
     }
 
     private static object? DefaultValue(Declaration declaration) => declaration.DefaultValue switch

@@ -59,6 +59,11 @@ public sealed record YarnCompilation
     public IReadOnlyList<YarnVariableData> Variables { get; init; } = [];
 
     /// <summary>
+    /// The functions the compiler knew, and the ones it guessed from their calls.
+    /// </summary>
+    public IReadOnlyList<YarnFunctionDeclaration> Functions { get; init; } = [];
+
+    /// <summary>
     /// What the compiler has to say, in the order it said it, at the project's severities.
     /// </summary>
     public IReadOnlyList<YarnDiagnostic> Diagnostics { get; init; } = [];

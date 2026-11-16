@@ -39,6 +39,12 @@ public sealed class DialogueSessionOptions
     public ILogger? Log { get; init; }
 
     /// <summary>
+    /// Who answers a function the scripts call and the game does not provide: it gets the name and the arguments, and
+    /// gives a boolean, a number or a string. Without it such a function gives false, and the log says so once.
+    /// </summary>
+    public Func<string, IReadOnlyList<object>, object>? MissingFunction { get; init; }
+
+    /// <summary>
     /// What the nodes say of themselves (<see cref="YarnProject.Nodes"/>): with it, a <see cref="SaliencyPick"/> gives
     /// the failed <c>when:</c> as written.
     /// </summary>
@@ -353,8 +359,11 @@ public sealed class DialogueSession : IYarnDialogueEvents
             if (library.FunctionExists(name))
                 continue;
 
-            library.RegisterFunction(name, (object[] arguments) =>
+            library.RegisterFunction(name, object (object[] arguments) =>
             {
+                if (options.MissingFunction is { } answer)
+                    return answer(name, arguments);
+
                 if (reportedFunctions.Add(name))
                     log?.Error($"The scripts call the function '{name}', which the game does not provide: it gives false (0 as a number) until it does.");
                 return false;

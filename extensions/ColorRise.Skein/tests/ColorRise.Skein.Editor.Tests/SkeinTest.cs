@@ -1,4 +1,5 @@
 using ColorRise.Skein.Assets;
+using ColorRise.Skein.Editor.Player;
 using ColorRise.Skein.Editor.Services;
 using ColorRise.Skein.Editor.ViewModels;
 using Stride.Assets.Editor.Testing;
@@ -41,6 +42,8 @@ internal sealed class SkeinSession : IAsyncDisposable
     public YarnExternalChangeService ExternalChanges => YarnExternalChangeService.Of(kit.Session);
 
     public YarnLocalisationService Localisation => YarnLocalisationService.Of(kit.Session);
+
+    public DialoguePlayerService Player => DialoguePlayerService.Of(kit.Session);
 
     public IUndoRedoService UndoRedo => kit.Session.ServiceProvider.Get<IUndoRedoService>();
 
@@ -103,6 +106,7 @@ internal sealed class SkeinSession : IAsyncDisposable
     {
         // The editor disposes its plugin host with the session, which runs what the plugins registered for the close;
         // the session of the test kit leaves its host as it is
+        kit.OnUiThread(Player.Close);
         kit.OnUiThread(Analysis.Close);
         kit.OnUiThread(ExternalChanges.Close);
         await kit.DisposeAsync();

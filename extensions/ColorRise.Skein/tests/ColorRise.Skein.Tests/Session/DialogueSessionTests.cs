@@ -496,6 +496,43 @@ public sealed class DialogueSessionTests
     }
 
     [Fact]
+    public async Task A_function_nothing_provides_is_answered_by_who_the_options_name()
+    {
+        var asked = new List<string>();
+        var dialogue = new TestDialogue(
+            """
+            title: Start
+            ---
+            <<if has_item("oil", 2)>>
+                Kye: You have {standing("guild")} with {patron()}.
+            <<endif>>
+            ===
+            """,
+            declarations:
+            [
+                new YarnFunctionDeclaration { Name = "has_item", ParameterTypes = [YarnFunctionDeclaration.String, YarnFunctionDeclaration.Number], ReturnType = YarnFunctionDeclaration.Bool },
+                new YarnFunctionDeclaration { Name = "standing", ParameterTypes = [YarnFunctionDeclaration.String], ReturnType = YarnFunctionDeclaration.Number },
+                new YarnFunctionDeclaration { Name = "patron", ReturnType = YarnFunctionDeclaration.String },
+            ],
+            missingFunction: (name, arguments) =>
+            {
+                asked.Add($"{name}({string.Join(", ", arguments.Select(a => $"{a.GetType().Name} {a}"))})");
+                return name switch
+                {
+                    "has_item" => true,
+                    "standing" => 4.5f,
+                    _ => "Odile",
+                };
+            });
+
+        await dialogue.RunAsync();
+
+        Assert.Equal(["line: Kye: You have 4.5 with Odile.", "complete"], dialogue.Transcript);
+        Assert.Equal(["has_item(String oil, Single 2)", "standing(String guild)", "patron()"], asked);
+        Assert.Empty(dialogue.Errors);
+    }
+
+    [Fact]
     public async Task The_functions_of_the_game_are_the_ones_of_the_moment_of_the_run()
     {
         var actions = new YarnActionRegistry();
