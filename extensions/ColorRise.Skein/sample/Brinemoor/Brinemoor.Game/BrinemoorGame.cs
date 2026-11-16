@@ -85,7 +85,7 @@ public sealed class BrinemoorGame : SyncScript
         story = new StoryDirector(new RunnerStage(Runner), Runner.Variables, Log);
         StoryCommands.Story = story;
         dialogues = Services.GetService<DialogueSystem>()!;
-        story.Journal.Added += entry => Toast($"{Text("ui_journal")}: {Text("quest_" + entry.Quest)} ({Text("state_" + entry.State.ToString().ToLowerInvariant())})");
+        story.Journal.Added += entry => Toast($"{Text("ui_journal")} · {Text("quest_" + entry.Quest)} ({Text("state_" + entry.State.ToString().ToLowerInvariant())})");
 
         Game.Window.Title = "Brinemoor";
         hud = new Hud(Font);
@@ -210,7 +210,7 @@ public sealed class BrinemoorGame : SyncScript
         if (story.Variables.TryGetValue<float>("$act", out var act))
             status = $"{Text("act_" + (int)act)}\n{status}";
         if (story.Inventory.Items.Count > 0)
-            status += $"\n{Text("ui_carrying")}: {string.Join(", ", story.Inventory.Items.Select(i => i.Value > 1 ? $"{Text("item_" + i.Key)} x{i.Value}" : Text("item_" + i.Key)))}";
+            status += $"\n{Text("ui_carrying")} {string.Join(", ", story.Inventory.Items.Select(i => i.Value > 1 ? $"{Text("item_" + i.Key)} x{i.Value}" : Text("item_" + i.Key)))}";
         hud.SetStatus(status);
 
         hud.SetJournal(Text("ui_journal"), [.. story.Journal.Open.Select(e => e.State == QuestState.Offered ? $"{Text("quest_" + e.Quest)} ({Text("state_offered")})" : Text("quest_" + e.Quest))]);
@@ -218,9 +218,9 @@ public sealed class BrinemoorGame : SyncScript
 
         var prompts = new List<string>();
         if (person is not null)
-            prompts.Add($"T: {Text("ui_talk")} {person.Entity.Name}");
+            prompts.Add($"T · {Text("ui_talk")} {person.Entity.Name}");
         if (thing is not null)
-            prompts.Add($"E: {LineText(thing.Label)}");
+            prompts.Add($"E · {LineText(thing.Label)}");
         hud.SetPrompt(prompts.Count == 0 ? null : string.Join("      ", prompts), showHelp: free);
 
         if (toastLeft > 0 && (toastLeft -= elapsed) <= 0)
@@ -256,7 +256,8 @@ public sealed class BrinemoorGame : SyncScript
             if (talkable.IsThing)
                 continue;
 
-            var point = camera is null || !talkable.IsShown ? null : ToScreen(camera, talkable.Entity.Transform.WorldMatrix.TranslationVector + new Vector3(0, 2.3f, 0));
+            // No names while the story plays: they would show through its options
+            var point = camera is null || !free || !talkable.IsShown ? null : ToScreen(camera, talkable.Entity.Transform.WorldMatrix.TranslationVector + new Vector3(0, 2.3f, 0));
             hud.SetTag(talkable.Entity, talkable.Entity.Name, hasSomethingToSay.GetValueOrDefault(talkable), point);
         }
     }
