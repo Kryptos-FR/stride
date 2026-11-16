@@ -10,8 +10,8 @@ A game references two packages, in the project that holds its assets (the one be
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="ColorRise.Skein" Version="0.1.0" />
-  <PackageReference Include="ColorRise.Skein.UI" Version="0.1.0" />
+  <PackageReference Include="ColorRise.Skein" Version="0.1.0-dev" />
+  <PackageReference Include="ColorRise.Skein.UI" Version="0.1.0-dev" />
 </ItemGroup>
 ```
 

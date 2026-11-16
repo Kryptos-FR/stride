@@ -40,7 +40,7 @@ Skein is meant to move to a repository of its own. What still depends on the che
 |---|---|---|---|
 | T1 | `nuget.config` has a source `stride-dev` pointing at `../../bin/packages` | The Stride packages with the plugin model exist only as the output of a local engine build | A released Stride has the plugin model; nuget.org then serves the packages |
 | T2 | `Directory.Build.targets` names the asset compiler under `$(StrideRoot)sources/assets/Stride.AssetCompiler/bin/` | Finding 1. Only in dev-redirect builds, from properties the dev package stubs set; nothing is read from the tree by Skein itself | Finding 1 is fixed, or Skein builds against published packages |
-| T3 | Skein's packages have a stable version (0.1.0) and depend on a prerelease Stride (4.5.3-dev): `dotnet pack` warns NU5104 for each | No released Stride has the plugin model | A released Stride, or a prerelease version for Skein until then (open, for Nicolas) |
+| T3 | Skein's packages depend on a prerelease Stride (4.5.3-dev), so they have a prerelease version too (0.1.0-dev); a stable version on a prerelease dependency makes `dotnet pack` warn NU5104 | No released Stride has the plugin model | A released Stride: Skein then gets a stable version |
 
 ## Saga's findings that the follow-ups fixed
 

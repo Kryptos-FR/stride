@@ -114,9 +114,11 @@ What still depends on the checkout Skein sits in, and what removes it:
 
 - `nuget.config` takes the Stride packages from `../../bin/packages`, the output of a local engine build. Once a released Stride has the plugin model, nuget.org serves them and that source goes.
 - `Directory.Build.targets` tells the build where the engine's asset compiler is when Skein is built in another configuration than the engine (a Release pack after a Debug engine build). It only acts against a local engine build, and goes with it.
-- The packages have the version 0.1.0 and depend on a development version of Stride, so `dotnet pack` warns (NU5104).
+- The packages have a prerelease version, 0.1.0-dev, because they depend on a development version of Stride. They get a stable version with a released Stride.
 
 ## Credits and licenses
+
+Skein is under the MIT license: see [LICENSE](LICENSE).
 
 Dialogue powered by Yarn Spinner — https://yarnspinner.dev
 
