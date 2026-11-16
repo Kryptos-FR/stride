@@ -20,8 +20,6 @@ public sealed class DialoguePlayerViewModel : PanelViewModel
     /// </summary>
     public new const string PanelId = "ColorRise.Skein.DialoguePlayer";
 
-    private const string DefaultNode = "Start";
-
     private readonly ISessionViewModel session;
     private YarnProjectViewModel? selectedProject;
     private ObservableList<string>? projectNodes;
@@ -287,7 +285,7 @@ public sealed class DialoguePlayerViewModel : PanelViewModel
         // The node the user chose as long as the project has it, else the usual first node, else the first
         if (nodes.Count > 0 && (!nodeIsChosen || selectedNode is null || !nodes.Contains(selectedNode)))
         {
-            selectedNode = nodes.Contains(DefaultNode) ? DefaultNode : nodes[0];
+            selectedNode = nodes.Contains(YarnProjectAnalysis.DefaultStartNode) ? YarnProjectAnalysis.DefaultStartNode : nodes[0];
             nodeIsChosen = false;
         }
 

@@ -2,6 +2,7 @@ using System.Globalization;
 using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Editor.Services;
 using Stride.Core.Assets.Editor.Annotations;
+using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Presentation.Commands;
 
@@ -218,11 +219,33 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
     /// <summary>
     /// Writes the strings file of a language.
     /// </summary>
-    public Task ExportStrings(string language) => Run(async service =>
+    public Task ExportStrings(string language) => Run(async service => Exported(await service.ExportStrings(Asset, language)));
+
+    /// <summary>
+    /// Writes the strings file of each language of the project that has none.
+    /// </summary>
+    public async Task ExportMissingStrings()
     {
-        var result = await service.ExportStrings(Asset, language);
-        return result.Problem ?? $"Exported {Count(result.Rows, "line")} to {result.File?.MakeRelative(Asset.AssetItem.FullPath.GetFullDirectory())}, from the folder of the project.";
-    });
+        await WhenRefreshed();
+        var missing = Languages.Where(l => !l.IsBase && l.CanExport).Select(l => l.Language).ToList();
+        await Run(async service =>
+        {
+            if (missing.Count == 0)
+            {
+                return Languages.Count > 1
+                    ? "Every language has its strings file: \"Update strings files\" brings them up to date."
+                    : "The project has no other language: add one to its localisations.";
+            }
+
+            var done = new List<string>();
+            foreach (var language in missing)
+            {
+                done.Add(Exported(await service.ExportStrings(Asset, language)));
+            }
+
+            return string.Join("\n", done);
+        });
+    }
 
     /// <summary>
     /// Brings the strings files of the languages up to date with the scripts.
@@ -254,6 +277,24 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
             editor.RequestPlace(new YarnTextPlace(line, Math.Max(1, column)));
         }
     }
+
+    /// <summary>
+    /// Opens the overview of a project, or shows the one that is open.
+    /// </summary>
+    /// <returns>The overview, or null when the session cannot open one.</returns>
+    public static async Task<YarnProjectEditorViewModel?> OpenEditor(YarnProjectViewModel project)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+
+        if (project.ServiceProvider.TryGet<IAssetEditorsManager>() is not { } editors)
+            return null;
+
+        await editors.OpenAssetEditorAsync(project);
+        return editors.TryGetAssetEditor<YarnProjectEditorViewModel>(project, out var editor) ? editor : null;
+    }
+
+    private string Exported(YarnStringsFileResult result)
+        => result.Problem ?? $"Exported {Count(result.Rows, "line")} to {result.File?.MakeRelative(Asset.AssetItem.FullPath.GetFullDirectory())}, from the folder of the project.";
 
     private async Task Run(Func<YarnLocalisationService, Task<string>> command)
     {

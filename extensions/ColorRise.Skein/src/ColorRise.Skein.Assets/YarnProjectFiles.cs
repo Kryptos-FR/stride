@@ -1,5 +1,6 @@
 using Microsoft.Extensions.FileSystemGlobbing;
 using Stride.Core.Assets;
+using Stride.Core.IO;
 
 namespace ColorRise.Skein.Assets;
 
@@ -24,11 +25,35 @@ public static class YarnProjectFiles
     public static IReadOnlyList<AssetItem> ScriptsOf(AssetItem project)
     {
         ArgumentNullException.ThrowIfNull(project);
-        if (project.Asset is not YarnProjectAsset asset || project.Package is not { } package)
+        return project.Asset is YarnProjectAsset asset && project.Package is { } package ? ScriptsOf(package, FolderOf(project), asset) : [];
+    }
+
+    /// <summary>
+    /// The scripts of a package that a project would include at a location, in the order of their names.
+    /// </summary>
+    /// <param name="package">The package.</param>
+    /// <param name="location">The location the project would have in the package, as <see cref="AssetItem.Location"/>.</param>
+    /// <param name="asset">The project, which need not be in the package.</param>
+    public static IReadOnlyList<AssetItem> ScriptsOf(Package package, UFile location, YarnProjectAsset asset)
+    {
+        ArgumentNullException.ThrowIfNull(package);
+        ArgumentNullException.ThrowIfNull(location);
+        ArgumentNullException.ThrowIfNull(asset);
+
+        // The locations of a package may start with its namespace, which the names of its files do not have: a script
+        // of the package shows how much to drop
+        if (package.Assets.FirstOrDefault(a => a.Asset is YarnScriptAsset) is not { } script)
             return [];
 
+        var root = script.Location.FullPath[..^script.UnqualifiedUrl.FullPath.Length];
+        var path = location.FullPath;
+        var bare = new UFile(root.Length > 0 && path.StartsWith(root, StringComparison.OrdinalIgnoreCase) ? path[root.Length..] : path);
+        return ScriptsOf(package, Rooted(bare.GetFullDirectory()?.FullPath ?? ""), asset);
+    }
+
+    private static IReadOnlyList<AssetItem> ScriptsOf(Package package, string folder, YarnProjectAsset asset)
+    {
         var scripts = package.Assets.Where(a => a.Asset is YarnScriptAsset).ToDictionary(a => Rooted(FileNameOf(a)));
-        var folder = FolderOf(project);
         var included = Matched(asset.SourceFiles, folder, scripts.Keys);
         included.ExceptWith(Matched(asset.ExcludedFiles, folder, scripts.Keys));
         return [.. included.Select(f => scripts[f]).OrderBy(a => a.Location.FullPath, StringComparer.Ordinal)];

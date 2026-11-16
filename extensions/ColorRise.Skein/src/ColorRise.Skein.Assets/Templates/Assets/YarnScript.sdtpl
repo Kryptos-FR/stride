@@ -7,3 +7,4 @@ Description: A Yarn Spinner script (.yarn) of dialogue nodes
 Group: Dialogue
 DefaultOutputName: YarnScript
 FactoryTypeName: YarnScriptAssetFactory
+Icon: .sdtpl/YarnScript.png

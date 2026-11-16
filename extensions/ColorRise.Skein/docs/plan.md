@@ -412,14 +412,24 @@ As built (2026-11-15).
 ### Task 21: Commands, templates, entity factory
 
 **Files:**
-- Create: `src/ColorRise.Skein.Editor/SkeinCommands.cs`, `EntityFactories/DialogueRunnerFactory.cs`; update the plugin classes and the `.sdtpl` files
+- Created in `src/ColorRise.Skein.Editor/`: `SkeinCommands.cs`, `EntityFactories/DialogueRunnerFactory.cs`, `Templates/YarnProjectTemplateGenerator.cs`; in `src/ColorRise.Skein.Assets/`: `EditorImages.cs`, `Resources/*.png` (drawn by `Resources/draw-icons.py`), `Templates/Assets/.sdtpl/*.png`; updated: `SkeinEditorPlugin`, the two `.sdtpl` files (icons, description), `YarnProjectFiles` (`ScriptsOf(package, location, project)`), `YarnProjectAnalysis` (`StartNodes`, `FirstNode`), `YarnProjectEditorViewModel` (`OpenEditor`, `ExportMissingStrings`), `YarnScriptEditorView` (the menu of the graph binds the command)
 - Test: `tests/ColorRise.Skein.Editor.Tests/SkeinCommandsTests.cs`
 
 **Interfaces:**
 - Produces: commands `ColorRise.Skein.PlayFromHere` (node menu), `ColorRise.Skein.PlayProject` (asset view menu, on a project or a script), `ColorRise.Skein.OpenDialoguePlayer`, `ColorRise.Skein.AddLineIds`, `ColorRise.Skein.ExportStrings`, `ColorRise.Skein.UpdateStrings` (category `Dialogue`). *Add asset* "Yarn project" creates the project and a first script `Start.yarn` holding a node `Start`. *Add entity* "Dialogue runner": the runner, and `LinePresenter`, `OptionsPresenter`, `LineAdvancer` when the game's package references `ColorRise.Skein.UI` (`PackageTypeScope`).
 
-- [ ] **Step 1:** Tests: `PlayProject` can execute with a project or a script selected and not with a texture; executing it opens the player panel and starts at the project's first node; the "Yarn project" template creates both assets; the factory's entity has a runner, with presenters only when the UI package is referenced.
-- [ ] **Step 2:** Implement, run → pass. Commit `feat(skein): commands, templates and the dialogue runner factory`, push.
+**As built:**
+- `SkeinCommands.Create()` gives the six commands, which the plugin registers; all are in the palette, category `Dialogue`.
+  - `PlayFromHere` has no placement: the menu of the graph binds it by its id (`{cmd:Command ColorRise.Skein.PlayFromHere}`) at a location of Skein's own, `ColorRise.Skein/Graph/Context`, whose selection is the card the menu opened on. Its shortcut is Ctrl+F5, in a script editor only (F5 starts the game). From the shortcut or the palette it plays the selected node of the editor that has the focus, else its first node. It is off on a note and outside a script editor.
+  - `PlayProject` ("Play dialogue") is in the menu of the asset view, on one project or one script of a project (off on a script that no project includes). A project starts at its node `Start`, else at its first node by name; a script at its first node in the order of its text. A note is never a start.
+  - `AddLineIds`, `ExportStrings` and `UpdateStrings` are in the menu of the asset view on one project (and in the palette when the overview of a project has the focus). They open the overview and run there, so that its message says what was done. `ExportStrings` writes the strings file of each language that has none.
+  - `OpenDialoguePlayer` shows the panel. The palette also lists "View: Dialogue player", which Game Studio makes for each panel.
+- *Add asset* "Yarn project": `YarnProjectTemplateGenerator` (an `AssetFactoryTemplateGenerator` for the templates of `YarnProjectAssetFactory`) creates the project and, when the project would include no script of the package at its place, a script `Start` beside it with the starter text (a node `Start`). One step of the undo history. Template generators have no registry in the plugin context: the plugin registers its own with the static `TemplateManager` for the session (finding 18).
+- *Add entity* "Dialogue runner" (category "Dialogue", after Stride's own, finding 19): a runner with `StartNode = "Start"`, and a line presenter, an options presenter and a line advancer in its `Presenters` when the package of the scene can use `ColorRise.Skein.UI` (`PackageTypeScope`). When the session has exactly one Yarn project, the runner's `Project` is set to it. `DialogueRunnerFactory.Create(name, withPresenters)` makes the entity.
+- Icons: a thumbnail for each of the two assets (`[StaticThumbnail]`), an icon for the runner and for the presenters (`[TypeImage]` on `DialogueRunnerComponent` and on `DialoguePresenter`), and an icon for each template (`Icon:` in the `.sdtpl`).
+
+- [x] **Step 1:** Tests: `PlayProject` can execute with a project or a script selected and not with a texture; executing it opens the player panel and starts at the project's first node; the "Yarn project" template creates both assets; the factory's entity has a runner, with presenters only when the UI package is referenced.
+- [x] **Step 2:** Implement, run → pass. Checked in Game Studio under Xvfb: the menu of the asset view, the palette, Ctrl+F5 and the menu of a card, "Yarn project" with its first script, "Dialogue runner" with its presenters and its project (screenshots `task21-asset-view-menu.png`, `task21-command-palette.png`, `task21-graph-menu.png`, `task21-add-asset.png`, `task21-yarn-project-template.png`, `task21-add-entity.png`, `task21-dialogue-runner-entity.png` in the project files, `yarn-spinner/screens/`). Commit `feat(skein): commands, templates and the dialogue runner factory`, push.
 
 ### Task 22: The sample — Brinemoor's game
 

@@ -9,6 +9,11 @@ namespace ColorRise.Skein.Editor.Services;
 public sealed record YarnProjectAnalysis
 {
     /// <summary>
+    /// The title of the node a story usually starts at.
+    /// </summary>
+    public const string DefaultStartNode = "Start";
+
+    /// <summary>
     /// The project; null for a script that no project includes, compiled alone.
     /// </summary>
     public YarnProjectViewModel? Project { get; init; }
@@ -54,6 +59,32 @@ public sealed record YarnProjectAnalysis
     public bool NodesAreOlder => !ReferenceEquals(Nodes, Build.Compilation.Nodes);
 
     /// <summary>
+    /// The titles of the nodes a dialogue can start at, by name: a note of the writer is a node the story never runs.
+    /// </summary>
+    public IReadOnlyList<string> StartNodes => [.. Nodes
+        .Where(n => !IsNote(n))
+        .Select(n => n.Title)
+        .Distinct(StringComparer.Ordinal)
+        .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)];
+
+    /// <summary>
+    /// The node a dialogue starts at when none is chosen, or null when there is none.
+    /// </summary>
+    /// <param name="script">A script, for its first node in the order of its text; null for the node
+    /// <see cref="DefaultStartNode"/> of the project, else its first node by name.</param>
+    public string? FirstNode(YarnScriptViewModel? script = null)
+    {
+        if (script is not null)
+        {
+            var file = FileNameOf(script);
+            return Nodes.Where(n => n.File == file && !IsNote(n)).MinBy(n => n.HeaderStartLine)?.Title;
+        }
+
+        var nodes = StartNodes;
+        return nodes.Contains(DefaultStartNode) ? DefaultStartNode : nodes.FirstOrDefault();
+    }
+
+    /// <summary>
     /// The script of a file name of the compiler, or null.
     /// </summary>
     public YarnScriptViewModel? ScriptOf(string fileName)
@@ -95,4 +126,6 @@ public sealed record YarnProjectAnalysis
 
         return null;
     }
+
+    private static bool IsNote(YarnNodeData node) => node.Headers.Any(h => h.Key == "style" && h.Value == "note");
 }

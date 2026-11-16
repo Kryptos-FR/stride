@@ -299,14 +299,9 @@ public sealed class YarnAnalysisService
         }
     }
 
-    // A note of the writer is a node the story never runs
     private static void ShowNodeNames(ObservableList<string> names, YarnProjectAnalysis analysis)
     {
-        List<string> titles = [.. analysis.Nodes
-            .Where(n => !n.Headers.Any(h => h.Key == "style" && h.Value == "note"))
-            .Select(n => n.Title)
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)];
+        var titles = analysis.StartNodes;
         if (!names.SequenceEqual(titles))
         {
             names.Clear();

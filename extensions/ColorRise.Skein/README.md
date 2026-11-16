@@ -65,6 +65,14 @@ This section follows the work: it says what can be tried at the current commit.
   - *Timeline* opens the *Dialogue timeline* panel: a column per step, and lanes for the nodes, the lines, the choices, what the game did and the variables. A click on a step (or the arrows) moves the run back and forth; the player, the variables and the script editor show that step. Going on from an earlier step with another choice drops what followed.
   - After an edit of the scripts, *Replay* plays the same inputs on the new scripts: a dot marks the steps that are new or read differently, and the replay stops with the reason before a choice that no longer exists.
   - With several languages, the panel plays in the one chosen (from the strings files as they are on the disk).
+- Commands, in the command palette (Ctrl+Shift+P, category *Dialogue*) and in the menus:
+  - *Play dialogue*, in the menu of the asset view on a Yarn project or on a script of a project: opens the dialogue player and starts, at the node `Start` of the project (else its first node by name), or at the first node of the script.
+  - *Play from here* (Ctrl+F5 in a script editor, and in the menu of a card): plays the node of the card, else the selected node, else the first node of the script.
+  - *Add line ids*, *Export strings* (the strings file of each language that has none) and *Update strings files*, in the menu of the asset view on a Yarn project: they open the overview of the project, which shows what was done.
+  - *Open dialogue player*.
+- *Add asset > Dialogue > Yarn project*, in a folder where the project would have no script, also makes a first script `Start` with a node `Start`: both in one step of the undo history, and *Play dialogue* on the new project plays at once.
+- *Add entity > Dialogue > Dialogue runner* in the scene editor makes an entity with a dialogue runner that starts at the node `Start`, and with a line presenter, an options presenter and a line advancer when the game references `ColorRise.Skein.UI`. In a game with one Yarn project, the runner plays it.
+- The Yarn script and the Yarn project have their thumbnail in the asset view and their icon in *Add asset*; the dialogue runner and the presenters have an icon in the property grid.
 - Covered by tests only: the runtime (the dialogue system, the dialogue runner component, presenters, actors, commands and functions in C#, variable storage) and the UI presenters. Yarn Spinner's own 32 test plans pass against Skein's dialogue session.
 - The sample game "Brinemoor" is an empty scene with one script and one project, to open in Game Studio:
 
@@ -77,7 +85,7 @@ This section follows the work: it says what can be tried at the current commit.
 
 ### Not yet
 
-Everything else of the design: the commands in Game Studio's command palette, the templates of *Add entity*, and the story of the sample game.
+Everything else of the design: the game and the story of the sample.
 
 ## Tied to the fork
 

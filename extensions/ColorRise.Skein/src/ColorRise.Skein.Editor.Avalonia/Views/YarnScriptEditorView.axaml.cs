@@ -11,6 +11,7 @@ using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Editor.Graph;
 using ColorRise.Skein.Editor.ViewModels;
 using Stride.Core.Assets.Editor.Annotations;
+using Stride.Core.Assets.Editor.Avalonia.Commands;
 using Stride.Core.Assets.Editor.Editors;
 using Stride.Core.Presentation.Avalonia.Controls;
 
@@ -228,6 +229,7 @@ public sealed partial class YarnScriptEditorView : UserControl, IAssetEditorView
         var onGraph = menuNode is null;
         OpenItem.IsVisible = onStub;
         PlayItem.IsVisible = menuNode is YarnNodeCardViewModel { IsNote: false };
+        CommandSlot.SetSelection(GraphMenu, menuNode);
         RenameItem.IsVisible = onCard;
         DuplicateItem.IsVisible = onCard;
         DeleteItem.IsVisible = onCard;
@@ -248,14 +250,6 @@ public sealed partial class YarnScriptEditorView : UserControl, IAssetEditorView
         if (menuNode is YarnStubCardViewModel stub)
         {
             editor?.OpenTargetCommand.Execute(stub);
-        }
-    }
-
-    private void OnPlayClick(object? sender, RoutedEventArgs e)
-    {
-        if (menuNode is YarnNodeCardViewModel card)
-        {
-            editor?.PlayFromHereCommand.Execute(card);
         }
     }
 

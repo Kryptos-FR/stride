@@ -1,7 +1,9 @@
 using ColorRise.Skein.Editor.Player;
 using ColorRise.Skein.Editor.PropertyGrid;
 using ColorRise.Skein.Editor.Services;
+using ColorRise.Skein.Editor.Templates;
 using Stride.Core.Assets.Editor.Services;
+using Stride.Core.Assets.Templates;
 using Stride.Editor;
 
 namespace ColorRise.Skein.Editor;
@@ -19,6 +21,10 @@ public sealed class SkeinEditorPlugin : StrideAssetsPlugin
         base.Initialize(context);
         context.Panels.Register(DialoguePlayerViewModel.Panel);
         context.Panels.Register(DialogueTimelineViewModel.Panel);
+        foreach (var command in SkeinCommands.Create())
+        {
+            context.Commands.Register(command);
+        }
     }
 
     /// <inheritdoc />
@@ -41,5 +47,11 @@ public sealed class SkeinEditorPlugin : StrideAssetsPlugin
         context.OnClose(player.Close);
 
         context.NodePresenterUpdaters.Register(new YarnNodeUpdater(context.Session));
+
+        // The template manager looks at the last registered generator first: this one goes before Stride's own for the
+        // "Yarn project" template
+        var projectTemplate = new YarnProjectTemplateGenerator();
+        TemplateManager.Register(projectTemplate);
+        context.OnClose(() => TemplateManager.Unregister(projectTemplate));
     }
 }
