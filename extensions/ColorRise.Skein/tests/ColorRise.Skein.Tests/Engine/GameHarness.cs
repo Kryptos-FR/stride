@@ -23,7 +23,8 @@ public sealed class GameCollection
 /// </summary>
 internal sealed class GameHarness : IDisposable
 {
-    private static readonly MethodInfo UpdateTime = typeof(GameTime).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    private static readonly MethodInfo UpdateTime = typeof(GameTime).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic)
+        ?? throw new InvalidOperationException("Stride's GameTime has no Update method any more: the harness cannot step the game's clock (finding 6 of docs/plugin-findings.md).");
 
     private readonly List<ILogMessage> messages = [];
 
