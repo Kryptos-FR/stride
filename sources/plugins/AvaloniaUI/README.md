@@ -19,11 +19,14 @@ using var game = new Game();
 game.Run();
 ```
 
+The native renderer, Stride's own, is opt-in: such a game sets Avalonia up with `UseStride(AvaloniaUIRenderer.Native)`. It still needs the Skia package, through which it draws on the CPU for now, so `RenderOnGpu` has no effect with it.
+
 ## How it works
 
 - Two packages: `Stride.AvaloniaUI` (the platform, the component and the game system; no Skia) and `Stride.AvaloniaUI.Skia` (the Skia renderer). The renderer is chosen once per process when Avalonia is set up (`UseStride(renderer)`), as Avalonia has one render interface per process. The core finds the Skia package among the registered assemblies, through its `[AssemblyScan]` index, or gets it from `UseSkiaFallback()` on the `AppBuilder`.
 - `Platform/`: an Avalonia platform with no native windows. Avalonia's dispatcher and render loop run on the game thread, driven by the game loop (`StrideDispatcherImpl`, `StrideRenderTimer`). Each view is an offscreen top level (`StrideTopLevelImpl`).
 - `Stride.AvaloniaUI.Skia/WholeFrame/`: Skia draws whole frames (`SkiaRendererBackend`), on the game's own Vulkan device. Skia renders each view into a texture of the device, with the device's queue, and the game draws that texture without a copy. Avalonia takes it as the GPU of its Skia backend (`StrideSkiaGpu`, given through `SkiaGpuProxy`); `Stride.Graphics` gives the Vulkan handles Skia needs (`VulkanInterop`). Where Skia can't share the device, it renders on the CPU into memory that keeps the previous frame, and the game uploads the frames that changed.
+- `Rendering/`: the native renderer (`NativeRendererBackend`). Avalonia's geometry, bitmaps and glyph runs are the core's own (`StrideRenderInterface`), and the drawing context records each frame's calls (`RecordingDrawingContext`) for a fallback to draw (`IRenderFallback`). The Skia package's fallback converts the core's objects to Skia's and draws the calls into the frame's memory with Skia's own drawing context (`Stride.AvaloniaUI.Skia/Fallback/`).
 - `AvaloniaUISystem` (a `[GameSystem]`): pumps Avalonia in the update, renders the views in the draw, and draws their frames over the back buffer after the scene. `RenderOnGpu` (on by default) chooses Skia on the device or on the CPU; a change takes effect at the next frame.
 - Input goes through the `InputManager`'s capture: a view captures the mouse (`Hover` priority) while it is over one of its controls or a button pressed on it is held, and the keyboard (`Focus` priority) while a text box has the focus, so scripts don't see what the UI takes. A click where no control is gives the focus back to the game, and a game drag that crosses the UI stays with the game.
 
@@ -43,4 +46,4 @@ This is the design in the analysis document up to Skia on Stride's own Vulkan de
 
 ## Tests
 
-`Stride.AvaloniaUI.Tests` runs a headless game with simulated input for the layout, rendering and input capture, and games on the GPU (Lavapipe on CI) that check the view is drawn over the scene and takes its clicks with Skia on the device and on the CPU, that both draw the same frame, and that the view is drawn again when it moves between them. With `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`, the Vulkan validation layer fails the GPU tests on any error.
+`Stride.AvaloniaUI.Tests` runs a headless game with simulated input for the layout, rendering and input capture, and games on the GPU (Lavapipe on CI) that check the view is drawn over the scene and takes its clicks with Skia on the device and on the CPU, that both draw the same frame, and that the view is drawn again when it moves between them. `Stride.AvaloniaUI.Native.Tests` runs games with the native renderer, as Avalonia has one renderer per process. With `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`, the Vulkan validation layer fails the GPU tests on any error.

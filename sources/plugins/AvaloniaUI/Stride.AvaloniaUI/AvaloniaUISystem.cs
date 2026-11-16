@@ -111,6 +111,9 @@ public sealed class AvaloniaUISystem : GameSystemBase,
     /// Gets or sets whether the renderer draws the views on the game's graphics device when it can (Skia shares Vulkan
     /// devices), rather than on the CPU. A change takes effect at the next frame.
     /// </summary>
+    /// <remarks>
+    /// The native renderer (<see cref="AvaloniaUIRenderer.Native"/>) draws on the CPU whatever this says.
+    /// </remarks>
     public bool RenderOnGpu
     {
         get => renderOnGpu;

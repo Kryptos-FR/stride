@@ -12,6 +12,7 @@ using Avalonia.Rendering;
 using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
 using Stride.AvaloniaUI.Rendering;
+using Stride.AvaloniaUI.Rendering.Fallback;
 using Stride.Core.Reflection;
 using Stride.Graphics;
 
@@ -44,6 +45,11 @@ public static class StrideAvaloniaPlatform
     public static AvaloniaUIRenderer? Renderer { get; private set; }
 
     /// <summary>
+    /// Gets the channel of the native renderer to its fallback, or <c>null</c> with another renderer.
+    /// </summary>
+    internal static FallbackChannel? NativeChannel => (backend as NativeRendererBackend)?.Channel;
+
+    /// <summary>
     /// Uses the Stride platform, with a renderer of the Avalonia views and HarfBuzz text shaping.
     /// </summary>
     /// <remarks>
@@ -54,7 +60,7 @@ public static class StrideAvaloniaPlatform
         => builder
             .UseStandardRuntimePlatformSubsystem()
             .UseWindowingSubsystem(Initialize, "Stride")
-            .UseRenderingSubsystem(() => InitializeRenderer(renderer), "Skia")
+            .UseRenderingSubsystem(() => InitializeRenderer(renderer), renderer == AvaloniaUIRenderer.Native ? "Stride" : "Skia")
             .UseHarfBuzz();
 
     /// <summary>
