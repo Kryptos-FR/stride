@@ -8,6 +8,9 @@ namespace ColorRise.Skein.Editor.Avalonia.Views;
 /// </summary>
 public sealed partial class DialogueTimelineView : UserControl
 {
+    /// <summary>
+    /// Makes the view of the dialogue timeline.
+    /// </summary>
     public DialogueTimelineView()
     {
         InitializeComponent();

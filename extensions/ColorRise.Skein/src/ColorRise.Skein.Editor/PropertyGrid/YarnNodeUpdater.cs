@@ -16,6 +16,9 @@ public sealed class YarnNodeUpdater : NodePresenterUpdaterBase
 {
     private readonly ISessionViewModel session;
 
+    /// <summary>
+    /// Makes the updater of a session.
+    /// </summary>
     public YarnNodeUpdater(ISessionViewModel session)
     {
         this.session = session;

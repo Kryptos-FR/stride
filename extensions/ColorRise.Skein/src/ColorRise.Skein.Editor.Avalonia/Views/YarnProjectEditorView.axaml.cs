@@ -14,6 +14,9 @@ namespace ColorRise.Skein.Editor.Avalonia.Views;
 [AssetEditorView<YarnProjectEditorViewModel>]
 public sealed partial class YarnProjectEditorView : UserControl, IAssetEditorView
 {
+    /// <summary>
+    /// Makes the view of the overview of a Yarn project.
+    /// </summary>
     public YarnProjectEditorView()
     {
         InitializeComponent();

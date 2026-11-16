@@ -20,6 +20,9 @@ public sealed class YarnNodePicker : AutoCompleteBox
     /// </summary>
     public static readonly StyledProperty<string?> NodeProperty = AvaloniaProperty.Register<YarnNodePicker, string?>(nameof(Node), defaultBindingMode: BindingMode.TwoWay);
 
+    /// <summary>
+    /// Makes an empty picker.
+    /// </summary>
     public YarnNodePicker()
     {
         // Every node until the user types: the title the box shows would leave only itself

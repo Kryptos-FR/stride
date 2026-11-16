@@ -55,6 +55,9 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
     // True while the pane selects the card of its caret, which is no reason to move the caret
     private bool selectingFromCaret;
 
+    /// <summary>
+    /// Makes a pane without a buffer.
+    /// </summary>
     public YarnTextPane()
     {
         ShowLineNumbers = true;

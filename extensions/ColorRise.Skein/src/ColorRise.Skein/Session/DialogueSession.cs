@@ -40,9 +40,16 @@ public sealed class DialogueSessionOptions
 
     /// <summary>
     /// Who answers a function the scripts call and the game does not provide: it gets the name and the arguments, and
-    /// gives a boolean, a number or a string. Without it such a function gives false, and the log says so once.
+    /// gives a boolean, a number or a string. Without it such a function gives the default of its type (false, 0 or an
+    /// empty string, from <see cref="FunctionTypes"/>), and the log says so once.
     /// </summary>
     public Func<string, IReadOnlyList<object>, object>? MissingFunction { get; init; }
+
+    /// <summary>
+    /// What each function the scripts call gives (<see cref="YarnProject.FunctionTypes"/>): a function nothing provides
+    /// gives the default of its type. A function not listed gives false.
+    /// </summary>
+    public IReadOnlyDictionary<string, string>? FunctionTypes { get; init; }
 
     /// <summary>
     /// What the nodes say of themselves (<see cref="YarnProject.Nodes"/>): with it, a <see cref="SaliencyPick"/> gives
@@ -105,7 +112,7 @@ public sealed class DialogueSession : IYarnDialogueEvents
         var view = new SessionVariables(variables, program);
         adapter = new Yarn32Adapter(view, program);
         adapter.Dialogue.LogErrorMessage = message => log?.Error(message);
-        saliency = new SeededSaliencyStrategy(view, () => random, OnPicked) { Kind = this.options.Saliency };
+        saliency = new SeededSaliencyStrategy(view, () => this.options.RandomSeed is null ? null : random, OnPicked) { Kind = this.options.Saliency };
         adapter.Dialogue.ContentSaliencyStrategy = saliency;
 
         // Yarn Spinner's own asks the strategy: ours asks without telling a pick
@@ -373,12 +380,27 @@ public sealed class DialogueSession : IYarnDialogueEvents
                 if (options.MissingFunction is { } answer)
                     return answer(name, arguments);
 
+                var standIn = DefaultOf(name);
                 if (reportedFunctions.Add(name))
-                    log?.Error($"The scripts call the function '{name}', which the game does not provide: it gives false (0 as a number) until it does.");
-                return false;
+                    log?.Error($"The scripts call the function '{name}', which the game does not provide: it gives {Describe(standIn)} until it does.");
+                return standIn;
             });
         }
     }
+
+    private object DefaultOf(string function) => options.FunctionTypes?.GetValueOrDefault(function) switch
+    {
+        "number" => 0f,
+        "string" => "",
+        _ => false,
+    };
+
+    private static string Describe(object value) => value switch
+    {
+        float => "0",
+        string => "an empty string",
+        _ => "false",
+    };
 
     private void OnPicked(IReadOnlyList<ContentSaliencyOption> candidates, ContentSaliencyOption? chosen)
     {

@@ -13,6 +13,9 @@ namespace ColorRise.Skein.Editor.ViewModels;
 [AssetViewModel<YarnProjectAsset>]
 public sealed class YarnProjectViewModel : AssetViewModel<YarnProjectAsset>
 {
+    /// <summary>
+    /// Makes the view model of a Yarn project asset.
+    /// </summary>
     public YarnProjectViewModel(AssetViewModelConstructionParameters parameters)
         : base(parameters)
     {

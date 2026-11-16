@@ -224,6 +224,7 @@ public sealed class DialogueRunnerComponent : StartupScript
             Clock = new GameDialogueClock(Script, Game),
             Log = Log,
             Nodes = project.Nodes,
+            FunctionTypes = project.FunctionTypes,
             Targets = new EntityTargetResolver(Entity),
         });
         return session;

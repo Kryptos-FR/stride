@@ -201,10 +201,23 @@ public sealed class YarnActionRegistryTests
     }
 
     [Theory]
+    [InlineData("walk Odile 1", "walk Odile Fast False")]
+    [InlineData("walk Odile 0 running", "walk Odile Slow True")]
+    public async Task An_enum_takes_the_number_of_one_of_its_cases(string command, string call)
+    {
+        // What <<walk Odile {$pace}>> gives when $pace is of a Yarn enum
+        await Run(Registry(), command);
+
+        Assert.Equal([call], Calls);
+    }
+
+    [Theory]
     [InlineData("give oil many", "count")]
     [InlineData("give", "item")]
     [InlineData("give oil 2 extra", "extra")]
     [InlineData("walk Odile sideways", "sideways")]
+    [InlineData("walk Odile 2", "Slow, Fast")]
+    [InlineData("walk Odile 0.5", "Slow, Fast")]
     [InlineData("open", "target")]
     [InlineData("open GardenDoor", "GardenDoor")]
     [InlineData("knock CellarDoor 2 GardenDoor", "GardenDoor")]

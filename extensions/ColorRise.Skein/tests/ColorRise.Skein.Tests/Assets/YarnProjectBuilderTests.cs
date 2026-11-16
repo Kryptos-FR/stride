@@ -72,6 +72,26 @@ public sealed class YarnProjectBuilderTests
     }
 
     [Fact]
+    public void The_content_knows_what_each_function_of_the_scripts_gives()
+    {
+        const string script = """
+            title: Start
+            ---
+            <<if gull_count() > 2 and keeper_name() == "Odile">>
+                Odile: Gulls.
+            <<endif>>
+            ===
+            """;
+        var declared = new YarnFunctionDeclaration { Name = "keeper_name", ReturnType = YarnFunctionDeclaration.String };
+
+        var content = YarnProjectBuilder.Build(Project(), "Dialogue/Story", [("Dialogue/Start.yarn", script)], [declared]).Project!;
+
+        // One the game declares, and one the compiler infers from its use
+        Assert.Equal(YarnFunctionDeclaration.String, content.FunctionTypes["keeper_name"]);
+        Assert.Equal(YarnFunctionDeclaration.Number, content.FunctionTypes["gull_count"]);
+    }
+
+    [Fact]
     public void An_error_of_a_script_fails_the_build_and_names_the_script()
     {
         var build = Build(Project(), ("Dialogue/Act1.yarn", "title: Start\n---\n<<if $gold >>\nOdile: Hm.\n===\n"), ("Dialogue/Chatter/Pier.yarn", Pier));

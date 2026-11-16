@@ -89,6 +89,9 @@ public sealed class YarnLocalisationService
 
     private readonly ISessionViewModel session;
 
+    /// <summary>
+    /// Makes the service of a session.
+    /// </summary>
     public YarnLocalisationService(ISessionViewModel session)
     {
         this.session = session;

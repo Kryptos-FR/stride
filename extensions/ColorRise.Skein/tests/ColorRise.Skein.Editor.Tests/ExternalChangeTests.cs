@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.Testing;
+using Stride.Core.Diagnostics;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Presentation.Windows;
 
@@ -47,6 +48,43 @@ public sealed class ExternalChangeTests
         Assert.Equal(Act1, script.TextBuffer.Text);
         Assert.Single(editor.Cards);
         Assert.True(script.IsDirty);
+    }
+
+    [Theory]
+    [InlineData("utf-16")]
+    [InlineData("latin-1")]
+    public async Task A_file_that_is_not_utf8_is_not_taken_and_says_so(string encoding)
+    {
+        var (dialogs, questions) = Dialogs.Answering(1);
+        await using var session = await SkeinSession.OpenAsync([dialogs], SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", Act1));
+        var script = session.ScriptAt("Dialogue/Act1");
+        var path = session.FileOf("Dialogue/Act1", ".yarn");
+        // The text is read: an asset whose text was never read takes its file as it is when it is first read
+        Assert.Equal(Act1, script.TextBuffer.Text);
+        var warnings = new List<string>();
+        void OnLogged(ILogMessage message)
+        {
+            if (message.Module == "ColorRise.Skein" && message.Type == LogMessageType.Warning)
+                warnings.Add(message.Text);
+        }
+
+        GlobalLogger.GlobalMessageLogged += OnLogged;
+        try
+        {
+            File.WriteAllText(path, Changed.Replace("Mind", "Gare à"), encoding == "utf-16" ? Encoding.Unicode : Encoding.Latin1);
+            await session.ExternalChanges.CheckAsync();
+
+            Assert.Equal(Act1, script.TextBuffer.Text);
+            Assert.Empty(session.Steps);
+            Assert.Empty(questions.Asked);
+            var warning = Assert.Single(warnings);
+            Assert.Contains("Dialogue/Act1", warning);
+            Assert.Contains("not UTF-8", warning);
+        }
+        finally
+        {
+            GlobalLogger.GlobalMessageLogged -= OnLogged;
+        }
     }
 
     [Fact]

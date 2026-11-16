@@ -33,6 +33,7 @@ public sealed class SerializationTests
         project.Nodes.Add(node);
         project.LineMetadata["line:hello"] = ["shout"];
         project.ShadowLines["line:echo"] = "line:hello";
+        project.FunctionTypes["gull_count"] = "number";
 
         var read = RoundTrip(project);
 
@@ -48,6 +49,7 @@ public sealed class SerializationTests
         Assert.Equal(["act1"], readNode.Tags);
         Assert.Equal(["shout"], read.LineMetadata["line:hello"]);
         Assert.Equal("line:hello", read.ShadowLines["line:echo"]);
+        Assert.Equal("number", read.FunctionTypes["gull_count"]);
         Assert.True(read.GetProgram().Nodes.ContainsKey("Start"));
         Assert.Same(read.GetProgram(), read.GetProgram());
     }

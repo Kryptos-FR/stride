@@ -1,5 +1,6 @@
 using ColorRise.Skein.Assets.Text;
 using ColorRise.Skein.Editor.ViewModels;
+using Stride.Core.Diagnostics;
 using Stride.Core.Presentation.Dirtiables;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Transactions;
@@ -28,6 +29,8 @@ public sealed class YarnTextBuffer : IDisposable
     /// </summary>
     public static readonly TimeSpan TypingMergeWindow = TimeSpan.FromSeconds(1);
 
+    private static readonly Logger Log = GlobalLogger.GetLogger("ColorRise.Skein");
+
     private readonly YarnScriptViewModel script;
     private readonly IUndoRedoService undoRedo;
     // The typing step the next typing change may join, with the time of its last change
@@ -35,6 +38,9 @@ public sealed class YarnTextBuffer : IDisposable
     private long typingTimestamp;
     private bool pushing;
 
+    /// <summary>
+    /// Makes the buffer of a script.
+    /// </summary>
     public YarnTextBuffer(YarnScriptViewModel script)
     {
         this.script = script;
@@ -190,13 +196,14 @@ public sealed class YarnTextBuffer : IDisposable
     /// Applies edits one after the other, each to the text the one before left. Does nothing when the text is not the one
     /// the edits were made on.
     /// </summary>
-    private void Apply(IReadOnlyList<TextEdit> edits)
+    /// <returns>Whether the edits were applied.</returns>
+    private bool Apply(IReadOnlyList<TextEdit> edits)
     {
         var text = Text;
         foreach (var edit in edits)
         {
             if (edit.Offset + edit.Removed.Length > text.Length || string.CompareOrdinal(text, edit.Offset, edit.Removed, 0, edit.Removed.Length) != 0)
-                return;
+                return false;
 
             text = string.Concat(text.AsSpan(0, edit.Offset), edit.Inserted, text.AsSpan(edit.Offset + edit.Removed.Length));
         }
@@ -206,6 +213,17 @@ public sealed class YarnTextBuffer : IDisposable
         {
             Changed?.Invoke(new YarnTextChange(edit.Offset, edit.Removed.Length, edit.Inserted));
         }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Undoes or redoes the edits of a step, or says that it cannot: the text was changed by something that is not a step.
+    /// </summary>
+    private void Move(IReadOnlyList<TextEdit> edits, string move)
+    {
+        if (!Apply(edits))
+            Log.Warning($"{script.Url}: the {move} of a step of the text was skipped, because the text is no longer the one the step was made on. Steps further back may not apply either.");
     }
 
     private void OnDone(object? sender, TransactionEventArgs e)
@@ -238,8 +256,8 @@ public sealed class YarnTextBuffer : IDisposable
             edits.Clear();
         }
 
-        protected override void Undo() => buffer.Apply([.. Enumerable.Reverse(edits).Select(x => x.Inverse)]);
+        protected override void Undo() => buffer.Move([.. Enumerable.Reverse(edits).Select(x => x.Inverse)], "undo");
 
-        protected override void Redo() => buffer.Apply(edits);
+        protected override void Redo() => buffer.Move(edits, "redo");
     }
 }

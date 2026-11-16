@@ -37,6 +37,9 @@ public sealed partial class YarnScriptEditorView : UserControl, IAssetEditorView
     private object? menuNode;
     private Point menuPlace;
 
+    /// <summary>
+    /// Makes the view of a script editor.
+    /// </summary>
     public YarnScriptEditorView()
     {
         InitializeComponent();

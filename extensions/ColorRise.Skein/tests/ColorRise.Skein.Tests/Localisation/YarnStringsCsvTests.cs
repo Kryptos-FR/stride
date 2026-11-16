@@ -143,6 +143,11 @@ public sealed class YarnStringsCsvTests
         Assert.Equal(new YarnStringsStatus(Lines: 4, Translated: 1, ToUpdate: 2, Dead: 1), status);
         Assert.Equal(1, status.Missing);
 
+        // A row without a translation is missing, whatever its lock says, and with the mark of an update too
+        var empty = YarnStringsStatus.Of(english, [French("line:one", "", of: "One?"), French("line:two", "(NEEDS UPDATE) ", of: "Two?")]);
+        Assert.Equal(new YarnStringsStatus(Lines: 4, Translated: 0, ToUpdate: 0, Dead: 0), empty);
+        Assert.Equal(4, empty.Missing);
+
         // The base language against itself, and against nothing
         Assert.Equal(new YarnStringsStatus(4, 4, 0, 0), YarnStringsStatus.Of(english, english));
         Assert.Equal(4, YarnStringsStatus.Of(english, []).Missing);

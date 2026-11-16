@@ -3,6 +3,7 @@ using ColorRise.Skein.Editor.Text;
 using ColorRise.Skein.Editor.ViewModels;
 using Stride.Assets.Editor.Testing;
 using Stride.Core.Assets.Editor.Testing;
+using Stride.Core.Diagnostics;
 using Stride.Core.Presentation.Services;
 
 namespace ColorRise.Skein.Editor.Tests.Spikes;
@@ -40,6 +41,37 @@ public sealed class TextUndoTests
         test.UndoRedo.Redo();
         Assert.Equal("title: Arrival\n---\nOdile: Good evening.\n===\n", buffer.Text);
         Assert.True(test.Script.IsDirty);
+    }
+
+    [Fact]
+    public async Task An_undo_that_no_longer_fits_the_text_is_skipped_with_a_warning()
+    {
+        await using var test = await ScriptTest.OpenAsync();
+        var warnings = new List<string>();
+        void OnLogged(ILogMessage message)
+        {
+            if (message.Module == "ColorRise.Skein" && message.Type == LogMessageType.Warning)
+                warnings.Add(message.Text);
+        }
+
+        GlobalLogger.GlobalMessageLogged += OnLogged;
+        try
+        {
+            test.Buffer.Replace(Hello.IndexOf("Hello", StringComparison.Ordinal), 5, "Good evening", "Change line");
+            // Something that is not a step of the buffer changes the text
+            test.Script.Asset.Text = Hello.Replace("Odile", "Kye");
+
+            test.UndoRedo.Undo();
+
+            Assert.Equal(Hello.Replace("Odile", "Kye"), test.Buffer.Text);
+            var warning = Assert.Single(warnings);
+            Assert.Contains("Dialogue/Hello", warning);
+            Assert.Contains("undo", warning);
+        }
+        finally
+        {
+            GlobalLogger.GlobalMessageLogged -= OnLogged;
+        }
     }
 
     [Fact]

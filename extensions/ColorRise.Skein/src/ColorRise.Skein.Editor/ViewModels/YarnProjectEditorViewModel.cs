@@ -69,6 +69,9 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
     private bool destroyed;
     private Task refreshing = Task.CompletedTask;
 
+    /// <summary>
+    /// Makes the overview of a Yarn project.
+    /// </summary>
     public YarnProjectEditorViewModel(YarnProjectViewModel project)
         : base(project)
     {

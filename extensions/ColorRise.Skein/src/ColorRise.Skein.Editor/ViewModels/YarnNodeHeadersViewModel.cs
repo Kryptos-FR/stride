@@ -14,6 +14,9 @@ public sealed class YarnNodeHeadersViewModel : IPropertyProviderViewModel, IDisp
     private readonly IObjectNode rootNode;
     private readonly GraphNodeChangeListener listener;
 
+    /// <summary>
+    /// Gives headers to the property grid of a session.
+    /// </summary>
     public YarnNodeHeadersViewModel(ISessionViewModel session, YarnNodeHeaders headers)
     {
         Headers = headers;

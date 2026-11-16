@@ -23,6 +23,9 @@ internal sealed class YarnHiddenLines : VisualLineElementGenerator, IReadOnlySec
     private readonly TextView view;
     private readonly List<Run> runs = [];
 
+    /// <summary>
+    /// Hides lines of a text view.
+    /// </summary>
     public YarnHiddenLines(TextView view)
     {
         this.view = view;

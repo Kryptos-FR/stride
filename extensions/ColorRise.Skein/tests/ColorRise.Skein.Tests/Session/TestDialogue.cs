@@ -30,6 +30,7 @@ internal sealed class TestDialogue
             Log = Log,
             Nodes = NodesOf(Compilation),
             MissingFunction = missingFunction,
+            FunctionTypes = Compilation.Functions.ToDictionary(f => f.Name, f => f.ReturnType),
         });
     }
 

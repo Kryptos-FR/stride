@@ -33,6 +33,9 @@ public sealed class YarnAnalysisService
     private int actionsVersion;
     private int scannedVersion = -1;
 
+    /// <summary>
+    /// Makes the service of a session.
+    /// </summary>
     public YarnAnalysisService(ISessionViewModel session)
     {
         this.session = session;

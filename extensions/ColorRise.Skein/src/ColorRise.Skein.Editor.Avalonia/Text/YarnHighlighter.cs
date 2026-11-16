@@ -58,6 +58,9 @@ internal sealed class YarnHighlighter : DocumentColorizingTransformer
     private readonly TextDocument document;
     private IReadOnlyList<YarnToken>? tokens;
 
+    /// <summary>
+    /// Colours a document.
+    /// </summary>
     public YarnHighlighter(TextDocument document)
     {
         this.document = document;

@@ -8,6 +8,9 @@ namespace ColorRise.Skein.Editor.Avalonia.Views;
 /// </summary>
 public sealed class YarnPropertyTemplates : ResourceDictionary
 {
+    /// <summary>
+    /// Loads the templates of the property grid.
+    /// </summary>
     public YarnPropertyTemplates()
     {
         AvaloniaXamlLoader.Load(this);

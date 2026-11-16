@@ -27,6 +27,9 @@ public sealed partial class DialoguePlayerView : UserControl
 
     private DialoguePlayerViewModel? player;
 
+    /// <summary>
+    /// Makes the view of the dialogue player.
+    /// </summary>
     public DialoguePlayerView()
     {
         InitializeComponent();

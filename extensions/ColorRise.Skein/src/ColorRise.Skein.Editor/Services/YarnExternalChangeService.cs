@@ -4,6 +4,7 @@ using ColorRise.Skein.Editor.ViewModels;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Assets.Presentation.ViewModels;
+using Stride.Core.Diagnostics;
 using Stride.Core.IO;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Presentation.Windows;
@@ -21,6 +22,9 @@ namespace ColorRise.Skein.Editor.Services;
 /// </remarks>
 public sealed class YarnExternalChangeService
 {
+    private static readonly Logger Log = GlobalLogger.GetLogger("ColorRise.Skein");
+    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+
     private static ReadOnlySpan<byte> Utf8ByteOrderMark => [0xEF, 0xBB, 0xBF];
 
     private readonly ISessionViewModel session;
@@ -34,6 +38,9 @@ public sealed class YarnExternalChangeService
     private CancellationTokenSource delay = new();
     private Task pump = Task.CompletedTask;
 
+    /// <summary>
+    /// Watches the Yarn scripts of a session.
+    /// </summary>
     public YarnExternalChangeService(ISessionViewModel session)
     {
         this.session = session;
@@ -186,6 +193,12 @@ public sealed class YarnExternalChangeService
         if (await ReadAsync(path) is not var (text, hasByteOrderMark) || !IsInSession(script))
             return;
 
+        if (text is null)
+        {
+            Log.Warning($"{script.Url} has been changed outside of Game Studio, but its file is not UTF-8 text: it was not reloaded, and saving it here overwrites it. Save the file as UTF-8 to reload it.");
+            return;
+        }
+
         // The file holds what the session has, or what the session wrote last: what was typed since is an unsaved
         // change, not a change of the file
         if (text == script.TextBuffer.Text || text == script.Asset.SavedText)
@@ -227,7 +240,8 @@ public sealed class YarnExternalChangeService
 
     private bool IsInSession(YarnScriptViewModel script) => !script.IsDeleted && session.GetAssetById(script.Id) == script;
 
-    private static async Task<(string Text, bool HasByteOrderMark)?> ReadAsync(string path)
+    /// <returns>Null when the file is not there; a null text when it is not UTF-8 (Yarn Spinner's tools read UTF-8 only).</returns>
+    private static async Task<(string? Text, bool HasByteOrderMark)?> ReadAsync(string path)
     {
         // The program that writes the file may still have it open
         for (var attempt = 0; ; attempt++)
@@ -236,7 +250,15 @@ public sealed class YarnExternalChangeService
             {
                 var bytes = await File.ReadAllBytesAsync(path);
                 var hasByteOrderMark = bytes.AsSpan().StartsWith(Utf8ByteOrderMark);
-                return (Encoding.UTF8.GetString(bytes, hasByteOrderMark ? 3 : 0, bytes.Length - (hasByteOrderMark ? 3 : 0)), hasByteOrderMark);
+                try
+                {
+                    // UTF-16 (a byte order mark FF FE or FE FF) is not valid UTF-8 either
+                    return (StrictUtf8.GetString(bytes, hasByteOrderMark ? 3 : 0, bytes.Length - (hasByteOrderMark ? 3 : 0)), hasByteOrderMark);
+                }
+                catch (DecoderFallbackException)
+                {
+                    return (null, false);
+                }
             }
             catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException or UnauthorizedAccessException)
             {

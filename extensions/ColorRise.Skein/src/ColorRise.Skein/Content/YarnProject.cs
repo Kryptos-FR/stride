@@ -37,6 +37,12 @@ public sealed class YarnProject
     public Dictionary<string, string> ShadowLines { get; } = [];
 
     /// <summary>
+    /// What each function the scripts call gives, as the compiler knows it: <c>number</c>, <c>string</c> or <c>bool</c>.
+    /// A function the game does not provide gives the default of its type.
+    /// </summary>
+    public Dictionary<string, string> FunctionTypes { get; } = [];
+
+    /// <summary>
     /// The language the scripts are written in.
     /// </summary>
     public string BaseLanguage { get; set; } = "en";

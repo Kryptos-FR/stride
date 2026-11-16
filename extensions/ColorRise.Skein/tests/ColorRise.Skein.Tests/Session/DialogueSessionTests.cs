@@ -492,7 +492,7 @@ public sealed class DialogueSessionTests
     }
 
     [Fact]
-    public async Task A_function_nothing_provides_gives_false_and_one_error()
+    public async Task A_function_nothing_provides_gives_the_default_of_its_type_and_one_error()
     {
         var dialogue = new TestDialogue(
             """
@@ -516,6 +516,34 @@ public sealed class DialogueSessionTests
         Assert.Equal(["line: Clerk: Do I know you?", "complete", "line: Clerk: Do I know you?", "complete"], dialogue.Transcript);
         var error = Assert.Single(dialogue.Errors);
         Assert.Contains("'standing'", error);
+        Assert.Contains("gives 0", error);
+
+        // A number goes on as a number, a string as a string
+        var typed = new TestDialogue(
+            """
+            title: Start
+            ---
+            <<set $gulls = gull_count() + 2>>
+            <<set $name = keeper_name() + "?">>
+            <<set $open = is_open()>>
+            ===
+            """,
+            declarations:
+            [
+                new YarnFunctionDeclaration { Name = "gull_count", ReturnType = YarnFunctionDeclaration.Number },
+                new YarnFunctionDeclaration { Name = "keeper_name", ReturnType = YarnFunctionDeclaration.String },
+                new YarnFunctionDeclaration { Name = "is_open", ReturnType = YarnFunctionDeclaration.Bool },
+            ]);
+
+        await typed.RunAsync();
+
+        Assert.True(typed.Variables.TryGetValue<float>("$gulls", out var gulls));
+        Assert.Equal(2f, gulls);
+        Assert.True(typed.Variables.TryGetValue<string>("$name", out var name));
+        Assert.Equal("?", name);
+        Assert.True(typed.Variables.TryGetValue<bool>("$open", out var open));
+        Assert.False(open);
+        Assert.Equal(3, typed.Errors.Count());
     }
 
     [Fact]

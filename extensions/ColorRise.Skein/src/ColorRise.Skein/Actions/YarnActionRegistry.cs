@@ -391,6 +391,11 @@ public sealed class YarnActionRegistry
             if (!int.TryParse(word, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) && Enum.TryParse(type, word, ignoreCase: true, out var value))
                 return value;
 
+            // <<paint {$colour}>>: a Yarn enum gives the number of its case, which is a case of the C# enum of the same values
+            if (float.TryParse(word, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) && number == MathF.Round(number)
+                && Enum.ToObject(type, (long)number) is var numbered && Enum.IsDefined(type, numbered))
+                return numbered;
+
             throw new YarnCommandException(commandText, $"'{word}' is not a {type.Name} for the parameter '{parameter.Name}': write one of {string.Join(", ", Enum.GetNames(type))}.");
         }
 

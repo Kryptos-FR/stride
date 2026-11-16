@@ -110,6 +110,11 @@ public static class YarnProjectBuilder
             content.Nodes.Add(info);
         }
 
+        foreach (var function in compilation.Functions)
+        {
+            content.FunctionTypes[function.Name] = function.ReturnType;
+        }
+
         var strings = new YarnStringTable { Language = project.BaseLanguage };
         foreach (var (id, line) in compilation.Lines.OrderBy(l => l.Key, StringComparer.Ordinal))
         {

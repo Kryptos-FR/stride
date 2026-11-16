@@ -22,6 +22,9 @@ internal sealed class YarnNodeHeadersSelection : IDisposable
     private bool writing;
     private int lastAsked;
 
+    /// <summary>
+    /// Shows the headers of the cards selected in a script editor.
+    /// </summary>
     public YarnNodeHeadersSelection(YarnScriptEditorViewModel editor)
     {
         this.editor = editor;

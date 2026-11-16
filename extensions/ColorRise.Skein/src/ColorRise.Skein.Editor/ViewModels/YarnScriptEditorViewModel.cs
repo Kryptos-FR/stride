@@ -69,6 +69,9 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     private DialoguePlayerService? player;
     private int? playLine;
 
+    /// <summary>
+    /// Makes the editor of a Yarn script.
+    /// </summary>
     public YarnScriptEditorViewModel(YarnScriptViewModel script)
         : base(script)
     {

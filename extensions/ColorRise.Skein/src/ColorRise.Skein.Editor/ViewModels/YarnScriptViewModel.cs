@@ -12,6 +12,9 @@ namespace ColorRise.Skein.Editor.ViewModels;
 [AssetViewModel<YarnScriptAsset>]
 public sealed class YarnScriptViewModel : AssetViewModel<YarnScriptAsset>
 {
+    /// <summary>
+    /// Makes the view model of a Yarn script asset.
+    /// </summary>
     public YarnScriptViewModel(AssetViewModelConstructionParameters parameters)
         : base(parameters)
     {
