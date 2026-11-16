@@ -1,0 +1,100 @@
+title: Hedda
+act: Survey
+location: Inn
+quest: recipe
+when: $act == Act.Survey
+when: $quest_recipe == QuestState.NotStarted
+---
+Hedda: Welcome to the Drowned Bell. Hedda Brune. You'll be the map maker the whole valley is talking about.
+Hedda: The bell? It's at the bottom of the well in my cellar. Fell in a hundred years ago, and the inn kept the name.
+Hedda: And while you're here, you haven't seen a little brass box, have you? My mother's recipe for the fair cake is in it.
+Hedda: I had it in the cellar last autumn, and now I can't find it anywhere.
+-> I will look for it.
+    Hedda: Bless you. If it's anywhere, it's down there among the barrels.
+    <<set $quest_recipe to QuestState.Active>>
+-> I am here for the map.
+    Hedda: Of course. Maps first, cakes after.
+    <<set $quest_recipe to QuestState.Offered>>
+<<quest_changed recipe>>
+===
+
+title: Hedda
+act: All
+location: Inn
+quest: recipe
+when: has_item("recipe")
+when: $quest_recipe == QuestState.Active
+---
+Hedda: My mother's box! Where was it?
+Hedda: Behind the barrels. Of course it was. I'll make the cake for the fair, and you'll have the first slice.
+<<take recipe>>
+<<set $quest_recipe to QuestState.Succeeded>>
+<<quest_changed recipe>>
+===
+
+title: CellarStairs
+act: All
+location: Inn
+scenario: The commission
+when: not $cellar_allowed
+---
+// The dialogue goes on while the cellar loads: Hedda walks to the stairs, the cartographer goes down, and she calls
+// after them from the inn above.
+Hedda: That's my cellar. Nobody goes down there without me.
+-> Could you show me the cellar? The old well is a landmark.
+    Hedda: The well? Nobody has measured that since my grandfather. Come on, then.
+    <<set $cellar_allowed to true>>
+    <<walk Hedda CellarStairs>>
+    <<go CellarStairs>>
+    Hedda: Mind the third step! It moves.
+    Hedda: And don't touch the wine.
+-> Never mind.
+===
+
+title: Well
+act: All
+location: Cellar
+quest: survey
+---
+<<if surveyed("well")>>
+    The well is on your map. Far down, something gleams. The drowned bell, maybe.
+<<else>>
+    An old well in the middle of the cellar, older than the inn. You drop a line to measure it, and set it down.
+    <<survey well>>
+    <<detour SurveyCheck>>
+<<endif>>
+===
+
+title: RecipeBox
+act: All
+location: Cellar
+quest: recipe
+when: not $recipe_found
+---
+<<if $quest_recipe == QuestState.Active or $quest_recipe == QuestState.Offered>>
+    Behind the barrels, a little brass box. Inside, a card in faded ink. Hedda's mother's recipe.
+    <<give recipe>>
+    <<set $recipe_found to true>>
+    <<if $quest_recipe == QuestState.Offered>>
+        <<set $quest_recipe to QuestState.Active>>
+        <<quest_changed recipe>>
+    <<endif>>
+<<else>>
+    A little brass box behind the barrels. It isn't yours.
+<<endif>>
+===
+
+title: Hollyroot
+act: All
+location: Cellar
+quest: herbs
+when: not $hollyroot_taken
+---
+<<if $quest_herbs == QuestState.Active>>
+    Hollyroot grows pale in the dark, between the stones of the wall. You cut a piece.
+    <<give hollyroot>>
+    <<set $hollyroot_taken to true>>
+<<else>>
+    Something pale grows between the stones of the wall.
+<<endif>>
+===

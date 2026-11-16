@@ -1,0 +1,220 @@
+title: Agathe
+act: Castle
+location: Castle
+scenario: The feast
+quest: feast
+when: $act == Act.Castle
+when: $quest_feast == QuestState.NotStarted
+---
+Agathe: Out of my kitchen! Oh. The map maker. Sit, then, if you must.
+Agathe: The Countess wants a feast tonight for the abbey's men, and I have no ale and no flour. The village has both.
+Agathe: Hedda's ale and Bram's flour. Bring me those, and you'll eat at the high table.
+-> I will go down to the village for you.
+    Agathe: Quick, then. The road is an hour each way.
+    <<set $quest_feast to QuestState.Active>>
+-> I have work here.
+    Agathe: Everybody has work here. Nobody has flour.
+    <<set $quest_feast to QuestState.Offered>>
+<<quest_changed feast>>
+===
+
+title: Agathe
+act: Castle
+location: Castle
+scenario: The feast
+quest: feast
+when: $act == Act.Castle
+when: $quest_feast == QuestState.Offered
+---
+Agathe: Well? Ale and flour?
+-> I will fetch them.
+    <<set $quest_feast to QuestState.Active>>
+    <<quest_changed feast>>
+    Agathe: Quick, then.
+-> Not yet.
+===
+
+title: Agathe
+act: Castle
+location: Castle
+scenario: The feast
+quest: feast
+when: $act == Act.Castle
+when: $quest_feast == QuestState.Active
+---
+<<if has_item("ale") and has_item("flour")>>
+    Agathe: Ale! Flour! You beautiful creature.
+    <<take ale>>
+    <<take flour>>
+    <<if $quest_recipe == QuestState.Succeeded>>
+        Agathe: And Hedda sent her mother's fair cake? She's never let that recipe out of the inn. You must have charmed her.
+    <<endif>>
+    <<set $feast_served to true>>
+    <<set $quest_feast to QuestState.Succeeded>>
+    <<quest_changed feast>>
+<<else>>
+    <<if has_item("ale")>>
+        Agathe: Still no flour? The abbey's men will eat the tablecloth.
+    <<elseif has_item("flour")>>
+        Agathe: Still no ale? The abbey's men will drink the well.
+    <<else>>
+        Agathe: Nothing yet? Hedda's ale and Bram's flour. It isn't hard.
+    <<endif>>
+<<endif>>
+===
+
+title: Agathe
+act: All
+location: Castle
+scenario: The feast
+when: $quest_feast != QuestState.NotStarted and $quest_feast != QuestState.Offered and $quest_feast != QuestState.Active
+---
+=> Agathe: Everything in this castle is cold except my kitchen.
+=> Agathe: Corvin eats standing up. Never trust a man who eats standing up.
+=> Agathe: The feast was a triumph. The abbot's men cried into the soup. <<if $feast_served>>
+===
+
+title: Events
+act: Castle
+location: Village
+scenario: The feast
+quest: feast
+when: once
+when: $act == Act.Castle
+when: here() == "Village" and been_to("Castle")
+---
+// The village after a day away: what changed while the cartographer was at the castle. Not before the castle: the
+// summons sets the act in the village, and the journey waits for the end of the dialogue and of its events.
+The village looks smaller after the castle.
+Pell's cart is gone from the green. He went up the hill to sell to the castle.
+<<if $culprit == Culprit.Lio>>
+    The boundary stones stand where the sergeant left them. Nobody moved them last night.
+<<else>>
+    The boundary stones have moved again. One more pace up the bank.
+<<endif>>
+===
+
+title: Hedda
+act: Castle
+location: Inn
+scenario: The feast
+quest: feast
+when: $act == Act.Castle
+when: $quest_feast == QuestState.Active and not has_item("ale")
+---
+Hedda: Ale for the castle? Agathe sent you? She'd send the river if it could carry a cask.
+<<give ale>>
+<<if $quest_recipe == QuestState.Succeeded>>
+    Hedda: And take this cake for the high table. My mother's recipe. Tell Agathe whose it is.
+<<endif>>
+===
+
+title: Hedda
+act: All
+location: Inn
+scenario: The feast
+when: always
+---
+=> Hedda: Soup's on. It's always on.
+=> Hedda: The regulars are Wim and Saul. They have argued about the same cow for nine years. <<if $act == Act.Survey>>
+=> Hedda: Corvin drinks here when the castle is too quiet for him. He pays, I'll give him that. <<if $act == Act.Survey>>
+=> Hedda: Lio was out late again. I saw the lantern go down to the river. <<if $act == Act.Survey and not $saw_lio>>
+=> Hedda: Bram will lose the mill if the road goes straight. He won't say it, but he's afraid. <<if $act == Act.Survey>>
+=> Hedda: The castle has you running errands? That's a castle for you. <<if $act == Act.Castle>>
+=> Hedda: The cake is in the oven for the fair. <<if $quest_recipe == QuestState.Succeeded>>
+=> Hedda: The regulars talk of nothing but Jory. <<if $act == Act.Fair>>
+===
+
+title: Bram
+act: Castle
+location: Village
+scenario: The feast
+quest: feast
+when: $act == Act.Castle
+when: $quest_feast == QuestState.Active and not has_item("flour")
+---
+<<if $wheel_mended>>
+    Bram: Flour for the castle's feast? The wheel ground all night. Take a sack, and tell the Countess it's Oster flour.
+    <<give flour>>
+<<else>>
+    Bram: Flour? With the wheel stuck? I have none to give, not even to a Countess. #mood:sad
+<<endif>>
+===
+
+title: PortraitFounder
+act: Castle
+location: Castle
+scenario: The portraits
+quest: portraits
+---
+<<if visited_count("PortraitFounder") == 0>>
+    <<set $portraits_seen to $portraits_seen + 1>>
+    <<detour PortraitSeen>>
+    The founder of the house of Varne, in gold armour, with a map unrolled at his feet. The border on it runs under a hill.
+<<else>>
+    The founder again. He looks at you as if you owe him rent.
+<<endif>>
+===
+
+title: PortraitTwins
+act: Castle
+location: Castle
+scenario: The portraits
+quest: portraits
+---
+<<if visited_count("PortraitTwins") == 0>>
+    <<set $portraits_seen to $portraits_seen + 1>>
+    <<detour PortraitSeen>>
+    Two sisters, the same face twice. One of them married an abbot's brother, and the border moved a mile.
+<<else>>
+    The twins. One of them is smiling. You are not sure it was the same one last time.
+<<endif>>
+===
+
+title: PortraitSaint
+act: Castle
+location: Castle
+scenario: The portraits
+quest: portraits
+---
+<<if visited_count("PortraitSaint") == 0>>
+    <<set $portraits_seen to $portraits_seen + 1>>
+    <<detour PortraitSeen>>
+<<endif>>
+// The castle's runner chooses among line groups with its own saliency strategy: the lines come round in order
+=> A pale lady in blue, holding a lantern. The plate says "Saint of the Deep Ways".
+=> The lantern in the painting is green, like no flame you have ever seen.
+=> The lady in blue again. Her lantern lights a carved wall behind her.
+===
+
+title: PortraitHound
+act: Castle
+location: Castle
+scenario: The portraits
+quest: portraits
+---
+<<if visited_count("PortraitHound") == 0>>
+    <<set $portraits_seen to $portraits_seen + 1>>
+    <<detour PortraitSeen>>
+    A hound. Just a hound. The plate says "Biscuit, who found the well".
+<<elseif visited_count("PortraitHound") == 1>>
+    Biscuit again. A good dog. A great dog, by the look of the frame.
+<<else>>
+    You have looked at this dog [plural value={visited_count("PortraitHound") + 1} one="% time" other="% times" /] now.
+<<endif>>
+===
+
+title: PortraitSeen
+act: Castle
+location: Castle
+quest: portraits
+---
+// Said the first time each portrait is looked at, after it is counted.
+<<if $portraits_seen >= 4>>
+    <<set $quest_portraits to QuestState.Succeeded>>
+    <<quest_changed portraits>>
+<<elseif $quest_portraits == QuestState.NotStarted>>
+    <<set $quest_portraits to QuestState.Active>>
+    <<quest_changed portraits>>
+<<endif>>
+===

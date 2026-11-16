@@ -129,6 +129,8 @@ color: yellow
 <<declare $cellar_allowed = false>>
 /// The cartographer watched the stones by night and saw who moves them.
 <<declare $saw_lio = false>>
+/// The cartographer met Pell.
+<<declare $pell_met = false>>
 /// Pell has a gear to sell, and the cartographer bought it.
 <<declare $gear_bought = false>>
 /// The mill wheel turns again.
@@ -193,6 +195,8 @@ color: yellow
 <<declare $corvin_presents = $offer != Offer.Accepted and $corvin_fate != CorvinFate.Left>>
 /// The road goes around the mill.
 <<declare $road_around = $road != Road.Corvin or $spoke_for_mill>>
+/// Pell has something else to say than small talk: what his node group's other nodes need, together.
+<<declare $pell_has_errand = (here() == "Village" and $act == Act.Survey and (not $pell_met or ($quest_wheel == QuestState.Active and not $gear_bought) or $culprit == Culprit.Pell)) or (here() == "Castle" and $act == Act.Castle and $quest_wares == QuestState.NotStarted) or (here() == "Village" and $act == Act.Fair and $quest_last_sale == QuestState.NotStarted)>>
 /// The map has holes: too few landmarks, and no carvings to make up for them.
 <<declare $map_incomplete = survey_count() < 4 and not $carvings_copied>>
 ===

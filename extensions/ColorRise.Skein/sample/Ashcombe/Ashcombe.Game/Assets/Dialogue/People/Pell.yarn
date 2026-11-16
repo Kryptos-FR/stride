@@ -1,0 +1,115 @@
+title: PellNotes
+act: All
+location: Anywhere
+scenario: The peddler
+style: note
+---
+Pell travels with his cart. He is in the village in Acts I and IV and at the castle in Act II, the same actor named Pell in two root scenes. His nodes are one node group, told apart by where the cartographer is (here) and by the act. His small talk plays only when no other node of the group can: Yarn's saliency prefers the content seen the least, so a fallback that could play beside a node already seen once would win over it. The smart variable $pell_has_errand says when another node can play.
+===
+
+title: Pell
+act: Survey
+location: Village
+scenario: The peddler
+when: here() == "Village" and $act == Act.Survey
+when: not $pell_met
+---
+Pell: Pell! Needles, ribbons, buttons, gears, and news from three valleys. What do you lack?
+Pell: A map maker. Then you'll want to know that the abbey's monks have been walking their meadows with a rope. Measuring.
+<<set $pell_met to true>>
+===
+
+title: Pell
+act: Survey
+location: Village
+scenario: The peddler
+quest: wheel
+when: here() == "Village" and $act == Act.Survey
+when: $pell_met and $quest_wheel == QuestState.Active and not $gear_bought
+---
+Pell: A gear? For Bram's wheel? I have just the one. Iron, from a mill that burned in the north.
+Pell: I don't want money. I want a story. Where have you been, that I haven't?
+-> Tell him about the salt flats in the south.
+    Pell: White to the edge of the world? I'll sell that story twice. Here.
+-> Tell him about the city where the bridges open at night.
+    Pell: Bridges that open! I knew it. Here, take it.
+<<set $gear_bought to true>>
+<<set $pell_trust to $pell_trust + 1>>
+<<give gear>>
+===
+
+title: Pell
+act: Survey
+location: Village
+scenario: The peddler
+when: here() == "Village" and $act == Act.Survey
+when: $pell_met and $culprit == Culprit.Pell
+---
+Pell: The sergeant says I move stones at night. Me! With these arms. #mood:angry
+Pell: You were out there. You saw who it was. Didn't you? #mood:angry
+===
+
+title: Pell
+act: All
+location: Anywhere
+scenario: The peddler
+when: not $pell_has_errand
+---
+=> Pell: Buttons? No? Nobody ever wants buttons.
+=> Pell: Every valley thinks its border is the oldest one.
+=> Pell: The castle's carts pay well. The castle's steward does not. <<if here() == "Castle">>
+=> Pell: You came back! Nobody comes back. <<if $act == Act.Fair>>
+===
+
+title: Pell
+act: Castle
+location: Castle
+scenario: The peddler
+quest: wares
+when: here() == "Castle" and $act == Act.Castle
+when: $quest_wares == QuestState.NotStarted
+---
+<<if $culprit == Culprit.Pell>>
+    Pell: Oh. You. The one who saw nobody. #mood:angry
+    Pell: They let me go when the stones moved again with me in the Lockup. No thanks to you.
+    -> I am sorry. I should have spoken.
+        <<set $pell_trust to $pell_trust + 1>>
+        Pell: Yes, you should. Well. A sorry is worth something. Not much.
+    -> It was not my business.
+        Pell: Then my wares are not your business either.
+        <<set $quest_wares to QuestState.Failed>>
+        <<quest_changed wares>>
+        <<stop>>
+<<else>>
+    Pell: My map maker! The castle's cook buys my pepper and the Countess's maids buy my ribbons.
+<<endif>>
+Pell: A ribbon for you? Castle blue. It will make you look like you belong here.
+-> Trade him a story for the ribbon.
+    Pell: Another story! You are my best customer.
+    <<give ribbon>>
+    <<set $quest_wares to QuestState.Succeeded>>
+-> No, thank you.
+    Pell: Your loss. It was a very blue ribbon.
+    <<set $quest_wares to QuestState.Failed>>
+<<quest_changed wares>>
+===
+
+title: Pell
+act: Fair
+location: Village
+scenario: Accounts
+quest: last_sale
+when: here() == "Village" and $act == Act.Fair
+when: $quest_last_sale == QuestState.NotStarted
+---
+Pell: Last day of the fair, last day in Ashcombe. Tomorrow the cart goes over the hill.
+<<if $pell_trust >= 1>>
+    Pell: For you, my last sale is a gift. An old compass, from a ship that never came back. It points true. Mostly.
+<<elseif $pell_trust <= -1>>
+    Pell: For you, my last sale is an old compass. Full price. It points away from me, which suits us both. #mood:angry
+<<else>>
+    Pell: My last sale. An old compass, fair price. It points true, which is more than most things here.
+<<endif>>
+<<set $quest_last_sale to QuestState.Succeeded>>
+<<quest_changed last_sale>>
+===

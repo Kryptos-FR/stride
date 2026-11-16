@@ -1,0 +1,293 @@
+title: Maren
+act: Survey
+location: Village
+scenario: The moving stones
+quest: stones
+when: $act == Act.Survey
+when: $quest_stones == QuestState.NotStarted
+---
+Maren: Sergeant Maren, the watch. Such as it is. You are the Countess's map maker?
+Maren: Then you can do me a service. Somebody moves the boundary stones by the bridge. At night, every night, a pace or two.
+Maren: The hearing is in a week, and the stones walk. Watch them for me, after dark, and tell me who it is.
+-> I will watch them.
+    Maren: Good. I need a name, not a story.
+    <<set $quest_stones to QuestState.Active>>
+-> Stones are your business, not mine.
+    Maren: They are on your map, aren't they? Think about it.
+    <<set $quest_stones to QuestState.Offered>>
+<<quest_changed stones>>
+===
+
+title: Maren
+act: Survey
+location: Village
+scenario: The moving stones
+quest: stones
+when: $act == Act.Survey
+when: $quest_stones == QuestState.Offered
+---
+Maren: Changed your mind about the stones?
+-> I will watch them tonight.
+    Maren: Good.
+    <<set $quest_stones to QuestState.Active>>
+    <<quest_changed stones>>
+-> No.
+    Maren: Then don't stand in the light.
+===
+
+title: Maren
+act: Survey
+location: Village
+scenario: The moving stones
+quest: stones
+when: $act == Act.Survey
+when: $quest_stones == QuestState.Active and not $saw_lio
+---
+Maren: The stones move after dark. You won't see anything standing here at noon.
+===
+
+title: Maren
+act: Survey
+location: Village
+scenario: The moving stones
+quest: stones
+when: $act == Act.Survey
+when: $quest_stones == QuestState.Active and $saw_lio
+---
+// The second fork: name the child, or let the sergeant blame the stranger.
+Maren: Well? You were out by the bridge last night. Who moves my stones?
+-> It was Lio, the miller's child.
+    <<set $culprit to Culprit.Lio>>
+    Maren: The miller's own. That will please the steward.
+    Maren: I'll have a word with Bram. A quiet word. The child gets a fright, and the stones stay put.
+-> I saw nobody.
+    <<set $culprit to Culprit.Pell>>
+    <<set $pell_trust to $pell_trust - 2>>
+    Maren: Nobody. Then it's the peddler. He came the same week as the stones started walking.
+    Maren: Strangers always. #mood:angry
+<<set $quest_stones to QuestState.Succeeded>>
+<<quest_changed stones>>
+===
+
+title: Maren
+act: All
+location: Village
+scenario: The road
+when: $act != Act.Survey or $quest_stones == QuestState.Succeeded or $quest_stones == QuestState.Failed
+---
+=> Maren: The inn is the place to hear things. Hedda hears everything.
+=> Maren: The castle wants a straight road. The mill wants to keep standing. I want a quiet fair.
+=> Maren: Your map had better be right. People will fight over it. <<if survey_count() > 0>>
+=> Maren: The Lockup is empty. Let us keep it that way. <<if $culprit != Culprit.Pell>>
+=> Maren: The peddler sat in the Lockup a night, and the stones moved anyway. I don't like being wrong. <<if $culprit == Culprit.Pell and $act != Act.Survey>>
+=> Maren: Back from the castle already? <<if $act == Act.Castle>>
+=> Maren: Jory's mother hasn't slept. <<if $act == Act.Fair and not $jory_found>>
+=> Maren: The fair has a hearing this year. I have twice the watch and half the patience. <<if $act == Act.Fair>>
+===
+
+title: Corvin
+act: Survey
+location: Village
+scenario: The road
+when: $act == Act.Survey
+when: not $met_corvin
+---
+Corvin: You must be the cartographer. Corvin Hale, steward to the Countess.
+Corvin: The new road will come down from the castle, straight across the bridge, past the mill and on to the market towns.
+Corvin: Draw it so, and the castle will remember you kindly.
+<<set $met_corvin to true>>
+===
+
+title: Corvin
+act: Survey
+location: Village
+scenario: The road
+when: $act == Act.Survey
+when: $met_corvin
+---
+<<if $road == Road.Corvin>>
+    Corvin: A straight road and a sensible map. We understand each other.
+<<elseif $road == Road.Miller>>
+    Corvin: The miller's friend. I hope his flour pays better than the castle. #mood:angry
+<<elseif $road == Road.NoSide>>
+    Corvin: Still drawing nothing at all? A map is a decision, cartographer.
+<<else>>
+    Corvin: Have you spoken to the miller yet? He will tell you a sad story about a wheel.
+<<endif>>
+===
+
+title: Bram
+act: Survey
+location: Village
+scenario: The road
+when: $act == Act.Survey
+when: not $met_bram
+---
+Bram: Bram Oster. The mill is mine, and my father's, and his father's.
+Bram: Now the steward wants his road straight through my yard, and the mill down, so his carts don't have to turn a corner.
+Bram: And on top of it the wheel is stuck. A cracked gear. If the mill can't grind, it might as well come down.
+<<set $met_bram to true>>
+<<set $quest_wheel to QuestState.Offered>>
+<<quest_changed wheel>>
+===
+
+title: Bram
+act: Survey
+location: Village
+scenario: The road
+quest: wheel
+when: $act == Act.Survey
+when: $met_bram and $quest_wheel == QuestState.Offered
+---
+Bram: A gear, that is all the wheel wants. The peddler might have one in his cart, if you can make him part with it.
+-> I will find you a gear.
+    Bram: Then you are a better friend than the steward.
+    <<set $quest_wheel to QuestState.Active>>
+    <<quest_changed wheel>>
+-> Not now.
+    Bram: Nobody ever has time for a wheel.
+===
+
+title: Bram
+act: All
+location: Village
+scenario: The road
+when: $met_bram and $quest_wheel != QuestState.Offered
+when: not ($act == Act.Castle and $quest_feast == QuestState.Active and not has_item("flour"))
+---
+=> Bram: Lio is in the mill. Shy, but sharp. Sharper than me with numbers.
+=> Bram: My grandmother said the old border ran under the hill. Nobody listens to grandmothers.
+=> Bram: The wheel turns. Listen to it! <<if $wheel_mended>>
+=> Bram: Lio has been quiet since the sergeant came round. <<if $culprit == Culprit.Lio>>
+===
+
+title: Stones
+act: Survey
+location: Village
+scenario: The moving stones
+quest: stones
+when: $quest_stones == QuestState.Active and not $saw_lio
+when: time_of_day() == "night"
+---
+// Only at night: the cartographer waits by the stones and sees who moves them.
+You wait in the dark by the bridge. The river talks to itself.
+A small figure comes down from the mill with a lantern under a coat. It is Lio, the miller's child.
+Lio puts a shoulder to the nearest stone and rolls it two paces up the bank.
+Lio: There. Where grandmother said. The old line runs under the hill, not along the river.
+Lio sees you, and runs.
+<<set $saw_lio to true>>
+===
+
+title: Stones
+act: All
+location: Village
+scenario: The moving stones
+quest: survey
+when: not surveyed("stones")
+---
+Five grey boundary stones in a row along the bank, each with a mason's mark. One of them has fresh earth around it.
+<<survey stones>>
+<<detour SurveyCheck>>
+===
+
+title: Stones
+act: All
+location: Village
+scenario: The moving stones
+when: always
+---
+=> The boundary stones lean towards the river. One of them has moved again.
+=> Each stone carries the same mason's mark: a circle with a line through it.
+===
+
+title: BridgeMark
+act: All
+location: Village
+scenario: The commission
+quest: survey
+---
+<<if surveyed("bridge")>>
+    The bridge's height mark is already on your map.
+<<else>>
+    A mason cut a line in the bridge to mark the flood of the bad year. You take its height and its place.
+    <<survey bridge>>
+    <<detour SurveyCheck>>
+<<endif>>
+===
+
+title: SurveyCheck
+act: All
+location: Anywhere
+quest: survey
+---
+// Said after each landmark is put on the map.
+<<if $quest_survey == QuestState.Active and surveyed("bell") and surveyed("well") and surveyed("loft") and surveyed("bridge") and surveyed("stones")>>
+    The fifth landmark. The village is on your map, every stone of it.
+    <<set $quest_survey to QuestState.Succeeded>>
+    <<quest_changed survey>>
+<<elseif $quest_survey == QuestState.Active>>
+    [plural value={survey_count()} one="One landmark" other="% landmarks" /] out of five on the map.
+<<endif>>
+===
+
+title: Wheel
+act: Survey
+location: Village
+scenario: The road
+quest: wheel
+when: $quest_wheel == QuestState.Active and has_item("gear")
+---
+You fit Pell's gear to the shaft, and lean on the spokes. The wheel groans, and turns, and the river takes it.
+Bram: It turns! Listen to it!
+Bram: Here, take my old rope. It held the sacks for twenty years. It will hold you anywhere you need to climb.
+<<take gear>>
+<<give rope>>
+<<set $wheel_mended to true>>
+<<set $quest_wheel to QuestState.Succeeded>>
+<<quest_changed wheel>>
+===
+
+title: Wheel
+act: All
+location: Village
+scenario: The road
+when: always
+---
+<<if $wheel_mended>>
+    The wheel turns, and the mill hums behind it.
+<<else>>
+    The wheel is stuck. One of the gears on the shaft is cracked through.
+<<endif>>
+===
+
+title: Nettle
+act: All
+location: Village
+quest: herbs
+when: not $nettle_taken
+---
+<<if $quest_herbs == QuestState.Active>>
+    You pick the nettle with your sleeve over your hand.
+    <<give nettle>>
+    <<set $nettle_taken to true>>
+<<else>>
+    Nettles. Somebody might want them, but not you.
+<<endif>>
+===
+
+title: DewCup
+act: All
+location: Village
+quest: herbs
+when: not $dewcup_taken
+---
+<<if $quest_herbs != QuestState.Active>>
+    A dew-cup by the river, its blue cup full of water.
+<<elseif time_of_day() != "morning">>
+    The dew-cup has closed. They only open in the morning.
+<<else>>
+    You pick the dew-cup while it is still open and wet.
+    <<give dewcup>>
+    <<set $dewcup_taken to true>>
+<<endif>>
+===

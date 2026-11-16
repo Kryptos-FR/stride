@@ -1,0 +1,130 @@
+title: ActOneNotes
+act: Survey
+location: Village
+scenario: The commission
+style: note
+---
+Act I, two days in the village. Five landmarks for the map, three of them inside child scenes (the cellar under the inn, the mill's loft, the chapel's bell). Somebody moves the boundary stones at night. The steward and the miller quarrel over the road. The act ends when the survey and the stones are done, or on the night of the second day, when the Countess sends for the cartographer.
+===
+
+title: Events
+act: Survey
+location: Village
+scenario: The commission
+quest: survey
+when: once
+when: $act == Act.Survey
+when: here() == "Village"
+---
+The road comes down out of the hills, and there is Ashcombe. A river, a mill, a chapel, an inn, and the castle on the hill above them.
+You carry a letter with the seal of Countess Ysolde Varne.
+"Survey the village before the spring fair. Five landmarks, set down true. The hearing will want them."
+<<set $quest_survey to QuestState.Active>>
+<<quest_changed survey>>
+===
+
+title: Events
+act: Survey
+location: Village
+scenario: The road
+when: once
+when: $act == Act.Survey
+when: here() == "Village"
+when: $met_corvin and $met_bram
+---
+// The first fork: the steward and the miller find each other in the square, with the cartographer between them.
+Corvin: Ah. The miller has found you too.
+Bram: Tell him, cartographer. Tell him the old road goes around the mill and always has.
+Corvin: The old road goes around everything. The new one will go straight, past the mill, and the castle's carts will thank us.
+Bram: Past the mill? Through it!
+-> Corvin is right. A straight road is a good road.
+    <<set $road to Road.Corvin>>
+    Corvin: A sensible eye. The Countess will hear of it.
+    Bram: Then draw your map, and draw my mill as a ruin while you are at it. #mood:angry
+-> The road should go around the mill.
+    <<set $road to Road.Miller>>
+    Bram: There. Even a stranger sees it.
+    Corvin: A stranger who will be paid by the castle. Remember that. #mood:angry
+-> I draw what is there. Roads are for the hearing.
+    <<set $road to Road.NoSide>>
+    Corvin: Careful. Nobody pays for a map that says nothing.
+    Bram: Nobody pays a miller either.
+===
+
+title: Events
+act: Survey
+location: Village
+scenario: The moving stones
+quest: herbs
+when: once
+when: $act == Act.Survey
+when: $quest_herbs == QuestState.Active and not $dewcup_taken
+when: day() > 2 or (day() == 2 and time_of_day() != "morning")
+---
+// The dew-cup only opens in the morning: after the morning of the second day, it is too late.
+The dew-cups by the river have closed for the year. Nan will have to make do.
+<<set $quest_herbs to QuestState.Failed>>
+<<quest_changed herbs>>
+===
+
+title: Events
+act: Survey
+location: Anywhere
+scenario: The commission
+when: once
+when: $act == Act.Survey
+when: ($quest_survey == QuestState.Succeeded and $quest_stones == QuestState.Succeeded) or day() > 2 or (day() == 2 and time_of_day() == "night")
+---
+// The end of the first act: the Countess sends for the cartographer. The road to the castle is a journey, held until
+// this dialogue ends, wherever in the village the cartographer is.
+A rider in the castle's colours comes down the road and stops at your side.
+Rider: The Countess will see the cartographer. Now, with the map as it is.
+<<if $quest_survey != QuestState.Succeeded>>
+    You look at the map. [plural value={survey_count()} one="One landmark" other="% landmarks" /] out of five. It will have to do.
+    <<set $quest_survey to QuestState.Failed>>
+    <<quest_changed survey>>
+<<endif>>
+<<if $quest_stones != QuestState.Succeeded>>
+    <<if $culprit == Culprit.Unknown>>
+        <<set $culprit to Culprit.Pell>>
+    <<endif>>
+    Maren: The stones moved again last night. I have my man. The peddler. Strangers always. #mood:angry
+    <<set $quest_stones to QuestState.Failed>>
+    <<quest_changed stones>>
+<<endif>>
+<<set $act to Act.Castle>>
+<<set $pell_in_village to false>>
+<<set $pell_at_castle to true>>
+<<set $corvin_in_village to false>>
+<<set $corvin_at_castle to true>>
+<<end_day>>
+<<go CastleRoad>>
+===
+
+title: CastleRoad
+act: Survey
+location: Village
+scenario: The commission
+when: $act == Act.Survey
+---
+The road climbs to the castle. The Countess expects you when the survey is done, not before.
+===
+
+title: CastleRoad
+act: Fair
+location: Village
+scenario: The hearing
+when: $act == Act.Fair
+---
+Not today. The whole valley is coming down this road for the fair.
+===
+
+title: MineRoad
+act: All
+location: Anywhere
+scenario: Under the hill
+when: $act != Act.Mine
+---
+A miner sits on a rock across the path.
+Miner: The mine is no place for visitors. Turn back.
+===

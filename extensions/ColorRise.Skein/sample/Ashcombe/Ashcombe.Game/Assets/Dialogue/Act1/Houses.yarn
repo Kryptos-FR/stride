@@ -1,0 +1,167 @@
+title: Lio
+act: Survey
+location: Mill
+scenario: The moving stones
+when: $act == Act.Survey
+when: not $saw_lio
+---
+Lio: You're the map maker. Can I see? Just the edge?
+Lio: I make maps too. Of the mill, and the river. Grandmother taught me. She knew where everything was before.
+Lio: The loft has the best view. You can see the whole bend of the river from up there.
+===
+
+title: Lio
+act: Survey
+location: Mill
+scenario: The moving stones
+when: $act == Act.Survey
+when: $saw_lio and $culprit == Culprit.Unknown
+---
+Lio: You saw me. Last night. Are you going to tell Maren?
+Lio: I'm not stealing land. I'm putting the stones back where they were. Grandmother said the true line runs under the hill, where the lantern folk are.
+Lio: Nobody believes her, because she's dead.
+-> Who are the lantern folk?
+    Lio: Lights, deep in the mine. The miners say so. Grandmother said they are the old border, written down.
+-> You can't go on moving them.
+    Lio: Then somebody should draw them where they belong.
+===
+
+title: Lio
+act: Survey
+location: Mill
+scenario: The moving stones
+when: $act == Act.Survey
+when: $culprit != Culprit.Unknown
+---
+<<if $culprit == Culprit.Lio>>
+    Lio: Maren came. Father shouted. The stones stay where they are now. #mood:angry
+<<else>>
+    Lio: They took the peddler in. Because of me. I didn't ask you to lie. #mood:sad
+<<endif>>
+===
+
+title: Loft
+act: All
+location: Mill
+quest: survey
+---
+<<if surveyed("loft")>>
+    The loft is on your map. The river bends below, silver and slow.
+<<else>>
+    You climb the ladder into the loft. From the hatch you see the whole bend of the river, and the stones along it.
+    <<survey loft>>
+    <<detour SurveyCheck>>
+<<endif>>
+===
+
+title: Sacks
+act: All
+location: Mill
+scenario: The road
+---
+<<if $wheel_mended>>
+    Sacks of fresh flour, still warm from the stones.
+<<else>>
+    Empty sacks. The mill has not ground for a week.
+<<endif>>
+===
+
+title: Nan
+act: Survey
+location: Cottage
+quest: herbs
+when: $act == Act.Survey
+when: $quest_herbs == QuestState.NotStarted
+---
+Nan: Close the door, the warmth is getting out. I'm Nan. I make what the valley needs when it is ill.
+Nan: I'm short of three herbs for the spring. Nettle from the green, a dew-cup from the river, and hollyroot. Hedda has some in her cellar wall, though she doesn't know it.
+Nan: The dew-cup only opens in the morning, mind. And not for long now. Two mornings more, at most.
+-> I will bring them.
+    Nan: Good. I'll make you something for your trouble.
+    <<set $quest_herbs to QuestState.Active>>
+-> I have a map to make.
+    Nan: So you do. The herbs will wait. The dew-cups won't.
+    <<set $quest_herbs to QuestState.Offered>>
+<<quest_changed herbs>>
+===
+
+title: Nan
+act: All
+location: Cottage
+quest: herbs
+when: $quest_herbs == QuestState.Offered
+---
+Nan: Changed your mind about my herbs?
+-> Yes. Nettle, dew-cup, hollyroot.
+    Nan: You were listening. Go on, then.
+    <<set $quest_herbs to QuestState.Active>>
+    <<quest_changed herbs>>
+-> Not yet.
+===
+
+title: Nan
+act: All
+location: Cottage
+quest: herbs
+when: $quest_herbs == QuestState.Active
+---
+<<if has_item("nettle") and has_item("dewcup") and has_item("hollyroot")>>
+    Nan: All three. And the dew-cup still wet. You have a good hand.
+    <<take nettle>>
+    <<take dewcup>>
+    <<take hollyroot>>
+    Nan: Here. A remedy against the cold. Drink it before cold water, and the water won't stop your heart.
+    Nan: I don't know why a map maker would need it. But you will go places I don't.
+    <<give remedy>>
+    <<set $quest_herbs to QuestState.Succeeded>>
+    <<quest_changed herbs>>
+<<else>>
+    Nan: Still missing [plural value={3 - item_count("nettle") - item_count("dewcup") - item_count("hollyroot")} one="one herb" other="% herbs" /].
+<<endif>>
+===
+
+title: Nan
+act: All
+location: Cottage
+scenario: The moving stones
+when: $quest_herbs != QuestState.Offered and $quest_herbs != QuestState.Active
+when: $quest_herbs != QuestState.NotStarted or $act != Act.Survey
+---
+=> Nan: Lio's grandmother and I picked herbs together for forty years. She knew every stone in this valley.
+=> Nan: The castle's steward came for a sleeping draught last month. I didn't ask what for.
+=> Nan: You'll take a cold down there in the mine, if you go. Everyone does. <<if $act == Act.Castle>>
+===
+
+title: HerbTable
+act: All
+location: Cottage
+quest: herbs
+---
+Jars and bunches on the table, each with a label in Nan's tidy hand. One jar is labelled "for the deep cold".
+===
+
+title: Bell
+act: All
+location: Chapel
+quest: survey
+---
+<<if surveyed("bell")>>
+    The bell tower is on your map. The rope sways a little in the draught.
+<<else>>
+    You climb the tower beside the bell rope. From the top the whole valley lies open, the castle, the mine, the abbey's meadows.
+    You take your bearings from the bell itself.
+    <<survey bell>>
+    <<detour SurveyCheck>>
+<<endif>>
+===
+
+title: MasonMark
+act: All
+location: Chapel
+scenario: The moving stones
+---
+A mason's mark cut in the wall: a circle with a line through it, the same as on the boundary stones by the river.
+<<once>>
+    Under it, almost worn away, words in the old tongue. "As above, so under the hill."
+<<endonce>>
+===
