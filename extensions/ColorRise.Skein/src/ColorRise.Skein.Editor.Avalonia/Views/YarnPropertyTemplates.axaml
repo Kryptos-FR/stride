@@ -9,7 +9,7 @@
   <!-- A property that names a Yarn node: a list of the nodes of its project that filters as the user types -->
   <views:YarnNodeTemplateProvider x:Key="YarnNodeTemplateProvider" caev:PropertyViewHelper.TemplateCategory="PropertyEditor" OverrideRule="All">
     <DataTemplate DataType="cpqvm:NodeViewModel">
-      <views:YarnNodePicker Text="{Binding NodeValue, Converter={caec:DifferentValuesToString}, UpdateSourceTrigger=Explicit}"
+      <views:YarnNodePicker Node="{Binding NodeValue, Converter={caec:DifferentValuesToString}}"
                             ItemsSource="{ReflectionBinding [NodeNames]}"
                             PlaceholderText="Pick a node"/>
     </DataTemplate>

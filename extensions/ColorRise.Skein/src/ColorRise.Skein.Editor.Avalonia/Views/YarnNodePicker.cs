@@ -1,45 +1,69 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 
 namespace ColorRise.Skein.Editor.Avalonia.Views;
 
 /// <summary>
-/// A box that picks the title of a Yarn node among those of a project: the list opens when the box gets the focus and
-/// filters as the user types. The text goes to its binding when a node is picked in the list, on Enter (the first node
-/// shown when none is highlighted) or when the focus leaves, not on every key; Escape shows the bound value again.
+/// A box that picks the title of a Yarn node among those of a project: the list opens with every node when the box
+/// gets the focus, and filters as the user types. The text becomes the <see cref="Node"/> when a node is picked in the
+/// list, on Enter (the first node shown when none is highlighted) or when the focus leaves, not on every key; Escape
+/// shows the node again.
 /// </summary>
-/// <remarks>
-/// The binding of <see cref="AutoCompleteBox.Text"/> uses <c>UpdateSourceTrigger=Explicit</c>.
-/// </remarks>
 public sealed class YarnNodePicker : AutoCompleteBox
 {
-    private bool hasChanges;
+    /// <summary>
+    /// The title of the picked node: what a property binds to.
+    /// </summary>
+    public static readonly StyledProperty<string?> NodeProperty = AvaloniaProperty.Register<YarnNodePicker, string?>(nameof(Node), defaultBindingMode: BindingMode.TwoWay);
 
     public YarnNodePicker()
     {
-        FilterMode = AutoCompleteFilterMode.Contains;
+        // Every node until the user types: the title the box shows would leave only itself
+        ItemFilter = (search, item) => !HasChanges || (item as string)?.Contains(search ?? "", StringComparison.OrdinalIgnoreCase) == true;
         MinimumPrefixLength = 0;
         MaxDropDownHeight = 300;
-        TextChanged += OnTextChanged;
         DropDownClosed += OnDropDownClosed;
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    /// <summary>
+    /// The title of the picked node.
+    /// </summary>
+    public string? Node
+    {
+        get => GetValue(NodeProperty);
+        set => SetValue(NodeProperty, value);
     }
 
     /// <inheritdoc/>
     protected override Type StyleKeyOverride => typeof(AutoCompleteBox);
 
+    // Whether the box shows something else than the node: what the user typed or picked, not sent yet
+    private bool HasChanges => (Text ?? "") != (Node ?? "");
+
     /// <summary>
-    /// Sends the text to the binding when the user changed it.
+    /// Makes the text of the box the node.
     /// </summary>
     public void Commit()
     {
-        if (!hasChanges)
-            return;
+        if (HasChanges)
+        {
+            SetCurrentValue(NodeProperty, Text ?? "");
+        }
+    }
 
-        hasChanges = false;
-        BindingOperations.GetBindingExpressionBase(this, TextProperty)?.UpdateSource();
+    /// <inheritdoc/>
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == NodeProperty)
+        {
+            SetCurrentValue(TextProperty, Node ?? "");
+        }
     }
 
     /// <inheritdoc/>
@@ -48,6 +72,8 @@ public sealed class YarnNodePicker : AutoCompleteBox
         base.OnGotFocus(e);
         if (!IsDropDownOpen && ItemsSource is not null)
         {
+            // The list still has what was last typed: it is filtered again before it opens
+            PopulateComplete();
             IsDropDownOpen = true;
         }
     }
@@ -64,22 +90,17 @@ public sealed class YarnNodePicker : AutoCompleteBox
         }
     }
 
-    private void OnTextChanged(object? sender, TextChangedEventArgs e)
-    {
-        // The text also changes when the binding shows its value: only what the user does counts
-        if (IsKeyboardFocusWithin || IsDropDownOpen)
-        {
-            hasChanges = true;
-        }
-    }
-
     private void OnDropDownClosed(object? sender, EventArgs e)
     {
-        // A node picked in the list: the box shows its title. The list also closes when the text is cleared
-        if (SelectedItem is string title && title == Text)
+        // A node picked in the list: the box shows its title once the list has closed. The list also closes when the
+        // text is cleared, or shows no node
+        Dispatcher.UIThread.Post(() =>
         {
-            Commit();
-        }
+            if (!IsDropDownOpen && SelectedItem is string title && title == Text)
+            {
+                Commit();
+            }
+        });
     }
 
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
@@ -96,12 +117,10 @@ public sealed class YarnNodePicker : AutoCompleteBox
                 Commit();
                 break;
 
-            case Key.Escape when hasChanges:
+            case Key.Escape when HasChanges:
                 // The box would put the typed text back when its list closes: the list closes first
-                hasChanges = false;
                 IsDropDownOpen = false;
-                BindingOperations.GetBindingExpressionBase(this, TextProperty)?.UpdateTarget();
-                hasChanges = false;
+                SetCurrentValue(TextProperty, Node ?? "");
                 e.Handled = true;
                 break;
         }
