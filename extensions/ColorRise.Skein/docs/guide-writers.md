@@ -109,7 +109,7 @@ A **line group** is the same idea for lines, inside a node:
 => Tam: You again! <<once>>
 ```
 
-How the game picks is the project's *Saliency*. With the default one, the node or the line with the most conditions wins; among equals, the one seen the least often; among those, one at random. So a node group with two nodes that are both always true does not play at random: it plays them in turn.
+How the game picks is the project's *Saliency*. With the default one, the node or the line seen the least often wins; among those, the one with the most conditions; among those, one at random. So a node group with two nodes that are both always true does not play at random: it plays them in turn. And a node meant as a fallback (`when: always`) is not kept for when nothing else passes: once the others have been seen, it is the least seen. Give a fallback a condition that is false when another node can play.
 
 ## 5. Play
 
