@@ -106,7 +106,13 @@ public sealed class YarnProjectBuilderTests
     {
         var untagged = "title: Docks\n---\nOne.\nTwo. #line:two\nThree.\nFour.\n-> Five\n    Six.\n===\n";
 
-        var build = Build(Project("fr", "de"), ("Dialogue/Act1.yarn", Act1), ("Dialogue/Docks.yarn", untagged), ("Dialogue/Chatter/Pier.yarn", Pier));
+        // The strings files were looked for, and neither language has one
+        var build = YarnProjectBuilder.Build(
+            Project("fr", "de"),
+            "Dialogue/Story",
+            [("Dialogue/Act1.yarn", Act1), ("Dialogue/Docks.yarn", untagged), ("Dialogue/Chatter/Pier.yarn", Pier)],
+            [],
+            new Dictionary<string, IReadOnlyList<YarnStringRow>>());
 
         Assert.False(build.HasErrors);
         Assert.Equal(["en", "fr", "de"], build.Project!.Languages);
@@ -150,6 +156,12 @@ public sealed class YarnProjectBuilderTests
                 "Dialogue/Story: the language 'de' has no strings file, so its lines show in en. Export the strings of the project and set the file in its localisations.",
             ],
             build.Warnings);
+
+        // A build that did not read the strings files says nothing of them: the analysis of the editor, as the scripts are typed
+        var unread = YarnProjectBuilder.Build(Project("fr", "de"), "Dialogue/Story", scripts, []);
+        Assert.Empty(unread.Warnings);
+        Assert.Empty(unread.Translations);
+        Assert.Equal(["en", "fr", "de"], unread.Project!.Languages);
     }
 
     [Fact]

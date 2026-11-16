@@ -53,7 +53,10 @@ public static class YarnProjectBuilder
     /// <param name="projectName">The name of the project in the messages about it.</param>
     /// <param name="scripts">The scripts the project includes, with the names the messages give them.</param>
     /// <param name="functions">The functions of the game.</param>
-    /// <param name="translations">The rows of the strings file of each other language of the project, by language; a language without a strings file is not in it.</param>
+    /// <param name="translations">
+    /// The rows of the strings file of each other language of the project, by language; a language without a strings file
+    /// is not in it. Null when the strings files were not read: the build has no translation and says nothing of them.
+    /// </param>
     /// <param name="cancellation">Stops the compilation.</param>
     public static YarnProjectBuild Build(
         YarnProjectAsset project,
@@ -120,9 +123,9 @@ public static class YarnProjectBuilder
 
         var tables = new List<YarnStringTable>();
         var baseRows = YarnStringsCsv.RowsOf(compilation, project.BaseLanguage);
-        foreach (var language in content.Languages.Skip(1))
+        foreach (var language in translations is null ? [] : content.Languages.Skip(1))
         {
-            if (translations is null || !translations.TryGetValue(language, out var rows))
+            if (!translations!.TryGetValue(language, out var rows))
             {
                 warnings.Add($"{projectName}: the language '{language}' has no strings file, so its lines show in {project.BaseLanguage}. Export the strings of the project and set the file in its localisations.");
                 continue;
