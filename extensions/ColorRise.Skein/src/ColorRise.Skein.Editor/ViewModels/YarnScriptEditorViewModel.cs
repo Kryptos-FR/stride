@@ -1,6 +1,8 @@
 using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Assets.Text;
 using ColorRise.Skein.Editor.Graph;
+using ColorRise.Skein.Editor.Nodes;
+using ColorRise.Skein.Editor.PropertyGrid;
 using ColorRise.Skein.Editor.Services;
 using ColorRise.Skein.Editor.Text;
 using Stride.Core.Assets.Editor.Annotations;
@@ -60,6 +62,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     private bool isAnalysisCurrent;
     private bool showWholeFile;
     private YarnTextPlace? requestedPlace;
+    private YarnNodeHeadersSelection? nodeHeaders;
 
     public YarnScriptEditorViewModel(YarnScriptViewModel script)
         : base(script)
@@ -154,6 +157,16 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     /// Raised when the text pane is to show a place: <see cref="TakeRequestedPlace"/> gives it.
     /// </summary>
     public event Action? PlaceRequested;
+
+    /// <summary>
+    /// Raised after the cards were read from the text again.
+    /// </summary>
+    public event Action? Refreshed;
+
+    /// <summary>
+    /// The headers of the selected cards that the property grid was last given, in the order of the text.
+    /// </summary>
+    public IReadOnlyList<YarnNodeHeadersViewModel> SelectedHeaders => nodeHeaders?.Shown ?? [];
 
     /// <summary>
     /// What the user should know of the place of the script among the Yarn projects, or null: no project includes it,
@@ -289,12 +302,14 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         }
 
         Refresh(withLinks: true);
+        nodeHeaders = new YarnNodeHeadersSelection(this);
         return Task.FromResult(true);
     }
 
     /// <inheritdoc/>
     public override void Destroy()
     {
+        nodeHeaders?.Dispose();
         TextBuffer.Changed -= OnTextChanged;
         if (analysisService is not null)
         {
@@ -351,6 +366,37 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         Problem = YarnRenameService.Rename(Asset, card.Title, title?.Trim() ?? "");
         return Problem is null;
     }
+
+    /// <summary>
+    /// Shows the headers of the selected cards in the property grid when it shows something else: the user came back
+    /// to the graph.
+    /// </summary>
+    public void ShowNodeProperties() => nodeHeaders?.Take();
+
+    /// <summary>
+    /// Writes the headers of a card as <paramref name="headers"/> has them, but for the title; when a header cannot be
+    /// written, <see cref="Problem"/> says why and no text has changed.
+    /// </summary>
+    internal void WriteHeaders(YarnNodeCardViewModel card, YarnNodeHeaders headers)
+    {
+        if (!Knows(card))
+            return;
+
+        var current = Synchronize();
+        try
+        {
+            Apply("Edit node headers", YarnNodeHeadersText.Write(current, card.Span, headers));
+        }
+        catch (ArgumentException exception)
+        {
+            Problem = exception.Message;
+        }
+    }
+
+    /// <summary>
+    /// Shows the properties of the script in the property grid.
+    /// </summary>
+    internal void ShowScriptProperties() => ShowAssetProperties();
 
     /// <summary>
     /// Adds a copy of each selected node under a title no node has, a little aside, and selects the copies.
@@ -679,6 +725,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             : [.. analysis.Diagnostics.OrderBy(d => d.File == fileName ? 0 : 1).ThenBy(d => d.File, StringComparer.Ordinal).ThenBy(d => d.Line).ThenBy(d => d.Column)];
         ScriptDiagnostics = [.. Diagnostics.Where(d => d.File == fileName)];
         RefreshNotice();
+        Refreshed?.Invoke();
     }
 
     // The nodes of the script in the analysis, by title and by rank among the nodes of the title

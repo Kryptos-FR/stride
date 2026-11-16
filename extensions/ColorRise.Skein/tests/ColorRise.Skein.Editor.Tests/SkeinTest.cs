@@ -20,7 +20,14 @@ internal sealed class SkeinSession : IAsyncDisposable
     private SkeinSession(EditorTestSession kit)
     {
         this.kit = kit;
-        UndoRedo.Done += (_, e) => Steps.Add(UndoRedo.GetName(e.Transaction));
+        UndoRedo.Done += (_, e) =>
+        {
+            // A transaction that made no change completes too, and is no step of the history
+            if (e.Transaction.Operations.Count > 0)
+            {
+                Steps.Add(UndoRedo.GetName(e.Transaction));
+            }
+        };
     }
 
     public SessionViewModel Session => kit.Session;

@@ -52,6 +52,9 @@ public sealed partial class YarnScriptEditorView : UserControl, IAssetEditorView
 
         // Before the graph opens its menu: the menu shows what fits the place of the click
         Graph.AddHandler(ContextRequestedEvent, OnGraphContextRequested, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
+        // A click on the graph brings the headers of the selected nodes back to the property grid, when the grid shows
+        // something else: the selection does not change when the user clicks a node that is selected already
+        Graph.AddHandler(PointerReleasedEvent, (_, _) => editor?.ShowNodeProperties(), RoutingStrategies.Bubble, handledEventsToo: true);
     }
 
     /// <summary>
