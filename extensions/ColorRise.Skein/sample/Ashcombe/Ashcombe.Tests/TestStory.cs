@@ -208,6 +208,15 @@ internal sealed class TestStory
 
         Assert.Empty(choices);
         Go(door);
+
+        // Through a door, the game plays what greets the cartographer there; at the end of a road, the stage of the
+        // next scene does
+        if (journey is null)
+        {
+            await Director.RunEvents();
+            Assert.Empty(Errors);
+        }
+
         await Settle();
     }
 
@@ -221,6 +230,47 @@ internal sealed class TestStory
             await Use(door);
         }
     }
+
+    /// <summary>
+    /// Talks to the echo of the deep level, as its own runner in the deep level's scene does: the echo's project, built
+    /// apart from the story's, in a session of its own over the same variables. The events after it play on the story.
+    /// </summary>
+    /// <param name="answers">The answers the cartographer knows, picked when the echo offers one of them.</param>
+    public async Task TalkToEcho(params string[] answers)
+    {
+        echo ??= MakeEcho();
+        Reader.Answers.Clear();
+        Reader.Answers.UnionWith(answers);
+        var stage = new SessionStage(echo);
+        Assert.True(Director.CanTalk("Echo", stage), "The echo has nothing to say now.");
+        Assert.True(await Director.Talk("Echo", stage));
+        Reader.Answers.Clear();
+        Assert.Empty(Errors);
+        await Settle();
+    }
+
+    private DialogueSession MakeEcho()
+    {
+        var functions = Actions.Describe().Where(a => a.Kind == YarnActionKind.Function).Select(YarnFunctionDeclaration.From).ToList();
+        var build = YarnProjectBuilder.Build(new YarnProjectAsset(), "Echo", StoryFiles.EchoScripts(), functions, null);
+        Assert.Empty(build.Compilation.Diagnostics.Where(d => d.Severity == YarnSeverity.Error).Select(d => d.ToString()));
+        var project = build.Project!;
+        var lines = new TextLineProvider(new[] { build.BaseStrings! }.ToDictionary(t => t.Language).GetValueOrDefault, project.BaseLanguage, Log)
+        {
+            LineMetadata = project.LineMetadata,
+            ShadowLines = project.ShadowLines,
+        };
+        return new DialogueSession(project.GetProgram(), Variables, lines, Actions, Reader, new DialogueSessionOptions
+        {
+            Saliency = project.Saliency,
+            RandomSeed = 1,
+            Clock = new NoWait(),
+            Log = Log,
+            Nodes = project.Nodes,
+        });
+    }
+
+    private DialogueSession? echo;
 
     /// <summary>
     /// Lets one part of the day pass, as the cartographer does, and plays the events that follow.
@@ -341,6 +391,11 @@ internal sealed class Reader : IDialogueResponder
     public Queue<string> Choices { get; } = new();
 
     /// <summary>
+    /// Answers to pick when no choice is queued: the first available option whose text is one of them.
+    /// </summary>
+    public HashSet<string> Answers { get; } = [];
+
+    /// <summary>
     /// Called with each command the game has not registered.
     /// </summary>
     public Action<string>? OnCommand { get; set; }
@@ -361,7 +416,7 @@ internal sealed class Reader : IDialogueResponder
         }
 
         if (!Choices.TryDequeue(out var wanted))
-            return new(options.FirstOrDefault(o => o.IsAvailable)?.Index);
+            return new((options.FirstOrDefault(o => o.IsAvailable && Answers.Contains(o.Line.Text.Text)) ?? options.FirstOrDefault(o => o.IsAvailable))?.Index);
 
         var chosen = options.FirstOrDefault(o => o.IsAvailable && o.Line.Text.Text == wanted);
         Assert.True(chosen is not null, $"The option '{wanted}' is not offered. Offered: {string.Join(" | ", options.Select(o => o.Line.Text.Text + (o.IsAvailable ? "" : " [unavailable]")))}");

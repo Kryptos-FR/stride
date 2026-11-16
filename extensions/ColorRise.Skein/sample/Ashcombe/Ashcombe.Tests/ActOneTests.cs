@@ -203,7 +203,10 @@ public sealed class ActOneTests
         await story.Talk("BridgeMark");
         await story.Talk("Stones");
         await story.Use("InnDoor");
-        await story.Use("CellarStairs", "Could you show me the cellar? The old well is a landmark.");
+        if (story.Flag("$cellar_allowed"))
+            await story.Use("CellarStairs");
+        else
+            await story.Use("CellarStairs", "Could you show me the cellar? The old well is a landmark.");
         await story.Talk("Well");
         await story.Walk("CellarUp", "InnExit", "MillDoor");
         await story.Talk("Loft");

@@ -1,0 +1,185 @@
+title: ActThreeNotes
+act: Mine
+location: Mine
+scenario: The collapse
+style: note
+---
+Act III, one shift in the mine, a separate root scene with its levels as child scenes (the gallery, the flooded gallery, the deep level). The lamp holds three measures of oil, and each descent burns one. Three ways down from the gallery to the deep level, each opened or not by Act I (the rope from the wheel, Nan's remedy against the cold water, or the long way, which burns one more measure). Jory, the carvings of the true border, the steward trapped in the gallery, the tally and the echo (a project of its own). The act ends at the camp when Jory is found or lost, or when the oil is out.
+===
+
+title: Events
+act: Mine
+location: Mine
+scenario: The collapse
+quest: jory
+when: once
+when: $act == Act.Mine
+when: here() == "Mine"
+---
+The mine camp, under the hill. Tents, a fire, and miners who don't look up.
+Gudrun: Foreman Gudrun. You came. Good.
+Gudrun: Jory went into the old gallery before it fell. The lift goes down that far. Past the rubble there are three ways to the deep level.
+Gudrun: The old shaft, if you have a rope. The flooded gallery, if the cold doesn't stop your heart. Or the long way round, which eats lamp oil.
+Gudrun: Three measures of oil in your lamp. Every trip down the lift burns one. Make them count.
+<<set $quest_jory to QuestState.Active>>
+<<quest_changed jory>>
+<<if $quest_page == QuestState.Succeeded>>
+    You think of the charter's page. "As the carvings show." The carvings must be down there.
+<<else>>
+    Gudrun: And the lantern folk are down there. Carvings on the wall, that glow green. Old miners' nonsense, or not.
+<<endif>>
+<<set $quest_carvings to QuestState.Active>>
+<<quest_changed carvings>>
+<<if $corvin_in_mine>>
+    Gudrun: Your steward came at first light. Went down the lift without a word to me. He hasn't come up.
+    <<set $quest_corvin to QuestState.Active>>
+    <<quest_changed corvin>>
+<<endif>>
+===
+
+title: Events
+act: Mine
+location: Anywhere
+scenario: The lights
+quest: echo
+when: $echo_answered and $quest_echo != QuestState.Succeeded
+---
+// The echo is a project of its own, but it shares the game's variables: the story sees what it set.
+Somewhere far below, the echo has fallen silent. The miners will talk about it for a year.
+<<set $quest_echo to QuestState.Succeeded>>
+<<quest_changed echo>>
+===
+
+title: Events
+act: Mine
+location: Mine
+scenario: The collapse
+when: once
+when: $act == Act.Mine
+when: here() == "Mine" and $quest_jory != QuestState.NotStarted
+when: $quest_jory != QuestState.Active or $oil <= 0
+---
+// The end of the third act, at the camp: Jory found, or lost with the last of the oil.
+<<if $jory_found>>
+    The lift comes up into grey dawn light, with Jory leaning on your shoulder. The camp cheers.
+    Gudrun: You brought him back. I won't forget it. Nobody under this hill will.
+<<else>>
+    <<if $quest_jory == QuestState.Active>>
+        <<set $quest_jory to QuestState.Failed>>
+        <<quest_changed jory>>
+    <<endif>>
+    Gudrun: The oil's out. We dig for him from this side, and we pray. #mood:sad
+<<endif>>
+<<if $quest_carvings == QuestState.Active>>
+    <<set $quest_carvings to QuestState.Failed>>
+    <<quest_changed carvings>>
+<<endif>>
+<<if $quest_corvin == QuestState.Active>>
+    The steward climbs out of the lift at the last moment, grey with dust, and walks off without a word.
+    <<set $quest_corvin to QuestState.Failed>>
+    <<quest_changed corvin>>
+<<endif>>
+<<if $quest_tally == QuestState.Active or $quest_tally == QuestState.Offered>>
+    <<set $quest_tally to QuestState.Failed>>
+    <<quest_changed tally>>
+<<endif>>
+<<if $quest_echo == QuestState.Offered>>
+    <<set $quest_echo to QuestState.Failed>>
+    <<quest_changed echo>>
+<<endif>>
+Two days later, the valley goes down to Ashcombe for the spring fair, and the hearing.
+<<set $act to Act.Fair>>
+<<set $fair_up to true>>
+<<set $pell_in_village to true>>
+<<set $corvin_in_mine to false>>
+<<set $corvin_at_fair to $corvin_fate != CorvinFate.Left>>
+<<end_day>>
+<<end_day>>
+<<go VillageRoad>>
+===
+
+title: Gudrun
+act: Mine
+location: Mine
+scenario: The collapse
+quest: tally
+when: $act == Act.Mine
+when: $quest_tally == QuestState.NotStarted
+---
+Gudrun: One more thing, map maker. The tally board. Every miner hangs a token when they go down and takes it back when they come up.
+Gudrun: My eyes are tired. Count them for me when you can. I need to know who is still under the hill.
+<<set $quest_tally to QuestState.Active>>
+<<quest_changed tally>>
+Gudrun: And if you hear a voice asking riddles down there, that's the echo of the deep level. Answer it, and it goes quiet. Nobody has.
+<<set $quest_echo to QuestState.Offered>>
+<<quest_changed echo>>
+===
+
+title: Gudrun
+act: All
+location: Mine
+scenario: The collapse
+when: always
+---
+=> Gudrun: Lamp oil is life down there. Don't waste it on sightseeing.
+=> Gudrun: [plural value={$oil} one="One measure" other="% measures" /] left in your lamp. <<if $oil > 0>>
+=> Gudrun: Your lamp is dry. Nobody goes down without light. <<if $oil <= 0>>
+=> Gudrun: You answered the echo? Nobody answers the echo. <<if $echo_answered>>
+=> Gudrun: Thank you for the count. <<if $quest_tally == QuestState.Succeeded>>
+===
+
+title: TallyBoard
+act: Mine
+location: Mine
+scenario: The collapse
+quest: tally
+when: $quest_tally == QuestState.Active
+---
+<<if $jory_found>>
+    <<set $tally to 12>>
+<<else>>
+    <<set $tally to 11>>
+<<endif>>
+You count the tokens on the pegs. [plural value={$tally} one="One miner" other="% miners" /] came up.
+<<if $jory_found>>
+    Jory's token hangs on the last peg, the [ordinal value=12 one="%st" two="%nd" few="%rd" other="%th" /]. Everyone is out.
+<<else>>
+    One peg is empty, the [ordinal value=12 one="%st" two="%nd" few="%rd" other="%th" /]. Jory's.
+<<endif>>
+<<set $quest_tally to QuestState.Succeeded>>
+<<quest_changed tally>>
+===
+
+title: TallyBoard
+act: All
+location: Mine
+scenario: The collapse
+when: always
+---
+The tally board. Twelve pegs, twelve names chalked above them.
+===
+
+title: LiftDown
+act: Mine
+location: Mine
+scenario: The collapse
+when: $act == Act.Mine
+---
+// Each trip down the lift burns a measure of the lamp's oil.
+<<if $oil <= 0>>
+    Gudrun: Your lamp is dry. I won't send you down without light.
+<<else>>
+    <<set $oil to $oil - 1>>
+    The lift creaks down into the dark. Your lamp burns lower. [plural value={$oil} one="One measure" other="% measures" /] left.
+    <<go Lift>>
+<<endif>>
+===
+
+title: MineToVillage
+act: Mine
+location: Mine
+scenario: The collapse
+when: $act == Act.Mine
+---
+Gudrun: Not while Jory is under the hill. Nobody leaves the camp.
+===
