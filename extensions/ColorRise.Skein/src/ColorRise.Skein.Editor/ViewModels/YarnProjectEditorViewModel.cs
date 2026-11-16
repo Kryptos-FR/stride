@@ -129,7 +129,8 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
     public int LineCount { get => lineCount; private set => SetValue(ref lineCount, value); }
 
     /// <summary>
-    /// The lines and options without a <c>#line:</c> id: they cannot be translated.
+    /// The lines and options without a <c>#line:</c> id: they cannot be translated. A line that repeats another
+    /// (<c>#shadow:</c>) is not one of them.
     /// </summary>
     public int LinesWithoutId { get => linesWithoutId; private set => SetValue(ref linesWithoutId, value); }
 
@@ -343,7 +344,7 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
         Warnings = current.Build.Warnings;
         NodeCount = current.Nodes.Count;
         LineCount = compilation.Lines.Count;
-        LinesWithoutId = compilation.Lines.Count(l => l.Value.IsImplicitId);
+        LinesWithoutId = compilation.Lines.Count(l => l.Value.IsImplicitId && l.Value.ShadowOf is null);
         Summary = string.Join("  ·  ", Count(Scripts.Count, "script"), Count(NodeCount, "node"), Count(LineCount, "line"), Count(Variables.Count, "variable"));
         LineIdNotice = LinesWithoutId switch
         {

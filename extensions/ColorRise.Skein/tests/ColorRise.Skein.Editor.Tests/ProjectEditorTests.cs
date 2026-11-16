@@ -188,6 +188,20 @@ public sealed class ProjectEditorTests
     }
 
     [Fact]
+    public async Task A_line_that_repeats_another_needs_no_id()
+    {
+        await using var session = await SkeinSession.OpenAsync(
+            SkeinSession.Project("Dialogue/Story"),
+            SkeinSession.Script("Dialogue/Act1", "title: Arrival\n---\nNarrator: Here. #line:here\nNarrator: Here. #shadow:here\n===\n"));
+        var editor = session.EditProject("Dialogue/Story");
+        await editor.WhenRefreshed();
+
+        // The line of #shadow: is translated with the line it repeats
+        Assert.Equal((2, 0), (editor.LineCount, editor.LinesWithoutId));
+        Assert.Null(editor.LineIdNotice);
+    }
+
+    [Fact]
     public async Task Saving_a_project_writes_the_project_file_of_Yarn_Spinners_tools()
     {
         await using var session = await OpenAsync("fr");
