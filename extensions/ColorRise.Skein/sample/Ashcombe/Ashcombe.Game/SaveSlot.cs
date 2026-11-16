@@ -95,7 +95,7 @@ public static class SaveSlot
     /// <summary>
     /// Puts a story in a saved state. Where the cartographer is, the game restores: it loads the places.
     /// </summary>
-    /// <returns>The variables of the save that the story no longer has.</returns>
+    /// <returns>The variables of the save that the story declares with another type, which were dropped.</returns>
     /// <exception cref="InvalidOperationException">A dialogue plays.</exception>
     public static IReadOnlyList<string> Restore(StoryDirector story, SaveData data)
     {

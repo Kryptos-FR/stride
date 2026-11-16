@@ -104,9 +104,8 @@ public sealed class StorySystem : GameSystemBase
     private ScriptSystem Scripts => Services.GetSafeServiceAs<ScriptSystem>();
 
     /// <summary>
-    /// Makes a Yarn project known to the variables of the game, and keeps it loaded. A save loaded before a scene that
-    /// uses the project started keeps the project's variables only if the project was declared: the variables drop
-    /// what no project they know declares.
+    /// Makes a Yarn project known to the variables of the game, and keeps it loaded: its variables read their defaults
+    /// and its smart variables are computed from the start, before a scene that uses the project starts.
     /// </summary>
     public void Declare(YarnProject project)
     {
@@ -207,7 +206,7 @@ public sealed class StorySystem : GameSystemBase
     /// <summary>
     /// Puts the game in a saved state: the story, the root scene and the interiors of the save, where everyone stood.
     /// </summary>
-    /// <returns>The variables of the save that no project of the game declares, which were dropped.</returns>
+    /// <returns>The variables of the save that the story declares with another type, which were dropped.</returns>
     /// <exception cref="InvalidOperationException">Something plays, or the cartographer is on the way.</exception>
     public IReadOnlyList<string> Restore(SaveData data)
     {

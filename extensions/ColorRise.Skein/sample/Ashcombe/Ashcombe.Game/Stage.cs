@@ -75,9 +75,9 @@ public sealed class Stage : SyncScript
     public float Reach { get; set; } = 2.5f;
 
     /// <summary>
-    /// The other Yarn projects of the game, which the variables must know from the start, whichever scene uses them.
+    /// The other Yarn projects of the game, which the variables know from the start, whichever scene uses them.
     /// </summary>
-    /// <userdoc>The other Yarn projects of the game (the echo of the mine). The variables know them from the start, so that a save made anywhere keeps their variables.</userdoc>
+    /// <userdoc>The other Yarn projects of the game (the echo of the mine). The variables know them from the start, so that the story reads their variables anywhere.</userdoc>
     [DataMember(60)]
     public List<YarnProject> Projects { get; } = [];
 

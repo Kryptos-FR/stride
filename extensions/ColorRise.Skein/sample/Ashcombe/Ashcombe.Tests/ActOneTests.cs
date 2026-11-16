@@ -8,6 +8,19 @@ namespace Ashcombe.Tests;
 public sealed class ActOneTests
 {
     [Fact]
+    public async Task Game_code_reads_a_smart_variable_that_calls_the_functions_of_the_game()
+    {
+        // $pell_has_errand calls here(), a function of the game: the game reads it outside a dialogue
+        var story = TestStory.Ashcombe();
+        await story.Start();
+        Assert.True(story.Flag("$pell_has_errand"));
+
+        story.Variables.SetValue("$pell_met", true);
+
+        Assert.False(story.Flag("$pell_has_errand"));
+    }
+
+    [Fact]
     public async Task The_survey_and_the_stones_done_on_the_first_day_send_the_cartographer_to_the_castle()
     {
         var story = TestStory.Ashcombe();

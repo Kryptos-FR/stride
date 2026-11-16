@@ -128,10 +128,10 @@ public sealed class SaveTests
     }
 
     [Fact]
-    public void Finding_a_save_loses_the_variables_of_a_project_the_variables_do_not_know_yet()
+    public void A_save_keeps_the_variables_of_a_project_no_scene_has_declared_yet()
     {
-        // What the stage's list of projects is for: without it, the echo's project is known only once a scene that
-        // uses it has started, and a save loaded in a new game before that drops the echo's variables
+        // Without the stage's list of projects, the echo's project is known only once a scene that uses it has started:
+        // the variables keep its values from a save until then, unchecked
         var project = new TestProject("Story", Story);
         var echo = new TestProject("Echo", Echo);
         SaveData save;
@@ -146,8 +146,14 @@ public sealed class SaveTests
         game.Start(Village);
         var dropped = game.System.Restore(save);
 
-        Assert.Equal(["$echo_riddles"], dropped);
-        Assert.False(game.Dialogues.Variables.TryGetValue<float>("$echo_riddles", out _));
+        Assert.Empty(dropped);
+        Assert.Equal(["$echo_riddles"], game.Dialogues.Variables.UndeclaredNames);
+
+        game.Dialogues.Variables.Declare(echo.Project);
+
+        Assert.Empty(game.Dialogues.Variables.UndeclaredNames);
+        Assert.True(game.Dialogues.Variables.TryGetValue<float>("$echo_riddles", out var riddles));
+        Assert.Equal(2f, riddles);
     }
 
     [Fact]

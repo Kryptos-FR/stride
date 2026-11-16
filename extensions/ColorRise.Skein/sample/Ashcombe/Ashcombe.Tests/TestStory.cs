@@ -109,7 +109,7 @@ internal sealed class TestStory
         if (translation is not null)
             Reader.Translate(YarnStringsCsv.RowsOf(Build.Compilation, language!), translation);
 
-        Variables = new VariableStorage(Log);
+        Variables = new VariableStorage(Log) { Functions = Actions };
         Reader.OnCommand = OnCommand;
         Session = new DialogueSession(project.GetProgram(), Variables, Lines, Actions, Reader, new DialogueSessionOptions
         {
