@@ -1,0 +1,94 @@
+title: EchoState
+act: Mine
+location: Deep
+quest: echo
+color: blue
+---
+// The echo of the deep level is a project of its own, loaded with the game and played by a runner of its own in the
+// deep level's scene. It shares the game's variables with the story: the story declares $echo_answered too, and reads
+// what the echo set; $echo_riddles is the echo's alone.
+/// The echo was answered.
+<<declare $echo_answered = false>>
+/// How many riddles the echo asked.
+<<declare $echo_riddles = 0>>
+===
+
+title: Echo
+act: Mine
+location: Deep
+quest: echo
+when: not $echo_answered
+---
+<<set $echo_riddles to $echo_riddles + 1>>
+<<if $echo_riddles == 1>>
+    Echo: Who calls? Who calls? Who calls?
+    Echo: Answer, and I will be quiet. Fail, and I will say your name all night.
+<<else>>
+    Echo: Back again. The [ordinal value={$echo_riddles} one="%st" two="%nd" few="%rd" other="%th" /] riddle, then.
+<<endif>>
+<<jump EchoRiddle>>
+===
+
+title: EchoRiddle
+act: Mine
+location: Deep
+quest: echo
+---
+// Each visit throws a die for the riddle.
+<<declare $echo_roll = 0>>
+<<set $echo_roll to dice(3)>>
+<<if $echo_roll == 1>>
+    Echo: I have a bed but never sleep, a mouth but never eat. What am I?
+    -> A river.
+        <<jump EchoRight>>
+    -> A mine.
+        <<jump EchoWrong>>
+    -> A lantern.
+        <<jump EchoWrong>>
+<<elseif $echo_roll == 2>>
+    Echo: The more you take, the more you leave behind. What are they?
+    -> Footsteps.
+        <<jump EchoRight>>
+    -> Coins.
+        <<jump EchoWrong>>
+    -> Years.
+        <<jump EchoWrong>>
+<<else>>
+    Echo: I speak without a tongue and hear without ears. What am I?
+    -> A bell.
+        <<jump EchoWrong>>
+    -> An echo.
+        <<jump EchoRight>>
+    -> A ghost.
+        <<jump EchoWrong>>
+<<endif>>
+===
+
+title: EchoRight
+act: Mine
+location: Deep
+quest: echo
+---
+Echo: Right. Right. Right...
+The voice fades into the stone, and the deep level is quiet.
+<<set $echo_answered to true>>
+===
+
+title: EchoWrong
+act: Mine
+location: Deep
+quest: echo
+---
+Echo: Wrong. Wrong. Wrong...
+The echo laughs, far away. It will ask again.
+===
+
+title: Echo
+act: Mine
+location: Deep
+quest: echo
+when: $echo_answered
+---
+=> The hole in the rock is quiet.
+=> Something drips, far down. The echo says nothing.
+===

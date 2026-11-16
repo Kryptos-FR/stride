@@ -1,0 +1,230 @@
+!SceneAsset
+Id: e70ae9d2-7d17-54c1-b805-7953b1e93bfa
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 0.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! 0d2c9c1f-ae47-5505-aeee-aefd2d60483c
+        - ref!! b0c3b957-b2f8-5b7e-aad2-7909efe6f3f2
+        - ref!! 40ffb70f-1db4-59b4-ab4b-8ab03dd0886b
+        - ref!! bdad5579-414d-59a3-9062-134c8cfca174
+        - ref!! 006737f5-37b1-58c3-bd9a-11d370887ab5
+        - ref!! 0e5b9663-af94-5433-bd8b-e52be32577e3
+        - ref!! b1f548d4-cdf6-51d8-bc63-5f62d81c716b
+        - ref!! f671975a-e24a-541a-95c6-c10865934d8e
+        - ref!! 0259f98c-4dc9-5782-9fc8-270f39bc339a
+        - ref!! 58b54f40-7efe-5572-96cc-144c94ba39e3
+        - ref!! 0cb30933-10ca-548e-b18d-ab1179e26f75
+        - ref!! ef8cdb64-3991-55e4-bd38-5219401d5874
+    Parts:
+        -   Entity:
+                Id: 0d2c9c1f-ae47-5505-aeee-aefd2d60483c
+                Name: StallHedda
+                Components:
+                    14c7d806eb025aa1aa68ac00e4f6f1fc: !TransformComponent
+                        Id: 998f715d-7268-5db7-85b3-485fc0cc5802
+                        Position: {X: -9.0, Y: 0.0, Z: 7.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ded513c0715e5a3c8e22a88a945472fc: !ModelComponent
+                        Id: 778ee3f5-264b-5296-846f-faa2d7fd92a7
+                        Model: d2c19395-3bd4-544b-9294-cfc8e456fc4c:World/Models/Stall
+                        Materials: {}
+        -   Entity:
+                Id: b0c3b957-b2f8-5b7e-aad2-7909efe6f3f2
+                Name: StallBram
+                Components:
+                    5e86abf23f19522a8f50da2409d70d08: !TransformComponent
+                        Id: f3f8028a-a225-5b96-9080-79de39f27b8e
+                        Position: {X: -5.0, Y: 0.0, Z: 7.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    4a97ccdf73f452c285e2144366dbadc2: !ModelComponent
+                        Id: 0d3fc830-778a-5572-802c-b5d875c9e13e
+                        Model: dfba3286-1aec-5df0-a2b8-0dca48a81537:World/Models/StallBlue
+                        Materials: {}
+        -   Entity:
+                Id: 40ffb70f-1db4-59b4-ab4b-8ab03dd0886b
+                Name: StallCheese
+                Components:
+                    f3255857b535550498c4dce794d28055: !TransformComponent
+                        Id: 66d7df42-9f57-5913-ba63-6c584fbc7aee
+                        Position: {X: 7.5, Y: 0.0, Z: 7.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    d5952514484754b3b25896847a98f5f3: !ModelComponent
+                        Id: 33e4b737-bd90-50de-a222-17e311b6a7ca
+                        Model: d2c19395-3bd4-544b-9294-cfc8e456fc4c:World/Models/Stall
+                        Materials: {}
+        -   Entity:
+                Id: bdad5579-414d-59a3-9062-134c8cfca174
+                Name: Flag1
+                Components:
+                    5ff0d47a9c315a5d885224012158855e: !TransformComponent
+                        Id: 906860b7-ac1c-5dda-b135-712f0a17c5fa
+                        Position: {X: -2.5, Y: 0.0, Z: 9.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    a3568a5681535d3f9752efa1c60e1dc0: !ModelComponent
+                        Id: 0b52062e-5892-5ab6-aae9-0872c12d015c
+                        Model: edcbc40e-587d-5702-a63b-bc04ab69d856:World/Models/Flag
+                        Materials: {}
+        -   Entity:
+                Id: 006737f5-37b1-58c3-bd9a-11d370887ab5
+                Name: Flag2
+                Components:
+                    6cd67d3eea865657a7c7b641183fbc5a: !TransformComponent
+                        Id: 8d37998a-b807-5e2a-9dad-3cf5020e139c
+                        Position: {X: 2.5, Y: 0.0, Z: 9.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    f0ef47068b865e1e918212171eb747bc: !ModelComponent
+                        Id: 28ad10ed-6b42-5829-b3ab-b9daa9b51af8
+                        Model: edcbc40e-587d-5702-a63b-bc04ab69d856:World/Models/Flag
+                        Materials: {}
+        -   Entity:
+                Id: 0e5b9663-af94-5433-bd8b-e52be32577e3
+                Name: HearingTable
+                Components:
+                    01d841c7fa3157f6ab4191c536e0cd0b: !TransformComponent
+                        Id: cd19c5ca-7c57-54e8-8f31-edcd0f36ab59
+                        Position: {X: 0.0, Y: 0.0, Z: 9.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    32750f15ade0516ba6ac9ebead72f933: !ModelComponent
+                        Id: 30fc66fa-d565-54b3-a7f0-90d55125eed7
+                        Model: 9b969bc8-ad6a-50c9-8c0c-ebc123b422b7:World/Models/HearingTable
+                        Materials: {}
+                    f912f1938eef56ab933a8fa33dc0f3e2: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: fbfb303c-4a7a-5e43-9f44-b284cb770f6e
+                        Node: Hearing
+                        IsThing: true
+                        Label: line:use_hearing
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: b1f548d4-cdf6-51d8-bc63-5f62d81c716b
+                Name: Ysolde
+                Components:
+                    9095eb33d29e5b5ab55a555bd7265295: !TransformComponent
+                        Id: 6365b67f-4c89-51c2-84ed-abb9cdb5cd44
+                        Position: {X: -0.8, Y: 0.0, Z: 8.2}
+                        Rotation: {X: 0.0, Y: 1.0, Z: 0.0, W: 0.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    683b5bee148f581e8c59f824eef756f1: !ModelComponent
+                        Id: 00c53fe4-3a00-5044-8d00-7f263b490c66
+                        Model: 623c0b99-e5d9-5b59-a8e5-d3d336c43251:World/Models/Ysolde
+                        Materials: {}
+                    4d9e75d2eecd52ab89ac787c8a9c24d9: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 32d6341d-a894-56c0-b962-e967448ac0f7
+                        Node: Ysolde
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                        Runner: null
+                    319689bb6d795a0b8c580e9f20406333: !DialogueActorComponent
+                        Id: d82b2d23-8c63-594a-adc5-da8f00be1763
+                        ActorName: Ysolde
+        -   Entity:
+                Id: f671975a-e24a-541a-95c6-c10865934d8e
+                Name: Corvin
+                Components:
+                    640ba4ab687358afa1899500f7774a73: !TransformComponent
+                        Id: b1ddc395-4b5c-50d0-a69e-dd1c94452b44
+                        Position: {X: 1.6, Y: 0.0, Z: 8.2}
+                        Rotation: {X: 0.0, Y: 1.0, Z: 0.0, W: 0.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ecb23819aed2564f915b190d2fa3f736: !ModelComponent
+                        Id: 556e30d6-9dab-5196-87ac-e3ed93dbcf59
+                        Model: 24c4b25a-2c14-5f05-9a61-7cd90dfb64e2:World/Models/Corvin
+                        Materials: {}
+                    5e49d9a5070a55f6b18660c3c3d3a00b: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 4f5d9bf4-0aa1-5d35-a0bc-f82aa5a85b9e
+                        Node: Corvin
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                        Runner: null
+                    103229007a23588494553297a6d4aa4c: !DialogueActorComponent
+                        Id: d5ef5380-4c9b-5041-90b5-2d36a3e3b63f
+                        ActorName: Corvin
+                    fa410b52afde5709861912f099614542: !Ashcombe.ShownWhen,Ashcombe.Game
+                        Id: 2c27efb5-f28e-5838-ae86-c3b28fb6c634
+                        Variable: $corvin_at_fair
+                        Not: false
+        -   Entity:
+                Id: 0259f98c-4dc9-5782-9fc8-270f39bc339a
+                Name: Anselm
+                Components:
+                    ebbafa6105355818a555b9f3be489ed3: !TransformComponent
+                        Id: 1afc91a3-01db-5fe2-8122-f2b3f864d5ed
+                        Position: {X: 3.4, Y: 0.0, Z: 10.4}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    f366faf8aad65ec5a3adc1e448d1991e: !ModelComponent
+                        Id: db0ad614-424a-500d-bd3d-ac3516952c12
+                        Model: 97dddbe4-a6a2-5255-b569-08f7004f3f2a:World/Models/Anselm
+                        Materials: {}
+                    0bfe48d7bd8c5d138a3fc70f7655871d: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 267ef5fc-86dd-52be-9173-4f45a857cff9
+                        Node: Anselm
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                        Runner: null
+                    060b1536b7a158d68c7e2275c5d20457: !DialogueActorComponent
+                        Id: f9a3b089-dbb4-5f18-87ac-2c9ed2838134
+                        ActorName: Anselm
+        -   Entity:
+                Id: 58b54f40-7efe-5572-96cc-144c94ba39e3
+                Name: Fairgoer1
+                Components:
+                    2339540028845652b4c8da175110c3f4: !TransformComponent
+                        Id: b467056e-b0d8-52cd-85a3-16508efd24b0
+                        Position: {X: -7.0, Y: 0.0, Z: 9.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    05260cee093753459cd8bb2a30c197bb: !ModelComponent
+                        Id: 90f848c5-5878-562b-892d-b4c17c7164cc
+                        Model: 0bbdf37f-8d1f-5bda-b8fa-29de1bce787e:World/Models/Fairgoer1
+                        Materials: {}
+        -   Entity:
+                Id: 0cb30933-10ca-548e-b18d-ab1179e26f75
+                Name: Fairgoer2
+                Components:
+                    3a6dc9d22e6252de96577ad7c875a7e4: !TransformComponent
+                        Id: a9f06594-cf98-5e7e-9d60-ae98aa774a44
+                        Position: {X: -3.5, Y: 0.0, Z: 11.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    4ac9ab43823756b4a10dd4f168d0e25a: !ModelComponent
+                        Id: c6502bf1-6b66-5157-a572-6c09e1cf040e
+                        Model: ff5694fe-9847-5fad-9763-e9fb9212ad3a:World/Models/Fairgoer2
+                        Materials: {}
+        -   Entity:
+                Id: ef8cdb64-3991-55e4-bd38-5219401d5874
+                Name: Fairgoer3
+                Components:
+                    3663fd8e8e0b5095831996e81eda8580: !TransformComponent
+                        Id: 90dd9e6d-dac8-5694-bbb4-c390f1080262
+                        Position: {X: 6.0, Y: 0.0, Z: 10.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    12999d80085850358cee679fb1c55743: !ModelComponent
+                        Id: 461797a7-d730-57d7-a1ea-9d984b330997
+                        Model: 2a8d0452-6ad3-5711-8f69-f9960aa0e9cf:World/Models/Fairgoer3
+                        Materials: {}

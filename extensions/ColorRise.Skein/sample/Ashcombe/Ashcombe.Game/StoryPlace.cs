@@ -9,6 +9,7 @@ namespace Ashcombe;
 /// A place the story loads by itself under the root scene while one of its variables is true: the fair of the last act
 /// is up on the village green. The cartographer does not move; the place is there, with its people.
 /// </summary>
+[DataContract]
 [Display("Story place")]
 [ComponentCategory("Ashcombe")]
 public sealed class StoryPlace : EntityComponent

@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: 97dddbe4-a6a2-5255-b569-08f7004f3f2a
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CapsuleProceduralModel
+    Length: 0.9
+    Radius: 0.35
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.8, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 3feca5e0-3ddf-53f9-9041-3b0599223916:World/Materials/Anselm

@@ -1,0 +1,254 @@
+!SceneAsset
+Id: b5e54c12-3e14-5a0f-a270-df0856d100b9
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 0.0, Y: 0.0, Z: -60.0}
+Hierarchy:
+    RootParts:
+        - ref!! 857a7049-35aa-5f03-a277-0ada1160ba6a
+        - ref!! 2467af63-ceeb-5e07-b8db-03da4cdbc987
+        - ref!! b7deff14-0bb4-574b-a229-384d992a0e76
+        - ref!! 94caa947-6cdd-5d93-8566-6f0ecb83c7bc
+        - ref!! 8e722c82-0dcf-5d20-b264-7f353aaaff47
+        - ref!! 737607eb-378f-55de-b09b-9e9126007998
+        - ref!! 0aecb7a9-fdd5-5e81-beb9-26272ad21442
+        - ref!! a7359027-aeb1-5ec0-9db3-af0304c2712d
+        - ref!! 3d4edc1c-1eb5-52ea-bad5-532bd4f4dee4
+        - ref!! 7baad53d-dfd2-5acb-bee3-7849199fb60c
+        - ref!! 0c6e1c65-f82e-5014-b3f0-72bc9802cbfe
+        - ref!! 198a2b32-112d-5f17-ac96-1c201105e7ae
+        - ref!! 56681f65-5098-5858-8c6c-56186deef9de
+        - ref!! c31165f3-59e0-5725-a2e3-78c11f29dfb2
+    Parts:
+        -   Entity:
+                Id: 857a7049-35aa-5f03-a277-0ada1160ba6a
+                Name: Area
+                Components:
+                    f9d94aabc88e5092b08d7360884a0749: !TransformComponent
+                        Id: 2cdf2158-5328-5a18-b96f-cc9aded588e6
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    83c7818dc19550419a85ffd920ca4d6a: !Ashcombe.PlaceArea,Ashcombe.Game
+                        Id: 1f284531-4461-5093-8ca1-3c979b319bdd
+                        HalfSize: {X: 4.5, Y: 3.5}
+                        Title: line:place_cellar
+        -   Entity:
+                Id: 2467af63-ceeb-5e07-b8db-03da4cdbc987
+                Name: Floor
+                Components:
+                    6aae6ac0f7835fd5883e68a39e1b69b1: !TransformComponent
+                        Id: e15164e3-56ab-5f52-863a-f4e24241e48e
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    05c2a83b3d5959678e109e2094a42dc6: !ModelComponent
+                        Id: c9aa36fc-57c9-5c5c-b0d6-922e7926a9a5
+                        Model: 10098408-8a69-5743-b0f2-c67cdd030e57:World/Models/CellarFloor
+                        Materials: {}
+        -   Entity:
+                Id: b7deff14-0bb4-574b-a229-384d992a0e76
+                Name: WallBack
+                Components:
+                    07e74058e344544c8500e458c7071205: !TransformComponent
+                        Id: 6bc9044c-4d49-51b8-98ce-9d959ace258a
+                        Position: {X: 0.0, Y: 0.0, Z: -4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    510ad2a726a054ad82f68a0c838974bf: !ModelComponent
+                        Id: 50e33d0f-4941-50e3-a13b-1d2d43c2ceca
+                        Model: ef3813ce-c1da-5009-b767-04082a59eb18:World/Models/CellarWallBack
+                        Materials: {}
+        -   Entity:
+                Id: 94caa947-6cdd-5d93-8566-6f0ecb83c7bc
+                Name: WallLeft
+                Components:
+                    272e4d9fd87b540b8e041e2f921f2b70: !TransformComponent
+                        Id: 6b303682-d1a9-56e2-bbcc-382ac319c415
+                        Position: {X: -5.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    57f81a63ef985c5da926c3349eb769b6: !ModelComponent
+                        Id: 22835244-1f99-5564-bc47-bb0b51a14ff4
+                        Model: cb36635e-0c72-5cb8-aa73-998c8a8d83ad:World/Models/CellarWallSide
+                        Materials: {}
+        -   Entity:
+                Id: 8e722c82-0dcf-5d20-b264-7f353aaaff47
+                Name: WallRight
+                Components:
+                    5074cfd59d9f5f96beb2e3d47278637e: !TransformComponent
+                        Id: 952d1e13-fc58-5e5e-8ffd-9aee1b00c653
+                        Position: {X: 5.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    fc8eccf88925593586c781090f314740: !ModelComponent
+                        Id: 73bccbb9-0fde-503d-95af-afa6aed0fefb
+                        Model: cb36635e-0c72-5cb8-aa73-998c8a8d83ad:World/Models/CellarWallSide
+                        Materials: {}
+        -   Entity:
+                Id: 737607eb-378f-55de-b09b-9e9126007998
+                Name: WallFrontLeft
+                Components:
+                    9c2af0faa23656ed945e764a37ce5f4b: !TransformComponent
+                        Id: a9c2e586-e74a-548b-a840-bd4d7c5c481b
+                        Position: {X: -3.0999999999999996, Y: 0.0, Z: 4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    24478eaf45225227a9b97e0cceb99d97: !ModelComponent
+                        Id: 65e6820f-5bc3-5f64-a27b-d9b5d2acb562
+                        Model: f8c20465-4586-5a32-9a4f-9be8c636b1a2:World/Models/CellarWallFront
+                        Materials: {}
+        -   Entity:
+                Id: 0aecb7a9-fdd5-5e81-beb9-26272ad21442
+                Name: WallFrontRight
+                Components:
+                    5149e0a969bc5272b9b8d06d12a9eb1c: !TransformComponent
+                        Id: 525ce4cc-7414-5137-911f-99a9de91ea88
+                        Position: {X: 3.0999999999999996, Y: 0.0, Z: 4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    8a1ad56e263256ebb225d16920414d7f: !ModelComponent
+                        Id: 24138ce0-8174-5607-b13b-7c48351ab6ae
+                        Model: f8c20465-4586-5a32-9a4f-9be8c636b1a2:World/Models/CellarWallFront
+                        Materials: {}
+        -   Entity:
+                Id: a7359027-aeb1-5ec0-9db3-af0304c2712d
+                Name: Lamp
+                Components:
+                    d61c3ec4571c559fb3f12209dd131853: !TransformComponent
+                        Id: a335cc95-6f2f-565e-8bb9-87205119bb16
+                        Position: {X: 0.0, Y: 3.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    704bb23124f4558aaeaa2f5814ab2a3b: !LightComponent
+                        Id: 9091c44b-893f-52cd-becf-bebfecdbb708
+                        Type: !LightPoint
+                            Color: !ColorRgbProvider
+                                Value: {R: 0.9, G: 0.75, B: 0.5}
+                            Radius: 10.0
+                        Intensity: 3.0
+        -   Entity:
+                Id: 3d4edc1c-1eb5-52ea-bad5-532bd4f4dee4
+                Name: Arrival
+                Components:
+                    80e97284ece2586887de085ed3fc61f5: !TransformComponent
+                        Id: 3d84411d-636f-5d4b-bd07-18a732d97403
+                        Position: {X: 3.0, Y: 0.0, Z: -2.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 7baad53d-dfd2-5acb-bee3-7849199fb60c
+                Name: Well
+                Components:
+                    8d103e0e8eb25160a860606a714c5aeb: !TransformComponent
+                        Id: e5a1e2e5-3194-5f42-bae6-db33bce8d094
+                        Position: {X: -2.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    00fa9c6d12fa58c5899d7b92dc3a13a3: !ModelComponent
+                        Id: 71f083f0-3184-5269-b060-c7c2c66c7eee
+                        Model: 5b90f5cf-48ac-5fc5-9b94-f3c80fde1dee:World/Models/Well
+                        Materials: {}
+                    2d7d68d972f550bfa909f5fd569ef623: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 37072575-33cc-5ec0-b688-6b1ae9ce5dc7
+                        Node: Well
+                        IsThing: true
+                        Label: line:use_survey
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: 0c6e1c65-f82e-5014-b3f0-72bc9802cbfe
+                Name: RecipeBox
+                Components:
+                    98d7dc37838353f194a72eb60ef944c0: !TransformComponent
+                        Id: 04388a31-f7df-5a00-93bb-d8a327e4f3a7
+                        Position: {X: 2.5, Y: 0.0, Z: 2.2}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    a30fe20df49153a080a04650901b91dc: !ModelComponent
+                        Id: d5665ea7-79e6-51f5-9fbe-81daf6f68a12
+                        Model: bed656e9-dfc4-5b2c-bc6a-8aa4348b09fb:World/Models/RecipeBox
+                        Materials: {}
+                    774e71e8034d528c83ae5b83c33cd437: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 55d4f804-f9e4-58c3-ad2a-02ac46468e13
+                        Node: RecipeBox
+                        IsThing: true
+                        Label: line:use_look
+                        WalkSpeed: 3.0
+                        Runner: null
+                    3c72dc86329e5122b493e43c8f6c419b: !Ashcombe.ShownWhen,Ashcombe.Game
+                        Id: eb0241ac-781e-52db-89c5-05d37256494a
+                        Variable: $recipe_found
+                        Not: true
+        -   Entity:
+                Id: 198a2b32-112d-5f17-ac96-1c201105e7ae
+                Name: Hollyroot
+                Components:
+                    9ecb48f1b65c5d078816a0d8963284df: !TransformComponent
+                        Id: 0a0dad84-e937-5cd7-a9f8-420554941a62
+                        Position: {X: -3.4, Y: 0.0, Z: 2.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    aa8aed3690015c44bcd7b348724e9757: !ModelComponent
+                        Id: f10c1caa-7fcb-56f5-b080-bbdb3bfa49cf
+                        Model: 85378652-f462-5298-8eca-dff39306483d:World/Models/Herb
+                        Materials: {}
+                    3e32a82fcf345e29ba9292bee0d87162: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 4742d50f-26ec-58bb-9f1e-1f28794a0989
+                        Node: Hollyroot
+                        IsThing: true
+                        Label: line:use_pick
+                        WalkSpeed: 3.0
+                        Runner: null
+                    4f43c7cdd02e55f99af16c4d485be5c0: !Ashcombe.ShownWhen,Ashcombe.Game
+                        Id: 3cdaa2e0-0362-578b-96dc-2ecbcc37c967
+                        Variable: $hollyroot_taken
+                        Not: true
+        -   Entity:
+                Id: 56681f65-5098-5858-8c6c-56186deef9de
+                Name: Barrels
+                Components:
+                    2e81785b5ebb512db6fdcd1772b28aeb: !TransformComponent
+                        Id: ada64d3d-73ef-5936-a4a7-7e27a7e25cf6
+                        Position: {X: 3.6, Y: 0.0, Z: 2.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    68c20b29410f584b9120a3e7ff0c497f: !ModelComponent
+                        Id: 20dc766d-7e08-5755-9a18-96fed8b78d3d
+                        Model: f76249fe-a007-52c4-aff3-b673c870ae2e:World/Models/Barrel
+                        Materials: {}
+        -   Entity:
+                Id: c31165f3-59e0-5725-a2e3-78c11f29dfb2
+                Name: CellarUp
+                Components:
+                    b4421be0c89658fdb18be685892d4fe9: !TransformComponent
+                        Id: 4384356b-94df-5a7b-bb29-1d05e1257d3d
+                        Position: {X: 3.6, Y: 0.0, Z: -3.4}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    0b76a7730030522cb07e5e7349215227: !ModelComponent
+                        Id: dbeb7767-2cb9-53fd-a578-347fea931bb4
+                        Model: fd11044a-958e-5c7c-a3f6-ddd72512e40d:World/Models/Doorway
+                        Materials: {}
+                    30edcb486eef5e8baa52ed43ebd9bd9b: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: a13e034f-f41c-5a02-ada4-997253daaae5
+                        Target: 1f2007c3-02f0-5bb8-a596-c297863e1676:Places/Village/Inn
+                        Spawn: FromCellar
+                        IsJourney: false
+                        Label: line:go_up
+                        Node: ''

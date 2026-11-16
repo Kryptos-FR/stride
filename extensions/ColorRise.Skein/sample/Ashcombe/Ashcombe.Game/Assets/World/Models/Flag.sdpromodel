@@ -1,0 +1,12 @@
+!ProceduralModelAsset
+Id: edcbc40e-587d-5702-a63b-bc04ab69d856
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CubeProceduralModel
+    Size: {X: 0.2, Y: 3.5, Z: 0.2}
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 1.75, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 4c74705b-e02e-5681-8386-344e61592b88:World/Materials/Banner

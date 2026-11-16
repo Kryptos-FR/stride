@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: 8f092def-35f5-55bc-b0e4-8cfeaffc17b8
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CapsuleProceduralModel
+    Length: 0.9
+    Radius: 0.35
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.8, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 83675b0a-09a4-5c62-aa0d-6527f65ff4ff:World/Materials/Lio

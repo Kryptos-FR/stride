@@ -10,4 +10,18 @@ AssetFolders:
     -   Path: !dir Assets
 ResourceFolders:
     - !dir Resources
-RootAssets: []
+RootAssets:
+    - 50792aa5-3dcc-5ad7-bbc6-317949f07e0a:Dialogue/Ashcombe
+    - b973cbc4-26f6-5bad-9310-f068119ace42:Dialogue/Echo/Echo
+    - ad59981f-58d4-5bec-95ec-6b81e339fa2f:Places/Castle
+    - a46d5918-9052-5bd3-9de7-88031a03e608:Places/Mine
+    - c62962fd-9238-5f7f-b7b0-ff89932f2c88:Places/Mine/Deep
+    - f6ca14cf-f324-5771-923a-b6bcaf76eb93:Places/Mine/Flooded
+    - 5acadda1-37d7-58e0-b466-9253b6ac2437:Places/Mine/Gallery
+    - 5a64658e-d3e2-5e00-bd43-c93cb050ecc6:Places/Village
+    - b5e54c12-3e14-5a0f-a270-df0856d100b9:Places/Village/Cellar
+    - 8533caa2-61f6-57a7-802a-f09b6f20a712:Places/Village/Chapel
+    - d944f031-f680-55f2-8004-155035c53a90:Places/Village/Cottage
+    - e70ae9d2-7d17-54c1-b805-7953b1e93bfa:Places/Village/Fair
+    - 1f2007c3-02f0-5bb8-a596-c297863e1676:Places/Village/Inn
+    - 47040839-5d51-52cd-90af-153793ef4bc2:Places/Village/Mill

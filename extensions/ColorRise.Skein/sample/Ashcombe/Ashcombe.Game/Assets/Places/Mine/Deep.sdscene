@@ -1,0 +1,208 @@
+!SceneAsset
+Id: c62962fd-9238-5f7f-b7b0-ff89932f2c88
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 400.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! f94c4aa5-bea8-523b-8532-591d6f348fad
+        - ref!! d4687a31-09ec-52ba-93ce-400e37ec672f
+        - ref!! 17176e0c-9b18-5d8e-b6b4-05148018de56
+        - ref!! dd431100-f344-5f6c-8e07-bd07c0dc47f7
+        - ref!! 57e1cac0-e3ff-5915-b37c-46661585bd8a
+        - ref!! ad74a6f8-a958-52b5-9ae4-71d2afa74b2c
+        - ref!! f6ccdf39-ef2c-5bce-8a32-a0f627fd96e5
+        - ref!! bfc73635-08e8-5c7f-8b0f-308b1c29c162
+        - ref!! 32ef1e09-c5c9-57cf-a359-0d2a4dde38da
+    Parts:
+        -   Entity:
+                Id: f94c4aa5-bea8-523b-8532-591d6f348fad
+                Name: Area
+                Components:
+                    70c08cbcecad5523a4b920309ef986bc: !TransformComponent
+                        Id: c90fbfa5-0fd4-5411-88ba-e03e2c3d757c
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    d44a340fa6d55c439e90e6ffcc43203b: !Ashcombe.PlaceArea,Ashcombe.Game
+                        Id: 1b4d6f28-4797-58e0-8156-22b7de7c64b5
+                        HalfSize: {X: 7.5, Y: 5.5}
+                        Title: line:place_deep
+        -   Entity:
+                Id: d4687a31-09ec-52ba-93ce-400e37ec672f
+                Name: Floor
+                Components:
+                    53fd3413f00657ff9ac6da5566e1149f: !TransformComponent
+                        Id: 3913cb75-9642-5d89-98d2-b16af9845973
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    5e723f2b51ad5cab8fc655f26e753a0b: !ModelComponent
+                        Id: a1c19b83-18f6-58d8-af37-49a50ab00d21
+                        Model: 382fd7d0-6cd0-5262-8338-09d85e668b57:World/Models/DeepFloor
+                        Materials: {}
+        -   Entity:
+                Id: 17176e0c-9b18-5d8e-b6b4-05148018de56
+                Name: SeamLight
+                Components:
+                    c4f013e73597530cb639d725a6c70dfd: !TransformComponent
+                        Id: af8b68f4-d771-5df6-9e12-382f0afaf789
+                        Position: {X: 2.0, Y: 2.0, Z: -4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    5e08d6cb207b5a39976c87e964d9be3e: !LightComponent
+                        Id: b4203f4c-e88f-5804-b5ef-29f8013354c6
+                        Type: !LightPoint
+                            Color: !ColorRgbProvider
+                                Value: {R: 0.45, G: 0.95, B: 0.85}
+                            Radius: 12.0
+                        Intensity: 6.0
+        -   Entity:
+                Id: dd431100-f344-5f6c-8e07-bd07c0dc47f7
+                Name: Arrival
+                Components:
+                    4cc41af61a1257989fe6a7eefc80b24c: !TransformComponent
+                        Id: f98111fa-7f3d-5a3d-a7dc-75a96f7edb12
+                        Position: {X: -6.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 57e1cac0-e3ff-5915-b37c-46661585bd8a
+                Name: Jory
+                Components:
+                    29aa18064c85551eb04173058add8079: !TransformComponent
+                        Id: 64d01ca2-55e6-538e-8a81-89c5c90d12d2
+                        Position: {X: 2.5, Y: 0.0, Z: 2.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    8f582166d32a5a6185b28482fa6ca1d5: !ModelComponent
+                        Id: 7de6cb55-7296-5ba3-ab31-4edcde408ac9
+                        Model: 85a65c38-4b31-57b9-8692-1887fb4d5251:World/Models/Jory
+                        Materials: {}
+                    ee936b72e0d350f799c029505cff7b50: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: f571401c-bed0-527b-b25e-890c36a389e1
+                        Node: Jory
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                        Runner: null
+                    8238d01146745c0a84cfe1890283b754: !DialogueActorComponent
+                        Id: 1b64407b-eaff-5748-87b4-48990914a692
+                        ActorName: Jory
+        -   Entity:
+                Id: ad74a6f8-a958-52b5-9ae4-71d2afa74b2c
+                Name: Carvings
+                Components:
+                    f18882b53b37510980353e6099456b88: !TransformComponent
+                        Id: a0706418-09ef-597e-8df1-ab8c34fa2e76
+                        Position: {X: -1.0, Y: 0.0, Z: -5.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    0295a1b07b3453f7866775dff5094c7f: !ModelComponent
+                        Id: 68d08586-9c95-526c-9eaa-de63434af177
+                        Model: ba0187b6-ccdf-51cb-9f45-9f23b14feaeb:World/Models/Carvings
+                        Materials: {}
+                    e2b07d0602635bff82f06e82b269ea7c: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 1db8bbba-5734-5316-97c7-024fb002f2fb
+                        Node: Carvings
+                        IsThing: true
+                        Label: line:use_carvings
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: f6ccdf39-ef2c-5bce-8a32-a0f627fd96e5
+                Name: Seam
+                Components:
+                    2065435594b55bc2bc0ac9e14f34b7c4: !TransformComponent
+                        Id: f2652ac8-4cda-51e5-a7ad-b77888952644
+                        Position: {X: 2.8, Y: 1.4, Z: -5.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    954c0e13857f51b596121d440cf30a04: !ModelComponent
+                        Id: 0022f7eb-3198-59de-8335-b354c1bf1332
+                        Model: 3b586fef-d38a-5a62-8386-efbb4813095d:World/Models/Seam
+                        Materials: {}
+        -   Entity:
+                Id: bfc73635-08e8-5c7f-8b0f-308b1c29c162
+                Name: Echo
+                Components:
+                    9bd5e1f9ebef5ab8a4cf6578efdbc3dd: !TransformComponent
+                        Id: 1652ef22-6187-5802-bd48-2a0ae98eff9b
+                        Position: {X: 5.6, Y: 0.0, Z: -3.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    7bf8078cf85d575caf821d084632cdc6: !ModelComponent
+                        Id: 621ef032-866b-5e34-9667-01dab3230147
+                        Model: 2057c520-735f-5f7f-8eba-d94568db0711:World/Models/EchoHole
+                        Materials: {}
+                    0631660b0f9e5dde9a70d56e22cf2d8d: !DialogueRunnerComponent
+                        Id: 648bb191-afc6-5a8d-a131-f969387d86d1
+                        Project: b973cbc4-26f6-5bad-9310-f068119ace42:Dialogue/Echo/Echo
+                        StartNode: ''
+                        AutoStart: false
+                        Presenters:
+                            5ff573f8761c5430ba0ac1b89caf40b5: ref!! 7c8a3429-164f-5cba-859a-3edaf869fc0e
+                            c59e2db1946e54abb793be0d54f373df: ref!! 6d5d54bf-2097-5371-a6d3-3a10ab04d6a5
+                            939657c50eb454018786a9b320c1aa56: ref!! 3f7b7c9e-c9a9-5735-8745-c9334df4f1ed
+                        Saliency: null
+                        OptionsFallThrough: true
+                    6578247b58eb59739684cc07ffc8f16b: !SkeinLinePresenter
+                        Id: 7c8a3429-164f-5cba-859a-3edaf869fc0e
+                        Page: null
+                        Font: 7a80ac14-ebca-58c0-8ed7-8f443b252856:UI/Font
+                        Typewriter: Letter
+                        Speed: 45.0
+                        AutoAdvance: false
+                        HoldTime: 1.5
+                    162ae98548cb50edbec51053654c2a1e: !SkeinOptionsPresenter
+                        Id: 6d5d54bf-2097-5371-a6d3-3a10ab04d6a5
+                        Page: null
+                        Font: 7a80ac14-ebca-58c0-8ed7-8f443b252856:UI/Font
+                        Unavailable: Hidden
+                        PreviousKey: Up
+                        NextKey: Down
+                        ChooseKey: Enter
+                        ChooseButton: A
+                        NumberKeys: true
+                    65d3c25e6c825d10a681584d7a7aa0cb: !SkeinLineAdvancer
+                        Id: 3f7b7c9e-c9a9-5735-8745-c9334df4f1ed
+                        AdvanceKey: Space
+                        AdvanceButton: A
+                        AdvanceWithPointer: true
+                    0ce474a89d5a5cd985c39feaa7143434: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 4d7224dd-71fb-53e0-8802-5a0668f8312f
+                        Node: Echo
+                        IsThing: true
+                        Label: line:use_echo
+                        WalkSpeed: 3.0
+                        Runner: ref!! 648bb191-afc6-5a8d-a131-f969387d86d1
+        -   Entity:
+                Id: 32ef1e09-c5c9-57cf-a359-0d2a4dde38da
+                Name: DeepLift
+                Components:
+                    13ce260db73254acae3378afabd5e398: !TransformComponent
+                        Id: 989bd4c7-598b-572e-b769-59c8ab093c0e
+                        Position: {X: -7.4, Y: 0.0, Z: -3.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    35f9307514db56cb9fa79ef05190a625: !ModelComponent
+                        Id: 6df7d05a-505e-55a0-bdc2-01ba03a2f51a
+                        Model: fd11044a-958e-5c7c-a3f6-ddd72512e40d:World/Models/Doorway
+                        Materials: {}
+                    b7b2fe39561e5dbbaaca44e713e67ab8: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: 651116b3-b4cc-53d5-9205-825a5bee5900
+                        Target: a46d5918-9052-5bd3-9de7-88031a03e608:Places/Mine
+                        Spawn: LiftTop
+                        IsJourney: false
+                        Label: line:go_up
+                        Node: DeepLift

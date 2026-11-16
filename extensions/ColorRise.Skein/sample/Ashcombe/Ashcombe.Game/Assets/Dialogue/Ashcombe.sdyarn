@@ -1,0 +1,15 @@
+!YarnProjectAsset
+Id: 50792aa5-3dcc-5ad7-bbc6-317949f07e0a
+SerializedVersion: {ColorRise.Skein: 1.0.0.0}
+Tags: []
+SourceFiles:
+    3eab7d54f02b97196b746392bd99bba9: '**/*.yarn'
+ExcludedFiles:
+    f07854ff1055d527a4ee9821b51afc97: Echo/**
+BaseLanguage: en
+Localisations: {}
+LineIdStyle: Descriptive
+Saliency: RandomBestLeastRecentlyViewed
+DiagnosticSeverities:
+    143aea0fd19fe2647001c89df3682090~YS0012: Error
+WriteYarnProjectFile: true

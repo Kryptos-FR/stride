@@ -1,0 +1,809 @@
+!SceneAsset
+Id: 5a64658e-d3e2-5e00-bd43-c93cb050ecc6
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: 
+    - 1f2007c3-02f0-5bb8-a596-c297863e1676
+    - 47040839-5d51-52cd-90af-153793ef4bc2
+    - d944f031-f680-55f2-8004-155035c53a90
+    - 8533caa2-61f6-57a7-802a-f09b6f20a712
+    - e70ae9d2-7d17-54c1-b805-7953b1e93bfa
+Offset: {X: 0.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! f6dbb715-ced8-5e9d-a596-20ad395ddb1f
+        - ref!! c8664498-25cf-5ecd-a1bc-56cf7ca1a0be
+        - ref!! c01d4858-978e-5000-860e-a03054ef3fda
+        - ref!! 37f2c0c9-0447-5eb5-84ca-25551ffbb32a
+        - ref!! fab619d0-8507-5724-8129-5dc716cd17e6
+        - ref!! 4568ea63-dc08-574e-b28f-5310b35d0977
+        - ref!! 42c94dfb-9827-50c1-8e0d-3ba4029f2ecd
+        - ref!! 44db9640-2247-53ab-8606-051f75c8a517
+        - ref!! 77964aa0-ddfe-5285-9f40-762b17f4c14b
+        - ref!! 25b55f85-5b2c-5d0e-8550-4378b6a588a4
+        - ref!! 1f6b4dca-8f61-511a-8efa-f5ce5e378744
+        - ref!! 9013f3b2-8b00-5b45-9066-d759b7e64bb3
+        - ref!! 0d3cfc3c-bc58-5290-9253-bb51a8c09957
+        - ref!! 1197c549-b7ae-53f7-8d3a-05836be41eba
+        - ref!! 9f3fef55-33e7-5e51-9bb8-99fbd981d29d
+        - ref!! e3115462-28cf-5f30-a628-b3a6908e27e6
+        - ref!! fe4a624c-3fde-5bb6-91f0-a94f8fd82dd1
+        - ref!! e5f4b33b-1c11-5113-bd5a-45b2a21c57b5
+        - ref!! f9ddfebc-f147-56af-9c43-570e0af75f98
+        - ref!! d47d23d8-964c-5af9-b786-b17be6f606ce
+        - ref!! 3bc01c84-7169-5dfd-8291-c996fe2fccf0
+        - ref!! fd5badb3-843f-54ac-8f43-982078ff7987
+        - ref!! 91324cef-e43e-54f0-baef-c82107e91a5e
+        - ref!! 29c12426-970a-5093-9aa8-f1cefe1a051d
+        - ref!! 554ca401-2735-59cd-9871-5a9bb34a6f80
+        - ref!! 0ce9d2ee-798d-5d1d-bec0-0b1af5109d97
+        - ref!! 8c3bf03e-af8a-580b-bfa1-6bfe71c7ae76
+        - ref!! c005d1d0-9433-5159-8162-325e3b3505c4
+        - ref!! ade48957-6c7d-55db-b8dd-552b18defda6
+        - ref!! 30807ce9-94ad-522d-9544-9e1daec17fa5
+        - ref!! 6e28f409-d517-5910-b0f0-31ac330ec62c
+        - ref!! 10ea0278-5dd7-5a82-aaa6-672e8cce8254
+        - ref!! b51000d5-8c95-520e-8d5d-f59daef1ed29
+        - ref!! 88466466-9253-5adf-b025-7e4a3d906c98
+        - ref!! 7b8fda32-751f-55d1-a8d6-5b329d9f258a
+        - ref!! c2528eb7-c752-5160-8fbe-db70a84736a0
+        - ref!! d5148d88-5ac3-5ef9-bb3e-142e09434833
+        - ref!! 98e6d2e3-34e2-5cf9-acab-f16688567dcd
+        - ref!! 3d37c475-08c7-5be9-b5ee-07836f7e7636
+        - ref!! 873a7ee9-a6fc-549e-8455-903c0c5a92bc
+        - ref!! 265fa158-04e7-56b1-9c91-0ea8b32b1933
+        - ref!! bcdc06b4-c4b0-541e-bbad-9422494f34d1
+    Parts:
+        -   Entity:
+                Id: f6dbb715-ced8-5e9d-a596-20ad395ddb1f
+                Name: Stage
+                Components:
+                    dcb495b5d50452a0a0c383b0302b44d7: !TransformComponent
+                        Id: ee014730-1b63-513c-8033-c958e1f79c98
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    1ecc15a185f95b80ac3559bcfec0084a: !DialogueRunnerComponent
+                        Id: 792485fc-6720-5a04-a6cc-d1600f973b21
+                        Project: 50792aa5-3dcc-5ad7-bbc6-317949f07e0a:Dialogue/Ashcombe
+                        StartNode: ''
+                        AutoStart: false
+                        Presenters:
+                            40a1efb12a9b5618ab2098a53cfce5e8: ref!! 47afd7de-103d-5cef-8353-95a6a0cbd5db
+                            0115f969133758c28bf95681f60cbbfb: ref!! 1ee579bd-916e-5202-83cf-85e1a0fb265c
+                            b69afc4a1f7b5dd293b926a1d5ba4eec: ref!! 9905c940-9dc8-57bc-9609-20b6612aa5cf
+                            325a0ddceb7451618c01e4eb8efe9d8e: ref!! 26fc8f88-99f8-5c34-a32f-8f21f86685f5
+                        Saliency: null
+                        OptionsFallThrough: true
+                    51149a2799265d8ba892db59c5041d3a: !SkeinLinePresenter
+                        Id: 47afd7de-103d-5cef-8353-95a6a0cbd5db
+                        Page: null
+                        Font: 7a80ac14-ebca-58c0-8ed7-8f443b252856:UI/Font
+                        Typewriter: Letter
+                        Speed: 45.0
+                        AutoAdvance: false
+                        HoldTime: 1.5
+                    920d5cbabe8f5c33af6420e10ec17d7e: !SkeinOptionsPresenter
+                        Id: 1ee579bd-916e-5202-83cf-85e1a0fb265c
+                        Page: null
+                        Font: 7a80ac14-ebca-58c0-8ed7-8f443b252856:UI/Font
+                        Unavailable: Hidden
+                        PreviousKey: Up
+                        NextKey: Down
+                        ChooseKey: Enter
+                        ChooseButton: A
+                        NumberKeys: true
+                    2cae80a0aed250c2ac22cf405a23cede: !SkeinLineAdvancer
+                        Id: 9905c940-9dc8-57bc-9609-20b6612aa5cf
+                        AdvanceKey: Space
+                        AdvanceButton: A
+                        AdvanceWithPointer: true
+                    8c3a9958df2655729a5b8b6a45d4768c: !Ashcombe.MoodPresenter,Ashcombe.Game
+                        Id: 26fc8f88-99f8-5c34-a32f-8f21f86685f5
+                    57ba101e96575f63a5ce9cecf89ba917: !Ashcombe.Stage,Ashcombe.Game
+                        Id: f16c9470-c78f-594f-a333-e3576a0f6087
+                        Runner: ref!! 792485fc-6720-5a04-a6cc-d1600f973b21
+                        Player: ref!! c8664498-25cf-5ecd-a1bc-56cf7ca1a0be
+                        Camera: ref!! c01d4858-978e-5000-860e-a03054ef3fda
+                        Font: 7a80ac14-ebca-58c0-8ed7-8f443b252856:UI/Font
+                        Reach: 2.5
+                        Projects:
+                            3678e3dcbcb454279e24f275bffb2f30: b973cbc4-26f6-5bad-9310-f068119ace42:Dialogue/Echo/Echo
+        -   Entity:
+                Id: c8664498-25cf-5ecd-a1bc-56cf7ca1a0be
+                Name: Cartographer
+                Components:
+                    f8600dff5ad554fca4c28142380f53af: !TransformComponent
+                        Id: 6efa9c2c-cea0-5135-8b9e-6da339cd6215
+                        Position: {X: 0.0, Y: 0.0, Z: 14.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    02de4474c01a50388d223214aba300d8: !ModelComponent
+                        Id: 928fc343-2cbe-54e2-98c5-60b5f268fc7a
+                        Model: 175e3201-25a1-5026-b434-fed4c956261c:World/Models/Cartographer
+                        Materials: {}
+                    8cddd12c6b2454a682c4e40cea62214c: !Ashcombe.PlayerController,Ashcombe.Game
+                        Id: 1b0911db-7e10-56a7-9f56-54462b3c61e8
+                        Speed: 5.0
+                        Camera: ref!! c01d4858-978e-5000-860e-a03054ef3fda
+        -   Entity:
+                Id: c01d4858-978e-5000-860e-a03054ef3fda
+                Name: Camera
+                Components:
+                    1dc174e365885e63b3867641c34e0f65: !TransformComponent
+                        Id: 8ad6797b-4aae-52ad-a39e-eb177a5b0b2f
+                        Position: {X: 0.0, Y: 13.0, Z: 26.0}
+                        Rotation: {X: -0.401073, Y: 0.0, Z: 0.0, W: 0.916046}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    4ca695244f6158878eafb738f75a63a7: !CameraComponent
+                        Id: 50a0da11-fd63-5ec7-b199-2a001d9037d3
+                        Name: null
+                        Projection: Perspective
+                        Slot: d0a6bf72-b3cd-4bd4-94ca-69952999d537
+        -   Entity:
+                Id: 37f2c0c9-0447-5eb5-84ca-25551ffbb32a
+                Name: Sun
+                Components:
+                    1be50e99a7dc5bd5a3741aaea5ed47dd: !TransformComponent
+                        Id: 4e79202f-0a2a-5ea7-87c8-595bf4472e01
+                        Position: {X: 0.0, Y: 5.0, Z: 0.0}
+                        Rotation: {X: -0.450803, Y: -0.191984, Z: -0.099941, W: 0.865985}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    d76213850e325d37840c8460dc3583c4: !LightComponent
+                        Id: 4c3d6c2a-d324-5b01-a04d-bc480984c9f7
+                        Type: !LightDirectional
+                            Color: !ColorRgbProvider
+                                Value: {R: 1.0, G: 0.97, B: 0.9}
+                            Shadow:
+                                Enabled: true
+                                Filter: !LightShadowMapFilterTypePcf
+                                    FilterSize: Filter5x5
+                                Size: Large
+                                DepthRange: {}
+                                PartitionMode: !LightDirectionalShadowMap.PartitionLogarithmic {}
+                                ComputeTransmittance: false
+                                BiasParameters: {}
+                        Intensity: 4.0
+        -   Entity:
+                Id: fab619d0-8507-5724-8129-5dc716cd17e6
+                Name: Ambient
+                Components:
+                    260089cffaba56a799470fa0f844f954: !TransformComponent
+                        Id: db9e3899-0375-5b89-994b-0c1810072943
+                        Position: {X: 0.0, Y: 5.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    07a27aed84df55d48b7e5525ce2f2330: !LightComponent
+                        Id: 46bae899-5234-5821-9170-5183ccf664a4
+                        Type: !LightAmbient
+                            Color: !ColorRgbProvider
+                                Value: {R: 0.8, G: 0.85, B: 1.0}
+                        Intensity: 0.8
+        -   Entity:
+                Id: 4568ea63-dc08-574e-b28f-5310b35d0977
+                Name: Area
+                Components:
+                    3e7b7507ddd65cc5affd88cbcaab5b58: !TransformComponent
+                        Id: 34d066c9-763a-55eb-81dd-e7d0bdca3217
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    be370b2494d4515a8a5532e70885d728: !Ashcombe.PlaceArea,Ashcombe.Game
+                        Id: bd7b116c-6b09-5459-a0ca-ac8b2b262674
+                        HalfSize: {X: 25.0, Y: 19.0}
+                        Title: line:place_village
+        -   Entity:
+                Id: 42c94dfb-9827-50c1-8e0d-3ba4029f2ecd
+                Name: Arrival
+                Components:
+                    f7dbeab801775b5397341956768403aa: !TransformComponent
+                        Id: 729e1a06-2595-5b99-a6c7-015020ace8da
+                        Position: {X: 0.0, Y: 0.0, Z: 14.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 44db9640-2247-53ab-8606-051f75c8a517
+                Name: InnFront
+                Components:
+                    95418ced0da0544a8a18f5206d1618d5: !TransformComponent
+                        Id: 7412b18c-dbe4-5fab-a994-042d5a3d74ed
+                        Position: {X: -12.0, Y: 0.0, Z: 1.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 77964aa0-ddfe-5285-9f40-762b17f4c14b
+                Name: MillFront
+                Components:
+                    f2b79a1c0f9f5db48cb1cf85a55ba277: !TransformComponent
+                        Id: 59c60c63-7094-5cb1-adbb-b644004fe40e
+                        Position: {X: 16.0, Y: 0.0, Z: 9.4}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 25b55f85-5b2c-5d0e-8550-4378b6a588a4
+                Name: CottageFront
+                Components:
+                    e8c1d7df85a8568bb6d98f4d29ecd4a0: !TransformComponent
+                        Id: 0a9eda7d-b98f-54d2-b5b3-532a8892a889
+                        Position: {X: -18.0, Y: 0.0, Z: 12.4}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 1f6b4dca-8f61-511a-8efa-f5ce5e378744
+                Name: ChapelFront
+                Components:
+                    58d74bb9ac2955c8a030c95e499c0393: !TransformComponent
+                        Id: 9a38c406-435a-51c7-b3b1-2786048f203d
+                        Position: {X: 2.0, Y: 0.0, Z: -2.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 9013f3b2-8b00-5b45-9066-d759b7e64bb3
+                Name: FromCastle
+                Components:
+                    bdbb30c871235abc96edef1128207394: !TransformComponent
+                        Id: 2c07a345-3eff-54db-b3fe-1ef708a44868
+                        Position: {X: 12.0, Y: 0.0, Z: -12.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 0d3cfc3c-bc58-5290-9253-bb51a8c09957
+                Name: FromMine
+                Components:
+                    5f043728e99952a08a447290217886e2: !TransformComponent
+                        Id: 8fa57620-ba6a-5698-9ab2-7d928a7cdb2f
+                        Position: {X: -21.5, Y: 0.0, Z: 12.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 1197c549-b7ae-53f7-8d3a-05836be41eba
+                Name: Ground
+                Components:
+                    42485dc9d47e5fc3b0f677d2cb2fb266: !TransformComponent
+                        Id: 3a87f300-f3cf-500f-ab70-4c6640e1378b
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    b085d75f1dd65eb6b4cbab4a5ede5fc8: !ModelComponent
+                        Id: 5d874a0f-8555-5482-970e-2bb060ece566
+                        Model: 784db2ce-c846-5ff6-8d82-4fe9c12d3cd4:World/Models/VillageGround
+                        Materials: {}
+        -   Entity:
+                Id: 9f3fef55-33e7-5e51-9bb8-99fbd981d29d
+                Name: Path
+                Components:
+                    7af728d690d252a5b6d630426c53c15a: !TransformComponent
+                        Id: f7b21497-2f8b-55cc-8091-b65722d7d282
+                        Position: {X: 0.0, Y: 0.01, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    7435b048d1125aa9b56c375dbf671c92: !ModelComponent
+                        Id: ea4b7938-a1b8-5c9e-b00b-c3a85ec43acf
+                        Model: 028e71a5-249e-5fe1-a497-07d7adb57854:World/Models/VillagePath
+                        Materials: {}
+        -   Entity:
+                Id: e3115462-28cf-5f30-a628-b3a6908e27e6
+                Name: River
+                Components:
+                    bcb8b47fd85e5af78ee42a2aa5341894: !TransformComponent
+                        Id: 014523ca-2a9e-5767-a2b6-e900b480eaf6
+                        Position: {X: 0.0, Y: 0.02, Z: -16.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    77c866b3e6725284a68b00b389705afd: !ModelComponent
+                        Id: 79efd1a2-a78f-5474-9607-6b7c1053b00b
+                        Model: 12975f23-7657-5f15-937a-c783c2c58ea4:World/Models/River
+                        Materials: {}
+        -   Entity:
+                Id: fe4a624c-3fde-5bb6-91f0-a94f8fd82dd1
+                Name: Bridge
+                Components:
+                    ff7169eca15054da810714d2f0a20727: !TransformComponent
+                        Id: eb171c64-41a7-5123-9d54-4dcb4512a51e
+                        Position: {X: 12.0, Y: 0.0, Z: -16.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    86a78810cf975f2f97db3986b50306df: !ModelComponent
+                        Id: 401c65db-1861-54de-a94d-b25d93eeda00
+                        Model: 545c60b2-be40-5a2d-bafb-a2ff99953ec6:World/Models/Bridge
+                        Materials: {}
+        -   Entity:
+                Id: e5f4b33b-1c11-5113-bd5a-45b2a21c57b5
+                Name: InnHouse
+                Components:
+                    4ebe8079259859bab78b62e1092dad20: !TransformComponent
+                        Id: e9513820-9a27-53eb-94d6-08db7b36408e
+                        Position: {X: -12.0, Y: 0.0, Z: -4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ed4f419a0fb45c2788c09d64c1ce11f1: !ModelComponent
+                        Id: bf645513-5cef-5d2d-a5a3-48da734bd4f0
+                        Model: 82f720d1-e722-5ede-9139-7fe0a7f95f46:World/Models/InnHouse
+                        Materials: {}
+        -   Entity:
+                Id: f9ddfebc-f147-56af-9c43-570e0af75f98
+                Name: InnRoof
+                Components:
+                    f42f1ca2d62d513799a6c1e9cb90cb39: !TransformComponent
+                        Id: 638f4c8e-6b9d-5794-8b14-19d3f8abcf06
+                        Position: {X: -12.0, Y: 4.0, Z: -4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    67679adb480b508aa6004a755116c75b: !ModelComponent
+                        Id: e66c5d3c-a47c-51fa-8979-24ec510384d8
+                        Model: fc2f52f1-0f48-560e-b1a9-6ed159658eca:World/Models/InnRoof
+                        Materials: {}
+        -   Entity:
+                Id: d47d23d8-964c-5af9-b786-b17be6f606ce
+                Name: MillHouse
+                Components:
+                    61f05747fb3650738f9c1efa8ed72edd: !TransformComponent
+                        Id: 89e8bc45-aa43-54ee-ad4a-6d2408f6b7e1
+                        Position: {X: 16.0, Y: 0.0, Z: 4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    965a70dd93105dea8f8167b99a016775: !ModelComponent
+                        Id: 7f97cac7-b7ee-5d2b-a8f4-7839ab61697a
+                        Model: 145e8f39-161a-50ad-84cb-db3047ef5e33:World/Models/MillHouse
+                        Materials: {}
+        -   Entity:
+                Id: 3bc01c84-7169-5dfd-8291-c996fe2fccf0
+                Name: MillWheel
+                Components:
+                    fd5b7021bf2758ad87295bc8d8b681c6: !TransformComponent
+                        Id: 22f07288-b309-581d-9009-9aa4b7aad12b
+                        Position: {X: 20.1, Y: 2.4, Z: 4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.707107, W: 0.707107}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    539ecdc269ad52c1bbb043c9ee1ce94e: !ModelComponent
+                        Id: 09bc92b4-5726-5243-a0cb-bc8f6f14ee48
+                        Model: e14004b0-f312-5d74-b9e6-b1c61d9d4317:World/Models/MillWheel
+                        Materials: {}
+        -   Entity:
+                Id: fd5badb3-843f-54ac-8f43-982078ff7987
+                Name: CottageHouse
+                Components:
+                    58d4e27c44fc5230bb2e37ef7a59ae3d: !TransformComponent
+                        Id: 5382f109-64d4-58f2-969e-67d594ce66ea
+                        Position: {X: -18.0, Y: 0.0, Z: 8.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    1de2b3da3bbb58948a5806d2dbf380b7: !ModelComponent
+                        Id: 94a46cf0-9b0b-502f-b6fd-9da1eede6197
+                        Model: 3553e5fe-5066-5a1b-a26a-5db25c8c4e03:World/Models/CottageHouse
+                        Materials: {}
+        -   Entity:
+                Id: 91324cef-e43e-54f0-baef-c82107e91a5e
+                Name: ChapelHall
+                Components:
+                    83fae4e4428357bcac072dff4baf8cb1: !TransformComponent
+                        Id: 70ff9633-c6e3-53ad-9e40-e1a8b0559fbc
+                        Position: {X: 2.0, Y: 0.0, Z: -9.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    3f3c841b7e8657b1a3caa21ad0145eb7: !ModelComponent
+                        Id: 20b4afec-c4f7-5652-bee8-2d938029912d
+                        Model: 42bf9258-1e3c-563e-ab67-1b2cb15f9e1e:World/Models/ChapelHall
+                        Materials: {}
+        -   Entity:
+                Id: 29c12426-970a-5093-9aa8-f1cefe1a051d
+                Name: ChapelTower
+                Components:
+                    572fb13723d45456b0468045a29c7f96: !TransformComponent
+                        Id: 65ce03be-6949-55fb-837e-0125cf0bd1a8
+                        Position: {X: 2.0, Y: 0.0, Z: -13.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    f670a334c10b5dbab048ff575338e0a8: !ModelComponent
+                        Id: 6115de19-d2a9-5917-bc70-8c529d9891bf
+                        Model: 8f48ee1c-3a9a-5f01-b130-74f86b73dc13:World/Models/ChapelTower
+                        Materials: {}
+        -   Entity:
+                Id: 554ca401-2735-59cd-9871-5a9bb34a6f80
+                Name: Lockup
+                Components:
+                    c47d8889931b5b41a7cd366c3c4254ca: !TransformComponent
+                        Id: e8fff371-1a8b-548a-9b16-5efdd614a99c
+                        Position: {X: 8.0, Y: 0.0, Z: -6.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    f85301bb13275941ab727c1b13a576ba: !ModelComponent
+                        Id: 3904b74a-07ff-5924-81d4-de9281a7857f
+                        Model: f7a66c42-12c5-5c30-ae23-8309cf77c30c:World/Models/Lockup
+                        Materials: {}
+        -   Entity:
+                Id: 0ce9d2ee-798d-5d1d-bec0-0b1af5109d97
+                Name: PellsCart
+                Components:
+                    ca4218ab4ac157b6b8629c592945e6c8: !TransformComponent
+                        Id: 1176febb-fb9b-55b4-b073-073b027fde18
+                        Position: {X: 7.0, Y: 0.0, Z: -11.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    638c22af842453eb9ef9816d83677367: !ModelComponent
+                        Id: 68b2779b-bc71-509c-b79c-b85449b23fbe
+                        Model: d656283c-e02f-59f7-be57-3e67a9b4f5be:World/Models/Cart
+                        Materials: {}
+        -   Entity:
+                Id: 8c3bf03e-af8a-580b-bfa1-6bfe71c7ae76
+                Name: InnDoor
+                Components:
+                    47d8f3e31f285413a74d05774896ffb1: !TransformComponent
+                        Id: ed5f6125-b5e9-526f-ac29-c727bc01d470
+                        Position: {X: -12.0, Y: 0.0, Z: -0.9}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    df8bb81450fd58bd9b9b95f3d7e9a429: !ModelComponent
+                        Id: f913a11f-5676-57cd-b677-497445adbd81
+                        Model: fd11044a-958e-5c7c-a3f6-ddd72512e40d:World/Models/Doorway
+                        Materials: {}
+                    cce93c452443521abc511a0691f8ca7a: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: 0ab38b15-4e25-5bdf-9302-ebfc098b3d02
+                        Target: 1f2007c3-02f0-5bb8-a596-c297863e1676:Places/Village/Inn
+                        Spawn: ''
+                        IsJourney: false
+                        Label: line:go_inn
+                        Node: ''
+        -   Entity:
+                Id: c005d1d0-9433-5159-8162-325e3b3505c4
+                Name: MillDoor
+                Components:
+                    e4e51d8907445559bef122b3ac3d7568: !TransformComponent
+                        Id: 60ffacee-2fb5-524d-abad-f27d927457c7
+                        Position: {X: 16.0, Y: 0.0, Z: 7.1}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    a5cf9caea7645b15965b67f81e5a183e: !ModelComponent
+                        Id: 4ddb3cb1-a8e1-5a25-a645-20a985e208d1
+                        Model: fd11044a-958e-5c7c-a3f6-ddd72512e40d:World/Models/Doorway
+                        Materials: {}
+                    9ca8c8b637775bf9ab54e8bd4ab1e9ae: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: 772fa574-f213-5247-85b3-abd17ab81df6
+                        Target: 47040839-5d51-52cd-90af-153793ef4bc2:Places/Village/Mill
+                        Spawn: ''
+                        IsJourney: false
+                        Label: line:go_mill
+                        Node: ''
+        -   Entity:
+                Id: ade48957-6c7d-55db-b8dd-552b18defda6
+                Name: CottageDoor
+                Components:
+                    51e2b0162b3c5803939b68e99749a919: !TransformComponent
+                        Id: 4719676e-6b4a-5263-a1df-30a87e590cb7
+                        Position: {X: -18.0, Y: 0.0, Z: 10.1}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    19ab50e4e6c456df8bcc236206d22495: !ModelComponent
+                        Id: 2e39f08d-c38b-5b88-8ac0-957290eb72d3
+                        Model: fd11044a-958e-5c7c-a3f6-ddd72512e40d:World/Models/Doorway
+                        Materials: {}
+                    18bada112c205f918d37de462ce9d820: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: bfef970d-45c3-59da-9a4f-0cf5a4c28be2
+                        Target: d944f031-f680-55f2-8004-155035c53a90:Places/Village/Cottage
+                        Spawn: ''
+                        IsJourney: false
+                        Label: line:go_cottage
+                        Node: ''
+        -   Entity:
+                Id: 30807ce9-94ad-522d-9544-9e1daec17fa5
+                Name: ChapelDoor
+                Components:
+                    b6c95b033496597cb833cdb6e48e8015: !TransformComponent
+                        Id: b7f26882-7b6e-5174-b04a-49b4394f8f0d
+                        Position: {X: 2.0, Y: 0.0, Z: -5.4}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    c846af824e795eb1adcb37d629d3f590: !ModelComponent
+                        Id: 83e3affb-4f7a-5a9e-81df-d2abaaff75ee
+                        Model: fd11044a-958e-5c7c-a3f6-ddd72512e40d:World/Models/Doorway
+                        Materials: {}
+                    e97d4afe432c5d859f2ee9465d2d10b0: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: ebff0d12-62c6-5987-8675-67bab676e085
+                        Target: 8533caa2-61f6-57a7-802a-f09b6f20a712:Places/Village/Chapel
+                        Spawn: ''
+                        IsJourney: false
+                        Label: line:go_chapel
+                        Node: ''
+        -   Entity:
+                Id: 6e28f409-d517-5910-b0f0-31ac330ec62c
+                Name: CastleRoad
+                Components:
+                    46e89428ed2c5b48af2baf4b3afae38b: !TransformComponent
+                        Id: e2856c8f-82b7-517c-a345-0b9073c52d47
+                        Position: {X: 12.0, Y: 0.0, Z: -19.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    3d8b134fe7a859b788c1b0c97960fea8: !ModelComponent
+                        Id: 511a0750-6ae5-59e3-99b8-06cf8e1de89e
+                        Model: 20dc0eb2-ea0b-51b8-a5e9-b4d28f73a3c0:World/Models/Signpost
+                        Materials: {}
+                    50ab7a820f4855ac81f6211e5d2989a8: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: ccceb05b-6004-5d52-aa74-402fa50a4d84
+                        Target: ad59981f-58d4-5bec-95ec-6b81e339fa2f:Places/Castle
+                        Spawn: Gate
+                        IsJourney: true
+                        Label: line:go_castle
+                        Node: CastleRoad
+        -   Entity:
+                Id: 10ea0278-5dd7-5a82-aaa6-672e8cce8254
+                Name: MineRoad
+                Components:
+                    a875041b7c20510187c7e2743fc68f80: !TransformComponent
+                        Id: a8efc025-049b-5c0d-9c59-6e6339c521aa
+                        Position: {X: -25.0, Y: 0.0, Z: 12.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    997cbec446905ac2af24901c88223349: !ModelComponent
+                        Id: 3cb4ea8f-f22e-5bec-8e9f-1598cdadb704
+                        Model: 20dc0eb2-ea0b-51b8-a5e9-b4d28f73a3c0:World/Models/Signpost
+                        Materials: {}
+                    0b5d0d452b2555c58ef37c57f253dc1d: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: 1ea1fb1e-7227-5808-9518-45008cd88fe6
+                        Target: a46d5918-9052-5bd3-9de7-88031a03e608:Places/Mine
+                        Spawn: Camp
+                        IsJourney: true
+                        Label: line:go_mine
+                        Node: MineRoad
+        -   Entity:
+                Id: b51000d5-8c95-520e-8d5d-f59daef1ed29
+                Name: Maren
+                Components:
+                    7916dd8ffa6757e490f223fc955aab9b: !TransformComponent
+                        Id: ba811dc2-9630-5bc9-927e-b2872d80adfe
+                        Position: {X: -3.0, Y: 0.0, Z: 4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    3a59502078bd597d852c3a67336ccc3b: !ModelComponent
+                        Id: a94bb929-5987-5a9d-a5c9-1dd8d85fa641
+                        Model: ea22fb9c-95a6-5d9d-964e-de46989cdebc:World/Models/Maren
+                        Materials: {}
+                    42c22921011c5b2fb64a5e8e7e9e9bcf: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 249cbc10-b6ee-5bc1-94f8-231dd967e47d
+                        Node: Maren
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                        Runner: null
+                    c2762871a3b850038363f1d8f2ae1351: !DialogueActorComponent
+                        Id: 78d0b85b-4907-5dc7-9865-f76d9664993a
+                        ActorName: Maren
+        -   Entity:
+                Id: 88466466-9253-5adf-b025-7e4a3d906c98
+                Name: Pell
+                Components:
+                    e9d9521048945572b24cb93d956b36d4: !TransformComponent
+                        Id: 36cddb80-98d0-5117-a33a-0cb410ae55ed
+                        Position: {X: 8.5, Y: 0.0, Z: -10.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    1a5265a28bc951ed9bc4ad5b594260bf: !ModelComponent
+                        Id: 6c2b5a7e-2eb4-5fb4-a053-9b7731d1a6ee
+                        Model: 10a1a1da-e067-5761-8586-a7ee197d8588:World/Models/Pell
+                        Materials: {}
+                    2ddb23c510cc53ebbe28fc51d5d74a9e: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: cd2640bd-10de-54ff-a9c2-b7edfa0cfdef
+                        Node: Pell
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                        Runner: null
+                    531cba14310e5773b6a16608e87285b9: !DialogueActorComponent
+                        Id: f4f4d61c-abfe-52a1-b4c4-e295463c0fc9
+                        ActorName: Pell
+                    51dd670f403e590fa9d82ec0307f8c67: !Ashcombe.ShownWhen,Ashcombe.Game
+                        Id: d2fd14c0-b5cd-512b-a071-26d9d0a3ebae
+                        Variable: $pell_in_village
+                        Not: false
+        -   Entity:
+                Id: 7b8fda32-751f-55d1-a8d6-5b329d9f258a
+                Name: Bram
+                Components:
+                    e37746a8cf3659bfbef60ff1e0b25401: !TransformComponent
+                        Id: 33c6c1a0-71bf-5c65-be7d-b2aaace26761
+                        Position: {X: 18.5, Y: 0.0, Z: 8.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    231a1d3a05b1571fb13cb2f7b2477366: !ModelComponent
+                        Id: 01bb6f8a-8cfa-5da7-9902-e75760e9b711
+                        Model: 3afc941d-821f-5f2f-9143-62de3700aa6b:World/Models/Bram
+                        Materials: {}
+                    a20dcaafc9dd52d28adfc3c6b2fba8a0: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: b2f35c84-4b01-52d1-9cc7-be44294056f5
+                        Node: Bram
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                        Runner: null
+                    966eac2fae6851769f18254ebab5543f: !DialogueActorComponent
+                        Id: c044583a-ec8c-5a0f-bb5c-654c17838bd5
+                        ActorName: Bram
+        -   Entity:
+                Id: c2528eb7-c752-5160-8fbe-db70a84736a0
+                Name: Corvin
+                Components:
+                    26370aac7ea75d98a59f897800fe31ff: !TransformComponent
+                        Id: f7e0546d-686d-51cb-8701-9fd08614a3f8
+                        Position: {X: 4.0, Y: 0.0, Z: 6.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    177e23145a0450fca7b7e4ef4f0fec8b: !ModelComponent
+                        Id: 1d917105-afb2-571a-a7d3-f3d0df9690ac
+                        Model: 24c4b25a-2c14-5f05-9a61-7cd90dfb64e2:World/Models/Corvin
+                        Materials: {}
+                    9eb732be533a561bbc05aabccaf37b91: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: ac4a65a5-2143-5105-9f51-fb5058244bca
+                        Node: Corvin
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                        Runner: null
+                    c9b95791015855b28564c61ae9c3d95f: !DialogueActorComponent
+                        Id: af8bdbca-26e5-561b-bcf0-438742b5c2e2
+                        ActorName: Corvin
+                    ecc16d1641c95b52872c3f64f57e99fd: !Ashcombe.ShownWhen,Ashcombe.Game
+                        Id: ea374b31-6a00-54fa-8291-5bcd98cb64c5
+                        Variable: $corvin_in_village
+                        Not: false
+        -   Entity:
+                Id: d5148d88-5ac3-5ef9-bb3e-142e09434833
+                Name: Stones
+                Components:
+                    8e4aa12f2bff577e959eeba5e68b782c: !TransformComponent
+                        Id: 393dc496-e487-593f-bce2-53aa19e40df1
+                        Position: {X: 16.0, Y: 0.0, Z: -11.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    77763d3fa1b65e12a8509f2eba5cf943: !ModelComponent
+                        Id: 8e7fc20b-7e88-573b-b45f-c2648691f299
+                        Model: 24cb11f5-554d-568f-b54b-3f4b2d5f3df6:World/Models/Stones
+                        Materials: {}
+                    e23d73d0792157dbaf9df1f7e8549e2c: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 6662e9d0-fc93-50c1-ba2f-a707d5bb9972
+                        Node: Stones
+                        IsThing: true
+                        Label: line:use_stones
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: 98e6d2e3-34e2-5cf9-acab-f16688567dcd
+                Name: BridgeMark
+                Components:
+                    0cc5db5f245e5dc2a3e8aee8e7d371a8: !TransformComponent
+                        Id: c401c42a-776f-5792-85da-0cd8f505239c
+                        Position: {X: 12.0, Y: 0.0, Z: -12.8}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    64445e1932f3577aa174edfb95ff7f2e: !ModelComponent
+                        Id: 94fb2cb5-0c20-5ea5-b65b-af9d7c5edf63
+                        Model: dd4ecb93-8a46-52fe-975e-5b8ef29cf267:World/Models/BridgeMark
+                        Materials: {}
+                    cd183a3fcd375a7a96379fbc4082d293: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 8e2f0128-d412-5a72-97bb-02e95dff8ff8
+                        Node: BridgeMark
+                        IsThing: true
+                        Label: line:use_survey
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: 3d37c475-08c7-5be9-b5ee-07836f7e7636
+                Name: DewCup
+                Components:
+                    d6f3794e83c056d6b4a0390773bb2abe: !TransformComponent
+                        Id: f246a92a-ccc6-52ff-9fd7-0bf91a9e0737
+                        Position: {X: -6.0, Y: 0.0, Z: -13.2}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    a39d6f54efcb55518c5d0962c25697c7: !ModelComponent
+                        Id: fcf3c117-7740-55f9-a8a0-0e586642a11e
+                        Model: 85378652-f462-5298-8eca-dff39306483d:World/Models/Herb
+                        Materials: {}
+                    63ab0ea5aefd56328d733bd825a2ce67: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 37740c4a-279a-5c85-935f-1eb4252b0c22
+                        Node: DewCup
+                        IsThing: true
+                        Label: line:use_pick
+                        WalkSpeed: 3.0
+                        Runner: null
+                    b5d9c9176d5559c7ab907d112d6b7b8b: !Ashcombe.ShownWhen,Ashcombe.Game
+                        Id: 9dbc6ddb-a0f0-5aa2-aefb-a51691abecd3
+                        Variable: $dewcup_taken
+                        Not: true
+        -   Entity:
+                Id: 873a7ee9-a6fc-549e-8455-903c0c5a92bc
+                Name: Nettle
+                Components:
+                    18c9637daa0d5a9dba511265b7678263: !TransformComponent
+                        Id: 5cfbf2d1-8f8e-57cd-984c-d8b2ae819485
+                        Position: {X: 5.2, Y: 0.0, Z: -4.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    7d6e1d26c8a15b4f8910edada0b7bf2f: !ModelComponent
+                        Id: 97240e39-5243-5b8d-a3d1-b9f75873c0c1
+                        Model: 85378652-f462-5298-8eca-dff39306483d:World/Models/Herb
+                        Materials: {}
+                    0175b74d18925ed1a96890dc1b87811b: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 6314e365-f45c-5d06-b9b6-cc1c47de6b99
+                        Node: Nettle
+                        IsThing: true
+                        Label: line:use_pick
+                        WalkSpeed: 3.0
+                        Runner: null
+                    6c9f7502049b5d94a24160c437886a27: !Ashcombe.ShownWhen,Ashcombe.Game
+                        Id: 0e9d35e7-bfac-5f1d-98dd-6d61b1f439bd
+                        Variable: $nettle_taken
+                        Not: true
+        -   Entity:
+                Id: 265fa158-04e7-56b1-9c91-0ea8b32b1933
+                Name: Wheel
+                Components:
+                    58b7c99dc59a509c814c077617d62301: !TransformComponent
+                        Id: ab2ac081-5762-5135-bfce-f35a383fa7de
+                        Position: {X: 20.6, Y: 0.0, Z: 6.8}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    d3343085b87d5cb1a85c4ac1c4fe5a2b: !ModelComponent
+                        Id: 5964d4db-0e20-5773-82f9-e99fceca4f19
+                        Model: 57f1f258-d22b-524e-9af7-6515e187d1a7:World/Models/Crate
+                        Materials: {}
+                    6756927784c55a77b185e4c987d4765a: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 6eec3ac9-76e2-5230-b860-c1fdb4614c5b
+                        Node: Wheel
+                        IsThing: true
+                        Label: line:use_wheel
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: bcdc06b4-c4b0-541e-bbad-9422494f34d1
+                Name: FairGround
+                Components:
+                    fdfc36adba6e56c4bc25dd1632939fab: !TransformComponent
+                        Id: d897eb30-5f1d-5da2-ab55-d2466ebd6e15
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    61ca1dddf54650b0b9f8a8ee60bfc1fe: !Ashcombe.StoryPlace,Ashcombe.Game
+                        Id: 4a8dc7a1-ed31-5571-951c-83a3c9f041b1
+                        Place: e70ae9d2-7d17-54c1-b805-7953b1e93bfa:Places/Village/Fair
+                        Variable: $fair_up

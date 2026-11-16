@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: 3b4d92c1-af7e-5584-b72e-0ab1f606e989
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CapsuleProceduralModel
+    Length: 0.85
+    Radius: 0.33
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.78, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: b73b88c6-033c-5753-88a7-63aaebcd4831:World/Materials/Miner

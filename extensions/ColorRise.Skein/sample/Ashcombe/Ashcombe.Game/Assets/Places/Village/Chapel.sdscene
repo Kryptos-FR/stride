@@ -1,0 +1,254 @@
+!SceneAsset
+Id: 8533caa2-61f6-57a7-802a-f09b6f20a712
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 500.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! 34714088-2b04-55cb-b9bb-26c80eb440d0
+        - ref!! b617c723-40b8-5d66-bea8-7a403d5e4102
+        - ref!! 3cff3a63-fb01-5325-b9fe-b8cfe6c72a30
+        - ref!! 575f2158-ffca-5bd7-8d8d-554ee235d719
+        - ref!! f90ccbba-2b3d-5701-b512-109d0036d5d4
+        - ref!! 631bd73a-a83f-5c47-83a8-3c4edb247a19
+        - ref!! 0ddffe07-00ff-5e8a-9109-ee73d60dfac8
+        - ref!! 5e11a277-7ea3-5c81-bca2-7ff7ca3e6f55
+        - ref!! 17f91640-bf8d-52d6-986a-d69f3cc746c3
+        - ref!! e08d6c1e-0741-5a01-93e1-2bdb1e0f7ab7
+        - ref!! e8e7327e-4053-576d-b486-f6d9eacf7bb9
+        - ref!! b5b2e8cf-0b8a-5a56-b2ef-50acfa383db6
+        - ref!! c44be6b8-7499-5d39-b128-6b8dca7d4d73
+        - ref!! fb7fd363-6a1f-58e1-bf77-d3b009a91946
+        - ref!! c2ba19d9-fd53-5141-91ba-1d1c2bc8f857
+    Parts:
+        -   Entity:
+                Id: 34714088-2b04-55cb-b9bb-26c80eb440d0
+                Name: Area
+                Components:
+                    c6ad2a820c865ef99c4e60ce74f95109: !TransformComponent
+                        Id: 69b13323-9b00-505e-8d23-bd9edbd37db4
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    239260bc28e45089ba555fc839c3c025: !Ashcombe.PlaceArea,Ashcombe.Game
+                        Id: f376f5b6-09fa-5e52-8824-166b63bc6fc2
+                        HalfSize: {X: 4.5, Y: 5.5}
+                        Title: line:place_chapel
+        -   Entity:
+                Id: b617c723-40b8-5d66-bea8-7a403d5e4102
+                Name: Floor
+                Components:
+                    ba0d15d2757c5e978e5a566443b21616: !TransformComponent
+                        Id: 8414a1f8-be5d-5752-8472-1e5f9f4f6a8d
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    f7409966776b5080b58937063d3b3caf: !ModelComponent
+                        Id: 2b644113-17a9-5e97-88cc-16097d1bc926
+                        Model: 9a3a7eaa-067b-5d08-a066-cabdfaba1f03:World/Models/ChapelFloor
+                        Materials: {}
+        -   Entity:
+                Id: 3cff3a63-fb01-5325-b9fe-b8cfe6c72a30
+                Name: WallBack
+                Components:
+                    70b48cec4592556c872e2f91cd7627bd: !TransformComponent
+                        Id: dcc8badc-8de4-5b9c-8aa1-20b4b6d28474
+                        Position: {X: 0.0, Y: 0.0, Z: -6.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    70e44176f3365cd39d6cbc799b179acd: !ModelComponent
+                        Id: 5d8b96ce-aa3b-5b8f-a729-04018279c135
+                        Model: c01df15b-c944-55d8-9f28-335ed5decd22:World/Models/ChapelWallBack
+                        Materials: {}
+        -   Entity:
+                Id: 575f2158-ffca-5bd7-8d8d-554ee235d719
+                Name: WallLeft
+                Components:
+                    1d3e7581be105fc5b3f32151af5d1417: !TransformComponent
+                        Id: 0921eb3f-c193-5fcb-9eaf-5ac59f06b994
+                        Position: {X: -5.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    c0b1a2de843b5a359dbf8cf8f48e93a6: !ModelComponent
+                        Id: cad1b485-4663-51f0-89d1-9a59ba3d4407
+                        Model: 1ff4e1f8-8fdf-5b85-9605-b4fca0b30bea:World/Models/ChapelWallSide
+                        Materials: {}
+        -   Entity:
+                Id: f90ccbba-2b3d-5701-b512-109d0036d5d4
+                Name: WallRight
+                Components:
+                    8f1058c0c2fd5985acc813fcca77f4de: !TransformComponent
+                        Id: 6070437c-25c7-553e-8daa-3e38cef489e8
+                        Position: {X: 5.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    f53a8c2027795ef88bef024cc9f515eb: !ModelComponent
+                        Id: 56a918eb-398b-51f3-828d-6c41eefdf25a
+                        Model: 1ff4e1f8-8fdf-5b85-9605-b4fca0b30bea:World/Models/ChapelWallSide
+                        Materials: {}
+        -   Entity:
+                Id: 631bd73a-a83f-5c47-83a8-3c4edb247a19
+                Name: WallFrontLeft
+                Components:
+                    9498ec6ea5245291a5f812732a35c48c: !TransformComponent
+                        Id: 61dba8cc-df89-524b-a625-e12f53f35e0d
+                        Position: {X: -3.0999999999999996, Y: 0.0, Z: 6.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    e48b3105f1f358d3af4883d4e75e94db: !ModelComponent
+                        Id: f3c49274-f92a-5ba8-af6d-05dd5570cc95
+                        Model: b5ccb1a4-2393-5ea3-be5a-0457e5d6c77d:World/Models/ChapelWallFront
+                        Materials: {}
+        -   Entity:
+                Id: 0ddffe07-00ff-5e8a-9109-ee73d60dfac8
+                Name: WallFrontRight
+                Components:
+                    1b202dc6b0e75de483a070389db442fa: !TransformComponent
+                        Id: 74a09ebd-dee4-5d0e-b988-01d71ca76578
+                        Position: {X: 3.0999999999999996, Y: 0.0, Z: 6.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    cffc9f9b4b0550e1ae76be8cab6c0047: !ModelComponent
+                        Id: c2592b1e-cba2-5e7d-9663-1d434f9e7233
+                        Model: b5ccb1a4-2393-5ea3-be5a-0457e5d6c77d:World/Models/ChapelWallFront
+                        Materials: {}
+        -   Entity:
+                Id: 5e11a277-7ea3-5c81-bca2-7ff7ca3e6f55
+                Name: Lamp
+                Components:
+                    cdabe7d1bc9452e2acd41354d9ba9523: !TransformComponent
+                        Id: 0de72256-554c-5c46-b71f-8e078a62abaa
+                        Position: {X: 0.0, Y: 4.0, Z: -2.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    9f9c3d97a51e55c681c48b5de08e01db: !LightComponent
+                        Id: a4da4bd7-fe5c-5a0d-9d8f-008eb591f3f4
+                        Type: !LightPoint
+                            Color: !ColorRgbProvider
+                                Value: {R: 0.85, G: 0.85, B: 1.0}
+                            Radius: 14.0
+                        Intensity: 5.0
+        -   Entity:
+                Id: 17f91640-bf8d-52d6-986a-d69f3cc746c3
+                Name: Arrival
+                Components:
+                    b8b8179dd1cf51dd9bf694c6d2c8dc30: !TransformComponent
+                        Id: 400cbf8d-311d-5273-9bbe-f586106891a7
+                        Position: {X: 0.0, Y: 0.0, Z: 4.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: e08d6c1e-0741-5a01-93e1-2bdb1e0f7ab7
+                Name: Altar
+                Components:
+                    5c82eaab89e75692b10d03e0ae954d5c: !TransformComponent
+                        Id: 98ff68ee-3712-5466-a7f1-9e8c02f01b2f
+                        Position: {X: 0.0, Y: 0.0, Z: -4.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    fd6a7633f3e65134b4103dab3960b827: !ModelComponent
+                        Id: ff36993d-acbe-5bf2-b6c4-4ec2245f8ae9
+                        Model: 1c78ad7d-b5eb-5be9-aa9f-852554714730:World/Models/Altar
+                        Materials: {}
+        -   Entity:
+                Id: e8e7327e-4053-576d-b486-f6d9eacf7bb9
+                Name: Pews1
+                Components:
+                    73b4587eaf49534092c1085ceea4b164: !TransformComponent
+                        Id: a673bd92-5cbd-5648-ad33-7c158984416a
+                        Position: {X: 0.0, Y: 0.0, Z: -1.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    b605d0fa635553b4a1f677ae80bea45c: !ModelComponent
+                        Id: a3f5b18c-14c1-502a-9e13-e9db3b312541
+                        Model: f776aad2-10be-52dd-941a-683f2ac91f91:World/Models/Pews
+                        Materials: {}
+        -   Entity:
+                Id: b5b2e8cf-0b8a-5a56-b2ef-50acfa383db6
+                Name: Pews2
+                Components:
+                    4e4f1a68d1e555638466c3fd3018b9ef: !TransformComponent
+                        Id: 7da9f460-c292-5a0f-85ba-15325cdac44d
+                        Position: {X: 0.0, Y: 0.0, Z: 1.2}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    3df4e74a762d59cfabb0a96deadbbe9c: !ModelComponent
+                        Id: b9634b73-c5b0-5979-9617-9181464bf607
+                        Model: f776aad2-10be-52dd-941a-683f2ac91f91:World/Models/Pews
+                        Materials: {}
+        -   Entity:
+                Id: c44be6b8-7499-5d39-b128-6b8dca7d4d73
+                Name: Bell
+                Components:
+                    adc1385aec1d5bca82d830eaf9119c6b: !TransformComponent
+                        Id: 6d0c6159-88fc-5e13-b340-e30a2b12b750
+                        Position: {X: -3.6, Y: 0.0, Z: -5.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    6ad6f070b7875759af055bfc0b1df04d: !ModelComponent
+                        Id: 78391d66-3e7b-5f90-a498-f860653e1f0b
+                        Model: f4cf0c31-f3ed-5f62-a5e0-d88f5f805358:World/Models/BellRope
+                        Materials: {}
+                    21ed59ef493255a9b26021ab433426eb: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 212818f4-de2a-585f-81a5-823d2f09ed68
+                        Node: Bell
+                        IsThing: true
+                        Label: line:use_survey
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: fb7fd363-6a1f-58e1-bf77-d3b009a91946
+                Name: MasonMark
+                Components:
+                    45067645231750fca53ef8917727378e: !TransformComponent
+                        Id: 6470341f-49e0-5d39-a855-d3ce4e0a04e8
+                        Position: {X: 3.8, Y: 0.0, Z: -3.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    7bbd08b64ade5bfc923a31c5ad351676: !ModelComponent
+                        Id: e9d0a8bd-d536-5028-b43b-caca6e8dd52f
+                        Model: 6d70024a-1e7e-569c-a305-eda34ff48a3d:World/Models/MasonMark
+                        Materials: {}
+                    ef6e391427f35c00b2d2507eb350b7dd: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 464c3bca-6a0b-5ca6-a65f-645e222ce99c
+                        Node: MasonMark
+                        IsThing: true
+                        Label: line:use_look
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: c2ba19d9-fd53-5141-91ba-1d1c2bc8f857
+                Name: ChapelExit
+                Components:
+                    11964db315d0503c9c2f5ef0643c1d5c: !TransformComponent
+                        Id: 0d51e14f-5a72-5a56-8aa8-45380b413e39
+                        Position: {X: 0.0, Y: 0.0, Z: 5.9}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    96792e650a3f5523b686d61fe0a5e507: !ModelComponent
+                        Id: c54e6442-1d9a-5802-8a4c-2c4a61234347
+                        Model: fd11044a-958e-5c7c-a3f6-ddd72512e40d:World/Models/Doorway
+                        Materials: {}
+                    d1e9513ccd755af4ac19060f4ef61954: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: 06b57662-6949-5925-ac6d-6e0f43b122ae
+                        Target: 5a64658e-d3e2-5e00-bd43-c93cb050ecc6:Places/Village
+                        Spawn: ChapelFront
+                        IsJourney: false
+                        Label: line:go_out
+                        Node: ''

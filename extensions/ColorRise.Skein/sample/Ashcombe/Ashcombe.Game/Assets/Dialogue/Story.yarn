@@ -1,0 +1,326 @@
+title: Story
+act: All
+location: Anywhere
+scenario: The state of the story
+color: yellow
+---
+// The state of the story. The acts, the quests and the forks are variables: the nodes read them in their "when:"
+// headers, and the game shows them on its screen. What the cartographer carries, the time, where the cartographer is
+// and the landmarks on the map are the game's: the scripts ask for them with functions (has_item, time_of_day, here,
+// surveyed) and change them with commands (give, take, end_day, survey, and go on a door).
+<<enum Act>>
+    <<case Survey>>
+    <<case Castle>>
+    <<case Mine>>
+    <<case Fair>>
+<<endenum>>
+
+<<enum QuestState>>
+    <<case NotStarted>>
+    <<case Offered>>
+    <<case Active>>
+    <<case Succeeded>>
+    <<case Failed>>
+<<endenum>>
+
+/// Fork 1: where the cartographer said the new road should go.
+<<enum Road>>
+    <<case Undecided>>
+    <<case Corvin>>
+    <<case Miller>>
+    <<case NoSide>>
+<<endenum>>
+
+/// Fork 2: who the sergeant blames for the moving stones.
+<<enum Culprit>>
+    <<case Unknown>>
+    <<case Lio>>
+    <<case Pell>>
+<<endenum>>
+
+/// Fork 3: what the cartographer did with the steward's offer.
+<<enum Offer>>
+    <<case NotMade>>
+    <<case Accepted>>
+    <<case Refused>>
+    <<case Proof>>
+<<endenum>>
+
+/// Fork 4: how the cartographer went down to the deep level.
+<<enum WayDown>>
+    <<case None>>
+    <<case Rope>>
+    <<case Flooded>>
+    <<case Long>>
+<<endenum>>
+
+/// Fork 5: what the cartographer did with the steward, trapped in the gallery.
+<<enum CorvinFate>>
+    <<case Unmet>>
+    <<case Helped>>
+    <<case Left>>
+    <<case Robbed>>
+<<endenum>>
+
+/// Fork 6: the border the cartographer drew at the hearing.
+<<enum Border>>
+    <<case None>>
+    <<case Carved>>
+    <<case Forged>>
+    <<case Walked>>
+<<endenum>>
+
+/// The act the story is in.
+<<declare $act = Act.Survey>>
+
+// The quests. The game writes a quest in its journal when a script says quest_changed with its id.
+
+/// Act I. Put the five landmarks of the village on the map.
+<<declare $quest_survey = QuestState.NotStarted>>
+/// Act I. Find who moves the boundary stones at night.
+<<declare $quest_stones = QuestState.NotStarted>>
+/// Act I, optional. Mend the mill wheel with a gear from Pell.
+<<declare $quest_wheel = QuestState.NotStarted>>
+/// Act I, optional. Bring Nan three herbs.
+<<declare $quest_herbs = QuestState.NotStarted>>
+/// Act I, optional. Find Hedda's lost recipe.
+<<declare $quest_recipe = QuestState.NotStarted>>
+/// Act II. Present the survey to the Countess.
+<<declare $quest_audience = QuestState.NotStarted>>
+/// Act II. Find the missing page of the charter.
+<<declare $quest_page = QuestState.NotStarted>>
+/// Act II. Answer the steward's offer.
+<<declare $quest_offer = QuestState.NotStarted>>
+/// Act II, optional. Bring the cook ale and flour from the village.
+<<declare $quest_feast = QuestState.NotStarted>>
+/// Act II, optional. Look at the four portraits of the hall.
+<<declare $quest_portraits = QuestState.NotStarted>>
+/// Act II, optional. Buy something from Pell at the castle.
+<<declare $quest_wares = QuestState.NotStarted>>
+/// Act III. Find Jory.
+<<declare $quest_jory = QuestState.NotStarted>>
+/// Act III. Copy the carved border into the map.
+<<declare $quest_carvings = QuestState.NotStarted>>
+/// Act III. Deal with the steward in the gallery.
+<<declare $quest_corvin = QuestState.NotStarted>>
+/// Act III, optional. Count the miners on Gudrun's tally board.
+<<declare $quest_tally = QuestState.NotStarted>>
+/// Act III, optional. Answer the echo of the deep level.
+<<declare $quest_echo = QuestState.NotStarted>>
+/// Act IV. Draw the border at the hearing.
+<<declare $quest_border = QuestState.NotStarted>>
+/// Act IV, only when the cartographer took a side on the road. Speak for the mill at the hearing.
+<<declare $quest_mill = QuestState.NotStarted>>
+/// Act IV, optional, only when Lio was not blamed. Look at Lio's first map.
+<<declare $quest_lio_map = QuestState.NotStarted>>
+/// Act IV, optional. Pell's last sale.
+<<declare $quest_last_sale = QuestState.NotStarted>>
+
+// Act I: the survey
+
+/// The forks
+<<declare $road = Road.Undecided>>
+<<declare $culprit = Culprit.Unknown>>
+/// The cartographer spoke to the steward in the village.
+<<declare $met_corvin = false>>
+/// The cartographer spoke to the miller.
+<<declare $met_bram = false>>
+/// Hedda lets the cartographer down into her cellar.
+<<declare $cellar_allowed = false>>
+/// The cartographer watched the stones by night and saw who moves them.
+<<declare $saw_lio = false>>
+/// Pell has a gear to sell, and the cartographer bought it.
+<<declare $gear_bought = false>>
+/// The mill wheel turns again.
+<<declare $wheel_mended = false>>
+/// How much Pell trusts the cartographer.
+<<declare $pell_trust = 0>>
+/// The herbs taken. The game hides each herb when it is taken.
+<<declare $nettle_taken = false>>
+<<declare $dewcup_taken = false>>
+<<declare $hollyroot_taken = false>>
+/// The recipe is found. The game hides its box.
+<<declare $recipe_found = false>>
+/// Who the game shows where.
+<<declare $pell_in_village = true>>
+<<declare $pell_at_castle = false>>
+<<declare $corvin_in_village = true>>
+<<declare $corvin_at_castle = false>>
+<<declare $corvin_in_mine = false>>
+<<declare $corvin_at_fair = false>>
+
+// Act II: the castle
+
+/// The clues to the missing page: the library, the tomb in the castle's chapel, the steward's desk.
+<<declare $clue_library = false>>
+<<declare $clue_tomb = false>>
+<<declare $clue_desk = false>>
+/// The steward's offer, in crowns.
+<<declare $bribe = 40>>
+<<declare $offer = Offer.NotMade>>
+/// The cook's feast was served.
+<<declare $feast_served = false>>
+/// The portraits looked at.
+<<declare $portraits_seen = 0>>
+
+// Act III: the mine
+
+/// The measures of oil left in the cartographer's lamp. Each descent, and the long way, burns some.
+<<declare $oil = 3>>
+<<declare $way = WayDown.None>>
+<<declare $corvin_fate = CorvinFate.Unmet>>
+<<declare $jory_found = false>>
+<<declare $carvings_copied = false>>
+/// The miners counted on the tally board.
+<<declare $tally = 0>>
+/// The echo of the deep level was answered. The echo's own project sets it; the story reads it.
+<<declare $echo_answered = false>>
+
+// Act IV: the fair
+
+/// The fair is up: the game loads its scene into the village.
+<<declare $fair_up = false>>
+<<declare $border = Border.None>>
+<<declare $spoke_for_mill = false>>
+
+// Facts that follow from others: smart variables, computed each time they are read.
+
+/// The page names the carvings, and the carvings are on the map.
+<<declare $can_draw_true_border = $carvings_copied and $quest_page == QuestState.Succeeded>>
+/// The cartographer holds proof that the steward forged a border: his letter, or his notebook.
+<<declare $has_proof = $offer == Offer.Proof or $corvin_fate == CorvinFate.Robbed>>
+/// The steward stands at the hearing with a border of his own: he did not pay for one, and he is not still under the hill.
+<<declare $corvin_presents = $offer != Offer.Accepted and $corvin_fate != CorvinFate.Left>>
+/// The road goes around the mill.
+<<declare $road_around = $road != Road.Corvin or $spoke_for_mill>>
+/// The map has holes: too few landmarks, and no carvings to make up for them.
+<<declare $map_incomplete = survey_count() < 4 and not $carvings_copied>>
+===
+
+title: Interface
+act: All
+location: Anywhere
+scenario: The state of the story
+color: yellow
+---
+// The words of the game's own screen. Nothing plays this node: the game reads each line by its id, in the language of
+// the moment.
+Day #line:ui_day
+morning #line:time_morning
+afternoon #line:time_afternoon
+evening #line:time_evening
+night #line:time_night
+Carrying #line:ui_carrying
+Journal #line:ui_journal
+On the map: #line:ui_map
+talk to #line:ui_talk
+WASD move · T talk · E use · N let time pass · L language · F5 save · F9 load · Esc quit #line:ui_help
+Saved. #line:ui_saved
+Loaded. #line:ui_loaded
+There is no save yet. #line:ui_no_save
+The end #line:ui_the_end
+F9 load · Esc quit #line:ui_end_help
+
+Act I · The survey #line:act_0
+Act II · The castle #line:act_1
+Act III · Under the hill #line:act_2
+Act IV · The fair #line:act_3
+
+offered #line:state_offered
+to do #line:state_active
+done #line:state_succeeded
+failed #line:state_failed
+
+Survey the village #line:quest_survey
+Who moves the stones #line:quest_stones
+The mill wheel #line:quest_wheel
+Nan's herbs #line:quest_herbs
+Hedda's lost recipe #line:quest_recipe
+Present the survey #line:quest_audience
+The missing page #line:quest_page
+The steward's offer #line:quest_offer
+The feast #line:quest_feast
+The portraits #line:quest_portraits
+Pell's wares #line:quest_wares
+Find Jory #line:quest_jory
+The carved border #line:quest_carvings
+The steward in the dark #line:quest_corvin
+Gudrun's tally #line:quest_tally
+The echo #line:quest_echo
+Draw the border #line:quest_border
+Speak for the mill #line:quest_mill
+Lio's first map #line:quest_lio_map
+Pell's last sale #line:quest_last_sale
+
+a gear #line:item_gear
+a rope #line:item_rope
+nettle #line:item_nettle
+a dew-cup #line:item_dewcup
+hollyroot #line:item_hollyroot
+Nan's remedy #line:item_remedy
+the recipe #line:item_recipe
+crowns #line:item_crowns
+a cask of ale #line:item_ale
+a sack of flour #line:item_flour
+the steward's letter #line:item_letter
+the steward's notebook #line:item_notebook
+the steward's border #line:item_false_map
+a ribbon #line:item_ribbon
+Lio's map #line:item_lio_map
+
+look at it #line:use_look
+put it on the map #line:use_survey
+look at the stones #line:use_stones
+pick it #line:use_pick
+look at the wheel #line:use_wheel
+look at the portrait #line:use_portrait
+copy the carvings #line:use_carvings
+call into the dark #line:use_echo
+read the tally #line:use_tally
+take your seat at the hearing #line:use_hearing
+
+go into the inn #line:go_inn
+go into the mill #line:go_mill
+go into the cottage #line:go_cottage
+go into the chapel #line:go_chapel
+go down to the cellar #line:go_cellar
+go out #line:go_out
+go up #line:go_up
+go down in the lift #line:go_down
+take the road to the castle #line:go_castle
+take the path to the mine #line:go_mine
+take the road to the village #line:go_village
+climb down the old shaft #line:go_shaft
+wade into the flooded gallery #line:go_water
+take the long way down #line:go_long
+go back #line:go_back
+go on #line:go_on
+
+Ashcombe #line:place_village
+The Drowned Bell inn #line:place_inn
+The inn's cellar #line:place_cellar
+The mill #line:place_mill
+Nan's cottage #line:place_cottage
+The chapel #line:place_chapel
+Varne castle #line:place_castle
+The mine camp #line:place_mine
+The fallen gallery #line:place_gallery
+The flooded gallery #line:place_flooded
+The deep level #line:place_deep
+
+The true border holds, and the road goes around the mill. Ashcombe keeps its wheel and its quarrels. #line:ending_true_around
+The true border holds, and the road goes through the village. The mill comes down by midsummer. #line:ending_true_through
+The steward's border is drawn. The abbey loses its meadows, and nobody can say why. #line:ending_forged
+The steward is exposed before the whole fair, and leaves the valley before the evening. #line:ending_exposed
+The border follows the path the villagers walk. Nobody is pleased, and nobody fights. #line:ending_walked
+The hearing ends without a border. The quarrel goes on for another generation. #line:ending_failed
+===
+
+title: StoryNotes
+act: All
+location: Anywhere
+scenario: The state of the story
+style: note
+---
+Four acts. Act I is the village and its houses (child scenes), for two days. Act II is the castle (a separate scene), for one day, and the feast sends the cartographer back to the village and back. Act III is the mine (a separate scene with its levels as child scenes), for one shift, with the lamp oil as the clock. Act IV is the village again, with the fair (a child scene loaded by the story) and the hearing, which gives one of six endings.
+===

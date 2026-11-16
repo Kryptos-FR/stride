@@ -7,6 +7,7 @@ namespace Ashcombe;
 /// <summary>
 /// Where the cartographer can walk in a place: a rectangle around its entity. Each scene of a place has one.
 /// </summary>
+[DataContract]
 [Display("Place area")]
 [ComponentCategory("Ashcombe")]
 public sealed class PlaceArea : EntityComponent

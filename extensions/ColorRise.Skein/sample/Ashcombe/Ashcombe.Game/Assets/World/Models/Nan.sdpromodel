@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: 6485f08c-efe3-5cc4-933c-0d6c53d6718c
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CapsuleProceduralModel
+    Length: 0.9
+    Radius: 0.35
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.8, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 92d3b7a9-a71f-521d-a535-1e4ce06fa8e9:World/Materials/Nan

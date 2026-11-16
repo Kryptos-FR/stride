@@ -1,0 +1,249 @@
+!SceneAsset
+Id: 47040839-5d51-52cd-90af-153793ef4bc2
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 300.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! 62232c7c-267f-5ae2-8070-400e96dc1f72
+        - ref!! fedb513f-afff-53c9-958e-57150e071698
+        - ref!! 10bce6bf-8fdd-5263-9fab-8fee7c7ae4bd
+        - ref!! 9cd279e5-f3b7-507b-bb05-ad28577cc79b
+        - ref!! 739ac563-34b5-565d-9a93-f81226222e0d
+        - ref!! 61b9834e-0f94-5c28-bf11-a87b56dc1015
+        - ref!! 9d1aa99d-7634-51fe-9eed-6c9a076ef918
+        - ref!! 7c426df8-5035-5f92-b29b-7d265ff4893c
+        - ref!! 185464f4-0eaa-55ee-8a02-d0ff5b01b431
+        - ref!! 37c764b3-f6fd-511c-a867-0d4b91307856
+        - ref!! 1379ed58-b8d9-57a4-814d-cafc85f6552c
+        - ref!! de1f4f6b-c3ed-5580-992b-745514af0598
+        - ref!! 38d55be1-6741-5036-b252-37f952d0adde
+        - ref!! 48e0b620-4789-547f-b051-ded432a7bf04
+    Parts:
+        -   Entity:
+                Id: 62232c7c-267f-5ae2-8070-400e96dc1f72
+                Name: Area
+                Components:
+                    66890e38280956c684de5f1ab79ac49c: !TransformComponent
+                        Id: 8889cc2a-4f3c-54a2-8bc2-6341d3bc7740
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    84a60bb9db845fed8717887ddd3b01bc: !Ashcombe.PlaceArea,Ashcombe.Game
+                        Id: 90cee02e-6e82-51b1-83c1-e4e9dbdcbd27
+                        HalfSize: {X: 5.5, Y: 4.5}
+                        Title: line:place_mill
+        -   Entity:
+                Id: fedb513f-afff-53c9-958e-57150e071698
+                Name: Floor
+                Components:
+                    462648fea23751038bdd1a3890fcebc8: !TransformComponent
+                        Id: 45de2b07-ff00-5fc7-b191-e72915df2aad
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    dc09c622d91f56a195d05fbbeb4147b0: !ModelComponent
+                        Id: ebeaebb9-3574-5dac-9280-6c8591768d12
+                        Model: 025c9b28-a910-5c83-9860-89e005b979cc:World/Models/MillFloor
+                        Materials: {}
+        -   Entity:
+                Id: 10bce6bf-8fdd-5263-9fab-8fee7c7ae4bd
+                Name: WallBack
+                Components:
+                    a3d0c7d119f1546b8b42d9718675bba0: !TransformComponent
+                        Id: fab4b9db-2993-5ac0-87de-182be7d90d90
+                        Position: {X: 0.0, Y: 0.0, Z: -5.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    0976bec92f405bcda6e138c0978d350a: !ModelComponent
+                        Id: a02c917e-c69b-59e0-ad24-e081fd3dedf7
+                        Model: a446ffd2-5e19-53be-88eb-890b59bc14b2:World/Models/MillWallBack
+                        Materials: {}
+        -   Entity:
+                Id: 9cd279e5-f3b7-507b-bb05-ad28577cc79b
+                Name: WallLeft
+                Components:
+                    2c1bccfc34ee55889433cee9b227d0d7: !TransformComponent
+                        Id: 83f3e950-e825-53eb-886c-986fb6b9cf4e
+                        Position: {X: -6.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    716f69b3178b5536b0885ccc6c37cee4: !ModelComponent
+                        Id: 3f261a8e-7610-5b9e-8bee-9b2cc9f24811
+                        Model: 6aff50fd-c484-5559-9177-cfdc81ba373a:World/Models/MillWallSide
+                        Materials: {}
+        -   Entity:
+                Id: 739ac563-34b5-565d-9a93-f81226222e0d
+                Name: WallRight
+                Components:
+                    6e8da78763cb5ab98567a002dc0ba336: !TransformComponent
+                        Id: bffec7a0-b0cc-5bb2-ab3d-a781012f02f1
+                        Position: {X: 6.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    cee1efb48aed5d41b1edd511f91b4c6d: !ModelComponent
+                        Id: 1e019790-648c-5adf-abbc-8e83eadc129c
+                        Model: 6aff50fd-c484-5559-9177-cfdc81ba373a:World/Models/MillWallSide
+                        Materials: {}
+        -   Entity:
+                Id: 61b9834e-0f94-5c28-bf11-a87b56dc1015
+                Name: WallFrontLeft
+                Components:
+                    40359982231957178197da78196f9f4c: !TransformComponent
+                        Id: 8a4e9d39-32fd-52a8-a085-15c35203fa60
+                        Position: {X: -3.5999999999999996, Y: 0.0, Z: 5.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    87f980519b2e52a1b00790b360722543: !ModelComponent
+                        Id: 25af685a-f3da-57df-97eb-2edd5942b76e
+                        Model: 43c7eed1-8e25-56e1-8011-f67c4643ade5:World/Models/MillWallFront
+                        Materials: {}
+        -   Entity:
+                Id: 9d1aa99d-7634-51fe-9eed-6c9a076ef918
+                Name: WallFrontRight
+                Components:
+                    ee43c4c3f9205acf8c6a3a1e0fe949cb: !TransformComponent
+                        Id: ddab3719-29b8-5b61-b612-adab23069cd3
+                        Position: {X: 3.5999999999999996, Y: 0.0, Z: 5.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    81fa1dbf12ce57c3bc31f60357aeb24f: !ModelComponent
+                        Id: 73d905f3-acd5-59f3-ad4f-c7a29b67356e
+                        Model: 43c7eed1-8e25-56e1-8011-f67c4643ade5:World/Models/MillWallFront
+                        Materials: {}
+        -   Entity:
+                Id: 7c426df8-5035-5f92-b29b-7d265ff4893c
+                Name: Lamp
+                Components:
+                    4c0e86fa038c5dd0b7b98a201705a3ca: !TransformComponent
+                        Id: 246670b3-5ad8-5398-baee-5d3072962084
+                        Position: {X: 0.0, Y: 4.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    49c9513ed454558ba460c6972d87a848: !LightComponent
+                        Id: c779b14d-ab93-56fd-adc3-8546f6e17fa3
+                        Type: !LightPoint
+                            Color: !ColorRgbProvider
+                                Value: {R: 1.0, G: 0.86, B: 0.62}
+                            Radius: 14.0
+                        Intensity: 6.0
+        -   Entity:
+                Id: 185464f4-0eaa-55ee-8a02-d0ff5b01b431
+                Name: Arrival
+                Components:
+                    eac82cb2938b5e4a95f101e4fddca8de: !TransformComponent
+                        Id: 767fb79a-6dd3-5581-b60f-b4c98762681c
+                        Position: {X: 0.0, Y: 0.0, Z: 3.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 37c764b3-f6fd-511c-a867-0d4b91307856
+                Name: Millstones
+                Components:
+                    7ffee952d663587199f6fbbf57b9396a: !TransformComponent
+                        Id: ff2db259-eebe-582a-956b-9c24273352da
+                        Position: {X: 1.5, Y: 0.0, Z: -1.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    323bdff02e8856d9968905c5eb2f7d8b: !ModelComponent
+                        Id: 791be5de-cda4-5c4c-a653-63a3d3a14007
+                        Model: c2514855-5f10-523c-879e-f9dcc1ac5400:World/Models/Millstones
+                        Materials: {}
+        -   Entity:
+                Id: 1379ed58-b8d9-57a4-814d-cafc85f6552c
+                Name: Lio
+                Components:
+                    255ac86ecd55512eb6b801b7bb061187: !TransformComponent
+                        Id: 014678e0-55b3-5ebd-aaf2-fc5e4abac285
+                        Position: {X: -2.5, Y: 0.0, Z: 0.5}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    aa41887949c45345bbab922a0fd73381: !ModelComponent
+                        Id: 4cad3ff5-9ad0-5110-98aa-246a895c75e1
+                        Model: 8f092def-35f5-55bc-b0e4-8cfeaffc17b8:World/Models/Lio
+                        Materials: {}
+                    2e75df090b815ae8b441245783550f30: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 2405f1be-33be-5791-96c4-e509bb7d6ba3
+                        Node: Lio
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                        Runner: null
+                    612294b689d25c7a9380e12e847bf51e: !DialogueActorComponent
+                        Id: d9d1e0f1-5624-5a4c-ba7a-4182d99c7e6f
+                        ActorName: Lio
+        -   Entity:
+                Id: de1f4f6b-c3ed-5580-992b-745514af0598
+                Name: Loft
+                Components:
+                    8a4e705de7be59ee8cfeda26c747fa1e: !TransformComponent
+                        Id: 3b7cf9a4-e4ac-5350-a306-1d97071bb468
+                        Position: {X: -4.2, Y: 0.0, Z: -4.4}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    691f374fa8fa5162b39fbdc343dd3167: !ModelComponent
+                        Id: 502d9805-91b0-5878-a712-411231d0cfb7
+                        Model: fed14ad2-ed19-5e45-b845-013d663f4be2:World/Models/Ladder
+                        Materials: {}
+                    fff84bf72ef35ce28625484317b7ecca: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: aee8dc2d-a9b3-5e9b-b1b6-5ba336178d28
+                        Node: Loft
+                        IsThing: true
+                        Label: line:use_survey
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: 38d55be1-6741-5036-b252-37f952d0adde
+                Name: Sacks
+                Components:
+                    68576a217d8e55f6969b208e626d249d: !TransformComponent
+                        Id: 5cb5ecd6-ccf1-5cd6-a5b3-16c8c2eb5e68
+                        Position: {X: 3.8, Y: 0.0, Z: -3.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    c2ed09a6815052c6a0f79630c3557afa: !ModelComponent
+                        Id: d7cb1300-d4fc-502b-99c3-c17cd78f324f
+                        Model: 64ca3268-fcf0-5770-8023-2393a7df9e4b:World/Models/Sacks
+                        Materials: {}
+                    6b4614fdff715337a604929fdedf0403: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 2b890243-e353-58d9-8161-217757ff98a5
+                        Node: Sacks
+                        IsThing: true
+                        Label: line:use_look
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: 48e0b620-4789-547f-b051-ded432a7bf04
+                Name: MillExit
+                Components:
+                    3d1473a408085b319c9e9e01e5fd131b: !TransformComponent
+                        Id: 59dcba98-35b4-5055-a31b-45de6374c3da
+                        Position: {X: 0.0, Y: 0.0, Z: 4.9}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    c4de8df1765b599983adead634c33c4c: !ModelComponent
+                        Id: dd432dbc-ca5d-5253-8c64-d237d917d890
+                        Model: fd11044a-958e-5c7c-a3f6-ddd72512e40d:World/Models/Doorway
+                        Materials: {}
+                    4def11280c0a533b8961a83ea8c9ed06: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: 00c73f77-7ed0-56c3-bff4-258dec06d568
+                        Target: 5a64658e-d3e2-5e00-bd43-c93cb050ecc6:Places/Village
+                        Spawn: MillFront
+                        IsJourney: false
+                        Label: line:go_out
+                        Node: ''

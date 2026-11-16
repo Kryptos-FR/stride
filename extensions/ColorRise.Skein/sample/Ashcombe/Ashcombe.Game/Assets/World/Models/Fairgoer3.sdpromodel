@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: 2a8d0452-6ad3-5711-8f69-f9960aa0e9cf
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CapsuleProceduralModel
+    Length: 0.85
+    Radius: 0.33
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.78, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: c1b85d02-463e-5efd-8cd3-b4796fd4c2de:World/Materials/Townsfolk

@@ -1,0 +1,127 @@
+!SceneAsset
+Id: f6ca14cf-f324-5771-923a-b6bcaf76eb93
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 300.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! 12151115-0f6e-5877-b304-be4c147af833
+        - ref!! b53bd07e-6eb4-5eb5-b6ee-fbc53eab894c
+        - ref!! 656f4bd0-659b-57c4-bf23-b2a83668f690
+        - ref!! bf850417-3188-5ac9-a807-841f2aac596e
+        - ref!! 1be3531f-6067-5cdc-915d-cee658aac256
+        - ref!! b5d809dd-7bc5-5c24-9b11-58edb1f4a3d7
+        - ref!! afbcdcb9-cf1e-5e73-8739-bb225802a973
+    Parts:
+        -   Entity:
+                Id: 12151115-0f6e-5877-b304-be4c147af833
+                Name: Area
+                Components:
+                    24b5d66b80d35af4b0271605935c87a8: !TransformComponent
+                        Id: 57fbd1e8-b2f5-5e21-a2ae-1d07137c94c1
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    9304f49df9ba54a19de40c9df2513559: !Ashcombe.PlaceArea,Ashcombe.Game
+                        Id: 6cf3a5e1-bb5c-5109-9b75-15d5fa9ff2f2
+                        HalfSize: {X: 5.5, Y: 4.0}
+                        Title: line:place_flooded
+        -   Entity:
+                Id: b53bd07e-6eb4-5eb5-b6ee-fbc53eab894c
+                Name: Floor
+                Components:
+                    2f31b50d1c245240a2f87ff3c5be7ee1: !TransformComponent
+                        Id: f0f5a09b-1c81-5a9d-82bf-d781618b8013
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    4980b26e6e8f53c9bafc17f68b91fff0: !ModelComponent
+                        Id: aba05091-c75d-5cc2-a251-e0d92a59b6b6
+                        Model: efea80ef-49bb-5693-9afe-208243238977:World/Models/GalleryFloor
+                        Materials: {}
+        -   Entity:
+                Id: 656f4bd0-659b-57c4-bf23-b2a83668f690
+                Name: Water
+                Components:
+                    1d0d10898e3359a8a7675b308828d88e: !TransformComponent
+                        Id: 54e7ef3c-c773-5881-b1ca-059a3cb391a3
+                        Position: {X: 0.0, Y: 0.4, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    8a53ff8f0199588e9066a1069cbae353: !ModelComponent
+                        Id: 29947653-4ec3-5c04-be91-12984bc6f317
+                        Model: 7bdbf68f-ccd8-53f4-9123-943e70e0b4b2:World/Models/FloodWater
+                        Materials: {}
+        -   Entity:
+                Id: bf850417-3188-5ac9-a807-841f2aac596e
+                Name: Light1
+                Components:
+                    7ec37ca97407519db40df172fa510655: !TransformComponent
+                        Id: 4efb2083-a154-5a6c-a323-8d3224b1aa1e
+                        Position: {X: 0.0, Y: 3.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    e6944b3a5d015636a49997b05e55ed89: !LightComponent
+                        Id: de4e6d72-51e3-516a-9a0a-2a331715c600
+                        Type: !LightPoint
+                            Color: !ColorRgbProvider
+                                Value: {R: 0.6, G: 0.75, B: 1.0}
+                            Radius: 9.0
+                        Intensity: 2.0
+        -   Entity:
+                Id: 1be3531f-6067-5cdc-915d-cee658aac256
+                Name: Arrival
+                Components:
+                    552e53c6cc755e5d8f8084628af3026e: !TransformComponent
+                        Id: 70384fd3-ab19-52c7-ab38-189a0546d6dc
+                        Position: {X: -5.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: b5d809dd-7bc5-5c24-9b11-58edb1f4a3d7
+                Name: FloodedBack
+                Components:
+                    487a7567b9235b8f97e65ce4bbdf89c0: !TransformComponent
+                        Id: e0e893f4-8f5e-5e88-ac59-23cad6534965
+                        Position: {X: -6.2, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    52bce5847d565fb5b6bc8f1cf9f0ddab: !ModelComponent
+                        Id: 54a4a1b7-f6f2-5c6d-939f-2e83e45e2d12
+                        Model: 8c2c9fb2-1e0a-5759-9ba6-d1a9f74d2aac:World/Models/Opening
+                        Materials: {}
+                    78761ac38c275b6aaadcb32b953d5036: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: 4b97b77e-ab83-5be4-9afa-0aa42e8a7819
+                        Target: 5acadda1-37d7-58e0-b466-9253b6ac2437:Places/Mine/Gallery
+                        Spawn: FromFlooded
+                        IsJourney: false
+                        Label: line:go_back
+                        Node: ''
+        -   Entity:
+                Id: afbcdcb9-cf1e-5e73-8739-bb225802a973
+                Name: FloodedOn
+                Components:
+                    88c33adb370d5661ab2b8f541de80370: !TransformComponent
+                        Id: a98b2f1f-f8c1-52ec-9396-7dfe061d5369
+                        Position: {X: 6.2, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    dfe3ce132e8e55dc88a9d05681e780e2: !ModelComponent
+                        Id: d1ef7daa-4108-52d6-8087-7a7d4d07388d
+                        Model: 8c2c9fb2-1e0a-5759-9ba6-d1a9f74d2aac:World/Models/Opening
+                        Materials: {}
+                    4e9fb8f5b2cf58d28555655265680b7e: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: f1d7c2e8-7f9d-5359-87f3-3ceff654db3a
+                        Target: c62962fd-9238-5f7f-b7b0-ff89932f2c88:Places/Mine/Deep
+                        Spawn: ''
+                        IsJourney: false
+                        Label: line:go_on
+                        Node: FloodedOn

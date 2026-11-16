@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: 85a65c38-4b31-57b9-8692-1887fb4d5251
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CapsuleProceduralModel
+    Length: 0.9
+    Radius: 0.35
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.8, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 65899fb7-a33a-59fa-9fcb-81c94f4122a8:World/Materials/Jory

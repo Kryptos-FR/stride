@@ -1,0 +1,12 @@
+!ProceduralModelAsset
+Id: fc2f52f1-0f48-560e-b1a9-6ed159658eca
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CubeProceduralModel
+    Size: {X: 7.4, Y: 0.6, Z: 6.4}
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.3, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 1d33e94a-02da-56d9-8749-0f58dff25208:World/Materials/Roof

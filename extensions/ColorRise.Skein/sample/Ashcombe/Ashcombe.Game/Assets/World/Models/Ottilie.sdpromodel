@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: b4d463ca-8e47-5072-a060-4f05b7e7c7e2
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CapsuleProceduralModel
+    Length: 0.9
+    Radius: 0.35
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.8, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 51677e8c-0794-5f55-9a73-a6bee6b8e3ed:World/Materials/Ottilie

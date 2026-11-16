@@ -1,0 +1,14 @@
+!ProceduralModelAsset
+Id: 8fbc7595-f51c-501a-8995-7465a51297a7
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CapsuleProceduralModel
+    Length: 0.9
+    Radius: 0.35
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.8, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 14c5cc7d-b0ae-5b67-b135-ccc3cc8de9f9:World/Materials/Gudrun

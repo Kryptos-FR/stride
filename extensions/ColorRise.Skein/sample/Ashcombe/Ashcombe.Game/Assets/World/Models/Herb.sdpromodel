@@ -1,0 +1,13 @@
+!ProceduralModelAsset
+Id: 85378652-f462-5298-8eca-dff39306483d
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !SphereProceduralModel
+    Radius: 0.28
+    Tessellation: 16
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.28, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 86864560-c563-5dd8-962d-d998321dec8a:World/Materials/Herb

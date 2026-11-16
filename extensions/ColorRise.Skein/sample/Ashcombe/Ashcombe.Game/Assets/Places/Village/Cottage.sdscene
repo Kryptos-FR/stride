@@ -1,0 +1,212 @@
+!SceneAsset
+Id: d944f031-f680-55f2-8004-155035c53a90
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 400.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! b60fec78-2e69-5cdb-bfb2-31cf976b953a
+        - ref!! fceaffef-033a-50ed-8e67-e40906856dce
+        - ref!! e026899d-fb54-5b27-99b6-173741074919
+        - ref!! 8440c193-9506-5c61-858b-3dac9b53cd02
+        - ref!! 7cf8f277-7284-5799-b481-0c95893af56b
+        - ref!! fdd7ec58-d33a-5f69-87bd-75525e71b5c7
+        - ref!! 47c1fed0-2178-5e7e-8236-74801f4a7786
+        - ref!! 0086b795-4a71-5701-877c-98b347f7f604
+        - ref!! 6807724a-ec2f-5f0d-812f-8eb57162b234
+        - ref!! 25f9e1ad-e207-5377-82fa-6e746a99d628
+        - ref!! 4be2a54e-cd80-5696-bdb0-2ddc2ffcf484
+        - ref!! 61f13d40-f4b8-50aa-827d-07f3e7b14242
+    Parts:
+        -   Entity:
+                Id: b60fec78-2e69-5cdb-bfb2-31cf976b953a
+                Name: Area
+                Components:
+                    41cf0470fa2d57deb4294192eadfa244: !TransformComponent
+                        Id: 7e8b38f7-cf50-51f0-8611-c1f37623a87e
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    af8a49ae1aac5c7e899a6c64a75a7c4f: !Ashcombe.PlaceArea,Ashcombe.Game
+                        Id: 3c0a2586-aab0-5b60-bee5-14edc600801e
+                        HalfSize: {X: 4.5, Y: 3.5}
+                        Title: line:place_cottage
+        -   Entity:
+                Id: fceaffef-033a-50ed-8e67-e40906856dce
+                Name: Floor
+                Components:
+                    9702b011d1d85565a42e05e362c332fd: !TransformComponent
+                        Id: bacc5f50-cced-58db-93cd-9d0d595affcf
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    6a73385a5bff53a787691f100417c1aa: !ModelComponent
+                        Id: c774640d-da5b-5250-abdf-bfbd1fed6507
+                        Model: c601d598-16fb-5794-aa5e-20041c9d23e8:World/Models/CottageFloor
+                        Materials: {}
+        -   Entity:
+                Id: e026899d-fb54-5b27-99b6-173741074919
+                Name: WallBack
+                Components:
+                    0bc64aa12a99599cba06d5b863c1682a: !TransformComponent
+                        Id: 478713a0-57fc-524d-b807-fb24b5db07cd
+                        Position: {X: 0.0, Y: 0.0, Z: -4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    5ec0f13a6dec5bedbe070f86b9771599: !ModelComponent
+                        Id: c7c00bee-7797-57c1-9293-63072c682877
+                        Model: 9805cbd8-c157-5996-a13b-5f0f3a6e3ec3:World/Models/CottageWallBack
+                        Materials: {}
+        -   Entity:
+                Id: 8440c193-9506-5c61-858b-3dac9b53cd02
+                Name: WallLeft
+                Components:
+                    52332eacc6ef5c09adc6ffa8ffb41385: !TransformComponent
+                        Id: 0a2f10c5-f580-5743-a222-999784e37d21
+                        Position: {X: -5.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    a8d62239561b50e18ae284fb55caa5bf: !ModelComponent
+                        Id: 93348729-3f99-517c-8a1e-3abc2676d3e6
+                        Model: ac9f8234-4c81-5bf3-9adf-d5eb392bd662:World/Models/CottageWallSide
+                        Materials: {}
+        -   Entity:
+                Id: 7cf8f277-7284-5799-b481-0c95893af56b
+                Name: WallRight
+                Components:
+                    1b7fa4c054f8519791fda86cd2e246ad: !TransformComponent
+                        Id: 18d40b2e-4c96-53da-a5c1-9035a0b9b066
+                        Position: {X: 5.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    2726aadc81d156ce9b1e4a62e32ed36b: !ModelComponent
+                        Id: 44faa3d1-2516-50b7-a231-3989213e1f2f
+                        Model: ac9f8234-4c81-5bf3-9adf-d5eb392bd662:World/Models/CottageWallSide
+                        Materials: {}
+        -   Entity:
+                Id: fdd7ec58-d33a-5f69-87bd-75525e71b5c7
+                Name: WallFrontLeft
+                Components:
+                    5af28845ad41502489f72dc80cbe4935: !TransformComponent
+                        Id: e08f2569-f6da-5e0e-8815-459848479e90
+                        Position: {X: -3.0999999999999996, Y: 0.0, Z: 4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    3a43a3885bd658819d5ed9524378588e: !ModelComponent
+                        Id: 01bd77d5-023e-56e0-ae27-59866fcb2ec3
+                        Model: e48ef2d3-712b-58ad-90ad-e8e914c2e274:World/Models/CottageWallFront
+                        Materials: {}
+        -   Entity:
+                Id: 47c1fed0-2178-5e7e-8236-74801f4a7786
+                Name: WallFrontRight
+                Components:
+                    1a30f0a698645463907d57c1b8842c9a: !TransformComponent
+                        Id: dbf97aad-e3de-5d88-96a3-167e34e61b29
+                        Position: {X: 3.0999999999999996, Y: 0.0, Z: 4.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    d708b7f13cfb541cb324892c1c0d8127: !ModelComponent
+                        Id: 2ce6d90c-d7bd-580d-a18a-8c83664976df
+                        Model: e48ef2d3-712b-58ad-90ad-e8e914c2e274:World/Models/CottageWallFront
+                        Materials: {}
+        -   Entity:
+                Id: 0086b795-4a71-5701-877c-98b347f7f604
+                Name: Lamp
+                Components:
+                    8c6ce9e1bbcc5e60b8444536c9f32c09: !TransformComponent
+                        Id: aad43dcd-859d-58a6-a6bc-a4d129a8eac6
+                        Position: {X: 0.0, Y: 3.5, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    2484baddf2b251adaf5507932fd2c8a2: !LightComponent
+                        Id: 2b06499f-cce1-5948-acd4-0bf5115b5074
+                        Type: !LightPoint
+                            Color: !ColorRgbProvider
+                                Value: {R: 0.95, G: 0.9, B: 0.7}
+                            Radius: 11.0
+                        Intensity: 5.0
+        -   Entity:
+                Id: 6807724a-ec2f-5f0d-812f-8eb57162b234
+                Name: Arrival
+                Components:
+                    412a771d3e1d547dbd5e956b18e5bfa7: !TransformComponent
+                        Id: f5130ff2-4947-5c1b-b380-dfb63ac76f03
+                        Position: {X: 0.0, Y: 0.0, Z: 2.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+        -   Entity:
+                Id: 25f9e1ad-e207-5377-82fa-6e746a99d628
+                Name: Nan
+                Components:
+                    703ce4209b6a547989cf9b146f30e1b3: !TransformComponent
+                        Id: 5e34490d-d599-5230-a95f-2f3ebad5bce2
+                        Position: {X: 0.5, Y: 0.0, Z: -1.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    5243a6bd2a6155e3a1d81d834397a483: !ModelComponent
+                        Id: ab9f6cf6-2efa-5bc8-96e0-ce2108c43da8
+                        Model: 6485f08c-efe3-5cc4-933c-0d6c53d6718c:World/Models/Nan
+                        Materials: {}
+                    0606e496a1c1577099b4bf12fdde62cf: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 777331ee-33cc-5ce3-a2d0-2bfe9f283c7e
+                        Node: Nan
+                        IsThing: false
+                        Label: ''
+                        WalkSpeed: 3.0
+                        Runner: null
+                    55d83f0950f058aaa42601c8c6fa2cbb: !DialogueActorComponent
+                        Id: d8d30099-6d1d-5e94-8838-309e5bb96294
+                        ActorName: Nan
+        -   Entity:
+                Id: 4be2a54e-cd80-5696-bdb0-2ddc2ffcf484
+                Name: HerbTable
+                Components:
+                    c3b76207caf45c43b8764f4d495371b6: !TransformComponent
+                        Id: f62088bf-a4e6-5173-85f8-6ed90af3caa6
+                        Position: {X: -2.5, Y: 0.0, Z: -2.6}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    0d30083d4aef5fa8ae20d5a9bed27229: !ModelComponent
+                        Id: d20e9a60-71a2-5c32-9f26-b6848a55101d
+                        Model: 9bcbae2c-0f99-5797-83d1-b4f6de0fb097:World/Models/HerbTable
+                        Materials: {}
+                    c0360427848354e99001002ce3d5d18a: !Ashcombe.Talkable,Ashcombe.Game
+                        Id: 6698cdba-25f0-5564-9865-fe01dadcc0ca
+                        Node: HerbTable
+                        IsThing: true
+                        Label: line:use_look
+                        WalkSpeed: 3.0
+                        Runner: null
+        -   Entity:
+                Id: 61f13d40-f4b8-50aa-827d-07f3e7b14242
+                Name: CottageExit
+                Components:
+                    22e6eb39e5b35173a21445d1b40c76b1: !TransformComponent
+                        Id: e9776971-0876-525b-9810-7f3c1d346b6b
+                        Position: {X: 0.0, Y: 0.0, Z: 3.9}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    bd228b8b761a5142a9830a13b4f45973: !ModelComponent
+                        Id: e8d44f8d-57f8-5a00-a30d-2003f7826647
+                        Model: fd11044a-958e-5c7c-a3f6-ddd72512e40d:World/Models/Doorway
+                        Materials: {}
+                    2d5cae859bba5d8bba2f7777eb1085ad: !Ashcombe.Doorway,Ashcombe.Game
+                        Id: a54196cc-442c-5f7d-aada-1a01a194c804
+                        Target: 5a64658e-d3e2-5e00-bd43-c93cb050ecc6:Places/Village
+                        Spawn: CottageFront
+                        IsJourney: false
+                        Label: line:go_out
+                        Node: ''
