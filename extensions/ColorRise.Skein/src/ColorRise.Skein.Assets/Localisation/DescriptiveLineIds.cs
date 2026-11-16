@@ -35,7 +35,7 @@ internal sealed partial class DescriptiveLineIds : ILineTagGenerator
     {
         // Yarn Spinner's generator refuses an id it is told to exclude: it only learns the ids of this script, and an id
         // of another script is told apart here
-        var own = lines.Values.SelectMany(c => c).Select(c => c.LineID).Where(id => !string.IsNullOrEmpty(id)).ToHashSet(StringComparer.Ordinal);
+        var own = lines.Values.SelectMany(c => c).Select(c => c.LineID).OfType<string>().Where(id => id.Length > 0).ToHashSet(StringComparer.Ordinal);
         generator.PrepareForLines(lines, [.. own]);
         taken.UnionWith(excluded);
         if (script.Length == 0)
