@@ -1,0 +1,18 @@
+{
+    "projectFileVersion": 4,
+    "sourceFiles": [
+        "**/*.yarn"
+    ],
+    "baseLanguage": "en",
+    "localisation": {
+        "fr": {
+            "strings": "Strings/Brinemoor.fr.csv"
+        }
+    },
+    "definitions": "Brinemoor.ysls.json",
+    "compilerOptions": {
+        "diagnosticsSeverity": {
+            "YS0012": "Error"
+        }
+    }
+}

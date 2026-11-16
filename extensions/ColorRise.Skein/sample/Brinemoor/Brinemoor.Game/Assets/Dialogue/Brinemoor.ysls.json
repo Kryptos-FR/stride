@@ -1,0 +1,150 @@
+{
+    "version": 2,
+    "commands": [
+        {
+            "yarnName": "end_day",
+            "definitionName": "StoryCommands.EndDay",
+            "language": "csharp",
+            "documentation": "Ends the day: the next morning.",
+            "async": false,
+            "parameters": []
+        },
+        {
+            "yarnName": "ending",
+            "definitionName": "StoryCommands.Ending",
+            "language": "csharp",
+            "documentation": "Ends the story with one of its endings: <<ending keeper>>.",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "name",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "yarnName": "give",
+            "definitionName": "StoryCommands.Give",
+            "language": "csharp",
+            "documentation": "Gives a thing to the courier: <<give oil>>, <<give letter 3>>.",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "item",
+                    "type": "string"
+                },
+                {
+                    "name": "count",
+                    "type": "number",
+                    "defaultValue": "1"
+                }
+            ]
+        },
+        {
+            "yarnName": "quest_changed",
+            "definitionName": "StoryCommands.QuestChanged",
+            "language": "csharp",
+            "documentation": "Writes the state of a quest in the journal, after a <<set $quest_...>>: <<quest_changed lamp>>.",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "quest",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "yarnName": "take",
+            "definitionName": "StoryCommands.Take",
+            "language": "csharp",
+            "documentation": "Takes a thing from the courier: <<take oil>>.",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "item",
+                    "type": "string"
+                },
+                {
+                    "name": "count",
+                    "type": "number",
+                    "defaultValue": "1"
+                }
+            ]
+        },
+        {
+            "yarnName": "walk",
+            "definitionName": "Talkable.Walk",
+            "language": "csharp",
+            "documentation": "Makes someone walk to a place of the scene, and waits: <<walk Brandt Pier>>.",
+            "async": true,
+            "parameters": [
+                {
+                    "name": "target",
+                    "type": "instance",
+                    "subtype": "Talkable",
+                    "documentation": "The name of the Talkable the command runs on."
+                },
+                {
+                    "name": "place",
+                    "type": "any"
+                }
+            ]
+        }
+    ],
+    "functions": [
+        {
+            "yarnName": "day",
+            "definitionName": "StoryCommands.Day",
+            "language": "csharp",
+            "documentation": "The day of the story, 1 at its start.",
+            "async": false,
+            "parameters": [],
+            "return": {
+                "type": "number"
+            }
+        },
+        {
+            "yarnName": "has_item",
+            "definitionName": "StoryCommands.HasItem",
+            "language": "csharp",
+            "documentation": "Whether the courier carries a thing: has_item(\"oil\").",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "item",
+                    "type": "string"
+                }
+            ],
+            "return": {
+                "type": "bool"
+            }
+        },
+        {
+            "yarnName": "item_count",
+            "definitionName": "StoryCommands.ItemCount",
+            "language": "csharp",
+            "documentation": "How many of a thing the courier carries: item_count(\"letter\").",
+            "async": false,
+            "parameters": [
+                {
+                    "name": "item",
+                    "type": "string"
+                }
+            ],
+            "return": {
+                "type": "number"
+            }
+        },
+        {
+            "yarnName": "time_of_day",
+            "definitionName": "StoryCommands.TimeOfDay",
+            "language": "csharp",
+            "documentation": "The time of the day: \"morning\", \"afternoon\", \"evening\" or \"night\".",
+            "async": false,
+            "parameters": [],
+            "return": {
+                "type": "string"
+            }
+        }
+    ]
+}
