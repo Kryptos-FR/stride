@@ -1,3 +1,4 @@
+using ColorRise.Skein.Assets;
 using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Assets.Text;
 using ColorRise.Skein.Editor.Graph;
@@ -65,6 +66,8 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     private bool showWholeFile;
     private YarnTextPlace? requestedPlace;
     private YarnNodeHeadersSelection? nodeHeaders;
+    private DialoguePlayerService? player;
+    private int? playLine;
 
     public YarnScriptEditorViewModel(YarnScriptViewModel script)
         : base(script)
@@ -299,6 +302,12 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     /// </summary>
     public ICommandBase PlayFromHereCommand { get; }
 
+    /// <summary>
+    /// The line, from 1, the run of the dialogue player is at in this script; null when the run is elsewhere, or when
+    /// the scripts changed since the run.
+    /// </summary>
+    public int? PlayLine { get => playLine; private set => SetValue(ref playLine, value); }
+
     /// <inheritdoc/>
     public override Task<bool> Initialize()
     {
@@ -309,6 +318,8 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             analysis = analysisService.AnalysisOf(Asset);
         }
 
+        player = DialoguePlayerService.Of(Session);
+        player.Changed += RefreshPlayMarks;
         Refresh(withLinks: true);
         nodeHeaders = new YarnNodeHeadersSelection(this);
         return Task.FromResult(true);
@@ -318,6 +329,11 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     public override void Destroy()
     {
         nodeHeaders?.Dispose();
+        if (player is not null)
+        {
+            player.Changed -= RefreshPlayMarks;
+        }
+
         TextBuffer.Changed -= OnTextChanged;
         if (analysisService is not null)
         {
@@ -767,7 +783,48 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             : [.. analysis.Diagnostics.OrderBy(d => d.File == fileName ? 0 : 1).ThenBy(d => d.File, StringComparer.Ordinal).ThenBy(d => d.Line).ThenBy(d => d.Column)];
         ScriptDiagnostics = [.. Diagnostics.Where(d => d.File == fileName)];
         RefreshNotice();
+        RefreshPlayMarks();
         Refreshed?.Invoke();
+    }
+
+    /// <summary>
+    /// Marks the cards of the nodes the run of the dialogue player went through and is in, and tells its line.
+    /// </summary>
+    private void RefreshPlayMarks()
+    {
+        var names = new Dictionary<(string Title, int Index), string>();
+        int? line = null;
+        string? current = null;
+        IReadOnlyList<string> path = [];
+        if (player is { IsPlaying: true, Project: { } project } && analysisService?.ProjectsOf(Asset).Contains(project) == true)
+        {
+            // The nodes of the script as the run's build has them, by title and by rank among the nodes of the title
+            var fileName = YarnProjectFiles.FileNameOf(Asset.AssetItem);
+            var ranks = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var (title, name) in player.NodesOf(fileName))
+            {
+                var rank = ranks.GetValueOrDefault(title);
+                ranks[title] = rank + 1;
+                names[(title, rank)] = name;
+            }
+
+            current = player.CurrentNode;
+            path = player.NodePath;
+
+            // The line is of the text the run was built from
+            if (!player.IsStale && player.CurrentFile == fileName)
+                line = player.CurrentLine;
+        }
+
+        foreach (var card in Cards)
+        {
+            card.PlayMark = !names.TryGetValue((card.Title, card.GroupIndex), out var name) ? YarnPlayMark.None
+                : name == current ? YarnPlayMark.Current
+                : path.Contains(name) ? YarnPlayMark.Visited
+                : YarnPlayMark.None;
+        }
+
+        PlayLine = line;
     }
 
     // The nodes of the script in the analysis, by title and by rank among the nodes of the title

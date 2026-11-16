@@ -114,6 +114,17 @@ public sealed class DialoguePlayerService
     }
 
     /// <summary>
+    /// The nodes of a script in the build the run plays, in the order of its text: the title of each and its name in
+    /// the program, which <see cref="CurrentNode"/> and <see cref="NodePath"/> give.
+    /// </summary>
+    /// <param name="fileName">The script, as the compiler names it.</param>
+    public IReadOnlyList<(string Title, string Name)> NodesOf(string fileName)
+    {
+        ArgumentNullException.ThrowIfNull(fileName);
+        return build is null ? [] : [.. build.Compilation.Nodes.Where(n => n.File == fileName).OrderBy(n => n.HeaderStartLine).Select(n => (n.Title, n.UniqueTitle))];
+    }
+
+    /// <summary>
     /// The options the run waits at, at the cursor: those of the step there, or of the step before the variables set
     /// and the answers given since. Empty when the run does not wait for a choice there.
     /// </summary>
