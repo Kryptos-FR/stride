@@ -441,7 +441,7 @@ public sealed class Stage : SyncScript
     /// <summary>
     /// A dialogue runner as the stage of the director.
     /// </summary>
-    internal sealed class RunnerStage(DialogueRunnerComponent runner) : IStoryStage
+    public sealed class RunnerStage(DialogueRunnerComponent runner) : IStoryStage
     {
         public bool IsPlaying => runner.IsRunning;
 
