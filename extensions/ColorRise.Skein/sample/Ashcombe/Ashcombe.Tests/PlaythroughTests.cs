@@ -194,7 +194,7 @@ public sealed class PlaythroughTests
 
         // Not one line of the story nor of the echo was said in English
         var english = story.EnglishTexts();
-        Assert.Empty(lines.Where(english.Contains));
+        Assert.DoesNotContain(lines, english.Contains);
     }
 
     [Fact]

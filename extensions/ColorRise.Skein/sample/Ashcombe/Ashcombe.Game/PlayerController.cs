@@ -11,7 +11,8 @@ namespace Ashcombe;
 /// </summary>
 public sealed class PlayerController : SyncScript
 {
-    private Vector3 cameraOffset;
+    // Where the camera is from the cartographer, as the scene has them: taken before the cartographer is first moved
+    private Vector3? cameraOffset;
 
     /// <summary>
     /// Metres per second.
@@ -50,12 +51,20 @@ public sealed class PlayerController : SyncScript
         Bounds = halfSize;
     }
 
-    /// <inheritdoc />
-    public override void Start()
+    /// <summary>
+    /// Puts the cartographer somewhere, with the camera following. A place loaded from a save or reached by a journey
+    /// moves the cartographer before this script starts: the camera keeps where the scene has it from the cartographer.
+    /// </summary>
+    public void MoveTo(Vector3 position)
     {
-        if (Camera is not null)
-            cameraOffset = Camera.Transform.Position - Entity.Transform.Position;
+        _ = CameraOffset;
+        Entity.Transform.Position = position;
     }
+
+    private Vector3 CameraOffset => cameraOffset ??= Camera is null ? Vector3.Zero : Camera.Transform.Position - Entity.Transform.Position;
+
+    /// <inheritdoc />
+    public override void Start() => _ = CameraOffset;
 
     /// <inheritdoc />
     public override void Update()
@@ -83,6 +92,6 @@ public sealed class PlayerController : SyncScript
         }
 
         if (Camera is not null)
-            Camera.Transform.Position = Entity.Transform.Position + cameraOffset;
+            Camera.Transform.Position = Entity.Transform.Position + CameraOffset;
     }
 }

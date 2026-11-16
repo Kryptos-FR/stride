@@ -98,6 +98,11 @@ public sealed class SaveTests
 
         Assert.Empty(game.Story.Whereabouts.Interiors);
         Assert.Equal(new Vector3(0, 0, 9), game.Find("Cartographer").Transform.Position);
+
+        // The cartographer is put where the save says before the scene's scripts start: the camera follows from where
+        // the scene has it, not from where the cartographer was put
+        game.Step();
+        Assert.Equal(Make.CameraOffset, game.Find("Camera").Transform.Position - game.Find("Cartographer").Transform.Position);
         Assert.DoesNotContain(Inn, game.Places.Loaded);
         Assert.DoesNotContain(Cellar, game.Places.Loaded);
         Assert.DoesNotContain(Village, game.Places.Loaded);

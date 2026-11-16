@@ -215,19 +215,27 @@ internal sealed class TestProject
 internal static class Make
 {
     /// <summary>
+    /// Where the camera of a root scene is from the cartographer.
+    /// </summary>
+    public static readonly Vector3 CameraOffset = new(0, 13, 12);
+
+    /// <summary>
     /// A root scene with its stage: a runner of the project with a recording presenter, and the cartographer.
     /// </summary>
     public static Scene Root(TestProject project, Recorder presenter, params Entity[] entities)
     {
         var runner = new DialogueRunnerComponent { Project = project.Project, LinesOverride = project.Lines };
         runner.Presenters.Add(presenter);
-        var player = new Entity("Cartographer") { new PlayerController() };
+        // The camera behind the cartographer, as in the game's scenes
+        var camera = new Entity("Camera", CameraOffset);
+        var player = new Entity("Cartographer") { new PlayerController { Camera = camera } };
         var stage = new Entity("Stage") { runner, presenter };
         stage.Add(new Stage { Runner = runner, Player = player });
 
         var scene = new Scene();
         scene.Entities.Add(stage);
         scene.Entities.Add(player);
+        scene.Entities.Add(camera);
         scene.Entities.Add(new Entity("Area") { new PlaceArea { HalfSize = new Vector2(20, 20) } });
         scene.Entities.Add(new Entity("Arrival"));
         foreach (var entity in entities)

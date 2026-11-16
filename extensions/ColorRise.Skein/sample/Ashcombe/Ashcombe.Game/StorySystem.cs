@@ -142,7 +142,7 @@ public sealed class StorySystem : GameSystemBase
         PlacePeople(Story.Whereabouts.Root, root);
 
         if (playerOnArrival is { } position && stage.Player is not null)
-            stage.Player.Transform.Position = position;
+            Move(stage.Player, position);
         playerOnArrival = null;
         moving = false;
         PlacesChanged?.Invoke();
@@ -240,7 +240,7 @@ public sealed class StorySystem : GameSystemBase
 
         Story.Whereabouts.SetInteriors(interiors.Select(i => i.Url));
         if (sameRoot && position is { } here && Stage?.Player is { } player)
-            player.Transform.Position = here;
+            Move(player, here);
         Stage?.FollowArea();
         PlacesChanged?.Invoke();
         return dropped;
@@ -361,7 +361,7 @@ public sealed class StorySystem : GameSystemBase
             Story.Whereabouts.SetInteriors(interiors.Select(i => i.Url));
             Story.Map.Visit(Story.Whereabouts.Here);
             if (SceneOf(url) is { } scene && Stage?.Player is { } player && SpawnPoint(scene, spawn) is { } point)
-                player.Transform.Position = point;
+                Move(player, point);
             Stage?.FollowArea();
             PlacesChanged?.Invoke();
 
@@ -479,6 +479,15 @@ public sealed class StorySystem : GameSystemBase
     /// <summary>
     /// Where the cartographer arrives in a place, in the world: the entity named so, else the place's <c>Arrival</c>.
     /// </summary>
+    // The camera follows the cartographer from where the scene has it
+    private static void Move(Entity player, Vector3 position)
+    {
+        if (player.Get<PlayerController>() is { } controller)
+            controller.MoveTo(position);
+        else
+            player.Transform.Position = position;
+    }
+
     private static Vector3? SpawnPoint(Scene scene, string? spawn)
     {
         var name = string.IsNullOrEmpty(spawn) ? "Arrival" : spawn;
