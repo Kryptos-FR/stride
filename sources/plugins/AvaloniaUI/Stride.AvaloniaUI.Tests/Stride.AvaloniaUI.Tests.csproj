@@ -1,0 +1,24 @@
+<Project>
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'Directory.Build.props'))/sdk/Stride.Build.Sdk.MultiPlatform.Tests/Sdk/Sdk.props" />
+  <PropertyGroup>
+    <TargetFrameworks>$(StrideTestTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyName>Stride.AvaloniaUI.Tests</AssemblyName>
+    <RootNamespace>Stride.AvaloniaUI.Tests</RootNamespace>
+    <StrideCompileAssets>false</StrideCompileAssets>
+    <StrideGraphicsRegression>true</StrideGraphicsRegression>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- The tests drive the Stride platform for Avalonia, whose interfaces Avalonia marks as private APIs -->
+    <AvaloniaAccessUnstablePrivateApis>true</AvaloniaAccessUnstablePrivateApis>
+    <NoWarn>$(NoWarn);AVA3001</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\tests\Stride.XunitRunner\Stride.XunitRunner.csproj" />
+    <ProjectReference Include="..\..\..\engine\Stride.Engine\Stride.Engine.csproj" />
+    <ProjectReference Include="..\..\..\engine\Stride.Graphics.Regression\Stride.Graphics.Regression.csproj" />
+    <ProjectReference Include="..\Stride.AvaloniaUI\Stride.AvaloniaUI.csproj" />
+  </ItemGroup>
+  <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk.MultiPlatform.Tests/Sdk/Sdk.targets" />
+</Project>

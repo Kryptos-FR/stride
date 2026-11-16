@@ -224,6 +224,10 @@
     <Project Path="tests/enduser/Stride.Templates.Tests/Stride.Templates.Tests.csproj" />
     <Project Path="tests/enduser/Stride.Samples.Tests/Stride.Samples.Tests.csproj" />
   </Folder>
+  <Folder Name="/80-Plugins/AvaloniaUI/">
+    <Project Path="sources/plugins/AvaloniaUI/Stride.AvaloniaUI.Tests/Stride.AvaloniaUI.Tests.csproj" />
+    <Project Path="sources/plugins/AvaloniaUI/Stride.AvaloniaUI/Stride.AvaloniaUI.csproj" />
+  </Folder>
   <Folder Name="/80-Plugins/Audio/">
     <Project Path="sources/plugins/Audio/Stride.Audio.Assets/Stride.Audio.Assets.csproj" />
     <Project Path="sources/plugins/Audio/Stride.Audio.Editor.Avalonia/Stride.Audio.Editor.Avalonia.csproj" />
