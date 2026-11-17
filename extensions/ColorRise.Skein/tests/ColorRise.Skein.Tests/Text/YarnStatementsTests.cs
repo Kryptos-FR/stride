@@ -251,4 +251,60 @@ public sealed class YarnStatementsTests
         var (document, node, statements) = Read(YarnFixtures.As(variant, Script), "Start");
         Assert.Throws<ArgumentException>(() => YarnTextPatcher.AppendJump(document, node, statements[0], "Pier"));
     }
+
+    [Fact]
+    public void A_line_or_an_option_takes_another_condition_and_keeps_its_text_and_its_id()
+    {
+        const string script =
+            "title: Start\n---\n<<declare $met = false>>\n<<declare $coins = 0>>\n"
+            + "Odile: Hello. #line:hello\n"
+            + "-> Ask <<if $met>> #line:ask\n"
+            + "    Odile: Sure.\n"
+            + "-> Leave <<once>>\n"
+            + "Odile: Bye.\n"
+            + "===\n";
+
+        string Patch(int index, string? condition, bool once)
+        {
+            var (document, node, statements) = Read(script, "Start");
+            var patched = YarnTextEdit.Apply(script, YarnTextPatcher.SetStatementCondition(document, node, statements[index], condition, once));
+            YarnFixtures.AssertCompiles(patched);
+            return patched;
+        }
+
+        // The statements are: Hello, Ask, Sure, Leave, Bye (the declarations are commands before them)
+        var (_, _, read) = Read(script, "Start");
+        var hello = read.ToList().FindIndex(s => s.Text == "Odile: Hello.");
+        var (ask, leave, bye) = (hello + 1, hello + 3, hello + 4);
+        Assert.Equal("<<if $met>>", script[read[ask].ConditionStart..read[ask].ConditionEnd]);
+        Assert.Equal(-1, read[hello].ConditionStart);
+
+        Assert.Equal(script.Replace("Odile: Hello. #line:hello", "Odile: Hello. <<if $coins > 2>> #line:hello"), Patch(hello, "$coins > 2", false));
+        Assert.Equal(script.Replace("Odile: Bye.", "Odile: Bye. <<once if not $met>>"), Patch(bye, " not $met ", true));
+        Assert.Equal(script.Replace("-> Ask <<if $met>> #line:ask", "-> Ask <<if $met and $coins >= 1>> #line:ask"), Patch(ask, "$met and $coins >= 1", false));
+        Assert.Equal(script.Replace("-> Ask <<if $met>> #line:ask", "-> Ask <<once>> #line:ask"), Patch(ask, null, true));
+        Assert.Equal(script.Replace("-> Ask <<if $met>> #line:ask", "-> Ask #line:ask"), Patch(ask, "", false));
+        Assert.Equal(script.Replace("-> Leave <<once>>", "-> Leave"), Patch(leave, null, false));
+        Assert.Equal(script, Patch(ask, "$met", false));
+
+        var (doc, start, statements) = Read(script, "Start");
+        Assert.Throws<ArgumentException>(() => YarnTextPatcher.SetStatementCondition(doc, start, statements[ask], "$a >> 2", false));
+        Assert.Throws<ArgumentException>(() => YarnTextPatcher.SetStatementCondition(doc, start, statements[ask], "$a\n$b", false));
+        Assert.Throws<ArgumentException>(() => YarnTextPatcher.SetStatementCondition(doc, start, statements[0], "$a", false));
+    }
+
+    [Fact]
+    public void A_command_takes_another_text()
+    {
+        const string script = "title: Start\n---\n<<declare $coins = 0>>\n    <<set $coins to 1>>   // pay\n===\n";
+        var (document, node, statements) = Read(script, "Start");
+
+        var patched = YarnTextEdit.Apply(script, YarnTextPatcher.SetCommandText(document, node, statements[1], " set $coins += 2 "));
+
+        Assert.Equal("title: Start\n---\n<<declare $coins = 0>>\n    <<set $coins += 2>>   // pay\n===\n", patched);
+        YarnFixtures.AssertCompiles(patched);
+        Assert.Empty(YarnTextPatcher.SetCommandText(document, node, statements[1], "set $coins to 1"));
+        Assert.Throws<ArgumentException>(() => YarnTextPatcher.SetCommandText(document, node, statements[1], "set $a to 1>> <<stop"));
+        Assert.Throws<ArgumentException>(() => YarnTextPatcher.SetCommandText(document, node, statements[1], " "));
+    }
 }

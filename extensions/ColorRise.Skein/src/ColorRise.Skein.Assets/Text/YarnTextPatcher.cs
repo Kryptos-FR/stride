@@ -293,6 +293,69 @@ public static partial class YarnTextPatcher
     }
 
     /// <summary>
+    /// Gives a line, an option or a line group item another condition, or none: <c>&lt;&lt;if ...&gt;&gt;</c>,
+    /// <c>&lt;&lt;once&gt;&gt;</c> or <c>&lt;&lt;once if ...&gt;&gt;</c> after its text. Its text and its hashtags stay.
+    /// </summary>
+    /// <param name="condition">The condition, as Yarn writes it; null or empty for none.</param>
+    /// <param name="once">Whether the statement runs one time only.</param>
+    /// <exception cref="ArgumentException">The statement is not text, or the condition cannot be in a command.</exception>
+    public static IReadOnlyList<YarnTextEdit> SetStatementCondition(YarnDocument document, YarnNodeSpan node, YarnStatementSpan statement, string? condition, bool once)
+    {
+        Check(document, node, statement);
+        if (!statement.IsText)
+            throw new ArgumentException("Only a line, an option or a line group item has a condition after it.", nameof(statement));
+
+        condition = string.IsNullOrWhiteSpace(condition) ? null : CommandText(condition, nameof(condition));
+        if (condition == statement.Condition && once == statement.IsOnce)
+            return [];
+
+        var command = (once, condition) switch
+        {
+            (true, null) => "<<once>>",
+            (true, { } c) => $"<<once if {c}>>",
+            (false, { } c) => $"<<if {c}>>",
+            _ => null,
+        };
+
+        if (statement.ConditionStart < 0)
+            return command is null ? [] : [new YarnTextEdit(statement.TextEnd, 0, " " + command)];
+
+        // Without a condition, the spaces before it go too
+        return command is null
+            ? [new YarnTextEdit(statement.TextEnd, statement.ConditionEnd - statement.TextEnd, "")]
+            : [new YarnTextEdit(statement.ConditionStart, statement.ConditionEnd - statement.ConditionStart, command)];
+    }
+
+    /// <summary>
+    /// Gives a command another text: what is between its <c>&lt;&lt;</c> and its <c>&gt;&gt;</c>.
+    /// </summary>
+    /// <param name="text">The command, as Yarn writes it: <c>set $met to true</c>.</param>
+    /// <exception cref="ArgumentException">The statement is not a command, or the text cannot be one.</exception>
+    public static IReadOnlyList<YarnTextEdit> SetCommandText(YarnDocument document, YarnNodeSpan node, YarnStatementSpan statement, string text)
+    {
+        Check(document, node, statement);
+        if (statement.Kind != YarnStatementKind.Command)
+            throw new ArgumentException("Only a command has a text to edit this way.", nameof(statement));
+
+        var written = CommandText(text, nameof(text));
+        return written == statement.Text ? [] : [new YarnTextEdit(statement.TextStart, statement.TextEnd - statement.TextStart, written)];
+    }
+
+    // What can be between << and >>: one line, without a >> of its own
+    private static string CommandText(string text, string parameter)
+    {
+        var written = text.Trim();
+        if (written.Length == 0)
+            throw new ArgumentException("A command needs a text.", parameter);
+        if (written.Contains('\n') || written.Contains('\r'))
+            throw new ArgumentException("A command is one line.", parameter);
+        if (written.Contains(">>", StringComparison.Ordinal))
+            throw new ArgumentException("'>>' would end the command.", parameter);
+
+        return written;
+    }
+
+    /// <summary>
     /// Adds a line at the end of a node: before the jumps and the <c>&lt;&lt;stop&gt;&gt;</c> that end it, indented as
     /// the statements at the top of its body.
     /// </summary>

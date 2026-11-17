@@ -134,6 +134,7 @@ internal static class YarnBodyReader
 
         string? condition = null;
         var isOnce = false;
+        var (conditionStart, conditionEnd) = (-1, -1);
         var hashtags = new List<string>();
         while (rest < end)
         {
@@ -157,7 +158,8 @@ internal static class YarnBodyReader
                 var close = CommandEnd(text, rest, end);
                 var inner = text[(rest + 2)..(close < 0 ? end : close - 2)].Trim();
                 (condition, isOnce) = ReadCondition(inner);
-                rest = close < 0 ? end : close;
+                (conditionStart, conditionEnd) = (rest, close < 0 ? end : close);
+                rest = conditionEnd;
             }
             else
             {
@@ -172,6 +174,8 @@ internal static class YarnBodyReader
             Text = text[start..textEnd],
             Condition = condition,
             IsOnce = isOnce,
+            ConditionStart = conditionStart,
+            ConditionEnd = conditionEnd,
             Hashtags = hashtags,
         };
     }

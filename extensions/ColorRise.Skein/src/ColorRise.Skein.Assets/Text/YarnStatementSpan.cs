@@ -127,6 +127,17 @@ public sealed record YarnStatementSpan
     public bool IsOnce { get; init; }
 
     /// <summary>
+    /// The place of the <c>&lt;&lt;if ...&gt;&gt;</c> or <c>&lt;&lt;once ...&gt;&gt;</c> after a line, an option or a line group
+    /// item, from its <c>&lt;&lt;</c>; -1 without one.
+    /// </summary>
+    public int ConditionStart { get; init; } = -1;
+
+    /// <summary>
+    /// The place after the <c>&gt;&gt;</c> of the condition after a line, an option or a line group item; -1 without one.
+    /// </summary>
+    public int ConditionEnd { get; init; } = -1;
+
+    /// <summary>
     /// The hashtags after a line, an option or a line group item, without their <c>#</c>: <c>line:lamp</c>, <c>mood:kind</c>.
     /// </summary>
     public IReadOnlyList<string> Hashtags { get; init; } = [];
