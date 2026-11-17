@@ -77,13 +77,8 @@ public sealed class NativeRendererGameTests : GameTestBase
             .Update(5, () => game.MouseSimulated.SetPosition(new Vector2(0.5f, 0.5f)))
             .Update(7, () => game.MouseSimulated.SimulateMouseDown(MouseButton.Left))
             .Update(9, () => game.MouseSimulated.SimulateMouseUp(MouseButton.Left))
-            // Away from the button, so it shows its own color and not the pointer-over one; the counts are those of that
-            // redraw, as the pressed button is drawn smaller, under a clip of fractional pixels
-            .Update(10, () =>
-            {
-                game.MouseSimulated.SetPosition(new Vector2(0.02f, 0.02f));
-                channel.ResetCounts();
-            })
+            // Away from the button, so it shows its own color and not the pointer-over one
+            .Update(10, () => game.MouseSimulated.SetPosition(new Vector2(0.02f, 0.02f)))
             .Draw(14, () => onGpu = game.Services.GetSafeServiceAs<AvaloniaUISystem>().IsRenderingOnGpu), readAt: 14);
 
         Assert.Equal(AvaloniaUIRenderer.Native, StrideAvaloniaPlatform.Renderer);

@@ -27,9 +27,6 @@ internal enum FallbackReason
     /// <summary>Dashes, or a join other than a miter on a rectangle's sharp corners (step 5).</summary>
     Stroke,
 
-    /// <summary>A clip that isn't a scissor (step 2).</summary>
-    ClipShape,
-
     /// <summary>A clip under another clip drawn by the shader (step 6).</summary>
     ClipDepth,
 
