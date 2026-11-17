@@ -37,7 +37,7 @@ public enum LiveComponentStatus
 /// <param name="TypeName">Its type in the game: the full name, a comma and the assembly's simple name.</param>
 /// <param name="Status">Whether it was read.</param>
 /// <param name="Component">The component in the mirror's entity: a real one, or a placeholder (an
-/// <see cref="Stride.Core.Reflection.IUnloadable"/> with the type's name) when it was not read.</param>
+/// <see cref="Stride.Core.Yaml.IUnloadable"/> with the type's name) when it was not read.</param>
 /// <param name="Error">Why it was not read.</param>
 [Experimental("STREXP012")]
 public sealed record LiveComponent(Guid Id, string TypeName, LiveComponentStatus Status, EntityComponent Component, string? Error);
