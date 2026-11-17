@@ -218,6 +218,8 @@
                 IsVisible="{sd:IsDebug}">
         <MenuItem Header="Simulate a crash"
                   Command="{Binding CrashCommand}"/>
+        <MenuItem Header="Play mode spike: live mirror of the selected entity"
+                  Command="{Binding PlayModeSpikeCommand}"/>
       </MenuItem>
     </Menu>
 

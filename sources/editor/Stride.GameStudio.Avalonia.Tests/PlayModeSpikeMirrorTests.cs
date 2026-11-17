@@ -96,6 +96,38 @@ public sealed class PlayModeSpikeMirrorTests
     }
 
     [AvaloniaFact]
+    public async Task AListThatGrowsIsChangedInPlaceWhenAsked()
+    {
+        using var fixture = await ShellSessionFixture.OpenAsync((ModelLocation, new ModelAsset()));
+        var (player, _) = MakeSmallScene();
+        var recording = MirrorRecorder.Record(player, 2 * MirrorRecorder.ListGrowthPeriod + 1);
+        var properties = new MirrorPropertiesViewModel(fixture.Session) { InPlaceCollections = true };
+        await properties.ApplyAsync(recording.Snapshots[0]);
+        try
+        {
+            var viewModel = properties.ViewModel!;
+            var values = Node(viewModel, "Components", typeof(MirrorTestScript), nameof(MirrorTestScript.Values));
+            var count = values.Children.Count;
+            for (var frame = 1; frame < recording.Snapshots.Count; frame++)
+            {
+                var timing = await properties.ApplyAsync(recording.Snapshots[frame]);
+                Assert.False(timing.Rebuilt);
+                Assert.Same(viewModel, properties.ViewModel);
+                if (frame % MirrorRecorder.ListGrowthPeriod == 0)
+                    Assert.Equal(1, timing.Result!.AddedItems);
+            }
+            Assert.Equal(1, properties.BuildCount);
+            values = Node(viewModel, "Components", typeof(MirrorTestScript), nameof(MirrorTestScript.Values));
+            Assert.Equal(count + 2, values.Children.Count);
+            Assert.Equal(MirrorSnapshotSerializer.Restore(recording.Snapshots[^1]).Get<MirrorTestScript>()!.Values, (List<float>)values.NodeValue!);
+        }
+        finally
+        {
+            properties.ViewModel?.Destroy();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task ReferencesShowTheObjectsOutsideOfTheMirrorAsStandIns()
     {
         using var fixture = await ShellSessionFixture.OpenAsync((ModelLocation, new ModelAsset()));
@@ -186,6 +218,11 @@ public sealed class PlayModeSpikeMirrorTests
                 }
             }
         }
+        report.AppendLine();
+        report.AppendLine("entity | a list grows: | rebuild, ms (median) | layout, ms (median) | in place, ms (median) | layout, ms (median)");
+        foreach (var (name, make) in new (string, Func<Entity>)[] { ("small", () => MakeSmallScene().Player), ("big", MakeBigEntity) })
+            report.AppendLine(await MeasureGrowthAsync(fixture, name, make()));
+        report.AppendLine();
         report.AppendLine("updaters that failed on a mirror:");
         foreach (var (updater, error) in MirrorGuardedUpdater.Failures)
             report.AppendLine($"- {updater}: {error}");
@@ -307,6 +344,49 @@ public sealed class PlayModeSpikeMirrorTests
             script,
             new MirrorTestScript(),
         };
+    }
+
+    /// <summary>
+    /// The frames where a list of the scripts grows: the grid rebuilt, or the list changed in place.
+    /// </summary>
+    private static async Task<string> MeasureGrowthAsync(ShellSessionFixture fixture, string name, Entity entity)
+    {
+        var recording = MirrorRecorder.Record(entity, FrameCount);
+        var results = new List<double>[4];
+        for (var i = 0; i < results.Length; i++)
+            results[i] = [];
+        foreach (var inPlace in new[] { false, true, false, true })
+        {
+            var properties = new MirrorPropertiesViewModel(fixture.Session) { BatchFinalizeTree = true, InPlaceCollections = inPlace };
+            var window = new Window { Width = 500, Height = 900, Content = new PropertyGridView { DataContext = properties } };
+            await window.ShowAsync();
+            try
+            {
+                await properties.ApplyAsync(recording.Snapshots[0]);
+                await WindowTestHelper.PumpAsync();
+                (await ItemAsync(window, x => x.Name == "Components")).IsExpanded = true;
+                await WindowTestHelper.PumpAsync();
+                for (var frame = 1; frame < FrameCount; frame++)
+                {
+                    var timing = await properties.ApplyAsync(recording.Snapshots[frame]);
+                    var layout = Stopwatch.StartNew();
+                    await WindowTestHelper.PumpAsync();
+                    if (frame % MirrorRecorder.ListGrowthPeriod != 0)
+                        continue;
+                    Assert.Equal(!inPlace, timing.Rebuilt);
+                    var column = inPlace ? 2 : 0;
+                    results[column].Add(timing.Total.TotalMilliseconds);
+                    results[column + 1].Add(layout.Elapsed.TotalMilliseconds);
+                }
+            }
+            finally
+            {
+                await window.CloseAsync();
+                properties.ViewModel?.Destroy();
+            }
+        }
+        return string.Create(CultureInfo.InvariantCulture,
+            $"{name} | | {Percentile(results[0], 0.5):F1} | {Percentile(results[1], 0.5):F1} | {Percentile(results[2], 0.5):F1} | {Percentile(results[3], 0.5):F1}");
     }
 
     private static double Percentile(List<double> values, double percentile)

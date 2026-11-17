@@ -71,6 +71,11 @@ public sealed class MirrorPropertiesViewModel : SessionObjectPropertiesViewModel
     public bool BatchFinalizeTree { get; set; }
 
     /// <summary>
+    /// Whether a list or a dictionary that gained or lost items is changed in place; see <see cref="MirrorApplier.InPlaceCollections"/>.
+    /// </summary>
+    public bool InPlaceCollections { get => applier.InPlaceCollections; set => applier.InPlaceCollections = value; }
+
+    /// <summary>
     /// The number of times the grid was built (the first time included).
     /// </summary>
     public int BuildCount { get; private set; }
@@ -132,7 +137,7 @@ public sealed class MirrorPropertiesViewModel : SessionObjectPropertiesViewModel
             {
                 MirrorGuardedUpdater.DeferFinalizeTree = false;
             }
-            if (result.WrittenValues > 0 && ViewModel is { } viewModel)
+            if (result.WrittenValues + result.AddedItems + result.RemovedItems > 0 && ViewModel is { } viewModel)
             {
                 foreach (var root in viewModel.RootNode.NodePresenters)
                 {

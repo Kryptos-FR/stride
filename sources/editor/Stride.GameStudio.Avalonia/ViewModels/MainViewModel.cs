@@ -69,8 +69,10 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
         CloseCommand = new AnonymousTaskCommand(serviceProvider, OnClose);
 #if DEBUG
         CrashCommand = new AnonymousCommand(serviceProvider, () => throw new Exception("Boom!"));
+        PlayModeSpikeCommand = new AnonymousTaskCommand(serviceProvider, () => PlayModeSpike.PlayModeSpikeController.ToggleAsync(Session));
 #else
         CrashCommand = DisabledCommand.Instance;
+        PlayModeSpikeCommand = DisabledCommand.Instance;
 #endif
         ExitCommand = new AnonymousCommand(serviceProvider, OnExit, () => DialogService.HasMainWindow);
         OpenCommand = new AnonymousTaskCommand<UFile?>(serviceProvider, OnOpen);
@@ -229,6 +231,11 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     public ICommandBase CloseCommand { get; }
 
     public ICommandBase CrashCommand { get; }
+
+    /// <summary>
+    /// Play mode spike (Debug menu): a live mirror of the selected entity in the property grid, fed from recorded snapshots.
+    /// </summary>
+    public ICommandBase PlayModeSpikeCommand { get; }
 
     public ICommandBase ExitCommand { get; }
 

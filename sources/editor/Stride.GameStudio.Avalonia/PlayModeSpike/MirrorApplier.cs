@@ -11,7 +11,7 @@ namespace Stride.GameStudio.Avalonia.PlayModeSpike;
 /// <summary>
 /// What applying a snapshot to the mirror did.
 /// </summary>
-public sealed record MirrorApplyResult(bool StructureChanged, int ComparedValues, int WrittenValues, int SkippedValues, string? StructuralChange);
+public sealed record MirrorApplyResult(bool StructureChanged, int ComparedValues, int WrittenValues, int SkippedValues, string? StructuralChange, int AddedItems = 0, int RemovedItems = 0);
 
 /// <summary>
 /// Play mode spike: compares the objects of a new snapshot with the mirror, through the mirror's Quantum nodes, and writes the
@@ -24,6 +24,10 @@ public sealed record MirrorApplyResult(bool StructureChanged, int ComparedValues
 public sealed class MirrorApplier
 {
     private readonly List<(IGraphNode Node, NodeIndex Index, object? Value)> writes = [];
+    // Items added to and removed from a list or a dictionary, when InPlaceCollections is set: applied after the writes, the
+    // removals from the last index down
+    private readonly List<(IObjectNode Node, NodeIndex Index, object? Value)> additions = [];
+    private readonly List<(IObjectNode Node, NodeIndex Index, object? Value)> removals = [];
     private readonly HashSet<object> visited = new(ReferenceEqualityComparer.Instance);
     private int compared;
     private int skipped;
@@ -35,6 +39,12 @@ public sealed class MirrorApplier
     public Func<IGraphNode, NodeIndex, bool>? IsProtected { get; set; }
 
     /// <summary>
+    /// Whether a list or a dictionary that gained or lost items (a change of structure) is changed in place, through its node,
+    /// instead of being reported for a rebuild. A change of the components of the entity is always reported.
+    /// </summary>
+    public bool InPlaceCollections { get; set; }
+
+    /// <summary>
     /// Compares <paramref name="incoming"/> with the mirror whose root node is <paramref name="mirrorRoot"/> and, when the structure
     /// is the same, writes the changed values.
     /// </summary>
@@ -43,6 +53,8 @@ public sealed class MirrorApplier
         ArgumentNullException.ThrowIfNull(mirrorRoot);
         ArgumentNullException.ThrowIfNull(incoming);
         writes.Clear();
+        additions.Clear();
+        removals.Clear();
         visited.Clear();
         compared = 0;
         skipped = 0;
@@ -51,6 +63,8 @@ public sealed class MirrorApplier
         if (structural is not null)
         {
             writes.Clear();
+            additions.Clear();
+            removals.Clear();
             return new MirrorApplyResult(true, compared, 0, 0, structural);
         }
 
@@ -61,9 +75,15 @@ public sealed class MirrorApplier
             else
                 ((IObjectNode)node).Update(value, index);
         }
-        var count = writes.Count;
+        foreach (var (node, index, value) in removals.OrderByDescending(x => x.Index))
+            node.Remove(value, index);
+        foreach (var (node, index, value) in additions)
+            node.Add(value, index);
+        var result = new MirrorApplyResult(false, compared, writes.Count, skipped, null, additions.Count, removals.Count);
         writes.Clear();
-        return new MirrorApplyResult(false, compared, count, skipped, null);
+        additions.Clear();
+        removals.Clear();
+        return result;
     }
 
     private string? CompareObject(IObjectNode node, object mirror, object incoming, MirrorReferences references)
@@ -88,12 +108,22 @@ public sealed class MirrorApplier
         {
             var mirrorKeys = node.Indices.ToList();
             var incomingKeys = collection.EnumerateKeys(incoming).Select(x => new NodeIndex(x)).ToList();
-            if (mirrorKeys.Count != incomingKeys.Count)
-                return $"[count {mirrorKeys.Count} became {incomingKeys.Count}]";
-            for (var i = 0; i < mirrorKeys.Count; i++)
+            if (!mirrorKeys.SequenceEqual(incomingKeys))
             {
-                if (mirrorKeys[i] != incomingKeys[i])
-                    return $"[key {mirrorKeys[i]} became {incomingKeys[i]}]";
+                if (!InPlaceCollections || incoming is EntityComponentCollection)
+                {
+                    return mirrorKeys.Count != incomingKeys.Count
+                        ? $"[count {mirrorKeys.Count} became {incomingKeys.Count}]"
+                        : $"[keys {string.Join(",", mirrorKeys)} became {string.Join(",", incomingKeys)}]";
+                }
+                // The common keys are compared below; the others are added or removed
+                var incomingSet = incomingKeys.ToHashSet();
+                var mirrorSet = mirrorKeys.ToHashSet();
+                foreach (var key in mirrorKeys.Where(x => !incomingSet.Contains(x)))
+                    removals.Add((node, key, node.Retrieve(key)));
+                foreach (var key in incomingKeys.Where(x => !mirrorSet.Contains(x)))
+                    additions.Add((node, key, collection.GetValue(incoming, key.Value!)));
+                mirrorKeys = mirrorKeys.Where(incomingSet.Contains).ToList();
             }
             foreach (var index in mirrorKeys)
             {
