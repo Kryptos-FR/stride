@@ -38,7 +38,7 @@ internal sealed class SkiaRendererBackend : RendererBackend
     }
 
     // Skia submits its commands to the device's queue at various points of the rendering
-    public override void BeginRender() => queueScope = graphics.Current?.LockQueue() ?? default;
+    public override void BeginRender(GraphicsContext graphicsContext) => queueScope = graphics.Current?.LockQueue() ?? default;
 
     public override void EndRender()
     {

@@ -128,9 +128,22 @@ internal sealed class RecordingDrawingContext : IDrawingContextImpl, IDrawingCon
             return;
         isDisposed = true;
 
-        DrawPending();
-        canvas.Dispose();
-        disposed?.Invoke();
+        // The target is released whatever the canvas throws
+        try
+        {
+            DrawPending();
+        }
+        finally
+        {
+            try
+            {
+                canvas.Dispose();
+            }
+            finally
+            {
+                disposed?.Invoke();
+            }
+        }
     }
 
     private void Record(DrawCommand command)

@@ -102,6 +102,11 @@ internal sealed unsafe class StrideTopLevelImpl : ITopLevelImpl, IFramebufferPla
     public Texture? GpuFrame { get; private set; }
 
     /// <summary>
+    /// Gets whether <see cref="GpuFrame"/> can be viewed as sRGB; otherwise the game copies it to sample it as sRGB.
+    /// </summary>
+    public bool GpuFrameCanViewAsSrgb { get; private set; }
+
+    /// <summary>
     /// Sets the size of the top level in pixels and its scaling (pixels per logical unit).
     /// </summary>
     public void Resize(PixelSize size, double scaling)
@@ -134,11 +139,13 @@ internal sealed unsafe class StrideTopLevelImpl : ITopLevelImpl, IFramebufferPla
     /// <summary>
     /// Takes a frame the renderer drew into a texture on the game's graphics device.
     /// </summary>
-    internal void OnGpuFrameRendered(Texture texture)
+    /// <param name="canViewAsSrgb">Whether the texture can be viewed as sRGB (Skia's Vulkan images, of a mutable format).</param>
+    internal void OnGpuFrameRendered(Texture texture, bool canViewAsSrgb)
     {
         if (GpuFrame == null)
             FreePixels();
         GpuFrame = texture;
+        GpuFrameCanViewAsSrgb = canViewAsSrgb;
         FrameVersion++;
     }
 

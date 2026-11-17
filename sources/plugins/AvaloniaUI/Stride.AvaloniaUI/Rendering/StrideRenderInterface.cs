@@ -13,6 +13,7 @@ using Avalonia.Platform;
 using Stride.AvaloniaUI.Rendering.Bitmaps;
 using Stride.AvaloniaUI.Rendering.Fallback;
 using Stride.AvaloniaUI.Rendering.Geometry;
+using Stride.AvaloniaUI.Rendering.Native;
 using Stride.AvaloniaUI.Rendering.Text;
 
 namespace Stride.AvaloniaUI.Rendering;
@@ -20,7 +21,8 @@ namespace Stride.AvaloniaUI.Rendering;
 /// <summary>
 /// The render interface of the native renderer: it makes the core's geometry, bitmaps and glyph runs.
 /// </summary>
-internal sealed class StrideRenderInterface(FallbackChannel channel) : IPlatformRenderInterface
+/// <param name="graphics">Gets what the native canvas keeps on the game's graphics device, or <c>null</c> to draw on the CPU.</param>
+internal sealed class StrideRenderInterface(FallbackChannel channel, Func<NativeGraphics?>? graphics = null) : IPlatformRenderInterface
 {
     /// <summary>
     /// Gets the channel to the fallback, which does what the core can't do yet.
@@ -103,8 +105,8 @@ internal sealed class StrideRenderInterface(FallbackChannel channel) : IPlatform
     public IGlyphRunImpl CreateGlyphRun(GlyphTypeface glyphTypeface, double fontRenderingEmSize, IReadOnlyList<GlyphInfo> glyphInfos, Point baselineOrigin)
         => new StrideGlyphRun(Channel, glyphTypeface, fontRenderingEmSize, glyphInfos, baselineOrigin);
 
-    // Any graphics context: the native renderer draws on the CPU, through the fallback
-    public IPlatformRenderInterfaceContext CreateBackendContext(IPlatformGraphicsContext? graphicsApiContext) => new StrideRenderInterfaceContext(Channel);
+    // Any graphics context: the native renderer draws on the game's graphics device itself, or on the CPU through the fallback
+    public IPlatformRenderInterfaceContext CreateBackendContext(IPlatformGraphicsContext? graphicsApiContext) => new StrideRenderInterfaceContext(Channel, graphics);
 
     public bool IsSupportedBitmapPixelFormat(PixelFormat format) => format == PixelFormat.Bgra8888 || format == PixelFormat.Rgba8888;
 
