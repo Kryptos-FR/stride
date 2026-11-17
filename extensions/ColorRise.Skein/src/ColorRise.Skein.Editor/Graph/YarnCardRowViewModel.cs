@@ -40,7 +40,7 @@ public sealed class YarnCardRowViewModel : ViewModelBase
             field = value;
             if (changed)
             {
-                OnPropertyChanged(nameof(Statement), nameof(Kind), nameof(Depth), nameof(Speaker), nameof(Display), nameof(Condition), nameof(IsEditable), nameof(HasConnector));
+                OnPropertyChanged(nameof(Statement), nameof(Kind), nameof(Depth), nameof(Speaker), nameof(Display), nameof(Condition), nameof(IsEditable), nameof(IsAssignment), nameof(HasConnector));
             }
         }
     }
@@ -99,6 +99,12 @@ public sealed class YarnCardRowViewModel : ViewModelBase
     /// Whether the text of the row is edited on the card: a line, an option or a line group item.
     /// </summary>
     public bool IsEditable => IsAdd || Statement?.IsText == true;
+
+    /// <summary>
+    /// Whether the row is a <c>&lt;&lt;set&gt;&gt;</c> command, which the set builder edits.
+    /// </summary>
+    public bool IsAssignment => Statement is { Kind: YarnStatementKind.Command } statement && statement.Text.StartsWith("set", StringComparison.Ordinal)
+        && statement.Text.Length > 3 && char.IsWhiteSpace(statement.Text[3]);
 
     /// <summary>
     /// Whether the row has a connector the links of what it holds leave from: an option, to drag a jump from, and a

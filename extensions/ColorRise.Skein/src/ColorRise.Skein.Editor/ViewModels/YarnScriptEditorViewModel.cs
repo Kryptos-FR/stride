@@ -1,6 +1,7 @@
 using ColorRise.Skein.Assets;
 using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Assets.Text;
+using ColorRise.Skein.Editor.Conditions;
 using ColorRise.Skein.Editor.Graph;
 using ColorRise.Skein.Editor.Nodes;
 using ColorRise.Skein.Editor.Player;
@@ -633,6 +634,94 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
 
         Select(row.Card);
         RequestPlace(new YarnTextPlace(statement.Line, statement.TextStart - statement.LineStart + 1));
+    }
+
+    /// <summary>
+    /// What the builders of conditions and <c>&lt;&lt;set&gt;&gt;</c> commands offer: the variables, functions and nodes of
+    /// the script's project, as of its last analysis.
+    /// </summary>
+    public YarnConditionKnowledge Knowledge => YarnConditionKnowledge.From(analysis);
+
+    /// <summary>
+    /// Makes the builder of the condition of a line, an option or a line group item.
+    /// </summary>
+    /// <returns>The builder, or null for a row that has no condition to edit.</returns>
+    public YarnConditionBuilderViewModel? EditCondition(YarnCardRowViewModel row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        return Knows(row.Card) && row.Statement is { IsText: true } statement
+            ? new YarnConditionBuilderViewModel(Knowledge, statement.Condition, statement.IsOnce, allowsOnce: true)
+            : null;
+    }
+
+    /// <summary>
+    /// Writes what a condition builder made after the text of a row, as one step of the history.
+    /// </summary>
+    /// <returns>Whether the text changed.</returns>
+    public bool CommitCondition(YarnCardRowViewModel row, YarnConditionBuilderViewModel builder)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        ArgumentNullException.ThrowIfNull(builder);
+        if (!Knows(row.Card))
+            return false;
+
+        var current = Synchronize();
+        if (row.Statement is not { IsText: true } statement)
+            return false;
+
+        try
+        {
+            return Apply("Edit condition", YarnTextPatcher.SetStatementCondition(current, row.Card.Span, statement, builder.Condition, builder.IsOnce));
+        }
+        catch (ArgumentException exception)
+        {
+            Problem = exception.Message;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Makes the builder of a <c>&lt;&lt;set&gt;&gt;</c> command.
+    /// </summary>
+    /// <returns>The builder, or null for a row that is not a <c>set</c> the builder reads.</returns>
+    public YarnAssignmentBuilderViewModel? EditAssignment(YarnCardRowViewModel row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        return Knows(row.Card) && row.Statement is { Kind: YarnStatementKind.Command } statement && YarnAssignment.Read(statement.Text) is { } assignment
+            ? new YarnAssignmentBuilderViewModel(Knowledge, assignment)
+            : null;
+    }
+
+    /// <summary>
+    /// Writes what a <c>&lt;&lt;set&gt;&gt;</c> builder made in the command of a row, as one step of the history.
+    /// </summary>
+    /// <returns>Whether the text changed.</returns>
+    public bool CommitAssignment(YarnCardRowViewModel row, YarnAssignmentBuilderViewModel builder)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        ArgumentNullException.ThrowIfNull(builder);
+        if (!Knows(row.Card))
+            return false;
+
+        var current = Synchronize();
+        if (row.Statement is not { Kind: YarnStatementKind.Command } statement)
+            return false;
+
+        if (builder.Command is not { } command)
+        {
+            Problem = "A set needs a variable and a value.";
+            return false;
+        }
+
+        try
+        {
+            return Apply("Edit set", YarnTextPatcher.SetCommandText(current, row.Card.Span, statement, command));
+        }
+        catch (ArgumentException exception)
+        {
+            Problem = exception.Message;
+            return false;
+        }
     }
 
     /// <summary>
