@@ -205,7 +205,7 @@ internal sealed class PlayAgentSystem : GameSystemBase
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Where(x => !x.IsDynamic).OrderBy(x => x.GetName().Name))
             {
                 var name = assembly.GetName();
-                json.WriteStringValue($"{name.Name} {name.Version}");
+                json.WriteStringValue($"{name.Name} {name.Version} {assembly.ManifestModule.ModuleVersionId}");
             }
             json.WriteEndArray();
             json.WriteEndObject();

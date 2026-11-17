@@ -32,15 +32,6 @@ public static class AgentBootstrap
             // Only the first game: a game could create others (an editor-like tool), which are not played.
             if (agent is not null || sender is not Game game)
                 return;
-            // Spike-only knob, applied the same way with and without the agent: a smaller back buffer, so that a
-            // software renderer (lavapipe under Xvfb) leaves frame times where the agent's cost can be seen.
-            if (Environment.GetEnvironmentVariable("STRIDE_PLAY_SPIKE_BACKBUFFER") is { } size && size.Split('x') is [var w, var h])
-            {
-                var deviceManager = (Stride.Games.GraphicsDeviceManager)game.GraphicsDeviceManager;
-                deviceManager.PreferredBackBufferWidth = int.Parse(w);
-                deviceManager.PreferredBackBufferHeight = int.Parse(h);
-                deviceManager.SynchronizeWithVerticalRetrace = false;
-            }
             agent = new PlayAgentSystem(game, pipeName, mode == "meter", Environment.GetEnvironmentVariable(PlayFraming.MeterOutputVariable));
             game.GameSystems.Add(agent);
         };

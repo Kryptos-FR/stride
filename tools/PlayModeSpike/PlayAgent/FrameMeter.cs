@@ -73,6 +73,10 @@ internal sealed class FrameMeter
             json.WriteNumber("gen1", GC.CollectionCount(1) - gen1);
             json.WriteNumber("gen2", GC.CollectionCount(2) - gen2);
             json.WriteNumber("allocatedBytes", GC.GetTotalAllocatedBytes() - allocated);
+            using (var process = Process.GetCurrentProcess())
+                json.WriteNumber("workingSetMB", Math.Round(process.WorkingSet64 / 1048576.0, 1));
+            json.WriteNumber("gcHeapMB", Math.Round(GC.GetGCMemoryInfo().HeapSizeBytes / 1048576.0, 1));
+            json.WriteNumber("loadedAssemblies", AppDomain.CurrentDomain.GetAssemblies().Length);
             extra?.Invoke(json);
             json.WriteEndObject();
         }

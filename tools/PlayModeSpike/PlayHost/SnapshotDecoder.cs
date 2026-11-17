@@ -56,7 +56,8 @@ internal sealed class SnapshotDecoder
         }
         if (options.LoadGameAssemblies)
         {
-            var directory = Path.GetDirectoryName(options.Game)!;
+            // The editor's own build of the game's assemblies, which can differ from the running game's.
+            var directory = options.EditorAssemblies ?? Path.GetDirectoryName(options.Game)!;
             var gameAssemblies = Directory.GetFiles(directory, "*.dll")
                 .Where(f => !Path.GetFileName(f).StartsWith("Stride.", StringComparison.Ordinal) && !Path.GetFileName(f).StartsWith("System.", StringComparison.Ordinal) && !Path.GetFileName(f).StartsWith("Microsoft.", StringComparison.Ordinal))
                 .Where(f => AssemblyName.GetAssemblyName(f).Name is { } n && (n.EndsWith(".Game", StringComparison.Ordinal) || IsPack(directory, n)));
@@ -64,7 +65,7 @@ internal sealed class SnapshotDecoder
             {
                 var assembly = Assembly.LoadFrom(file);
                 RuntimeHelpers.RunModuleConstructor(assembly.ManifestModule.ModuleHandle);
-                loadNotes.Add($"loaded game assembly {assembly.GetName().Name}");
+                loadNotes.Add($"loaded game assembly {assembly.GetName().Name} {assembly.ManifestModule.ModuleVersionId} from {directory}");
             }
         }
         else

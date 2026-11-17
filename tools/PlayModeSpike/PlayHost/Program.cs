@@ -17,7 +17,7 @@ using Stride.PlayMode.Spike;
 // the snapshots, decodes the snapshots as the editor would, and collects the measurements. It always ends the game.
 //
 // Usage: PlayHost --game <game assembly> --out <folder> [--no-game-assemblies] [--seconds 10] [--baseline]
-//        [--pick name1,name2,...] [--input-script <file>]
+//        [--pick name1,name2,...] [--click-ms 300] [--quick] [--editor-assemblies <folder>]
 
 var options = Options.Parse(args);
 Directory.CreateDirectory(options.Output);
@@ -29,7 +29,7 @@ var decoder = new SnapshotDecoder(options);
 using var session = new PlaySession(options, decoder);
 return await session.RunAsync();
 
-internal sealed record Options(string Game, string Output, string Agent, bool LoadGameAssemblies, int Seconds, bool Baseline, string[] Pick, int ClickMs, bool Quick)
+internal sealed record Options(string Game, string Output, string Agent, bool LoadGameAssemblies, int Seconds, bool Baseline, string[] Pick, int ClickMs, bool Quick, string? EditorAssemblies)
 {
     public static Options Parse(string[] args)
     {
@@ -40,6 +40,7 @@ internal sealed record Options(string Game, string Output, string Agent, bool Lo
         var pick = Array.Empty<string>();
         var clickMs = 0;
         var quick = false;
+        string? editorAssemblies = null;
         for (var i = 0; i < args.Length; i++)
         {
             switch (args[i])
@@ -53,11 +54,12 @@ internal sealed record Options(string Game, string Output, string Agent, bool Lo
                 case "--pick": pick = args[++i].Split(','); break;
                 case "--click-ms": clickMs = int.Parse(args[++i]); break;
                 case "--quick": quick = true; break;
+                case "--editor-assemblies": editorAssemblies = Path.GetFullPath(args[++i]); break;
                 default: throw new ArgumentException($"Unknown argument {args[i]}");
             }
         }
         agent ??= Path.Combine(AppContext.BaseDirectory, "agent", "Stride.PlayMode.Spike.Agent.dll");
-        return new Options(game ?? throw new ArgumentException("--game is required"), output ?? throw new ArgumentException("--out is required"), agent, load, seconds, baseline, pick, clickMs, quick);
+        return new Options(game ?? throw new ArgumentException("--game is required"), output ?? throw new ArgumentException("--out is required"), agent, load, seconds, baseline, pick, clickMs, quick, editorAssemblies);
     }
 }
 
