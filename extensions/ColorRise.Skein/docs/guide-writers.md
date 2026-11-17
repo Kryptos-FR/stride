@@ -25,7 +25,10 @@ Select the project in the asset view to see its settings in the property grid:
 | Line id style | How *Add line ids* names the ids: random (`line:0a1b2c3`) or descriptive (`line:Tavern_0100_Odile`). |
 | Saliency | How the game picks among the lines of a line group or the nodes of a node group (section 4). |
 | Severities | How serious a message of the compiler is, by its code. In a new project, a jump to a node that does not exist (`YS0012`) is an error. |
+| Character colours | The colour of a character's name on the cards, in the text and in the dialogue player: *+* adds a name and its colour. A character that is not listed gets a colour made from its name, the same each time. The game does not use these colours. |
 | Yarn project file | Keeps the files Yarn Spinner's own tools read beside the project (section 9). |
+
+A double click on the project opens its **overview**: its scripts with their nodes and errors, its variables, the **commands and functions** the game's code gives the scripts (how a script writes each one, `<<give item: string [count: number = 1]>>` or `has_item(item: string) → bool`, what it does, and the method of the code; *waits* marks a command the dialogue waits for), its languages (section 8) and what the compiler says.
 
 ## 2. Write
 
@@ -77,8 +80,11 @@ How the graph looks is written in the script itself, with headers that Yarn Spin
 | Colour a card | Menu of the card, *Colour* | `color: red` (red, orange, yellow, green, blue, purple) |
 | A note for the writers | *+ Note*, or *Add note here* | a node with `style: note` that nothing jumps to |
 | See everything | Right click, *Show all the nodes* | |
+| Put the graph in a design document | *Export graph…* in the toolbar | nothing: a separate file |
 
 The search box dims the cards that do not match: it looks in the titles, the headers and the text.
+
+*Export graph…* writes the graph of the script as text that documentation tools draw: a `.mmd` file (Mermaid), a `.md` file with the Mermaid chart under the name of the script (GitHub, GitLab and most wikis draw it), or a `.dot` or `.gv` file (Graphviz). The format follows the extension of the name. A node group is one box with its count of nodes, the notes stay out, a jump is a solid arrow and a detour a dashed one, each labelled with the option or the branch it leaves from, and the nodes of other scripts, missing nodes and jumps to an expression have a shape of their own.
 
 A card is as tall as its rows, and *Layout* places the cards for their height. The `position:` headers written before the cards had rows were made for shorter cards, so cards can overlap in an older script: *Layout* places them anew.
 

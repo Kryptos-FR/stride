@@ -25,6 +25,19 @@ public sealed class GuideTests
         }
     }
 
+    [Fact]
+    public async Task The_converter_of_the_developers_guide_makes_a_seed_and_refuses_another_word()
+    {
+        var registry = new YarnActionRegistry();
+        registry.RegisterType(typeof(Garden));
+
+        Assert.True(await registry.RunCommandAsync("sow turnip", CancellationToken.None));
+        Assert.Equal(new Seed("turnip", 5), Garden.Sown);
+
+        var refused = await Assert.ThrowsAsync<YarnCommandException>(() => registry.RunCommandAsync("sow rose", CancellationToken.None).AsTask());
+        Assert.Contains("'rose' is not a Seed for the parameter 'seed'.", refused.Message);
+    }
+
     [Theory]
     [InlineData("guide-writers.md")]
     [InlineData("guide-developers.md")]

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ColorRise.Skein.UI;
 using Stride.Core;
 using Stride.Engine;
@@ -248,4 +249,37 @@ public static class TrimmedGame
         dialogues.Actions.RegisterType(typeof(Purse));
         dialogues.Actions.RegisterType(typeof(Gate));
     }
+}
+
+public sealed class QuestGiver : SyncScript
+{
+    public YarnProject? Story { get; set; }
+
+    // The nodes with a "quest:" header that contains "lamp", whatever its case
+    [YarnNode(nameof(Story), Filter = "lamp", FilterHeader = "quest")]
+    public string? LampNode { get; set; }
+
+    // The nodes whose title starts with "Bark_"
+    [YarnNode(nameof(Story), Filter = "Bark_", FilterType = YarnNodeFilter.StartsWith)]
+    public string? Bark { get; set; }
+
+    public override void Update() { }
+}
+
+public sealed record Seed(string Name, int Days);
+
+public static class Garden
+{
+    public static Seed? Sown { get; private set; }
+
+    [YarnConverter(typeof(Seed))]
+    public static bool TrySeed(string text, [MaybeNullWhen(false)] out Seed seed)
+    {
+        seed = text switch { "turnip" => new Seed("turnip", 5), "kale" => new Seed("kale", 8), _ => null };
+        return seed is not null;
+    }
+
+    // <<sow turnip>>
+    [YarnCommand("sow", Description = "Sows a seed in the garden: <<sow turnip>>.")]
+    public static void Sow(Seed seed) => Sown = seed;
 }

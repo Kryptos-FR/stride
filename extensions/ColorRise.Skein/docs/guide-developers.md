@@ -140,6 +140,27 @@ Far out, a ship turns toward the light.
 
 An event must make its own condition false, or be `when: once`: the game above would play it again each frame.
 
+**A node in a component of the game.** A string member with `[YarnNode]` is picked in Game Studio's property grid among the nodes of the project that another member of the same component holds, as the runner's *Start Node* is. As in Yarn Spinner for Unity, `Filter`, `FilterType` and `FilterHeader` narrow the list to the nodes whose header passes:
+
+```csharp
+public sealed class QuestGiver : SyncScript
+{
+    public YarnProject? Story { get; set; }
+
+    // The nodes with a "quest:" header that contains "lamp", whatever its case
+    [YarnNode(nameof(Story), Filter = "lamp", FilterHeader = "quest")]
+    public string? LampNode { get; set; }
+
+    // The nodes whose title starts with "Bark_"
+    [YarnNode(nameof(Story), Filter = "Bark_", FilterType = YarnNodeFilter.StartsWith)]
+    public string? Bark { get; set; }
+
+    public override void Update() { }
+}
+```
+
+`FilterType` is `Contains` by default, or `StartsWith`, `EndsWith` and `MatchesRegex` (a regular expression, which minds the case; one that does not read matches nothing). `FilterHeader` is `title` by default, or any header of the nodes (`tags`, `when`, a header of your own). A node group is offered when one of its nodes passes.
+
 ## 4. Presenters
 
 A presenter shows the dialogue. A runner can have several, each doing one thing.
@@ -308,6 +329,34 @@ public sealed class Gate : StartupScript
 ```
 
 The name is looked for among the entities that have a **dialogue actor** component (`DialogueActorComponent`, whose Actor Name is the name the scripts use; empty, the entity's own name), then among the entities by name, in the runner's scene first. Give an actor component to what the story names: it keeps working when the entity is renamed or spawned from a prefab. The token of a command is cancelled when the dialogue stops.
+
+**Parameters of your own types.** A static method marked `[YarnConverter(typeof(T))]` turns a word of a command into a `T`, as in Yarn Spinner for Unity. It is written `static bool TryX(string text, out T value)` and returns false when the word is not a `T`:
+
+```csharp
+public sealed record Seed(string Name, int Days);
+
+public static class Garden
+{
+    public static Seed? Sown { get; private set; }
+
+    [YarnConverter(typeof(Seed))]
+    public static bool TrySeed(string text, [MaybeNullWhen(false)] out Seed seed)
+    {
+        seed = text switch { "turnip" => new Seed("turnip", 5), "kale" => new Seed("kale", 8), _ => null };
+        return seed is not null;
+    }
+
+    // <<sow turnip>>
+    [YarnCommand("sow", Description = "Sows a seed in the garden: <<sow turnip>>.")]
+    public static void Sow(Seed seed) => Sown = seed;
+}
+```
+
+- A converter takes the place of Skein's own reading of the type: an enum by its case, an entity or a component by name.
+- A word that is not a `T` fails the command with `'rose' is not a Seed for the parameter 'seed'.`, as a word that is not a number does.
+- Converters are for the parameters of commands. A function takes and returns Yarn's values (booleans, numbers, strings), which the compiler checks: a function that wants a `Seed` takes its name.
+- `dialogues.Actions.AddConverter<Seed>(Garden.TrySeed)` adds a converter by hand, and `RemoveConverter(typeof(Seed))` removes it.
+- The overview of a Yarn project in Game Studio lists the commands and functions of the game, with how a script writes each, its description and its method; a parameter of your own type shows that type's name.
 
 **By hand.** A command or a function can also be a delegate, added and removed from code:
 
