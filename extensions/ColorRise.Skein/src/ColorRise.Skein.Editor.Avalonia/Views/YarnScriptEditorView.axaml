@@ -74,6 +74,8 @@
                     ToolTip.Tip="{sd:LocalizeString Show the text of the whole file instead of the selected nodes, Context=ToolTip}"/>
       <ToggleButton DockPanel.Dock="Right" Classes="tool" Content="{sd:LocalizeString Fold cards, Context=Button}" IsChecked="{Binding FoldCards}"
                     ToolTip.Tip="{sd:LocalizeString Fold every card to its first lines and the rows its links leave from, Context=ToolTip}"/>
+      <Button DockPanel.Dock="Right" Classes="tool" Content="{sd:LocalizeString Export graph…, Context=Button}" Command="{Binding ExportGraphCommand}"
+              ToolTip.Tip="{sd:LocalizeString Save the graph as Mermaid (.mmd\, .md) or DOT (.dot)\, for a design document, Context=ToolTip}"/>
     </DockPanel>
 
     <!-- Where the script stands among the Yarn projects -->

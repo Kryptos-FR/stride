@@ -14,6 +14,7 @@ using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Presentation.Collections;
 using Stride.Core.Presentation.Commands;
+using Stride.Core.Presentation.Services;
 
 namespace ColorRise.Skein.Editor.ViewModels;
 
@@ -96,6 +97,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         LayoutCommand = new AnonymousCommand(ServiceProvider, Layout);
         OpenTargetCommand = new AnonymousTaskCommand<YarnStubCardViewModel>(ServiceProvider, OpenTarget);
         PlayFromHereCommand = new AnonymousTaskCommand<YarnNodeCardViewModel?>(ServiceProvider, PlayFromHere);
+        ExportGraphCommand = new AnonymousTaskCommand(ServiceProvider, ExportGraph);
     }
 
     /// <summary>
@@ -332,6 +334,11 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     /// Plays the node of a card in the dialogue player; without a card, the selected node, else the first.
     /// </summary>
     public ICommandBase PlayFromHereCommand { get; }
+
+    /// <summary>
+    /// Asks where to export the graph, as Mermaid or DOT, and writes it there.
+    /// </summary>
+    public ICommandBase ExportGraphCommand { get; }
 
     /// <summary>
     /// The line, from 1, the run of the dialogue player is at in this script; null when the run is elsewhere, or when
@@ -761,6 +768,42 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
 
         var edits = places.Select(p => YarnTextPatcher.SetPosition(current, p.Key.Span, p.Value.X, p.Value.Y)).ToArray();
         Apply(moved.Count == 1 ? "Move node" : "Move nodes", edits);
+    }
+
+    /// <summary>
+    /// Asks where to export the graph, and writes it there in the format of the file's extension.
+    /// </summary>
+    /// <returns>The file written, or null when the user cancelled.</returns>
+    public async Task<string?> ExportGraph()
+    {
+        if (ServiceProvider.TryGet<IDialogService>() is not { } dialogs)
+            return null;
+
+        var path = await dialogs.SaveFilePickerAsync(
+            Asset.AssetItem.FullPath.GetFullDirectory(),
+            [
+                new FilePickerFilter("Mermaid") { Patterns = ["*.mmd"] },
+                new FilePickerFilter("Mermaid in Markdown") { Patterns = ["*.md"] },
+                new FilePickerFilter("DOT (Graphviz)") { Patterns = ["*.dot", "*.gv"] },
+            ],
+            "mmd",
+            Asset.Name + "-graph");
+        if (path is null)
+            return null;
+
+        ExportGraphTo(path.ToOSPath());
+        return path.ToOSPath();
+    }
+
+    /// <summary>
+    /// Writes the graph to a file, in the format of its extension (<see cref="YarnGraphExport.FormatOf"/>); Mermaid for
+    /// another extension.
+    /// </summary>
+    public void ExportGraphTo(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        Synchronize();
+        File.WriteAllText(path, YarnGraphExport.Write(Asset.Name, Cards, Links, YarnGraphExport.FormatOf(path) ?? YarnGraphFormat.Mermaid));
     }
 
     /// <summary>
