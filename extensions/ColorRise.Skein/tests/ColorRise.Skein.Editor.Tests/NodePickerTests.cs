@@ -17,7 +17,7 @@ namespace ColorRise.Skein.Editor.Tests;
 /// </summary>
 public sealed class NodePickerTests
 {
-    private const string Act1 = "title: Arrival\n---\nNarrator: Here.\n<<jump Pier>>\n===\ntitle: Pier\n---\nNarrator: The pier.\n===\ntitle: Todo\nstyle: note\n---\nLater.\n===\n";
+    private const string Act1 = "title: Arrival\nquest: letters\n---\nNarrator: Here.\n<<jump Pier>>\n===\ntitle: Pier\nquest: Lamp\n---\nNarrator: The pier.\n===\ntitle: Todo\nstyle: note\n---\nLater.\n===\n";
     private const string Act2 = "title: Lighthouse\nwhen: always\n---\nUp.\n===\ntitle: Lighthouse\nwhen: once\n---\nUp again.\n===\n";
 
     // The second project is in a folder without a script
@@ -85,6 +85,32 @@ public sealed class NodePickerTests
         Assert.Null(NodeNames(grid, nameof(QuestGiver.Giver)));
     }
 
+    [Fact]
+    public async Task A_member_can_list_only_the_nodes_whose_header_passes_its_filter()
+    {
+        await using var session = await OpenAsync();
+        var quest = new QuestGiver { Story = Reference(session.ProjectAt("Dialogue/Story")) };
+
+        var grid = await ShowAsync(session, quest);
+        await session.Analysis.WhenIdle();
+
+        // A header of the nodes, without regard to case; a node group passes when one of its nodes does
+        Assert.Equal(["Pier"], NodeNames(grid, nameof(QuestGiver.Lamp)));
+        Assert.Equal(["Lighthouse"], NodeNames(grid, nameof(QuestGiver.Once)));
+
+        // The title by default, and the other ways of the filter
+        Assert.Equal(["Arrival", "Lighthouse"], NodeNames(grid, nameof(QuestGiver.WithL)));
+        Assert.Equal(["Pier"], NodeNames(grid, nameof(QuestGiver.EndsInR)));
+        Assert.Equal(["Lighthouse"], NodeNames(grid, nameof(QuestGiver.Lights)));
+        Assert.Empty(NodeNames(grid, nameof(QuestGiver.Broken))!);
+
+        // The filtered list follows the scripts too
+        session.ScriptAt("Dialogue/Act1").TextBuffer.Replace(0, 0, "title: Shed\nquest: lamp\n---\nOil.\n===\n", YarnTextBuffer.TypingActionName);
+        await session.Analysis.WhenIdle();
+        Assert.Equal(["Pier", "Shed"], NodeNames(grid, nameof(QuestGiver.Lamp)));
+        Assert.Equal(["Arrival", "Lighthouse", "Pier", "Shed"], NodeNames(grid, nameof(QuestGiver.Offer)));
+    }
+
     private static YarnProject Reference(YarnProjectViewModel project) => AttachedReferenceManager.CreateProxyObject<YarnProject>(project.Id, project.Url);
 
     private static async Task<GraphViewModel> ShowAsync(SkeinSession session, object shown)
@@ -118,6 +144,24 @@ public sealed class NodePickerTests
 
         [YarnNode("Missing")]
         public string Lost { get; set; } = "";
+
+        [YarnNode(nameof(Story), Filter = "lamp", FilterHeader = "quest")]
+        public string Lamp { get; set; } = "";
+
+        [YarnNode(nameof(Story), Filter = "once", FilterHeader = "when")]
+        public string Once { get; set; } = "";
+
+        [YarnNode(nameof(Story), Filter = "l")]
+        public string WithL { get; set; } = "";
+
+        [YarnNode(nameof(Story), Filter = "R", FilterType = YarnNodeFilter.EndsWith)]
+        public string EndsInR { get; set; } = "";
+
+        [YarnNode(nameof(Story), Filter = "^Li", FilterType = YarnNodeFilter.MatchesRegex)]
+        public string Lights { get; set; } = "";
+
+        [YarnNode(nameof(Story), Filter = "(", FilterType = YarnNodeFilter.MatchesRegex)]
+        public string Broken { get; set; } = "";
     }
 
     /// <summary>

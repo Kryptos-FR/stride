@@ -21,7 +21,7 @@ public sealed class YarnAnalysisService
     private readonly ISessionViewModel session;
     private readonly Dictionary<AssetId, Unit> units = [];
     // Asked for from the threads that build the property grid
-    private readonly Dictionary<AssetId, ObservableList<string>> nodeNames = [];
+    private readonly Dictionary<(AssetId Project, NodeFilter Filter), ObservableList<string>> nodeNames = [];
     private readonly CancellationTokenSource closing = new();
     private CancellationTokenSource delay = new();
     private Task pump = Task.CompletedTask;
@@ -113,16 +113,19 @@ public sealed class YarnAnalysisService
     /// The titles of the nodes of a project that a dialogue can start, sorted. The list is kept current: it changes, on
     /// the UI thread, after each analysis of the project. Safe from any thread.
     /// </summary>
-    public ObservableList<string> NodeNamesOf(YarnProjectViewModel project)
+    /// <param name="project">The project.</param>
+    /// <param name="attribute">The attribute of the member that lists them, for its filter; null for every node.</param>
+    public ObservableList<string> NodeNamesOf(YarnProjectViewModel project, YarnNodeAttribute? attribute = null)
     {
         ArgumentNullException.ThrowIfNull(project);
 
+        var filter = NodeFilter.Of(attribute);
         ObservableList<string>? names;
         lock (nodeNames)
         {
-            if (!nodeNames.TryGetValue(project.Id, out names))
+            if (!nodeNames.TryGetValue((project.Id, filter), out names))
             {
-                nodeNames.Add(project.Id, names = []);
+                nodeNames.Add((project.Id, filter), names = []);
             }
         }
 
@@ -142,7 +145,7 @@ public sealed class YarnAnalysisService
         {
             if (!closing.IsCancellationRequested && !project.IsDeleted && AnalysisOf(project) is { } analysis)
             {
-                ShowNodeNames(names, analysis);
+                ShowNodeNames(names, analysis, filter);
             }
         }
     }
@@ -287,24 +290,24 @@ public sealed class YarnAnalysisService
                 Nodes = unit.GoodNodes ?? build.Compilation.Nodes,
                 Actions = gameActions,
             };
-            ObservableList<string>? names;
+            List<(NodeFilter Filter, ObservableList<string> Names)> lists;
             lock (nodeNames)
             {
-                nodeNames.TryGetValue(unit.Owner.Id, out names);
+                lists = [.. nodeNames.Where(n => n.Key.Project == unit.Owner.Id).Select(n => (n.Key.Filter, n.Value))];
             }
 
-            if (names is not null)
+            foreach (var (filter, names) in lists)
             {
-                ShowNodeNames(names, unit.Latest);
+                ShowNodeNames(names, unit.Latest, filter);
             }
 
             Changed?.Invoke(unit.Latest);
         }
     }
 
-    private static void ShowNodeNames(ObservableList<string> names, YarnProjectAnalysis analysis)
+    private static void ShowNodeNames(ObservableList<string> names, YarnProjectAnalysis analysis, NodeFilter filter)
     {
-        var titles = analysis.StartNodes;
+        var titles = analysis.StartNodesFor(filter.Attribute);
         if (!names.SequenceEqual(titles))
         {
             names.Clear();
@@ -407,5 +410,14 @@ public sealed class YarnAnalysisService
                && Settings.ExcludedFiles.SequenceEqual(other.Settings.ExcludedFiles)
                && Settings.Localisations.Select(l => (l.Language, l.Strings)).SequenceEqual(other.Settings.Localisations.Select(l => (l.Language, l.Strings)))
                && Settings.DiagnosticSeverities.OrderBy(s => s.Key, StringComparer.Ordinal).SequenceEqual(other.Settings.DiagnosticSeverities.OrderBy(s => s.Key, StringComparer.Ordinal));
+    }
+
+    // The filter of a list of node names, by value: members with the same filter share their list
+    private readonly record struct NodeFilter(string Header, YarnNodeFilter Type, string Text)
+    {
+        public YarnNodeAttribute? Attribute => Text.Length == 0 ? null : new YarnNodeAttribute("") { Filter = Text, FilterType = Type, FilterHeader = Header };
+
+        public static NodeFilter Of(YarnNodeAttribute? attribute)
+            => attribute is { Filters: true } ? new NodeFilter(attribute.FilterHeader.ToLowerInvariant(), attribute.FilterType, attribute.Filter!) : new NodeFilter("", YarnNodeFilter.None, "");
     }
 }

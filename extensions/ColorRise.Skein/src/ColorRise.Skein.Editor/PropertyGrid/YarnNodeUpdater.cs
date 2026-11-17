@@ -10,7 +10,8 @@ namespace ColorRise.Skein.Editor.PropertyGrid;
 
 /// <summary>
 /// Gives the property grid the node names to pick from, for a string member marked <see cref="YarnNodeAttribute"/>: the
-/// nodes of the Yarn project that the member named by the attribute refers to, in the same object.
+/// nodes of the Yarn project that the member named by the attribute refers to, in the same object, that pass the
+/// attribute's filter.
 /// </summary>
 public sealed class YarnNodeUpdater : NodePresenterUpdaterBase
 {
@@ -49,7 +50,7 @@ public sealed class YarnNodeUpdater : NodePresenterUpdaterBase
             node.AddDependency(project, false);
             if (ProjectOf(project.Value) is { } viewModel && session.ServiceProvider.TryGet<YarnAnalysisService>() is { } analysis)
             {
-                node.AttachedProperties.Set(YarnNodeKeys.NodeNamesKey, analysis.NodeNamesOf(viewModel));
+                node.AttachedProperties.Set(YarnNodeKeys.NodeNamesKey, analysis.NodeNamesOf(viewModel, attribute));
             }
         }
     }

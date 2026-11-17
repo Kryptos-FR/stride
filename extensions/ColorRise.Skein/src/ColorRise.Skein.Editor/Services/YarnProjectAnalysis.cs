@@ -68,6 +68,25 @@ public sealed record YarnProjectAnalysis
         .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>
+    /// The titles of <see cref="StartNodes"/> that pass the filter of a <see cref="YarnNodeAttribute"/>: a node group
+    /// passes when one of its nodes does.
+    /// </summary>
+    public IReadOnlyList<string> StartNodesFor(YarnNodeAttribute? attribute)
+    {
+        if (attribute is not { Filters: true })
+            return StartNodes;
+
+        var byTitle = string.Equals(attribute.FilterHeader, "title", StringComparison.OrdinalIgnoreCase);
+        return [.. Nodes
+            .Where(n => !IsNote(n) && (byTitle
+                ? attribute.Matches(n.Title)
+                : n.Headers.Any(h => string.Equals(h.Key, attribute.FilterHeader, StringComparison.OrdinalIgnoreCase) && attribute.Matches(h.Value))))
+            .Select(n => n.Title)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    /// <summary>
     /// The node a dialogue starts at when none is chosen, or null when there is none.
     /// </summary>
     /// <param name="script">A script, for its first node in the order of its text; null for the node
