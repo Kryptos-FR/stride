@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
+using Avalonia.Media.TextFormatting;
 using Avalonia.Platform;
 using Stride.AvaloniaUI.Rendering;
 using Stride.AvaloniaUI.Rendering.Drawing;
@@ -31,7 +32,7 @@ public sealed class CommandBoundsTests
         ("a 1.5 scale", Matrix.CreateScale(1.5, 1.5)),
     ];
 
-    private static readonly string[] Cases = ["Rectangle", "BoxShadows", "Ellipse", "Line", "MiterGeometry", "GlyphRun", "Bitmap", "OpacityGroup", "LayerGroup", "ClipGroup"];
+    private static readonly string[] Cases = ["Rectangle", "BoxShadows", "Ellipse", "Line", "MiterGeometry", "GlyphRun", "OffsetGlyphRun", "Bitmap", "OpacityGroup", "LayerGroup", "ClipGroup"];
 
     /// <summary>
     /// Gets the names of the cases, one test case each.
@@ -91,6 +92,16 @@ public sealed class CommandBoundsTests
             case "GlyphRun":
             {
                 var (typeface, glyphs) = GlyphRunTests.Shape("Bounds", 40, FontWeight.Bold);
+                var glyphRun = core.CreateGlyphRun(typeface, 40, glyphs, new Point(110, 200));
+                resources.Add(glyphRun);
+                return [new DrawGlyphRunCommand(stroke, glyphRun)];
+            }
+            case "OffsetGlyphRun":
+            {
+                // A mark placed by its offset, as a shaper places combining marks: well above and right of its advance
+                var (typeface, glyphs) = GlyphRunTests.Shape("Bounds", 40, FontWeight.Bold);
+                var last = glyphs[^1];
+                glyphs[^1] = new GlyphInfo(last.GlyphIndex, last.GlyphCluster, last.GlyphAdvance, new Vector(30, -60));
                 var glyphRun = core.CreateGlyphRun(typeface, 40, glyphs, new Point(110, 200));
                 resources.Add(glyphRun);
                 return [new DrawGlyphRunCommand(stroke, glyphRun)];
