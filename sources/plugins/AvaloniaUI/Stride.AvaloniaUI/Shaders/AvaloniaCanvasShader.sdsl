@@ -5,8 +5,14 @@ namespace Stride.AvaloniaUI.Rendering.Native
 {
     /// <summary>
     /// Draws the instances of the native canvas of the Avalonia UI: quads in pixels of the target, each filled with a
-    /// premultiplied color, or with a region of Texture0 sampled one texel to one pixel.
+    /// premultiplied color, with a region of Texture0 sampled one texel to one pixel, or with a shape.
     /// </summary>
+    /// <remarks>
+    /// A shape is a rounded rectangle in its own frame, filled, or the ring between it and an inner one. Its coverage of a
+    /// pixel is saturate(0.5 - d), where d is the signed distance from the pixel's center to the outline in pixels: computed
+    /// in the shape's frame and divided by the length of its gradient in pixels, so that a rotated or scaled shape keeps
+    /// edges one pixel wide. Along the straight edges, the coverages of the two axes multiply.
+    /// </remarks>
     shader AvaloniaCanvasShader : ShaderBase, Texturing
     {
         cbuffer PerDraw
@@ -21,11 +27,27 @@ namespace Stride.AvaloniaUI.Rendering.Native
         // Per instance: the quad in pixels (left, top, right, bottom)
         stage stream float4 QuadRect : QUAD_RECT;
 
-        // Per instance: the premultiplied color, which multiplies the texture's
+        // Per instance: the premultiplied color, which multiplies the texture's or the shape's coverage
         stage stream float4 QuadColor : QUAD_COLOR;
 
-        // Per instance: the texel of Texture0 at the quad's top-left corner (xy), and 1 to sample it, 0 not to (z)
-        stage stream float4 QuadTexture : QUAD_TEXTURE;
+        // Per instance: the texel of Texture0 at the quad's top-left corner (xy); the kind of quad (z): 0 a color, 1 a
+        // texture, 2 a shape; and 1 for a shape with aliased edges (w)
+        stage stream float4 QuadKind : QUAD_KIND;
+
+        // Per instance, for a shape: the rows of the transform from the pixels of the target to the shape's frame
+        stage stream float4 ShapeX : SHAPE_X;
+        stage stream float4 ShapeY : SHAPE_Y;
+
+        // Per instance, for a shape: its outline in its frame (left, top, right, bottom), and the radii of its corners:
+        // top left (xy) and top right (zw), then bottom right (xy) and bottom left (zw)
+        stage stream float4 OuterRect : OUTER_RECT;
+        stage stream float4 OuterRadiiTop : OUTER_RADII_TOP;
+        stage stream float4 OuterRadiiBottom : OUTER_RADII_BOTTOM;
+
+        // Per instance, for a stroke: the hole in the shape, as the outline; empty (left not below right) for a fill
+        stage stream float4 InnerRect : INNER_RECT;
+        stage stream float4 InnerRadiiTop : INNER_RADII_TOP;
+        stage stream float4 InnerRadiiBottom : INNER_RADII_BOTTOM;
 
         stage override void VSMain()
         {
@@ -37,13 +59,79 @@ namespace Stride.AvaloniaUI.Rendering.Native
         stage override void PSMain()
         {
             float4 color = streams.QuadColor;
-            if (streams.QuadTexture.z > 0.5)
+            if (streams.QuadKind.z > 1.5)
+            {
+                // The position is the pixel's center
+                float3 pixel = float3(streams.ShadingPosition.xy, 1);
+                float2 position = float2(dot(streams.ShapeX.xyz, pixel), dot(streams.ShapeY.xyz, pixel));
+                float2 axisX = streams.ShapeX.xy;
+                float2 axisY = streams.ShapeY.xy;
+                float aliased = streams.QuadKind.w;
+                float coverage = Coverage(position, streams.OuterRect, streams.OuterRadiiTop, streams.OuterRadiiBottom, axisX, axisY, aliased);
+                if (streams.InnerRect.x < streams.InnerRect.z)
+                    coverage = saturate(coverage - Coverage(position, streams.InnerRect, streams.InnerRadiiTop, streams.InnerRadiiBottom, axisX, axisY, aliased));
+                color *= coverage;
+            }
+            else if (streams.QuadKind.z > 0.5)
             {
                 // The position is the pixel's center: its whole part is the pixel
-                int2 texel = int2(floor(streams.ShadingPosition.xy - streams.QuadRect.xy + streams.QuadTexture.xy));
+                int2 texel = int2(floor(streams.ShadingPosition.xy - streams.QuadRect.xy + streams.QuadKind.xy));
                 color *= Texture0.Load(int3(texel, 0));
             }
             streams.ColorTarget = color;
+        }
+
+        // The coverage of a pixel at a signed distance in pixels from an outline, positive outside
+        float EdgeCoverage(float distance, float aliased)
+        {
+            if (aliased > 0.5)
+                return distance < 0 ? 1 : 0;
+            return saturate(0.5 - distance);
+        }
+
+        // The coverage of a pixel by a rounded rectangle, at a position in the rectangle's frame; axisX and axisY are the
+        // gradients of the frame's x and y in pixels
+        float Coverage(float2 position, float4 rect, float4 radiiTop, float4 radiiBottom, float2 axisX, float2 axisY, float aliased)
+        {
+            // The nearest edge on each axis
+            float2 center = (rect.xy + rect.zw) * 0.5;
+            float2 halfSize = (rect.zw - rect.xy) * 0.5;
+            float2 outside = abs(position - center) - halfSize;
+            float coverage = EdgeCoverage(outside.x / max(length(axisX), 1e-20), aliased) * EdgeCoverage(outside.y / max(length(axisY), 1e-20), aliased);
+
+            // Each rounded corner whose box holds the position: top left, top right, bottom right, bottom left
+            coverage = min(coverage, CornerCoverage(float2(rect.x + radiiTop.x, rect.y + radiiTop.y) - position, radiiTop.xy, float2(-1, -1), axisX, axisY, aliased));
+            coverage = min(coverage, CornerCoverage(float2(position.x - rect.z + radiiTop.z, rect.y + radiiTop.w - position.y), radiiTop.zw, float2(1, -1), axisX, axisY, aliased));
+            coverage = min(coverage, CornerCoverage(position - float2(rect.z - radiiBottom.x, rect.w - radiiBottom.y), radiiBottom.xy, float2(1, 1), axisX, axisY, aliased));
+            coverage = min(coverage, CornerCoverage(float2(rect.x + radiiBottom.z - position.x, position.y - rect.w + radiiBottom.w), radiiBottom.zw, float2(-1, 1), axisX, axisY, aliased));
+            return coverage;
+        }
+
+        // The coverage of a pixel by an elliptical corner, from the position's offset from the corner's center towards the
+        // corner; directions gives the signs of the offset's axes in the frame. A position outside the corner's box is covered.
+        float CornerCoverage(float2 offset, float2 radii, float2 directions, float2 axisX, float2 axisY, float aliased)
+        {
+            if (radii.x <= 0 || radii.y <= 0 || offset.x <= 0 || offset.y <= 0)
+                return 1;
+
+            // The distance is about f / |gradient of f in pixels|, as Skia measures it on the GPU: f = |offset / radii| - 1 for
+            // a circle, where the distance is exact, and f = |offset / radii|² - 1 for an ellipse
+            float2 scaled = offset / radii;
+            float f;
+            float2 gradient;
+            if (abs(radii.x - radii.y) <= 1e-4 * radii.x)
+            {
+                float len = max(length(scaled), 1e-20);
+                f = len - 1;
+                gradient = directions * scaled / radii / len;
+            }
+            else
+            {
+                f = dot(scaled, scaled) - 1;
+                gradient = directions * 2 * scaled / radii;
+            }
+            float2 pixelGradient = gradient.x * axisX + gradient.y * axisY;
+            return EdgeCoverage(f / max(length(pixelGradient), 1e-20), aliased);
         }
     };
 }

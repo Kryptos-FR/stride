@@ -77,8 +77,13 @@ public sealed class NativeRendererGameTests : GameTestBase
             .Update(5, () => game.MouseSimulated.SetPosition(new Vector2(0.5f, 0.5f)))
             .Update(7, () => game.MouseSimulated.SimulateMouseDown(MouseButton.Left))
             .Update(9, () => game.MouseSimulated.SimulateMouseUp(MouseButton.Left))
-            // Away from the button, so it shows its own color and not the pointer-over one
-            .Update(10, () => game.MouseSimulated.SetPosition(new Vector2(0.02f, 0.02f)))
+            // Away from the button, so it shows its own color and not the pointer-over one; the counts are those of that
+            // redraw, as the pressed button is drawn smaller, under a clip of fractional pixels
+            .Update(10, () =>
+            {
+                game.MouseSimulated.SetPosition(new Vector2(0.02f, 0.02f));
+                channel.ResetCounts();
+            })
             .Draw(14, () => onGpu = game.Services.GetSafeServiceAs<AvaloniaUISystem>().IsRenderingOnGpu), readAt: 14);
 
         Assert.Equal(AvaloniaUIRenderer.Native, StrideAvaloniaPlatform.Renderer);
@@ -87,8 +92,17 @@ public sealed class NativeRendererGameTests : GameTestBase
         AssertColor(BackgroundColor, frame, 5, 5);
         AssertColor(BackgroundColor, frame, Width - 5, Height - 5);
         AssertColor(ButtonColor, frame, Width / 2 - 60, Height / 2);
-        Assert.True(channel.GetCount(DrawCallKind.DrawRectangle) > 0);
-        Assert.True(channel.GetCount(DrawCallKind.DrawGlyphRun) > 0);
+        if (renderOnGpu)
+        {
+            // The button's rectangles are drawn natively, its text by the fallback
+            Assert.True(channel.GetCount(DrawCallKind.DrawRectangle) == 0, $"Rectangles went to the fallback, for: {string.Join(", ", channel.GetReasons())}.");
+            Assert.True(channel.GetCount(FallbackReason.Text) > 0);
+        }
+        else
+        {
+            Assert.True(channel.GetCount(DrawCallKind.DrawRectangle) > 0);
+            Assert.True(channel.GetCount(DrawCallKind.DrawGlyphRun) > 0);
+        }
     });
 
     [SkippableTheory]
