@@ -35,6 +35,9 @@ public sealed class AvaloniaUIGameTests : GameTestBase
     // A game registers the plugins it references before it creates its systems; the test runner loads the plugin lazily
     static AvaloniaUIGameTests() => RuntimeHelpers.RunModuleConstructor(typeof(AvaloniaUISystem).Module.ModuleHandle);
 
+    // Skia renders on the game's device only when it is a Vulkan one
+    private static bool SkiaSharesTheDevice => GraphicsDevice.Platform == GraphicsPlatform.Vulkan;
+
     public AvaloniaUIGameTests()
     {
         GraphicsDeviceManager.PreferredBackBufferWidth = Width;
@@ -57,8 +60,8 @@ public sealed class AvaloniaUIGameTests : GameTestBase
             Assert.Null(run.Component.TopLevel);
             Assert.Equal(1, run.Clicks);
             Assert.False(run.GameSawThePress);
-            // Lavapipe is a Vulkan device, which Skia shares
-            Assert.Equal(renderOnGpu, run.RenderedOnGpu);
+            // Skia shares a Vulkan device (Lavapipe on CI); with the other graphics APIs it renders on the CPU
+            Assert.Equal(renderOnGpu && SkiaSharesTheDevice, run.RenderedOnGpu);
 
             using var frame = run.Frame;
             // The scene shows where no control is, the button is drawn over it
@@ -68,9 +71,10 @@ public sealed class AvaloniaUIGameTests : GameTestBase
         });
     }
 
-    [Fact]
+    [SkippableFact]
     public void SkiaDrawsTheSameFrameOnTheGpuAsOnTheCpu()
     {
+        SkipUnlessSkiaSharesTheDevice();
         AvaloniaThread.Run(() =>
         {
             using var cpuFrame = RunGame(renderOnGpu: false).Frame;
@@ -95,9 +99,10 @@ public sealed class AvaloniaUIGameTests : GameTestBase
         static int Difference(Color a, Color b) => Math.Max(Math.Abs(a.R - b.R), Math.Max(Math.Abs(a.G - b.G), Math.Abs(a.B - b.B)));
     }
 
-    [Fact]
+    [SkippableFact]
     public void ViewIsRedrawnWhenItMovesBetweenTheGpuAndTheCpu()
     {
+        SkipUnlessSkiaSharesTheDevice();
         AvaloniaThread.Run(() =>
         {
             var (game, component) = CreateGame(CreateButton(), renderOnGpu: true);
@@ -227,6 +232,9 @@ public sealed class AvaloniaUIGameTests : GameTestBase
             ? new Color(pixel.B, pixel.G, pixel.R, pixel.A)
             : pixel;
     }
+
+    private static void SkipUnlessSkiaSharesTheDevice() =>
+        Skip.IfNot(SkiaSharesTheDevice, $"Skia renders on the GPU with Vulkan only, and this game runs on {GraphicsDevice.Platform}.");
 
     private static void AssertColor(Color expected, Image image, int x, int y)
     {
