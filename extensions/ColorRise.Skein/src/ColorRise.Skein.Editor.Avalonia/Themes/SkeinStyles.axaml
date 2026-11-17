@@ -17,20 +17,43 @@
        block, shown in grey (a double click shows it in the text). The rows links leave from have a connector on the
        right; a folded card shows only these. -->
   <DataTemplate x:Key="SkeinRowTemplate" x:DataType="graph:YarnCardRowViewModel">
-    <Grid ColumnDefinitions="*,Auto" MinHeight="17" Background="Transparent" views:YarnRowEditing.Opens="DoubleClick"
+    <Grid Classes="row" ColumnDefinitions="*,Auto" MinHeight="17" Background="Transparent" views:YarnRowEditing.Opens="DoubleClick"
           IsVisible="{sd:MultiBinding {Binding !Card.IsFolded}, {Binding HasConnector}, Converter={sd:OrMulti}}">
+      <Grid.Styles>
+        <!-- "+ if" shows on the row under the mouse only -->
+        <Style Selector="Border.addif">
+          <Setter Property="Opacity" Value="0"/>
+        </Style>
+        <Style Selector="Grid.row:pointerover Border.addif">
+          <Setter Property="Opacity" Value="1"/>
+        </Style>
+      </Grid.Styles>
       <Panel Grid.Column="0" Margin="{Binding Depth, Converter={x:Static views:YarnConverters.Indent}}">
         <TextBlock Foreground="{StaticResource SkeinCardText}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
                    IsVisible="{sd:MultiBinding {Binding IsEditable}, {Binding !IsEditing}, Converter={sd:AndMulti}}"
                    ToolTip.Tip="{sd:LocalizeString Double-click to edit, Context=ToolTip}">
           <Run Text="{Binding Kind, Converter={x:Static views:YarnConverters.RowMark}}" Foreground="{StaticResource SkeinCardFaintText}"/><Run
                Text="{Binding Speaker, Converter={x:Static views:YarnConverters.SpeakerLabel}}" Foreground="{StaticResource SkeinSpeakerText}" FontWeight="SemiBold"/><Run
-               Text="{Binding Display}"/><Run
-               Text="{Binding Condition, Converter={x:Static views:YarnConverters.ConditionLabel}}" Foreground="{StaticResource SkeinWhenText}" FontStyle="Italic" FontSize="11"/>
+               Text="{Binding Display}"/><InlineUIContainer BaselineAlignment="Center">
+            <Border Classes="condition" Margin="5,0,0,0" Padding="4,0" CornerRadius="6" Background="#30E3B565" Cursor="Hand"
+                    views:YarnBuilderPopups.OpensCondition="True" IsVisible="{Binding Condition, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    ToolTip.Tip="{sd:LocalizeString Click to edit the condition, Context=ToolTip}">
+              <TextBlock Text="{Binding Condition}" FontSize="11" FontStyle="Italic" Foreground="{StaticResource SkeinWhenText}" MaxWidth="190" TextTrimming="CharacterEllipsis"/>
+            </Border>
+          </InlineUIContainer><InlineUIContainer BaselineAlignment="Center">
+            <Border Classes="addif" Margin="5,0,0,0" Padding="4,0" CornerRadius="6" Background="{StaticResource SkeinChipBrush}" Cursor="Hand"
+                    views:YarnBuilderPopups.OpensCondition="True" IsVisible="{Binding Condition, Converter={x:Static ObjectConverters.IsNull}}"
+                    ToolTip.Tip="{sd:LocalizeString Add a condition, Context=ToolTip}">
+              <TextBlock Text="{sd:LocalizeString + if, Context=Button}" FontSize="10" Foreground="{StaticResource SkeinCardFaintText}"/>
+            </Border>
+          </InlineUIContainer>
         </TextBlock>
         <TextBlock FontSize="11" FontStyle="Italic" Foreground="{StaticResource SkeinCardFaintText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                   Text="{Binding Display}" IsVisible="{Binding !IsEditable}"
+                   Text="{Binding Display}" IsVisible="{sd:MultiBinding {Binding !IsEditable}, {Binding !IsAssignment}, Converter={sd:AndMulti}}"
                    ToolTip.Tip="{sd:LocalizeString Double-click to show it in the text, Context=ToolTip}"/>
+        <TextBlock FontSize="11" FontStyle="Italic" Foreground="{StaticResource SkeinWhenText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                   Text="{Binding Display}" IsVisible="{Binding IsAssignment}"
+                   ToolTip.Tip="{sd:LocalizeString Double-click to edit, Context=ToolTip}"/>
         <TextBox Text="{Binding EditText}" IsVisible="{Binding IsEditing}" views:YarnRowEditing.IsEditBox="True"
                  MinHeight="0" Padding="3,1" FontSize="12" AcceptsReturn="False" TextWrapping="Wrap"/>
       </Panel>

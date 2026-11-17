@@ -27,6 +27,7 @@ public sealed class YarnConditionBuilderViewModel : ViewModelBase
         AllowsOnce = allowsOnce;
         IsOnce = once;
         Load(condition?.Trim() ?? "");
+        IsChanged = false;
     }
 
     /// <summary>
@@ -80,7 +81,9 @@ public sealed class YarnConditionBuilderViewModel : ViewModelBase
             }
             else
             {
+                // The box that asked for rows shows text again
                 Problem = "This condition is not rows of one joiner: it stays text.";
+                OnPropertyChanged(nameof(IsText));
                 return;
             }
 
@@ -146,6 +149,12 @@ public sealed class YarnConditionBuilderViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Whether the user changed something since the builder was made: one that only looked writes nothing, not even the
+    /// usual spelling of its operators.
+    /// </summary>
+    public bool IsChanged { get; private set; }
+
+    /// <summary>
     /// Why the last thing asked of the builder was not done, or null.
     /// </summary>
     public string? Problem { get; private set => SetValue(ref field, value); }
@@ -173,6 +182,26 @@ public sealed class YarnConditionBuilderViewModel : ViewModelBase
     };
 
     /// <summary>
+    /// What the builder writes, as it shows in the text: <c>&lt;&lt;if ...&gt;&gt;</c> after a line, <c>when: ...</c> for a header.
+    /// </summary>
+    public string Preview
+    {
+        get
+        {
+            if (AllowsAlways)
+                return HeaderText is { } header ? $"when: {header}" : "no when: header";
+
+            return (IsOnce, Condition) switch
+            {
+                (true, null) => "<<once>>",
+                (true, { } condition) => $"<<once if {condition}>>",
+                (false, { } condition) => $"<<if {condition}>>",
+                _ => "no condition",
+            };
+        }
+    }
+
+    /// <summary>
     /// Makes the builder of a <c>when:</c> header.
     /// </summary>
     /// <param name="knowledge">What the project offers.</param>
@@ -182,7 +211,9 @@ public sealed class YarnConditionBuilderViewModel : ViewModelBase
         var text = header?.Trim() ?? "";
         var once = text == Once || text.StartsWith(OnceIf, StringComparison.Ordinal);
         var condition = text == Always || text == Once ? null : once ? text[OnceIf.Length..] : text;
-        return new YarnConditionBuilderViewModel(knowledge, condition, once, allowsOnce: true) { AllowsAlways = true, IsAlways = text == Always };
+        var builder = new YarnConditionBuilderViewModel(knowledge, condition, once, allowsOnce: true) { AllowsAlways = true, IsAlways = text == Always };
+        builder.IsChanged = false;
+        return builder;
     }
 
     /// <summary>
@@ -234,5 +265,9 @@ public sealed class YarnConditionBuilderViewModel : ViewModelBase
 
     private string RowsText() => new YarnCondition { Terms = [.. Terms.Select(t => t.ToTerm())], Joiner = Joiner }.Write();
 
-    private void OnChanged() => OnPropertyChanged(nameof(Condition), nameof(HeaderText));
+    private void OnChanged()
+    {
+        IsChanged = true;
+        OnPropertyChanged(nameof(Condition), nameof(HeaderText), nameof(Preview));
+    }
 }

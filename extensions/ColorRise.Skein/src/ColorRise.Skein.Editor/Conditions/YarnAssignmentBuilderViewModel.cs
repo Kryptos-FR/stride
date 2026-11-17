@@ -20,7 +20,14 @@ public sealed class YarnAssignmentBuilderViewModel : ViewModelBase
         Variable = assignment?.Variable ?? Variables.FirstOrDefault() ?? "";
         Operator = assignment?.Operator ?? YarnAssignmentOperator.Set;
         Value = assignment?.Value ?? "";
+        IsChanged = false;
     }
+
+    /// <summary>
+    /// Whether the user changed something since the builder was made: one that only looked writes nothing, not even the
+    /// usual spelling of its operator.
+    /// </summary>
+    public bool IsChanged { get; private set; }
 
     /// <summary>
     /// What the project offers.
@@ -43,6 +50,7 @@ public sealed class YarnAssignmentBuilderViewModel : ViewModelBase
                 Operator = YarnAssignmentOperator.Set;
             }
 
+            IsChanged = true;
             OnPropertyChanged(nameof(Type), nameof(Operators), nameof(Values), nameof(Command));
         }
     } = "";
@@ -67,6 +75,7 @@ public sealed class YarnAssignmentBuilderViewModel : ViewModelBase
         {
             if (SetValue(ref field, value))
             {
+                IsChanged = true;
                 OnPropertyChanged(nameof(Command));
             }
         }
@@ -87,6 +96,7 @@ public sealed class YarnAssignmentBuilderViewModel : ViewModelBase
         {
             if (SetValue(ref field, value ?? ""))
             {
+                IsChanged = true;
                 OnPropertyChanged(nameof(Command));
             }
         }

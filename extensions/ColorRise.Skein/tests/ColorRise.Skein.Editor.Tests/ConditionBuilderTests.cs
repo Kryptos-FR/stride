@@ -1,6 +1,8 @@
 using ColorRise.Skein.Assets.Text;
 using ColorRise.Skein.Editor.Conditions;
+using ColorRise.Skein.Editor.PropertyGrid;
 using ColorRise.Skein.Editor.ViewModels;
+using Stride.Core.Presentation.Quantum.ViewModels;
 
 namespace ColorRise.Skein.Editor.Tests;
 
@@ -223,5 +225,33 @@ public sealed class ConditionBuilderTests
         var plain = YarnConditionBuilderViewModel.ForHeader(knowledge, "$act == Act.Wreck");
         Assert.Equal(Enum.GetValues<YarnComparison>(), plain.Terms[0].Comparisons);
         Assert.Equal("$act == Act.Wreck", plain.HeaderText);
+    }
+
+    [Fact]
+    public async Task The_when_headers_in_the_property_grid_have_the_knowledge_of_the_builder()
+    {
+        var text = Act1.Replace("title: Pier\n---", "title: Pier\nwhen: $met\nwhen: once\n---");
+        await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", text));
+        var editor = session.Edit("Dialogue/Act1");
+        await session.Analysis.WhenIdle();
+
+        editor.Select("Pier");
+        var properties = session.Session.ActiveProperties;
+        await properties.RefreshSelectedPropertiesAsync();
+        var when = properties.ViewModel!.RootNode.Children.Single(x => x.Name == "When");
+
+        Assert.Equal(2, when.Children.Count);
+        Assert.All(when.Children, item => Assert.Same(editor.Knowledge, item.AssociatedData[YarnNodeKeys.ConditionKnowledge]));
+
+        // What the builder writes goes to the text
+        var first = when.Children.First();
+        var builder = YarnConditionBuilderViewModel.ForHeader((YarnConditionKnowledge)first.AssociatedData[YarnNodeKeys.ConditionKnowledge], (string?)first.NodeValue);
+        builder.Terms[0].Comparison = YarnComparison.IsFalse;
+        first.NodeValue = builder.HeaderText;
+        Assert.Contains("title: Pier\nwhen: not $met\nwhen: once\n---", editor.TextBuffer.Text);
+
+        // A builder that only looked writes nothing
+        var set = editor.Cards.Single(c => c.Title == "Start").Rows.Single(r => r.IsAssignment);
+        Assert.False(editor.CommitAssignment(set, editor.EditAssignment(set)!));
     }
 }

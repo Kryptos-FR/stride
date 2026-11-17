@@ -14,4 +14,12 @@
                             PlaceholderText="Pick a node"/>
     </DataTemplate>
   </views:YarnNodeTemplateProvider>
+
+  <!-- A when: header of a Yarn node: its condition as text, and a button that opens the condition builder -->
+  <views:YarnConditionTemplateProvider x:Key="YarnConditionTemplateProvider" caev:PropertyViewHelper.TemplateCategory="PropertyEditor" OverrideRule="All">
+    <DataTemplate DataType="cpqvm:NodeViewModel">
+      <views:YarnConditionBox Text="{Binding NodeValue, Converter={caec:DifferentValuesToString}}"
+                              Knowledge="{ReflectionBinding [ConditionKnowledge]}"/>
+    </DataTemplate>
+  </views:YarnConditionTemplateProvider>
 </ResourceDictionary>

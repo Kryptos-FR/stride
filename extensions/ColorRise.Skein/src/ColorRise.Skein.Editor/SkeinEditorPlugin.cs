@@ -47,6 +47,7 @@ public sealed class SkeinEditorPlugin : StrideAssetsPlugin
         context.OnClose(player.Close);
 
         context.NodePresenterUpdaters.Register(new YarnNodeUpdater(context.Session));
+        context.NodePresenterUpdaters.Register(new YarnConditionUpdater());
 
         // The template manager looks at the last registered generator first: this one goes before Stride's own for the
         // "Yarn project" template

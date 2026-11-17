@@ -347,6 +347,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         {
             analysisService.Changed += OnAnalysisChanged;
             analysis = analysisService.AnalysisOf(Asset);
+            KnowledgeOfAnalysis = null;
         }
 
         player = DialoguePlayerService.Of(Session);
@@ -640,7 +641,10 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     /// What the builders of conditions and <c>&lt;&lt;set&gt;&gt;</c> commands offer: the variables, functions and nodes of
     /// the script's project, as of its last analysis.
     /// </summary>
-    public YarnConditionKnowledge Knowledge => YarnConditionKnowledge.From(analysis);
+    public YarnConditionKnowledge Knowledge => KnowledgeOfAnalysis ??= YarnConditionKnowledge.From(analysis);
+
+    // Made again when the analysis changes: the selected nodes share it in the property grid
+    private YarnConditionKnowledge? KnowledgeOfAnalysis { get; set; }
 
     /// <summary>
     /// Makes the builder of the condition of a line, an option or a line group item.
@@ -655,14 +659,15 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     }
 
     /// <summary>
-    /// Writes what a condition builder made after the text of a row, as one step of the history.
+    /// Writes what a condition builder made after the text of a row, as one step of the history; a builder the user did
+    /// not change writes nothing.
     /// </summary>
     /// <returns>Whether the text changed.</returns>
     public bool CommitCondition(YarnCardRowViewModel row, YarnConditionBuilderViewModel builder)
     {
         ArgumentNullException.ThrowIfNull(row);
         ArgumentNullException.ThrowIfNull(builder);
-        if (!Knows(row.Card))
+        if (!builder.IsChanged || !Knows(row.Card))
             return false;
 
         var current = Synchronize();
@@ -693,14 +698,15 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     }
 
     /// <summary>
-    /// Writes what a <c>&lt;&lt;set&gt;&gt;</c> builder made in the command of a row, as one step of the history.
+    /// Writes what a <c>&lt;&lt;set&gt;&gt;</c> builder made in the command of a row, as one step of the history; a builder
+    /// the user did not change writes nothing.
     /// </summary>
     /// <returns>Whether the text changed.</returns>
     public bool CommitAssignment(YarnCardRowViewModel row, YarnAssignmentBuilderViewModel builder)
     {
         ArgumentNullException.ThrowIfNull(row);
         ArgumentNullException.ThrowIfNull(builder);
-        if (!Knows(row.Card))
+        if (!builder.IsChanged || !Knows(row.Card))
             return false;
 
         var current = Synchronize();
@@ -984,6 +990,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         }
 
         analysis = mine;
+        KnowledgeOfAnalysis = null;
         Refresh(withLinks: true);
     }
 

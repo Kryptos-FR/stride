@@ -10,8 +10,8 @@ using ColorRise.Skein.Editor.ViewModels;
 namespace ColorRise.Skein.Editor.Avalonia.Views;
 
 /// <summary>
-/// The editing of the rows of a card in place: a double click on a row opens its box (or, for a command or a block,
-/// shows it in the text), a click on the row that adds a line opens its box, and the box writes its text with Enter or
+/// The editing of the rows of a card in place: a double click on a row opens its box (for a <c>&lt;&lt;set&gt;&gt;</c>,
+/// the set builder; for another command or a block, it shows it in the text), a click on the row that adds a line opens its box, and the box writes its text with Enter or
 /// when it loses the focus, and closes without writing with Escape.
 /// </summary>
 /// <remarks>
@@ -92,7 +92,7 @@ public static class YarnRowEditing
             {
                 editor.BeginEdit(row);
             }
-            else
+            else if (!row.IsAssignment || YarnBuilderPopups.OpenAssignment(control, editor, row) is null)
             {
                 editor.ShowInText(row);
             }

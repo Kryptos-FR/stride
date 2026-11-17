@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:c="using:ColorRise.Skein.Editor.Conditions"
+             xmlns:views="using:ColorRise.Skein.Editor.Avalonia.Views"
+             x:Class="ColorRise.Skein.Editor.Avalonia.Views.YarnAssignmentBuilderView"
+             x:DataType="c:YarnAssignmentBuilderViewModel"
+             Width="460">
+  <!-- The builder of a <<set>>: a variable, how it changes and a value. OK or Enter writes it, Cancel or Escape does not. -->
+  <StackPanel Spacing="6" Margin="2">
+    <StackPanel Orientation="Horizontal" Spacing="4">
+      <TextBlock VerticalAlignment="Center" Text="{sd:LocalizeString Set, Context=Label}"/>
+      <views:YarnValueBox x:Name="VariableBox" Width="150" Text="{Binding Variable, Mode=TwoWay}" ItemsSource="{Binding Variables}"/>
+      <ComboBox x:Name="OperatorBox" MinWidth="60" ItemsSource="{Binding Operators}" SelectedItem="{Binding Operator}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding Converter={x:Static views:YarnConverters.AssignmentLabel}}"/>
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <views:YarnValueBox x:Name="ValueBox" Width="160" Text="{Binding Value, Mode=TwoWay}" ItemsSource="{Binding Values}"
+                          ToolTip.Tip="{sd:LocalizeString A value: an enum case can be typed by its name\, a text without its quotes, Context=ToolTip}"/>
+    </StackPanel>
+    <TextBlock Opacity="0.7" FontFamily="Cascadia Code,Consolas,Menlo,DejaVu Sans Mono,monospace"
+               Text="{Binding Command, Converter={x:Static views:YarnConverters.CommandPreview}}"/>
+    <DockPanel LastChildFill="False">
+      <Button DockPanel.Dock="Right" Margin="6,0,0,0" MinWidth="70" HorizontalContentAlignment="Center" Content="{sd:LocalizeString OK, Context=Button}" Click="OnOk"/>
+      <Button DockPanel.Dock="Right" MinWidth="70" HorizontalContentAlignment="Center" Content="{sd:LocalizeString Cancel, Context=Button}" Click="OnCancel"/>
+    </DockPanel>
+  </StackPanel>
+</UserControl>

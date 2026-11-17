@@ -115,7 +115,9 @@ internal sealed class YarnNodeHeadersSelection : IDisposable
 
         foreach (var card in cards)
         {
-            var headers = new YarnNodeHeadersViewModel(editor.Session, YarnNodeHeadersText.Read(card.Span));
+            var read = YarnNodeHeadersText.Read(card.Span);
+            read.Knowledge = editor.Knowledge;
+            var headers = new YarnNodeHeadersViewModel(editor.Session, read);
             headers.Changed += changed => OnChanged(card, changed);
             shown.Add((card, headers));
         }

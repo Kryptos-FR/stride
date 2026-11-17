@@ -5,6 +5,7 @@ using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Assets.Text;
+using ColorRise.Skein.Editor.Conditions;
 
 namespace ColorRise.Skein.Editor.Avalonia.Views;
 
@@ -13,6 +14,26 @@ namespace ColorRise.Skein.Editor.Avalonia.Views;
 /// </summary>
 public static class YarnConverters
 {
+    /// <summary>
+    /// The text of a comparison in the condition builder: "is", "is not", "&lt;"...
+    /// </summary>
+    public static readonly IValueConverter ComparisonLabel = new FuncValueConverter<YarnComparison, string>(YarnConditionTermViewModel.LabelOf);
+
+    /// <summary>
+    /// The text of a joiner in the condition builder.
+    /// </summary>
+    public static readonly IValueConverter JoinerLabel = new FuncValueConverter<YarnJoiner, string>(joiner => joiner == YarnJoiner.And ? "all of these (and)" : "one of these (or)");
+
+    /// <summary>
+    /// What the set builder writes, as the text shows it.
+    /// </summary>
+    public static readonly IValueConverter CommandPreview = new FuncValueConverter<string?, string>(command => command is null ? "A set needs a variable and a value." : $"<<{command}>>");
+
+    /// <summary>
+    /// The text of an operator in the set builder: "to", "+="...
+    /// </summary>
+    public static readonly IValueConverter AssignmentLabel = new FuncValueConverter<YarnAssignmentOperator, string>(YarnAssignmentBuilderViewModel.LabelOf);
+
     /// <summary>
     /// The brush of the header of a card, from the colour of its node and whether it is a note.
     /// </summary>
@@ -69,11 +90,6 @@ public static class YarnConverters
     /// The speaker of a line as a row starts with it: <c>Odile: </c>, or nothing.
     /// </summary>
     public static readonly IValueConverter SpeakerLabel = new FuncValueConverter<string?, string>(speaker => speaker is null ? "" : speaker + ": ");
-
-    /// <summary>
-    /// The condition of a line or an option as a row ends with it, or nothing.
-    /// </summary>
-    public static readonly IValueConverter ConditionLabel = new FuncValueConverter<string?, string>(condition => condition is null ? "" : "  \u27E8" + condition + "\u27E9");
 
     /// <summary>
     /// The glyph of the button that folds a card: what a click does.

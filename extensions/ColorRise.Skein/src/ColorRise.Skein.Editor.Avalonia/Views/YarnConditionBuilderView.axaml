@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:c="using:ColorRise.Skein.Editor.Conditions"
+             xmlns:views="using:ColorRise.Skein.Editor.Avalonia.Views"
+             x:Class="ColorRise.Skein.Editor.Avalonia.Views.YarnConditionBuilderView"
+             x:DataType="c:YarnConditionBuilderViewModel"
+             Width="580">
+  <!-- The condition builder: rows of a variable or a function, a comparison and a value, joined by "and" or "or";
+       or the condition as text when it is not rows. OK or Enter writes it, Cancel or Escape does not. -->
+  <StackPanel Spacing="6" Margin="2">
+    <StackPanel Orientation="Horizontal" Spacing="14" IsVisible="{Binding AllowsOnce}">
+      <CheckBox Content="{sd:LocalizeString always, Context=CheckBox}" IsChecked="{Binding IsAlways}" IsVisible="{Binding AllowsAlways}"
+                ToolTip.Tip="{sd:LocalizeString The node can always run: when: always, Context=ToolTip}"/>
+      <CheckBox x:Name="OnceBox" Content="{sd:LocalizeString once, Context=CheckBox}" IsChecked="{Binding IsOnce}"
+                ToolTip.Tip="{sd:LocalizeString It runs one time only, Context=ToolTip}"/>
+    </StackPanel>
+
+    <StackPanel Spacing="4" IsEnabled="{Binding !IsAlways}">
+      <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsText}">
+        <TextBlock VerticalAlignment="Center" Text="{sd:LocalizeString Holds when, Context=Label}"/>
+        <ComboBox x:Name="JoinerBox" ItemsSource="{Binding Joiners}" SelectedItem="{Binding Joiner}" MinWidth="150">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Converter={x:Static views:YarnConverters.JoinerLabel}}"/>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock VerticalAlignment="Center" Text="{sd:LocalizeString hold:, Context=Label}"/>
+      </StackPanel>
+
+      <ItemsControl x:Name="TermList" ItemsSource="{Binding Terms}" IsVisible="{Binding !IsText}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="c:YarnConditionTermViewModel">
+            <DockPanel Margin="0,2">
+              <Button DockPanel.Dock="Right" Content="✕" Padding="6,2" Margin="4,0,0,0" VerticalAlignment="Center" Click="OnRemoveTerm"
+                      ToolTip.Tip="{sd:LocalizeString Remove this row, Context=ToolTip}"/>
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <views:YarnValueBox x:Name="SubjectBox" Width="150" Text="{Binding Subject, Mode=TwoWay}" ItemsSource="{Binding Subjects}"
+                                    ToolTip.Tip="{sd:LocalizeString A variable or a function, Context=ToolTip}"/>
+                <TextBlock Text="(" VerticalAlignment="Center" IsVisible="{Binding IsFunction}"/>
+                <ItemsControl ItemsSource="{Binding Arguments}" IsVisible="{Binding IsFunction}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Horizontal" Spacing="4"/>
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="c:YarnArgumentViewModel">
+                      <views:YarnValueBox Width="120" Text="{Binding Text, Mode=TwoWay}" ItemsSource="{Binding Values}"/>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text=")" VerticalAlignment="Center" IsVisible="{Binding IsFunction}"/>
+                <ComboBox x:Name="ComparisonBox" MinWidth="80" ItemsSource="{Binding Comparisons}" SelectedItem="{Binding Comparison}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Converter={x:Static views:YarnConverters.ComparisonLabel}}"/>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <views:YarnValueBox x:Name="ValueBox" Width="140" Text="{Binding Value, Mode=TwoWay}" ItemsSource="{Binding Values}" IsVisible="{Binding HasValue}"
+                                    ToolTip.Tip="{sd:LocalizeString A value: an enum case can be typed by its name\, a text without its quotes, Context=ToolTip}"/>
+              </StackPanel>
+            </DockPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Button x:Name="AddTermButton" HorizontalAlignment="Left" Content="{sd:LocalizeString + condition, Context=Button}" Click="OnAddTerm" IsVisible="{Binding !IsText}"/>
+
+      <TextBox x:Name="TextBox" Text="{Binding Text}" IsVisible="{Binding IsText}" AcceptsReturn="False"
+               FontFamily="Cascadia Code,Consolas,Menlo,DejaVu Sans Mono,monospace"/>
+    </StackPanel>
+
+    <TextBlock Text="{Binding Problem}" Foreground="#FFE3B565" TextWrapping="Wrap" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+    <TextBlock Text="{Binding Preview}" Opacity="0.7" TextWrapping="Wrap" FontFamily="Cascadia Code,Consolas,Menlo,DejaVu Sans Mono,monospace"/>
+
+    <DockPanel>
+      <Button DockPanel.Dock="Right" Margin="6,0,0,0" MinWidth="70" HorizontalContentAlignment="Center" Content="{sd:LocalizeString OK, Context=Button}" Click="OnOk"/>
+      <Button DockPanel.Dock="Right" MinWidth="70" HorizontalContentAlignment="Center" Content="{sd:LocalizeString Cancel, Context=Button}" Click="OnCancel"/>
+      <CheckBox x:Name="TextCheck" Content="{sd:LocalizeString Edit as text, Context=CheckBox}" IsChecked="{Binding IsText}" IsEnabled="{Binding !IsAlways}"/>
+    </DockPanel>
+  </StackPanel>
+</UserControl>

@@ -1,3 +1,4 @@
+using ColorRise.Skein.Editor.Conditions;
 using Stride.Core;
 
 namespace ColorRise.Skein.Editor.Nodes;
@@ -44,6 +45,12 @@ public sealed class YarnNodeHeaders
     /// </summary>
     [DataMember(60)]
     public List<YarnHeader> Others { get; } = [];
+
+    /// <summary>
+    /// What the builder of the <c>when:</c> conditions offers: the variables, functions and nodes of the project.
+    /// </summary>
+    [DataMemberIgnore]
+    public YarnConditionKnowledge? Knowledge { get; set; }
 }
 
 /// <summary>
