@@ -1,0 +1,39 @@
+<Project>
+  <!-- Puts the play agent's files (the startup hook, the agent and the protocol) in a PlayMode folder of the output, and of
+       the package, of an editor that plays games (Stride.Editor.PlayMode.PlayAgentFiles finds them there). The folder holds
+       only these three assemblies: the hook resolves the agent's dependencies from it, and must never find another build of
+       an assembly the game has. -->
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Stride.PlayMode.Hook.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Stride.PlayMode.Agent\Stride.PlayMode.Agent.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);_StridePlayModePackageFiles</TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+
+  <Target Name="_StridePlayModeCollectFiles" DependsOnTargets="ResolveProjectReferences">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)Stride.PlayMode.Hook.csproj;$(MSBuildThisFileDirectory)..\Stride.PlayMode.Agent\Stride.PlayMode.Agent.csproj"
+             Targets="GetTargetPath" RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained" BuildInParallel="$(BuildInParallel)">
+      <Output TaskParameter="TargetOutputs" ItemName="_StridePlayModeAssembly" />
+    </MSBuild>
+    <ItemGroup>
+      <_StridePlayModeFile Include="@(_StridePlayModeAssembly)" />
+      <_StridePlayModeFile Include="%(_StridePlayModeAssembly.RootDir)%(_StridePlayModeAssembly.Directory)Stride.PlayMode.Protocol.dll" Condition="'%(_StridePlayModeAssembly.Filename)' == 'Stride.PlayMode.Agent'" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_StridePlayModeCopyFiles" AfterTargets="CopyFilesToOutputDirectory" DependsOnTargets="_StridePlayModeCollectFiles"
+          Inputs="@(_StridePlayModeFile)" Outputs="@(_StridePlayModeFile->'$(OutDir)PlayMode\%(Filename)%(Extension)')">
+    <Copy SourceFiles="@(_StridePlayModeFile)" DestinationFolder="$(OutDir)PlayMode" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <FileWrites Include="@(_StridePlayModeFile->'$(OutDir)PlayMode\%(Filename)%(Extension)')" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_StridePlayModePackageFiles" DependsOnTargets="_StridePlayModeCollectFiles">
+    <ItemGroup>
+      <BuildOutputInPackage Include="@(_StridePlayModeFile)" TargetPath="PlayMode\%(Filename)%(Extension)" />
+    </ItemGroup>
+  </Target>
+</Project>

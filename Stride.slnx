@@ -173,6 +173,9 @@
     <Project Path="sources/editor/Stride.Core.Assets.Presentation/Stride.Core.Assets.Presentation.csproj" />
     <Project Path="sources/editor/Stride.Editor/Stride.Editor.csproj" />
     <Project Path="sources/engine/Stride.Debugger/Stride.Debugger.csproj" />
+    <Project Path="sources/engine/Stride.PlayMode.Agent/Stride.PlayMode.Agent.csproj" />
+    <Project Path="sources/engine/Stride.PlayMode.Hook/Stride.PlayMode.Hook.csproj" />
+    <Project Path="sources/engine/Stride.PlayMode.Protocol/Stride.PlayMode.Protocol.csproj" />
   </Folder>
   <Folder Name="/60-Editor/Avalonia/">
     <Project Path="sources/editor/Stride.Assets.Editor.Avalonia/Stride.Assets.Editor.Avalonia.csproj" />
@@ -195,6 +198,7 @@
     <Project Path="sources/editor/Stride.Editor.Tests/Stride.Editor.Tests.csproj" />
     <Project Path="sources/editor/Stride.GameStudio.AutoTesting/Stride.GameStudio.AutoTesting.csproj" />
     <Project Path="sources/editor/Stride.GameStudio.Tests/Stride.GameStudio.Tests.csproj" />
+    <Project Path="sources/engine/Stride.PlayMode.Tests/Stride.PlayMode.Tests.csproj" />
     <Project Path="tests/editor/Stride.Editor.Wpf.Tests/Stride.Editor.Wpf.Tests.csproj" />
   </Folder>
   <Folder Name="/61-Editor.Tests/Avalonia/">

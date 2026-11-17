@@ -19,8 +19,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Stride.Engine\Stride.Engine.csproj" />
     <ProjectReference Include="..\Stride.PlayMode.Protocol\Stride.PlayMode.Protocol.csproj" />
-    <!-- Built with the agent: the editor ships both (Stride.PlayMode.Files.targets); the agent does not reference it -->
-    <ProjectReference Include="..\Stride.PlayMode.Hook\Stride.PlayMode.Hook.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
   <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk/Sdk/Sdk.targets" />
 </Project>

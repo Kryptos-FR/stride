@@ -48,6 +48,8 @@
   </ItemGroup>
 
   <Import Project="..\..\shared\Stride.NuGetResolver.Targets\Stride.NuGetResolver.Targets.projitems" Label="Shared" />
+  <!-- Play mode: the agent loaded into played games ships in a PlayMode folder next to the editor -->
+  <Import Project="..\..\engine\Stride.PlayMode.Hook\Stride.PlayMode.Files.targets" />
 
   <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk.Editor/Sdk/Sdk.targets" />
 </Project>
