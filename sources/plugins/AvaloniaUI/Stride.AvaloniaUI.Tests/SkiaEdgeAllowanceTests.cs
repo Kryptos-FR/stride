@@ -22,8 +22,9 @@ namespace Stride.AvaloniaUI.Tests;
 /// on the CPU: the allowance the native renderer's edges get against the fallback.
 /// </summary>
 /// <remarks>
-/// The counts are written into <see cref="ShapeCases.EdgeAllowance"/> and <see cref="ReferenceViews.EdgeAllowance"/>; a
-/// failure gives the count measured.
+/// The counts are written into <see cref="ShapeCases.EdgeAllowance"/> and <see cref="ReferenceViews.EdgeAllowance"/> from a
+/// run on Linux with Lavapipe; a failure gives the count measured. Other devices get the headroom of
+/// <see cref="EdgeAllowances"/>.
 /// </remarks>
 public sealed class SkiaEdgeAllowanceTests : GameTestBase
 {
@@ -46,10 +47,10 @@ public sealed class SkiaEdgeAllowanceTests : GameTestBase
         TestAvalonia.Run(() =>
         {
             var isPage = ReferenceViews.Pages.Contains(name);
-            var (cpu, gpu) = isPage
+            var (cpu, gpu, adapter) = isPage
                 ? RenderBothWays(ReferenceViews.Create(name), ReferenceViews.Width, ReferenceViews.Height, 1)
                 : RenderBothWays(ShapeCases.Create(name), ShapeCases.Width, ShapeCases.Height, ShapeCases.GetScaling(name));
-            var allowance = isPage ? ReferenceViews.EdgeAllowance[name] : ShapeCases.EdgeAllowance[name];
+            var allowance = EdgeAllowances.On(adapter, isPage ? ReferenceViews.EdgeAllowance[name] : ShapeCases.EdgeAllowance[name]);
 
             using (cpu)
             using (gpu)
@@ -70,8 +71,8 @@ public sealed class SkiaEdgeAllowanceTests : GameTestBase
         });
     }
 
-    // Skia on the CPU, then on the GPU, in one game
-    private static (Image Cpu, Image Gpu) RenderBothWays(Control content, int width, int height, double scaling)
+    // Skia on the CPU, then on the GPU, in one game, and the adapter it ran on
+    private static (Image Cpu, Image Gpu, GraphicsAdapter Adapter) RenderBothWays(Control content, int width, int height, double scaling)
     {
         var game = new SkiaEdgeAllowanceTests();
         game.GraphicsDeviceManager.PreferredBackBufferWidth = width;
@@ -85,6 +86,7 @@ public sealed class SkiaEdgeAllowanceTests : GameTestBase
         system.RenderOnGpu = false;
         Image? cpu = null;
         Image? gpu = null;
+        GraphicsAdapter? adapter = null;
         bool? onGpu = null;
 
         game.FrameGameSystem.IsUnitTestFeeding = true;
@@ -99,13 +101,14 @@ public sealed class SkiaEdgeAllowanceTests : GameTestBase
             {
                 onGpu = system.IsRenderingOnGpu;
                 gpu = ReadBackBuffer(game);
+                adapter = game.GraphicsDevice.Adapter;
             })
             // Skia on the GPU keeps the layer of a bitmap cache while the view shows it, and that memory would outlive the device
             .Update(46, () => component.Content = null);
         RunGameTest(game);
 
         Assert.True(onGpu, "Skia doesn't draw the view on the GPU.");
-        return (cpu!, gpu!);
+        return (cpu!, gpu!, adapter!);
     }
 
     private static Image ReadBackBuffer(Game game) => game.GraphicsDevice.Presenter.BackBuffer.GetDataAsImage(game.GraphicsContext.CommandList);
