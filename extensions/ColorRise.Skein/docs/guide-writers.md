@@ -49,9 +49,13 @@ Tam: Up the stairs, second door.
 ```
 
 - **The text** shows the nodes selected on the graph. *Whole file* shows the file as it is on the disk, headers and all. The text has Yarn's colours, and the compiler reads it as you type: an error is underlined at its place and listed below, with the same message the build would give. A double click on a message shows its place. Ctrl+click on a node name of a `<<jump>>` goes to that node.
-- **The graph** has a card for each node: its title, who speaks in it, its first lines, its options and its tags. A jump or a detour is a link between two cards. A node of another script is a grey stub (a double click opens its script), and a node that does not exist is a red stub.
+- **The graph** has a card for each node: its title, its `when:` conditions, and a row for each line, option, line group item, block (`<<if>>`, `<<once>>`) and command of its body, indented as in the text. A line shows its speaker in colour, an option has an arrow (→), a line group item a double one (⇒), and the condition of a line or an option follows it in orange. A node where the dialogue stops (`<<stop>>`, or no jump at its end) has an "■ end" mark. A node of another script is a grey stub (a double click opens its script), a node that does not exist is a red stub, and a jump to an expression (`<<jump {$next}>>`) leads to a blue-grey stub that says the node is known when it plays.
+- **Edit a line or an option on its card**: a double click on its row opens a box with the line as written (`Odile: The lamp's out.`). Enter or a click elsewhere writes it, Escape closes the box without writing. The line keeps its `#line:` id, its condition and its other hashtags; a `#`, `//` or `<<` you type is escaped so that it stays text. A line left empty is deleted (an option left empty is refused: delete it in the text). A double click on a command or a block shows it in the text.
+- **Add a line**: *+ line* at the bottom of the card, one click. The box starts with the speaker of the last line; the line goes at the end of the node, before its last `<<jump>>` or `<<stop>>`. The new line has no `#line:` id yet, as when you type it in the text (*Add line ids* gives it one).
+- **Fold cards**, in the toolbar, folds every card to its speakers and first lines, keeping the rows that links leave from; the ▾ in the title of a card folds or unfolds that card alone.
 - **A new node**: *+ Node* in the toolbar, or right click on the graph and *Add node here*. Type its text in the text pane.
-- **A new jump**: drag from the "jump" or "detour" connector of a card to another card. The `<<jump>>` or `<<detour>>` is added at the end of the node's text; move it where it belongs.
+- **Links**: a jump or a detour under an option, or under a branch of a block or a line group item, leaves from the connector of that row; one at the top of the node leaves from the card's "jump" or "detour" connector at the bottom. Every option has a connector; a block or a line group item has one when a link leaves from it.
+- **A new jump**: drag from a connector to another card. From an option's row, the `<<jump>>` is added under the option; from a block's, under that branch; from the card's "jump" or "detour", at the end of the node's text.
 - **Rename**: double click on a title, or F2. Every jump to the node follows, in all the scripts of the project.
 - **Duplicate, delete**: in the menu of a card. Delete also works with the Delete key when the graph has the focus.
 
@@ -72,6 +76,8 @@ How the graph looks is written in the script itself, with headers that Yarn Spin
 | See everything | Right click, *Show all the nodes* | |
 
 The search box dims the cards that do not match: it looks in the titles, the headers and the text.
+
+A card is as tall as its rows, and *Layout* places the cards for their height. The `position:` headers written before the cards had rows were made for shorter cards, so cards can overlap in an older script: *Layout* places them anew.
 
 ## 4. Group
 
