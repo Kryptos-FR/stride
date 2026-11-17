@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using ColorRise.Skein.Editor.Conditions;
@@ -33,6 +34,15 @@ public sealed partial class YarnConditionBuilderView : UserControl
         if (sender is Control { DataContext: YarnConditionTermViewModel term })
         {
             Builder?.RemoveTerm(term);
+        }
+    }
+
+    // Text that is not rows stays text: the box the click unticked shows it again
+    private void OnTextClick(object? sender, RoutedEventArgs e)
+    {
+        if (Builder is { } builder && TextCheck.IsChecked != builder.IsText)
+        {
+            TextCheck.SetCurrentValue(ToggleButton.IsCheckedProperty, builder.IsText);
         }
     }
 

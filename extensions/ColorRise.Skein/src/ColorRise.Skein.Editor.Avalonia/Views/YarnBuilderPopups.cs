@@ -2,6 +2,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using ColorRise.Skein.Editor.Conditions;
@@ -111,7 +113,7 @@ public static class YarnBuilderPopups
         if (GetOpenBuilder(anchor) is not null)
             return;
 
-        var flyout = new Flyout { Content = view, Placement = PlacementMode.BottomEdgeAlignedLeft };
+        var flyout = new Flyout { Content = view, Placement = PlacementMode.BottomEdgeAlignedLeft, FlyoutPresenterTheme = WideTheme(anchor) };
         var finished = false;
         void Finish(bool write)
         {
@@ -137,6 +139,19 @@ public static class YarnBuilderPopups
         // The keys go to the builder: Enter writes, Escape does not
         view.Focusable = true;
         Dispatcher.UIThread.Post(() => view.Focus(), DispatcherPriority.Input);
+    }
+
+    // The theme's popovers are narrower than a builder: the same look, as wide as the builder
+    private static ControlTheme? WideTheme(Control anchor)
+    {
+        if (!anchor.TryFindResource(typeof(FlyoutPresenter), out var found) || found is not ControlTheme theme)
+            return null;
+
+        return new ControlTheme(typeof(FlyoutPresenter))
+        {
+            BasedOn = theme,
+            Setters = { new Setter(Layoutable.MaxWidthProperty, double.PositiveInfinity) },
+        };
     }
 
     private static void OnConditionPressed(object? sender, PointerPressedEventArgs e)

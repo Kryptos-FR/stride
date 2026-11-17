@@ -45,13 +45,15 @@ public sealed class YarnAssignmentBuilderViewModel : ViewModelBase
             if (!SetValue(ref field, value?.Trim() ?? ""))
                 return;
 
+            // The lists change first: a box that loses its selection with its list takes the operator again after
+            OnPropertyChanged(nameof(Type), nameof(Operators), nameof(Values));
             if (!Operators.Contains(Operator))
             {
                 Operator = YarnAssignmentOperator.Set;
             }
 
             IsChanged = true;
-            OnPropertyChanged(nameof(Type), nameof(Operators), nameof(Values), nameof(Command));
+            OnPropertyChanged(nameof(Operator), nameof(Command));
         }
     } = "";
 
@@ -103,9 +105,9 @@ public sealed class YarnAssignmentBuilderViewModel : ViewModelBase
     } = "";
 
     /// <summary>
-    /// The values to offer: the cases of an enum, <c>true</c> and <c>false</c>, the variables of the same type.
+    /// The values to offer: the cases of an enum, <c>true</c> and <c>false</c>, the other variables of the same type.
     /// </summary>
-    public IReadOnlyList<string> Values => Knowledge.ValuesOf(Type);
+    public IReadOnlyList<string> Values => [.. Knowledge.ValuesOf(Type).Where(v => v != Variable)];
 
     /// <summary>
     /// The command the builder writes, without <c>&lt;&lt;</c> and <c>&gt;&gt;</c>; null until it has a variable and a value.

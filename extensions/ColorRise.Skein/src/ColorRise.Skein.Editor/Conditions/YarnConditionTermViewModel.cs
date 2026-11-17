@@ -127,9 +127,9 @@ public sealed class YarnConditionTermViewModel : ViewModelBase
     } = "";
 
     /// <summary>
-    /// The values to offer: the cases of an enum, <c>true</c> and <c>false</c>, the variables of the same type.
+    /// The values to offer: the cases of an enum, <c>true</c> and <c>false</c>, the other variables of the same type.
     /// </summary>
-    public IReadOnlyList<string> Values => Knowledge.ValuesOf(Type);
+    public IReadOnlyList<string> Values => [.. Knowledge.ValuesOf(Type).Where(v => v != Subject)];
 
     /// <summary>
     /// Whether the row says something: a subject, and the value its comparison needs.
@@ -184,6 +184,9 @@ public sealed class YarnConditionTermViewModel : ViewModelBase
             argument.OnFunctionChanged();
         }
 
+        // The lists change first: a box that loses its selection with its list takes the comparison again after
+        OnPropertyChanged(nameof(IsFunction), nameof(Type), nameof(Comparisons), nameof(Values));
+
         // A value of another type means nothing for the new subject
         if (newType || !Comparisons.Contains(Comparison))
         {
@@ -191,7 +194,7 @@ public sealed class YarnConditionTermViewModel : ViewModelBase
             Value = "";
         }
 
-        OnPropertyChanged(nameof(IsFunction), nameof(Type), nameof(Comparisons), nameof(Values));
+        OnPropertyChanged(nameof(Comparison));
         Changed();
     }
 }

@@ -115,8 +115,11 @@ public sealed class ConditionBuilderTests
 
         // A function gets a box for each parameter; the nodes are offered for visited
         var term = builder.AddTerm();
-        Assert.Equal("$act", term.Subject);
+        Assert.Equal(("$act", YarnComparison.Equal), (term.Subject, term.Comparison));
+        Assert.Equal(["Act.Arrival", "Act.Wreck"], term.Values);
+        Assert.Null(builder.Condition);
         term.Value = "Wreck";
+        Assert.Equal("$act == Act.Wreck", builder.Condition);
         term.Subject = "visited";
         Assert.True(term.IsFunction);
         Assert.Equal(YarnComparison.IsTrue, term.Comparison);

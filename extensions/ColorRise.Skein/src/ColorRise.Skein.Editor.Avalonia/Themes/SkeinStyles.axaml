@@ -38,16 +38,18 @@
             <Border Classes="condition" Margin="5,0,0,0" Padding="4,0" CornerRadius="6" Background="#30E3B565" Cursor="Hand"
                     views:YarnBuilderPopups.OpensCondition="True" IsVisible="{Binding Condition, Converter={x:Static ObjectConverters.IsNotNull}}"
                     ToolTip.Tip="{sd:LocalizeString Click to edit the condition, Context=ToolTip}">
-              <TextBlock Text="{Binding Condition}" FontSize="11" FontStyle="Italic" Foreground="{StaticResource SkeinWhenText}" MaxWidth="190" TextTrimming="CharacterEllipsis"/>
-            </Border>
-          </InlineUIContainer><InlineUIContainer BaselineAlignment="Center">
-            <Border Classes="addif" Margin="5,0,0,0" Padding="4,0" CornerRadius="6" Background="{StaticResource SkeinChipBrush}" Cursor="Hand"
-                    views:YarnBuilderPopups.OpensCondition="True" IsVisible="{Binding Condition, Converter={x:Static ObjectConverters.IsNull}}"
-                    ToolTip.Tip="{sd:LocalizeString Add a condition, Context=ToolTip}">
-              <TextBlock Text="{sd:LocalizeString + if, Context=Button}" FontSize="10" Foreground="{StaticResource SkeinCardFaintText}"/>
+              <TextBlock Text="{Binding Condition}" FontSize="11" FontStyle="Italic" Foreground="{StaticResource SkeinWhenText}" MaxWidth="190"
+                         TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Condition}"/>
             </Border>
           </InlineUIContainer>
         </TextBlock>
+        <!-- Over the end of the row, without room of its own: it shows under the mouse only -->
+        <Border Classes="addif" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="4,0" CornerRadius="6" Background="#FF5A5A60" Cursor="Hand"
+                views:YarnBuilderPopups.OpensCondition="True"
+                IsVisible="{sd:MultiBinding {Binding IsEditable}, {Binding !IsEditing}, {Binding Condition, Converter={x:Static ObjectConverters.IsNull}}, Converter={sd:AndMulti}}"
+                ToolTip.Tip="{sd:LocalizeString Add a condition, Context=ToolTip}">
+          <TextBlock Text="{sd:LocalizeString + if, Context=Button}" FontSize="10" Foreground="{StaticResource SkeinCardText}"/>
+        </Border>
         <TextBlock FontSize="11" FontStyle="Italic" Foreground="{StaticResource SkeinCardFaintText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                    Text="{Binding Display}" IsVisible="{sd:MultiBinding {Binding !IsEditable}, {Binding !IsAssignment}, Converter={sd:AndMulti}}"
                    ToolTip.Tip="{sd:LocalizeString Double-click to show it in the text, Context=ToolTip}"/>

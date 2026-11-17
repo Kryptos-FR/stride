@@ -78,7 +78,7 @@
     <DockPanel>
       <Button DockPanel.Dock="Right" Margin="6,0,0,0" MinWidth="70" HorizontalContentAlignment="Center" Content="{sd:LocalizeString OK, Context=Button}" Click="OnOk"/>
       <Button DockPanel.Dock="Right" MinWidth="70" HorizontalContentAlignment="Center" Content="{sd:LocalizeString Cancel, Context=Button}" Click="OnCancel"/>
-      <CheckBox x:Name="TextCheck" Content="{sd:LocalizeString Edit as text, Context=CheckBox}" IsChecked="{Binding IsText}" IsEnabled="{Binding !IsAlways}"/>
+      <CheckBox x:Name="TextCheck" Content="{sd:LocalizeString Edit as text, Context=CheckBox}" IsChecked="{Binding IsText}" IsEnabled="{Binding !IsAlways}" Click="OnTextClick"/>
     </DockPanel>
   </StackPanel>
 </UserControl>

@@ -217,11 +217,13 @@ public sealed class YarnConditionBuilderViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Adds a row: the first variable of the project, or an empty one.
+    /// Adds a row: the first variable of the project with the first comparison of its type, or an empty one.
     /// </summary>
     public YarnConditionTermViewModel AddTerm()
     {
-        var term = new YarnConditionTermViewModel(Knowledge, new YarnConditionTerm { Subject = Knowledge.Variables.FirstOrDefault()?.Name ?? "" }, OnChanged);
+        var subject = Knowledge.Variables.FirstOrDefault()?.Name ?? "";
+        var term = new YarnConditionTermViewModel(Knowledge, new YarnConditionTerm { Subject = subject }, OnChanged);
+        term.Comparison = term.Comparisons[0];
         Terms.Add(term);
         OnChanged();
         return term;

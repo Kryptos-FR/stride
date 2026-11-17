@@ -101,11 +101,39 @@ public sealed class ConditionBuilderViewTests
             boxes[0].Text = "$coins";
         });
         Assert.Equal("$coins", term.Subject);
+
+        // The comparison box shows the comparison of the row after its list changed with the type
+        var comparisonBox = builderView.GetVisualDescendants().OfType<ComboBox>().Single(b => b.Name == "ComparisonBox");
+        Assert.Equal(YarnComparison.Equal, comparisonBox.SelectedItem);
+        view.Do(() => builderView.GetVisualDescendants().OfType<YarnValueBox>().First(b => b.IsEffectivelyVisible).Text = "$met");
+        Assert.Equal(YarnComparison.IsTrue, comparisonBox.SelectedItem);
+        view.Do(() => builderView.GetVisualDescendants().OfType<YarnValueBox>().First(b => b.IsEffectivelyVisible).Text = "$coins");
         view.Do(() =>
         {
             term.Comparison = YarnComparison.Greater;
             builderView.GetVisualDescendants().OfType<YarnValueBox>().Single(b => b.Name == "ValueBox" && b.IsEffectivelyVisible).Text = "2";
         });
+        Assert.Equal("$coins > 2", builder.Condition);
+
+        // Text that is not rows stays text, and its box stays ticked
+        var textCheck = builderView.GetVisualDescendants().OfType<CheckBox>().Single(b => b.Name == "TextCheck");
+        void ClickCheck()
+        {
+            var middle = textCheck.TranslatePoint(new Point(10, textCheck.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(middle, MouseButton.Left);
+            window.MouseUp(middle, MouseButton.Left);
+        }
+
+        view.Do(ClickCheck);
+        Assert.True(builder.IsText);
+        view.Do(() => builder.Text = "($coins > 2 or $met) and $coins < 9");
+        view.Do(ClickCheck);
+        Assert.True(builder.IsText);
+        Assert.NotNull(builder.Problem);
+        Assert.True(textCheck.IsChecked);
+        view.Do(() => builder.Text = "$coins > 2");
+        view.Do(ClickCheck);
+        Assert.False(textCheck.IsChecked);
         Assert.Equal("$coins > 2", builder.Condition);
 
         // Cancel leaves the text as it is
@@ -134,6 +162,13 @@ public sealed class ConditionBuilderViewTests
         var builderView = Popover<YarnAssignmentBuilderView>(row);
         var builder = (YarnAssignmentBuilderViewModel)builderView.DataContext!;
         Assert.Equal("set $coins to 1", builder.Command);
+
+        // The operator box shows the operator after its list changed with the type
+        var operatorBox = builderView.GetVisualDescendants().OfType<ComboBox>().Single(b => b.Name == "OperatorBox");
+        view.Do(() => builderView.GetVisualDescendants().OfType<YarnValueBox>().Single(b => b.Name == "VariableBox").Text = "$met");
+        Assert.Equal(YarnAssignmentOperator.Set, operatorBox.SelectedItem);
+        view.Do(() => builderView.GetVisualDescendants().OfType<YarnValueBox>().Single(b => b.Name == "VariableBox").Text = "$coins");
+        Assert.Equal(YarnAssignmentOperator.Set, operatorBox.SelectedItem);
 
         view.Do(() =>
         {
