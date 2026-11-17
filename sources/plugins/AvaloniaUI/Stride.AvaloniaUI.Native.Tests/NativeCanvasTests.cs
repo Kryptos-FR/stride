@@ -100,6 +100,18 @@ public sealed class NativeCanvasTests : GameTestBase
     });
 
     [SkippableTheory]
+    [MemberData(nameof(PageNames))]
+    public void PageFallsBackOnlyForLaterSteps(string page) => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        var (fallback, native, reasons) = RenderBothWays(ReferenceViews.Create(page), ReferenceViews.Width, ReferenceViews.Height);
+        fallback.Dispose();
+        native.Dispose();
+        Assert.Empty(reasons.Except(ReferenceViews.AllowedFallbacks[page]));
+    });
+
+    [SkippableTheory]
     [MemberData(nameof(ShapeCaseNames))]
     public void ShapeMatchesTheFallback(string name) => TestAvalonia.Run(() =>
     {

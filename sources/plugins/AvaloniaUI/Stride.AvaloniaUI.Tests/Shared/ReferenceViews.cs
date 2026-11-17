@@ -13,6 +13,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Stride.AvaloniaUI.Rendering.Fallback;
 using AvaloniaImage = Avalonia.Controls.Image;
 using Image = Stride.Graphics.Image;
 using ImageFileType = Stride.Graphics.ImageFileType;
@@ -57,6 +58,22 @@ internal static class ReferenceViews
         ["Clips"] = 499,
         ["Opacity"] = 349,
         ["Effects"] = 790,
+    };
+
+    /// <summary>
+    /// The reasons each page may still hand calls to the fallback for: those of steps of the native renderer to come.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, FallbackReason[]> AllowedFallbacks = new Dictionary<string, FallbackReason[]>
+    {
+        ["Fluent"] = [FallbackReason.Text, FallbackReason.Path, FallbackReason.Brush, FallbackReason.BoxShadow, FallbackReason.OpacityGroup],
+        ["Shapes"] = [FallbackReason.Path, FallbackReason.BoxShadow],
+        ["Text"] = [FallbackReason.Text],
+        ["Gradients"] = [FallbackReason.Brush],
+        ["Images"] = [FallbackReason.Bitmap, FallbackReason.Brush],
+        ["Paths"] = [FallbackReason.Path, FallbackReason.Stroke],
+        ["Clips"] = [FallbackReason.Brush, FallbackReason.GeometryClip],
+        ["Opacity"] = [FallbackReason.OpacityGroup, FallbackReason.OpacityMask, FallbackReason.Bitmap],
+        ["Effects"] = [FallbackReason.Effect, FallbackReason.Path],
     };
 
     // The icons of the Fluent theme's templates: the drop-down chevron, the close cross, the back arrow, the refresh arrow,
