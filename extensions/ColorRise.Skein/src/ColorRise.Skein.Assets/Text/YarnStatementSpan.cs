@@ -148,13 +148,14 @@ public sealed record YarnStatementSpan
         or YarnStatementKind.Else or YarnStatementKind.Once;
 
     /// <summary>
-    /// The text before the first colon of a line, which Yarn Spinner takes as the speaker; null without one.
+    /// The text before the first colon of a line or a line group item, which Yarn Spinner takes as the speaker; null
+    /// without one.
     /// </summary>
     public string? Speaker
     {
         get
         {
-            if (Kind != YarnStatementKind.Line)
+            if (Kind is not (YarnStatementKind.Line or YarnStatementKind.LineGroupItem))
                 return null;
 
             for (var i = 0; i < Text.Length; i++)

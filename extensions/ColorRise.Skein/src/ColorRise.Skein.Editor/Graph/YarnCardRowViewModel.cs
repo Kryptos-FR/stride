@@ -73,7 +73,7 @@ public sealed class YarnCardRowViewModel : ViewModelBase
 
             return statement.Kind switch
             {
-                YarnStatementKind.Line when statement.Speaker is { } speaker => statement.Text[(statement.Text.IndexOf(':', StringComparison.Ordinal) + 1)..].TrimStart(),
+                YarnStatementKind.Line or YarnStatementKind.LineGroupItem when statement.Speaker is not null => statement.Text[(statement.Text.IndexOf(':', StringComparison.Ordinal) + 1)..].TrimStart(),
                 YarnStatementKind.ElseIf => "else if " + statement.Condition,
                 YarnStatementKind.Once => statement.Condition is null ? "once" : "once if " + statement.Condition,
                 _ => statement.Text,
@@ -101,10 +101,25 @@ public sealed class YarnCardRowViewModel : ViewModelBase
     public bool IsEditable => IsAdd || Statement?.IsText == true;
 
     /// <summary>
-    /// Whether the row has a connector the links of what it holds leave from: an option, a line group item, a branch
-    /// of a block. A folded card still shows these rows.
+    /// Whether the row has a connector the links of what it holds leave from: an option, to drag a jump from, and a
+    /// line group item or a branch of a block that a link leaves from. A folded card still shows these rows.
     /// </summary>
-    public bool HasConnector => Statement?.IsBranch == true;
+    public bool HasConnector => Statement?.Kind == YarnStatementKind.Option || (IsLinked && Statement?.IsBranch == true);
+
+    /// <summary>
+    /// Whether a link of the graph leaves from the row.
+    /// </summary>
+    public bool IsLinked
+    {
+        get;
+        internal set
+        {
+            if (SetValue(ref field, value))
+            {
+                OnPropertyChanged(nameof(HasConnector));
+            }
+        }
+    }
 
     /// <summary>
     /// The slot the links of what the row holds start from.

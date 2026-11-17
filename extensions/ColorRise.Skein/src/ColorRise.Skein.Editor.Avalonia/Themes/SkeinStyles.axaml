@@ -32,7 +32,7 @@
                    Text="{Binding Display}" IsVisible="{Binding !IsEditable}"
                    ToolTip.Tip="{sd:LocalizeString Double-click to show it in the text, Context=ToolTip}"/>
         <TextBox Text="{Binding EditText}" IsVisible="{Binding IsEditing}" views:YarnRowEditing.IsEditBox="True"
-                 MinHeight="0" Padding="3,1" FontSize="12" AcceptsReturn="False"/>
+                 MinHeight="0" Padding="3,1" FontSize="12" AcceptsReturn="False" TextWrapping="Wrap"/>
       </Panel>
       <sd:NodeGraphConnector Grid.Column="1" Margin="3,1,1,0" VerticalAlignment="Top" Slot="{Binding OutSlot}" Direction="Output"
                              IsVisible="{Binding HasConnector}"
@@ -46,7 +46,7 @@
       <TextBlock FontSize="11" Foreground="{StaticResource SkeinCardFaintText}" Text="{sd:LocalizeString + line, Context=Button}" IsVisible="{Binding !IsEditing}"
                  ToolTip.Tip="{sd:LocalizeString Add a line at the end of the node, Context=ToolTip}"/>
       <TextBox Text="{Binding EditText}" IsVisible="{Binding IsEditing}" views:YarnRowEditing.IsEditBox="True"
-               MinHeight="0" Padding="3,1" FontSize="12" AcceptsReturn="False"/>
+               MinHeight="0" Padding="3,1" FontSize="12" AcceptsReturn="False" TextWrapping="Wrap"/>
     </Panel>
   </DataTemplate>
 

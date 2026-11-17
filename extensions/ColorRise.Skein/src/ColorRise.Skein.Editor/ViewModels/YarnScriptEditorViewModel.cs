@@ -921,6 +921,16 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         }
 
         RefreshEnds();
+        foreach (var card in Cards)
+        {
+            foreach (var row in card.Rows)
+            {
+                row.IsLinked = Links.Any(l => l.Row == row);
+            }
+
+            card.Height = HeightOf(card);
+        }
+
         Place();
         RefreshNodes();
 
@@ -1046,7 +1056,6 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             card.HasPosition = node.Position is not null;
             card.IsFilteredOut = !Matches(node);
             RefreshRows(card, document.StatementsOf(node));
-            card.Height = HeightOf(card);
         }
 
         Synchronize(Cards, [.. cards.OfType<YarnNodeCardViewModel>()]);

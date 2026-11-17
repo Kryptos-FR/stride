@@ -216,6 +216,26 @@ public sealed class CardRowsTests
     }
 
     [Fact]
+    public async Task A_block_or_a_line_group_has_a_connector_only_when_a_link_leaves_from_it()
+    {
+        const string text = "title: Start\n---\n=> Odile: Hello. #line:a\n=> Odile: Hi.\n<<if $x>>\n    Odile: Well.\n<<endif>>\n-> Leave\n===\n";
+        var (session, editor) = await Open(text);
+        await using var _ = session;
+        var start = editor.Cards[0];
+
+        Assert.Equal([false, false, false, false, true], start.Rows.Select(r => r.HasConnector));
+        Assert.Equal("Odile", start.Rows[0].Speaker);
+        Assert.Equal("Hello.", start.Rows[0].Display);
+
+        // A jump added under the block gives it its connector
+        editor.Link(start, start, row: start.Rows[2]);
+        Assert.Contains("    Odile: Well.\n    <<jump Start>>\n<<endif>>", editor.TextBuffer.Text);
+        await session.Analysis.WhenIdle();
+        Assert.True(start.Rows[2].HasConnector);
+        Assert.Same(start.Rows[2].OutSlot, Assert.Single(editor.Links).SourceSlot);
+    }
+
+    [Fact]
     public async Task A_link_dragged_from_a_row_adds_a_jump_under_it()
     {
         var (session, editor) = await Open();
