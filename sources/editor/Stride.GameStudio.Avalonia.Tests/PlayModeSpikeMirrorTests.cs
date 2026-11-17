@@ -114,7 +114,7 @@ public sealed class PlayModeSpikeMirrorTests
                 Assert.False(timing.Rebuilt);
                 Assert.Same(viewModel, properties.ViewModel);
                 if (frame % MirrorRecorder.ListGrowthPeriod == 0)
-                    Assert.Equal(1, timing.Result!.AddedItems);
+                    Assert.Equal(2, timing.Result!.AddedItems); // Values and Points
             }
             Assert.Equal(1, properties.BuildCount);
             values = Node(viewModel, "Components", typeof(MirrorTestScript), nameof(MirrorTestScript.Values));
