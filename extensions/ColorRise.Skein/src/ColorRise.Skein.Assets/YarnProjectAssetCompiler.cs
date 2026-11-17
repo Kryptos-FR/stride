@@ -1,5 +1,6 @@
 using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Assets.Localisation;
+using ColorRise.Skein.Assets.Voice;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Compiler;
 using Stride.Core.BuildEngine;
@@ -13,11 +14,19 @@ namespace ColorRise.Skein.Assets;
 /// Compiles a Yarn project asset: one <see cref="YarnProject"/> at the URL of the asset, and the lines of each language
 /// at <see cref="YarnProject.StringTableUrl"/>. The text of every script the project includes, the strings file of each
 /// language and the functions of the game's code are part of what it compiles: a change to one of them compiles the
-/// project again.
+/// project again. The voice-over clips of its folders (<see cref="YarnProjectAsset.VoiceOverFolder"/>) are compiled with it, and
+/// their URLs make a <see cref="YarnVoiceTable"/> per language at <see cref="YarnProject.VoiceTableUrl"/>.
 /// </summary>
 [AssetCompiler(typeof(YarnProjectAsset), typeof(AssetCompilationContext))]
 public sealed class YarnProjectAssetCompiler : AssetCompilerBase
 {
+    /// <inheritdoc />
+    public override IEnumerable<ObjectUrl> GetInputFiles(AssetItem assetItem)
+    {
+        // Content and not an asset: the game gets the sounds, which nothing else of it may reference
+        return YarnVoiceClips.Find(assetItem).Languages.SelectMany(l => l.Clips.Values).Distinct().Select(url => new ObjectUrl(UrlType.Content, url));
+    }
+
     /// <inheritdoc />
     protected override void Prepare(AssetCompilerContext context, AssetItem assetItem, string targetUrlInStorage, AssetCompilerResult result)
     {
@@ -59,7 +68,7 @@ public sealed class YarnProjectAssetCompiler : AssetCompilerBase
         }
 
         result.BuildSteps = new AssetBuildStep(assetItem);
-        result.BuildSteps.Add(new YarnProjectCommand(targetUrlInStorage, project, assetItem.Location.FullPath, files, paths, [.. strings], [.. actions.Functions], assetItem.Package!));
+        result.BuildSteps.Add(new YarnProjectCommand(targetUrlInStorage, project, assetItem.Location.FullPath, files, paths, [.. strings], [.. actions.Functions], YarnVoiceClips.Find(assetItem), assetItem.Package!));
     }
 
     // The build engine serializes a command to run it in another process, which this one never asks for
@@ -72,12 +81,13 @@ public sealed class YarnProjectAssetCompiler : AssetCompilerBase
         Dictionary<string, string> paths,
         (string Language, string Path, string? Csv)[] strings,
         YarnFunctionDeclaration[] functions,
+        YarnVoiceFolders voices,
         IAssetFinder assetFinder)
         : AssetCommand<YarnProjectAsset>(url, parameters, assetFinder)
 #pragma warning restore STRDIAG010
     {
         // To raise when the content of a project changes for the same asset and scripts
-        private const int ContentVersion = 2;
+        private const int ContentVersion = 3;
 
         protected override void ComputeParameterHash(BinarySerializationWriter writer)
         {
@@ -106,6 +116,22 @@ public sealed class YarnProjectAssetCompiler : AssetCompilerBase
                 writer.Write(string.Join(",", function.ParameterTypes));
                 writer.Write(function.VariadicType ?? "");
             }
+
+            // The clips by URL: what a clip says is the sound's, compiled on its own
+            writer.Write(voices.Languages.Count);
+            foreach (var folder in voices.Languages)
+            {
+                writer.Write(folder.Language);
+                writer.Write(folder.Folder);
+                writer.Write(folder.Clips.Count);
+                foreach (var (name, url) in folder.Clips.OrderBy(c => c.Key, StringComparer.Ordinal))
+                {
+                    writer.Write(name);
+                    writer.Write(url);
+                }
+            }
+
+            writer.Write(string.Join("\n", voices.Problems));
         }
 
         protected override Task<ResultStatus> DoCommandOverride(ICommandContext commandContext)
@@ -156,11 +182,24 @@ public sealed class YarnProjectAssetCompiler : AssetCompilerBase
             if (build.Project is null || build.BaseStrings is null)
                 return Task.FromResult(ResultStatus.Failed);
 
+            var (voiceTables, voiceWarnings) = YarnVoiceTables.Make(projectName, build.BaseStrings.Strings.Keys, build.Project.ShadowLines, voices);
+            foreach (var warning in voiceWarnings)
+            {
+                commandContext.Logger.Warning(warning);
+            }
+
+            build.Project.VoicedLanguages.AddRange(voiceTables.Select(t => t.Language));
+
             var content = new ContentManager(MicrothreadLocalDatabases.ProviderService);
             content.Save(Url, build.Project);
             foreach (var table in build.Translations.Prepend(build.BaseStrings))
             {
                 content.Save(YarnProject.StringTableUrl(Url, table.Language), table);
+            }
+
+            foreach (var table in voiceTables)
+            {
+                content.Save(YarnProject.VoiceTableUrl(Url, table.Language), table);
             }
 
             return Task.FromResult(ResultStatus.Successful);

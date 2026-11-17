@@ -16,6 +16,7 @@
     <PackageReference Include="Stride.AssetCompiler" Version="$(SkeinStrideVersion)" IncludeAssets="build;buildTransitive" />
     <ProjectReference Include="..\ColorRise.Skein\ColorRise.Skein.csproj" />
     <ProjectReference Include="..\ColorRise.Skein.UI\ColorRise.Skein.UI.csproj" />
+    <ProjectReference Include="..\ColorRise.Skein.Audio\ColorRise.Skein.Audio.csproj" />
     <ProjectReference Include="..\ColorRise.Skein.Assets\ColorRise.Skein.Assets.csproj" />
   </ItemGroup>
 </Project>

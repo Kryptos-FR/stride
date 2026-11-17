@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Skein.Audio</RootNamespace>
+    <PackageTags>stride-plugin;dialogue;story;yarn-spinner;audio;voice-over</PackageTags>
+    <Description>Skein's voice-over presenter on Stride's audio: it plays the clip of each line, from the speaker when it has an audio emitter.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ColorRise.Skein.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Audio" Version="$(SkeinStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(SkeinStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <ProjectReference Include="..\ColorRise.Skein\ColorRise.Skein.csproj" />
+  </ItemGroup>
+</Project>

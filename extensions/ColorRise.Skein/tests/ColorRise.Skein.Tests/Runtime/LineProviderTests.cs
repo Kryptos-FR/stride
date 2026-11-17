@@ -223,4 +223,42 @@ public sealed class LineProviderTests
             return new Yarn.Markup.ReplacementMarkerResult([], 0);
         }
     }
+
+    [Fact]
+    public void A_line_has_the_clip_of_the_providers_language_only_and_a_shadow_line_speaks_the_clip_of_its_source()
+    {
+        var english = new YarnVoiceTable { Language = "en" };
+        english.Clips["line:lamp"] = "Voice/en/lamp";
+        english.Clips["line:tide"] = "Voice/en/tide";
+        var french = new YarnVoiceTable { Language = "fr" };
+        french.Clips["line:lamp"] = "Voice/fr/lamp";
+        var asked = new List<string>();
+        var provider = new TextLineProvider(l => l == "fr" ? French : English, "en")
+        {
+            ShadowLines = new Dictionary<string, string> { ["line:lamp2"] = "line:lamp" },
+            VoiceTables = l =>
+            {
+                asked.Add(l);
+                return l switch { "en" => english, "fr" => french, _ => null };
+            },
+        };
+
+        Assert.Equal("Voice/en/lamp", provider.GetLine("line:lamp", []).VoiceOver);
+        Assert.Equal("Voice/en/lamp", provider.GetLine("line:lamp2", []).VoiceOver);
+        Assert.Null(provider.GetLine("line:letters", ["2"]).VoiceOver);
+        Assert.Equal("Voice/en/tide", provider.GetVoiceOver("line:tide"));
+
+        provider.Language = "fr";
+        Assert.Equal("Voice/fr/lamp", provider.GetLine("line:lamp", []).VoiceOver);
+        // French text, and no French clip: the line is not spoken in English
+        Assert.Null(provider.GetLine("line:tide", []).VoiceOver);
+        Assert.Null(provider.GetVoiceOver("line:tide"));
+
+        provider.Language = "de";
+        Assert.Null(provider.GetLine("line:lamp", []).VoiceOver);
+        Assert.Equal(["en", "fr", "de"], asked);
+
+        Assert.Null(Provider().GetLine("line:lamp", []).VoiceOver);
+        Assert.Null(((ILineProvider)Provider()).GetVoiceOver("line:lamp"));
+    }
 }

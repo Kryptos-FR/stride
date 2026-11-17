@@ -59,6 +59,14 @@ public sealed class TextLineProvider : ILineProvider
     public IReadOnlyDictionary<string, string>? ShadowLines { get; init; }
 
     /// <summary>
+    /// Gives the voice table of a language, or null when it has none; asked once per language. Without it, no line has a
+    /// <see cref="LocalizedLine.VoiceOver"/>.
+    /// </summary>
+    public Func<string, YarnVoiceTable?>? VoiceTables { get; init; }
+
+    private Dictionary<string, YarnVoiceTable?> Voices { get; } = [];
+
+    /// <summary>
     /// Yarn Spinner's markup parser, with <c>select</c>, <c>plural</c> and <c>ordinal</c> registered: a plural or an ordinal
     /// shows its <c>other</c> text for a case it does not give. A game registers its own replacement markers here.
     /// </summary>
@@ -114,7 +122,30 @@ public sealed class TextLineProvider : ILineProvider
             TextWithoutCharacterName = withoutName,
             Metadata = LineMetadata is not null && LineMetadata.TryGetValue(lineId, out var metadata) ? metadata : [],
             Language = textLanguage,
+            VoiceOver = VoiceOf(lineId) ?? (textId != lineId ? VoiceOf(textId) : null),
         };
+    }
+
+    /// <inheritdoc />
+    public string? GetVoiceOver(string lineId)
+    {
+        ArgumentNullException.ThrowIfNull(lineId);
+        return VoiceOf(lineId) ?? (ShadowLines is not null && ShadowLines.TryGetValue(lineId, out var source) ? VoiceOf(source) : null);
+    }
+
+    // In the provider's language only: a line is not spoken in another language than the one asked
+    private string? VoiceOf(string lineId)
+    {
+        if (VoiceTables is null)
+            return null;
+
+        if (!Voices.TryGetValue(language, out var table))
+        {
+            table = VoiceTables(language);
+            Voices[language] = table;
+        }
+
+        return table is not null && table.Clips.TryGetValue(lineId, out var url) ? url : null;
     }
 
     private (string Text, string Language) Find(string lineId)

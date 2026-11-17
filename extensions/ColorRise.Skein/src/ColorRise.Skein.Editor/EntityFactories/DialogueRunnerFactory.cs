@@ -1,3 +1,4 @@
+using ColorRise.Skein.Audio;
 using ColorRise.Skein.Editor.Services;
 using ColorRise.Skein.Editor.ViewModels;
 using ColorRise.Skein.UI;
@@ -12,7 +13,8 @@ namespace ColorRise.Skein.Editor.EntityFactories;
 
 /// <summary>
 /// "Dialogue runner" of the scene editor's <i>Add entity</i>: an entity that plays a Yarn project, with the presenters of
-/// <c>ColorRise.Skein.UI</c> when the game can use that package. In a game with one Yarn project, the runner plays it.
+/// <c>ColorRise.Skein.UI</c> when the game can use that package, and the voice-over presenter of <c>ColorRise.Skein.Audio</c>
+/// when it can use that one. In a game with one Yarn project, the runner plays it.
 /// </summary>
 [Display(10, "Dialogue runner", Category)]
 public sealed class DialogueRunnerFactory : EntityFactory
@@ -37,7 +39,8 @@ public sealed class DialogueRunnerFactory : EntityFactory
         // The presenters are scripts of the UI package: a game that does not reference it could not load them
         var package = parent.Asset.AssetItem.Package;
         var withPresenters = package is null || PackageTypeScope.For(package).Contains(typeof(LinePresenter));
-        var entity = Create(ComputeNewName(parent, "Dialogue runner"), withPresenters);
+        var withVoice = package is not null && PackageTypeScope.For(package).Contains(typeof(VoiceOverPresenter));
+        var entity = Create(ComputeNewName(parent, "Dialogue runner"), withPresenters, withVoice);
 
         if (parent.Asset.Session.AllAssets.OfType<YarnProjectViewModel>().Where(p => !p.IsDeleted).Take(2).ToList() is [var project])
         {
@@ -49,9 +52,9 @@ public sealed class DialogueRunnerFactory : EntityFactory
 
     /// <summary>
     /// Makes the entity: a runner that starts at the node <c>Start</c>, and when asked a line presenter, an options
-    /// presenter and a line advancer that the runner shows its dialogue with.
+    /// presenter and a line advancer that the runner shows its dialogue with, and a voice-over presenter.
     /// </summary>
-    public static Entity Create(string name, bool withPresenters)
+    public static Entity Create(string name, bool withPresenters, bool withVoice = false)
     {
         var runner = new DialogueRunnerComponent { StartNode = YarnProjectAnalysis.DefaultStartNode };
         var entity = new Entity { Name = name };
@@ -63,6 +66,13 @@ public sealed class DialogueRunnerFactory : EntityFactory
                 entity.Components.Add(presenter);
                 runner.Presenters.Add(presenter);
             }
+        }
+
+        if (withVoice)
+        {
+            var voice = new VoiceOverPresenter();
+            entity.Components.Add(voice);
+            runner.Presenters.Add(voice);
         }
 
         return entity;

@@ -17,4 +17,10 @@ public interface ILineProvider
     /// <param name="lineId">The id of the line.</param>
     /// <param name="substitutions">The values the script puts in the line, in the order of its <c>{0}</c> placeholders.</param>
     LocalizedLine GetLine(string lineId, IReadOnlyList<string> substitutions);
+
+    /// <summary>
+    /// The URL of the voice-over clip of a line in the current language, before the line runs: a presenter loads it while
+    /// the dialogue enters the node. Null when the line has none, and from a provider without voice-over.
+    /// </summary>
+    string? GetVoiceOver(string lineId) => null;
 }

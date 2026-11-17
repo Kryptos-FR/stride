@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/ColorRise.Skein/ColorRise.Skein.csproj" />
     <Project Path="src/ColorRise.Skein.UI/ColorRise.Skein.UI.csproj" />
+    <Project Path="src/ColorRise.Skein.Audio/ColorRise.Skein.Audio.csproj" />
     <Project Path="src/ColorRise.Skein.Assets/ColorRise.Skein.Assets.csproj" />
     <Project Path="src/ColorRise.Skein.Editor/ColorRise.Skein.Editor.csproj" />
     <Project Path="src/ColorRise.Skein.Editor.Avalonia/ColorRise.Skein.Editor.Avalonia.csproj" />

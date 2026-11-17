@@ -1,6 +1,7 @@
 using System.Reflection;
 using ColorRise.Skein.Assets;
 using ColorRise.Skein.Assets.Localisation;
+using ColorRise.Skein.Audio;
 using ColorRise.Skein.Editor.EntityFactories;
 using ColorRise.Skein.Editor.Player;
 using ColorRise.Skein.Editor.ViewModels;
@@ -275,7 +276,7 @@ public sealed class SkeinCommandsTests
     }
 
     [Fact]
-    public void The_dialogue_runner_entity_has_the_presenters_of_the_UI_package_when_the_game_has_it()
+    public void The_dialogue_runner_entity_has_the_presenters_of_the_UI_and_audio_packages_when_the_game_has_them()
     {
         var bare = DialogueRunnerFactory.Create("Runner", withPresenters: false);
 
@@ -290,6 +291,10 @@ public sealed class SkeinCommandsTests
         runner = Assert.Single(full.Components.OfType<DialogueRunnerComponent>());
         Assert.Equal([typeof(LinePresenter), typeof(OptionsPresenter), typeof(LineAdvancer)], runner.Presenters.Select(p => p.GetType()));
         Assert.Equal(runner.Presenters, full.Components.OfType<DialoguePresenter>());
+
+        var voiced = DialogueRunnerFactory.Create("Runner", withPresenters: true, withVoice: true);
+        runner = Assert.Single(voiced.Components.OfType<DialogueRunnerComponent>());
+        Assert.Equal([typeof(LinePresenter), typeof(OptionsPresenter), typeof(LineAdvancer), typeof(VoiceOverPresenter)], runner.Presenters.Select(p => p.GetType()));
     }
 
     [Fact]
@@ -312,8 +317,8 @@ public sealed class SkeinCommandsTests
             Assert.Equal(["Dialogue runner", "Dialogue runner"], entities.Select(e => e.Name));
             var runner = entities[0].AssetSideEntity.Get<DialogueRunnerComponent>();
             Assert.NotNull(runner);
-            // The test's session loaded the UI package with the plugin: the game can use it
-            Assert.Equal(3, runner.Presenters.Count);
+            // The test's session loaded the UI and audio packages with the plugin: the game can use them
+            Assert.Equal([typeof(LinePresenter), typeof(OptionsPresenter), typeof(LineAdvancer), typeof(VoiceOverPresenter)], runner.Presenters.Select(p => p.GetType()));
             Assert.Equal(runner.Presenters, entities[0].AssetSideEntity.Components.OfType<DialoguePresenter>());
             // The only Yarn project of the game is the one the runner plays
             Assert.Equal(session.ProjectAt("Dialogue/Story").Id, AttachedReferenceManager.GetAttachedReference(runner.Project)?.Id);

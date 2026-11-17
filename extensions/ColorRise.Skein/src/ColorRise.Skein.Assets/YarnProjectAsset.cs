@@ -61,6 +61,20 @@ public sealed class YarnProjectAsset : Asset
     public List<YarnLocalisation> Localisations { get; } = [];
 
     /// <summary>
+    /// The folder of the voice-over clips of a language, relative to the folder of this asset, with <c>{language}</c> where
+    /// the language goes. Each clip is a sound named after the id of its line without <c>line:</c>.
+    /// </summary>
+    /// <userdoc>Where the voice-over of each language is, from the folder of this asset: {language} is replaced by the language (Voice/en, Voice/fr). Each clip is a sound named after the id of its line without "line:" (0a1b2c3 for #line:0a1b2c3). Empty: the project has no voice-over.</userdoc>
+    [DataMember(45)]
+    [Display("Voice-over folder")]
+    public string VoiceOverFolder { get; set; } = DefaultVoiceOverFolder;
+
+    /// <summary>
+    /// The voice-over folder of a new project.
+    /// </summary>
+    public const string DefaultVoiceOverFolder = "Voice/{language}";
+
+    /// <summary>
     /// How "Add line ids" names the ids it adds.
     /// </summary>
     /// <userdoc>How "Add line ids" names the ids it adds to the lines: random (line:0a1b2c3) or descriptive (line:Tavern_0100_Odile).</userdoc>

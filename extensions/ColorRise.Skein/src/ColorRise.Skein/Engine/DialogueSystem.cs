@@ -107,6 +107,7 @@ public sealed class DialogueSystem : GameSystemBase
             {
                 LineMetadata = project.LineMetadata,
                 ShadowLines = project.ShadowLines,
+                VoiceTables = project.VoicedLanguages.Count > 0 ? tableLanguage => LoadVoices(content, url, project, tableLanguage) : null,
                 Language = LanguageOf(project),
             };
             providers.Add(project, provider);
@@ -144,6 +145,15 @@ public sealed class DialogueSystem : GameSystemBase
 
         var url = YarnProject.StringTableUrl(projectUrl, tableLanguage);
         return content.Exists(url) ? content.Load<YarnStringTable>(url) : null;
+    }
+
+    private static YarnVoiceTable? LoadVoices(IContentManager? content, string? projectUrl, YarnProject project, string tableLanguage)
+    {
+        if (content is null || projectUrl is null || !project.VoicedLanguages.Contains(tableLanguage))
+            return null;
+
+        var url = YarnProject.VoiceTableUrl(projectUrl, tableLanguage);
+        return content.Exists(url) ? content.Load<YarnVoiceTable>(url) : null;
     }
 
     private string LanguageOf(YarnProject project) => language.Length > 0 ? language : project.BaseLanguage;

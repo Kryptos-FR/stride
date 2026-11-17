@@ -53,6 +53,11 @@ public sealed class YarnProject
     public List<string> Languages { get; } = [];
 
     /// <summary>
+    /// The languages that have voice-over clips, each with a <see cref="YarnVoiceTable"/>.
+    /// </summary>
+    public List<string> VoicedLanguages { get; } = [];
+
+    /// <summary>
     /// How the runners of the project pick among the nodes of a group, unless a runner says otherwise.
     /// </summary>
     public YarnSaliency Saliency { get; set; } = YarnSaliency.RandomBestLeastRecentlyViewed;
@@ -66,4 +71,9 @@ public sealed class YarnProject
     /// The URL of the string table of a language, from the URL of its project.
     /// </summary>
     public static string StringTableUrl(string projectUrl, string language) => $"{projectUrl}/strings/{language}";
+
+    /// <summary>
+    /// The URL of the voice table of a language, from the URL of its project.
+    /// </summary>
+    public static string VoiceTableUrl(string projectUrl, string language) => $"{projectUrl}/voice/{language}";
 }

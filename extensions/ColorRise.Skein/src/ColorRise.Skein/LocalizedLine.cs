@@ -42,6 +42,14 @@ public sealed class LocalizedLine
     /// </summary>
     public string Language { get; init; } = "";
 
+    /// <summary>
+    /// The URL of the voice-over clip of the line in the provider's language, or null when the line has none there.
+    /// </summary>
+    /// <remarks>
+    /// A line without a clip in the current language is not spoken in another: a French line does not speak English.
+    /// </remarks>
+    public string? VoiceOver { get; init; }
+
     /// <inheritdoc />
     public override string ToString() => Text.Text;
 }
