@@ -32,7 +32,11 @@ internal sealed class SnapshotDecoder
     private readonly Dictionary<Guid, string> names = [];
     private readonly Dictionary<string, List<double>> decodeMs = [];
     private readonly Dictionary<string, int> failures = [];
+    private readonly Dictionary<string, int> failureMessages = [];
     private readonly List<string> loadNotes = [];
+
+    /// <summary>The children of the last transform decoded, before the mirror dropped them.</summary>
+    private string LastChildren { get; set; } = "";
 
     public SnapshotDecoder(Options options)
     {
@@ -141,6 +145,8 @@ internal sealed class SnapshotDecoder
                     var component = DecodeComponent(format, chunk.Bytes, entity);
                     text.AppendLine($"   decoded as {component.GetType().FullName}{(component is IUnloadable u ? $" (IUnloadable of {u.TypeName}, {u.AssemblyName}: {u.Error})" : "")}");
                     Describe(text, component, "   ", 0);
+                    if (component is TransformComponent)
+                        text.AppendLine($"   (children before the mirror dropped them: {LastChildren})");
                 }
                 catch (Exception e)
                 {
@@ -167,9 +173,11 @@ internal sealed class SnapshotDecoder
                 {
                     DecodeComponent(format, chunk.Bytes, entity);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     failures[key] = failures.GetValueOrDefault(key) + 1;
+                    var message = $"{key} {chunk.TypeName.Split(',')[0]}: {e.GetType().Name}: {e.Message}";
+                    failureMessages[message] = failureMessages.GetValueOrDefault(message) + 1;
                 }
             }
         }
@@ -190,6 +198,10 @@ internal sealed class SnapshotDecoder
             json.WriteNumber("failedComponents", failures.GetValueOrDefault(key));
             json.WriteEndObject();
         }
+        json.WriteStartObject("failures");
+        foreach (var (message, count) in failureMessages)
+            json.WriteNumber(message, count);
+        json.WriteEndObject();
     }
 
     private sealed record Chunk(Guid Id, string TypeName, byte[]? Bytes, string? Error);
@@ -240,6 +252,13 @@ internal sealed class SnapshotDecoder
                 reader.Context.Set(ContentSerializerContext.SerializeAttachedReferenceProperty, ContentSerializerContext.AttachedReferenceSerialization.AsSerializableVersion);
                 EntityComponent? component = null;
                 reader.SerializeExtended(ref component, ArchiveMode.Deserialize);
+                // The children resolve to the stand-ins of the child transforms, which the mirror would re-parent (and the
+                // next mirror would fail on): the tree gives the hierarchy, so the mirror keeps no children.
+                if (component is TransformComponent transform)
+                {
+                    LastChildren = string.Join(", ", transform.Children.Select(c => $"{c.Entity?.Name ?? "?"} {c.Id}"));
+                    transform.Children.Clear();
+                }
                 return component!;
             }
             finally

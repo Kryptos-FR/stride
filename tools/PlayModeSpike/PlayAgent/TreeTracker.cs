@@ -19,13 +19,19 @@ namespace Stride.PlayMode.Spike;
 /// Sends the tree of the running scenes at connect, then the changes, batched per frame and coalesced.
 /// </summary>
 /// <remarks>
-/// It also keeps the table of every entity and component of the scene instance by id, which the binary snapshots use to
-/// write references to objects outside the snapshot as ids.
+/// Entities are named by a handle the agent gives each instance (<c>h</c>), with their id next to it: entities
+/// instantiated from a prefab keep the prefab's ids, so two live entities can share an id. It also keeps the table of
+/// every entity and component of the scene instance by id, which the binary snapshots use to write references to
+/// objects outside the snapshot as ids.
 /// </remarks>
 internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
 {
     private readonly List<Op> pending = [];
-    private readonly Dictionary<Guid, int> pendingAdds = [];
+    private readonly Dictionary<Entity, int> pendingAdds = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<Entity, int> handles = new(ReferenceEqualityComparer.Instance);
+    private readonly List<Entity> released = [];
+    private readonly Dictionary<Entity, (string? Name, bool Enabled)> polled = new(ReferenceEqualityComparer.Instance);
+    private int nextHandle = 1;
     private readonly HashSet<Scene> trackedScenes = [];
     private SceneInstance? sceneInstance;
     private Scene? rootScene;
@@ -40,6 +46,12 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
     public int OpsSent { get; private set; }
 
     public int OpsCoalesced { get; private set; }
+
+    /// <summary>The number of times an entity or component was added while another live one had the same id.</summary>
+    public int IdCollisions { get; private set; }
+
+    /// <summary>The number of live entities that share their id with another live entity, at the last poll.</summary>
+    public int SharedIdEntities { get; private set; }
 
     public void Update(SceneInstance instance, long frame)
     {
@@ -84,8 +96,13 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
             TrackScene(rootScene);
 
         Identifiables.Clear();
+        handles.Clear();
+        polled.Clear();
         foreach (var entity in instance)
+        {
             AddIdentifiables(entity);
+            Handle(entity);
+        }
         pending.Clear();
         pendingAdds.Clear();
     }
@@ -99,28 +116,51 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
             TrackScene(child);
     }
 
+    private int Handle(Entity entity)
+    {
+        if (!handles.TryGetValue(entity, out var handle))
+            handles[entity] = handle = nextHandle++;
+        return handle;
+    }
+
     private void AddIdentifiables(Entity entity)
     {
-        Identifiables[entity.Id] = entity;
+        Add(entity);
         foreach (var component in entity.Components)
-            Identifiables[component.Id] = component;
+            Add(component);
+    }
+
+    private void Add(IIdentifiable identifiable)
+    {
+        if (Identifiables.TryGetValue(identifiable.Id, out var existing) && !ReferenceEquals(existing, identifiable))
+            IdCollisions++;
+        Identifiables[identifiable.Id] = identifiable;
+    }
+
+    private void Remove(IIdentifiable identifiable)
+    {
+        // Only when the table holds this instance: another live instance may have the same id.
+        if (Identifiables.TryGetValue(identifiable.Id, out var existing) && ReferenceEquals(existing, identifiable))
+            Identifiables.Remove(identifiable.Id);
     }
 
     private void OnEntityAdded(object? sender, Entity entity)
     {
         AddIdentifiables(entity);
-        pendingAdds[entity.Id] = pending.Count;
+        Handle(entity);
+        pendingAdds[entity] = pending.Count;
         pending.Add(new Op("add", entity));
     }
 
     private void OnEntityRemoved(object? sender, Entity entity)
     {
-        Identifiables.Remove(entity.Id);
+        Remove(entity);
         foreach (var component in entity.Components)
-            Identifiables.Remove(component.Id);
+            Remove(component);
+        released.Add(entity);
 
         // Added and removed in the same batch: neither is sent.
-        if (pendingAdds.Remove(entity.Id, out var index))
+        if (pendingAdds.Remove(entity, out var index))
         {
             pending[index] = pending[index] with { Kind = null };
             OpsCoalesced += 2;
@@ -131,8 +171,9 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
 
     private void OnHierarchyChanged(object? sender, Entity entity)
     {
-        // The add of this batch is written with the parent at the time of sending.
-        if (pendingAdds.ContainsKey(entity.Id))
+        // An entity added in this batch is written with its parent at the time of sending; the engine raises this
+        // event before the add when a child is attached to an entity already in the scene.
+        if (pendingAdds.ContainsKey(entity) || !handles.ContainsKey(entity))
         {
             OpsCoalesced++;
             return;
@@ -143,10 +184,10 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
     private void OnComponentChanged(object? sender, EntityComponentEventArgs e)
     {
         if (e.PreviousComponent is not null)
-            Identifiables.Remove(e.PreviousComponent.Id);
+            Remove(e.PreviousComponent);
         if (e.NewComponent is not null)
-            Identifiables[e.NewComponent.Id] = e.NewComponent;
-        if (pendingAdds.ContainsKey(e.Entity.Id))
+            Add(e.NewComponent);
+        if (pendingAdds.ContainsKey(e.Entity))
         {
             OpsCoalesced++;
             return;
@@ -169,19 +210,20 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
         }
     }
 
-    private readonly Dictionary<Guid, (string? Name, bool Enabled)> polled = [];
-
     private void PollNamesAndEnabled()
     {
-        foreach (var identifiable in Identifiables.Values)
+        var ids = new HashSet<Guid>();
+        var shared = 0;
+        foreach (var entity in handles.Keys)
         {
-            if (identifiable is not Entity entity)
-                continue;
+            if (!ids.Add(entity.Id))
+                shared++;
             var state = (entity.Name, IsEnabled(entity));
-            if (polled.TryGetValue(entity.Id, out var previous) && previous != state && !pendingAdds.ContainsKey(entity.Id))
+            if (polled.TryGetValue(entity, out var previous) && previous != state && !pendingAdds.ContainsKey(entity))
                 pending.Add(new Op("state", entity));
-            polled[entity.Id] = state;
+            polled[entity] = state;
         }
+        SharedIdEntities = shared;
     }
 
     private void SendBatch(long frame)
@@ -192,10 +234,22 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
             json.WriteStartObject();
             json.WriteNumber("frame", frame);
             json.WriteStartArray("ops");
+            var removedInBatch = new HashSet<Entity>(ReferenceEqualityComparer.Instance);
+            foreach (var op in pending)
+            {
+                if (op.Kind == "remove")
+                    removedInBatch.Add(op.Entity!);
+            }
             foreach (var op in pending)
             {
                 if (op.Kind is null)
                     continue;
+                // The remove makes any earlier change of the same entity in this batch moot.
+                if (op.Kind is "parent" or "components" or "state" && removedInBatch.Contains(op.Entity!))
+                {
+                    OpsCoalesced++;
+                    continue;
+                }
                 json.WriteStartObject();
                 json.WriteString("op", op.Kind);
                 if (op.Entity is { } entity)
@@ -206,18 +260,18 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
                             WriteEntity(json, entity, withChildren: false);
                             break;
                         case "remove":
-                            json.WriteString("id", entity.Id);
+                            json.WriteNumber("h", Handle(entity));
                             break;
                         case "parent":
-                            json.WriteString("id", entity.Id);
+                            json.WriteNumber("h", Handle(entity));
                             WriteParent(json, entity);
                             break;
                         case "components":
-                            json.WriteString("id", entity.Id);
+                            json.WriteNumber("h", Handle(entity));
                             WriteComponents(json, entity);
                             break;
                         case "state":
-                            json.WriteString("id", entity.Id);
+                            json.WriteNumber("h", Handle(entity));
                             json.WriteString("name", entity.Name);
                             json.WriteBoolean("enabled", IsEnabled(entity));
                             break;
@@ -238,6 +292,15 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
         }
         pending.Clear();
         pendingAdds.Clear();
+        foreach (var entity in released)
+        {
+            if (entity.EntityManager is null)
+            {
+                handles.Remove(entity);
+                polled.Remove(entity);
+            }
+        }
+        released.Clear();
         BatchesSent++;
         send(PlayMessageType.TreeBatch, stream.ToArray());
     }
@@ -258,7 +321,7 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
         send(PlayMessageType.Tree, stream.ToArray());
     }
 
-    private static void WriteScene(Utf8JsonWriter json, Scene scene, string propertyName)
+    private void WriteScene(Utf8JsonWriter json, Scene scene, string propertyName)
     {
         json.WriteStartObject(propertyName);
         json.WriteString("id", scene.Id);
@@ -283,8 +346,9 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
         json.WriteEndObject();
     }
 
-    private static void WriteEntity(Utf8JsonWriter json, Entity entity, bool withChildren)
+    private void WriteEntity(Utf8JsonWriter json, Entity entity, bool withChildren)
     {
+        json.WriteNumber("h", Handle(entity));
         json.WriteString("id", entity.Id);
         json.WriteString("name", entity.Name);
         json.WriteBoolean("enabled", IsEnabled(entity));
@@ -307,8 +371,13 @@ internal sealed class TreeTracker(Action<PlayMessageType, byte[]> send)
         }
     }
 
-    private static void WriteParent(Utf8JsonWriter json, Entity entity)
-        => json.WriteString("parent", entity.Transform?.Parent?.Entity?.Id.ToString());
+    private void WriteParent(Utf8JsonWriter json, Entity entity)
+    {
+        if (entity.Transform?.Parent?.Entity is { } parent)
+            json.WriteNumber("parent", Handle(parent));
+        else
+            json.WriteNull("parent");
+    }
 
     private static void WriteComponents(Utf8JsonWriter json, Entity entity)
     {

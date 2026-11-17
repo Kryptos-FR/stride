@@ -87,7 +87,7 @@ internal static class TreeDump
     {
         var types = entity.GetProperty("components").EnumerateArray().Select(x => x.GetProperty("type").GetString()!.Split('.')[^1]);
         var enabled = entity.GetProperty("enabled").GetBoolean() ? "" : " (disabled)";
-        builder.Append(' ', depth * 2).AppendLine($"{entity.GetProperty("name").GetString()}{enabled} [{string.Join(", ", types)}] {entity.GetProperty("id").GetGuid()}");
+        builder.Append(' ', depth * 2).AppendLine($"#{entity.GetProperty("h").GetInt32()} {entity.GetProperty("name").GetString()}{enabled} [{string.Join(", ", types)}] {entity.GetProperty("id").GetGuid()}");
         if (entity.TryGetProperty("children", out var children))
         {
             foreach (var child in children.EnumerateArray())

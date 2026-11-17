@@ -26,6 +26,7 @@ internal sealed class YamlComponentWriter
 {
     private readonly MemoryStream buffer = new(4096);
     private readonly ReferenceCollector collector = new();
+    private static readonly bool Debug = Environment.GetEnvironmentVariable("STRIDE_PLAY_DEBUG") == "1";
 
     public YamlComponentWriter()
     {
@@ -37,7 +38,13 @@ internal sealed class YamlComponentWriter
     {
         AssetCollectionItemIdHelper.GenerateMissingItemIds(component);
         var settings = new SerializerContextSettings();
-        settings.Properties.Add(AssetObjectSerializerBackend.ObjectReferencesKey, collector.Collect(component));
+        var references = collector.Collect(component);
+        if (Debug)
+        {
+            foreach (var (path, id) in references)
+                Console.WriteLine($"Play agent YAML ref: {component.GetType().Name} {path} -> {id}");
+        }
+        settings.Properties.Add(AssetObjectSerializerBackend.ObjectReferencesKey, references);
         buffer.SetLength(0);
         AssetYamlSerializer.Default.Serialize(buffer, component, typeof(EntityComponent), settings);
         return buffer.GetBuffer().AsSpan(0, (int)buffer.Length);
@@ -66,7 +73,7 @@ internal sealed class YamlComponentWriter
             {
                 if (obj is IIdentifiable identifiable and (Entity or EntityComponent))
                 {
-                    references.Set(YamlAssetPath.FromMemberPath(CurrentPath, root!), identifiable.Id);
+                    references.Set(ToYamlPath(CurrentPath, root!), identifiable.Id);
                     return;
                 }
                 // Content is written as a URL: nothing to find inside.
@@ -74,6 +81,31 @@ internal sealed class YamlComponentWriter
                     return;
             }
             base.VisitObject(obj, descriptor, visitMembers);
+        }
+
+        // YamlAssetPath.FromMemberPath looks the item ids up on the item instead of its collection, so items always get an
+        // index there, while the YAML writes item ids: build the path here, reading the ids on each collection.
+        private static YamlAssetPath ToYamlPath(MemberPath path, object root)
+        {
+            var result = new YamlAssetPath();
+            var current = root;
+            foreach (var item in path.Decompose())
+            {
+                if (item.MemberDescriptor is not null)
+                {
+                    result.PushMember(item.MemberDescriptor.Name);
+                }
+                else
+                {
+                    var index = item.GetIndex()!;
+                    if (CollectionItemIdHelper.TryGetCollectionItemIds(current, out var ids) && ids.TryGet(index, out var id))
+                        result.PushItemId(id);
+                    else
+                        result.PushIndex(index);
+                }
+                current = item.GetValue(current)!;
+            }
+            return result;
         }
     }
 }

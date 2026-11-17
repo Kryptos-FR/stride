@@ -16,6 +16,8 @@ internal sealed class FrameMeter
 {
     private readonly List<double> frameMs = new(4096);
     private readonly List<double> agentUs = new(4096);
+    private readonly List<double> updateMs = new(4096);
+    private readonly List<double> drawMs = new(4096);
     private long lastTimestamp;
     private int gen0;
     private int gen1;
@@ -29,6 +31,8 @@ internal sealed class FrameMeter
     {
         frameMs.Clear();
         agentUs.Clear();
+        updateMs.Clear();
+        drawMs.Clear();
         lastTimestamp = 0;
         gen0 = GC.CollectionCount(0);
         gen1 = GC.CollectionCount(1);
@@ -44,6 +48,12 @@ internal sealed class FrameMeter
         lastTimestamp = timestamp;
     }
 
+    /// <summary>The time from the first system's update to the agent's (scripts, physics, scene; not the agent).</summary>
+    public void OnUpdatePhase(long ticks) => updateMs.Add(ticks * 1000.0 / Stopwatch.Frequency);
+
+    /// <summary>The time from the first system's draw to the last one's (rendering, before present).</summary>
+    public void OnDrawPhase(long ticks) => drawMs.Add(ticks * 1000.0 / Stopwatch.Frequency);
+
     public void OnAgentWork(long ticks) => agentUs.Add(ticks * 1_000_000.0 / Stopwatch.Frequency);
 
     public byte[] ToJson(string label, double startToFirstFrameMs, Action<Utf8JsonWriter>? extra = null)
@@ -57,6 +67,8 @@ internal sealed class FrameMeter
             json.WriteNumber("startToFirstFrameMs", startToFirstFrameMs);
             WriteDistribution(json, "frameMs", frameMs);
             WriteDistribution(json, "agentUs", agentUs);
+            WriteDistribution(json, "updatePhaseMs", updateMs);
+            WriteDistribution(json, "drawPhaseMs", drawMs);
             json.WriteNumber("gen0", GC.CollectionCount(0) - gen0);
             json.WriteNumber("gen1", GC.CollectionCount(1) - gen1);
             json.WriteNumber("gen2", GC.CollectionCount(2) - gen2);

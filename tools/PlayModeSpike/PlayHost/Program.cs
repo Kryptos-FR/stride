@@ -29,7 +29,7 @@ var decoder = new SnapshotDecoder(options);
 using var session = new PlaySession(options, decoder);
 return await session.RunAsync();
 
-internal sealed record Options(string Game, string Output, string Agent, bool LoadGameAssemblies, int Seconds, bool Baseline, string[] Pick)
+internal sealed record Options(string Game, string Output, string Agent, bool LoadGameAssemblies, int Seconds, bool Baseline, string[] Pick, int ClickMs, bool Quick)
 {
     public static Options Parse(string[] args)
     {
@@ -38,6 +38,8 @@ internal sealed record Options(string Game, string Output, string Agent, bool Lo
         var seconds = 10;
         var baseline = false;
         var pick = Array.Empty<string>();
+        var clickMs = 0;
+        var quick = false;
         for (var i = 0; i < args.Length; i++)
         {
             switch (args[i])
@@ -49,11 +51,13 @@ internal sealed record Options(string Game, string Output, string Agent, bool Lo
                 case "--seconds": seconds = int.Parse(args[++i]); break;
                 case "--baseline": baseline = true; break;
                 case "--pick": pick = args[++i].Split(','); break;
+                case "--click-ms": clickMs = int.Parse(args[++i]); break;
+                case "--quick": quick = true; break;
                 default: throw new ArgumentException($"Unknown argument {args[i]}");
             }
         }
         agent ??= Path.Combine(AppContext.BaseDirectory, "agent", "Stride.PlayMode.Spike.Agent.dll");
-        return new Options(game ?? throw new ArgumentException("--game is required"), output ?? throw new ArgumentException("--out is required"), agent, load, seconds, baseline, pick);
+        return new Options(game ?? throw new ArgumentException("--game is required"), output ?? throw new ArgumentException("--out is required"), agent, load, seconds, baseline, pick, clickMs, quick);
     }
 }
 
@@ -101,6 +105,50 @@ internal static class GameStarter
             await process.WaitForExitAsync();
         }
         return process.ExitCode;
+    }
+}
+
+/// <summary>
+/// Clicks in the game window at random places, so that the game spawns and removes entities (shots, click effects,
+/// walking into streamed scenes).
+/// </summary>
+internal static class Clicker
+{
+    public static async Task RunAsync(int processId, int intervalMs, CancellationToken cancellationToken)
+    {
+        string? window = null;
+        while (window is null && !cancellationToken.IsCancellationRequested)
+        {
+            window = (await XdoAsync($"search --pid {processId}")).Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+            if (window is null)
+                await Task.Delay(500, CancellationToken.None);
+        }
+        // "WIDTHxHEIGHT" from the geometry line; clicks stay in the middle of the window.
+        var geometry = (await XdoAsync($"getwindowgeometry {window}")).Split("Geometry: ")[^1].Trim().Split('x');
+        var (width, height) = (int.Parse(geometry[0]), int.Parse(geometry[1]));
+        var random = new Random(1);
+        var clicks = 0;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await XdoAsync($"mousemove --window {window} {random.Next(width / 6, width * 5 / 6)} {random.Next(height / 5, height * 4 / 5)} click 1");
+            clicks++;
+            try
+            {
+                await Task.Delay(intervalMs, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+        Console.WriteLine($"Clicked {clicks} times in window {window}");
+    }
+
+    private static async Task<string> XdoAsync(string arguments)
+    {
+        using var process = Process.Start(new ProcessStartInfo("xdotool", arguments) { RedirectStandardOutput = true, UseShellExecute = false })!;
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        return output;
     }
 }
 
@@ -172,7 +220,11 @@ internal sealed class PlaySession(Options options, SnapshotDecoder decoder) : ID
             var treeDocument = await tree.Task.WaitAsync(TimeSpan.FromSeconds(120));
             Console.WriteLine($"Tree after {Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds:F0} ms");
             decoder.SetTree(treeDocument);
+            using var clicking = new CancellationTokenSource();
+            var clicker = options.ClickMs > 0 ? Task.Run(() => Clicker.RunAsync(game.Id, options.ClickMs, clicking.Token)) : Task.CompletedTask;
             await RunScenarioAsync(treeDocument);
+            clicking.Cancel();
+            await clicker;
 
             Send(PlayMessageType.Quit, []);
             var exitCode = await GameStarter.EndAsync(game, TimeSpan.FromSeconds(20));
@@ -198,6 +250,15 @@ internal sealed class PlaySession(Options options, SnapshotDecoder decoder) : ID
 
     private async Task RunScenarioAsync(JsonDocument treeDocument)
     {
+        if (options.Quick)
+        {
+            // Activity only: tree batches while the clicker plays, one binary snapshot to decode, and one of YAML.
+            var quickPicks = EntityPicker.Pick(treeDocument.RootElement, options.Pick).Select(p => p.Id).ToArray();
+            await MeasureAsync("binary at 5 Hz (activity)", quickPicks, 5, "binary");
+            await MeasureAsync("yaml at 5 Hz (activity)", quickPicks, 5, "yaml");
+            return;
+        }
+
         // Idle: connected, tree sent, no selection.
         await Task.Delay(TimeSpan.FromSeconds(5));
         await MeasureAsync("connected, idle", null, 0, "binary");

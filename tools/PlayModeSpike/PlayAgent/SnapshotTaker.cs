@@ -140,6 +140,8 @@ internal sealed class SnapshotTaker(TreeTracker tracker, Action<PlayMessageType,
         json.WriteNumber("treeBatches", tracker.BatchesSent);
         json.WriteNumber("treeOps", tracker.OpsSent);
         json.WriteNumber("treeOpsCoalesced", tracker.OpsCoalesced);
+        json.WriteNumber("idCollisions", tracker.IdCollisions);
+        json.WriteNumber("sharedIdEntities", tracker.SharedIdEntities);
         json.WriteStartArray("resolvedFromAgent");
         lock (AgentBootstrap.ResolvedFromAgent)
         {

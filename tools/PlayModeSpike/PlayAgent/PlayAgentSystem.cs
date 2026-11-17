@@ -32,6 +32,7 @@ internal sealed class PlayAgentSystem : GameSystemBase
     private readonly FrameMeter meter = new();
     private readonly TreeTracker tracker;
     private readonly SnapshotTaker snapshots;
+    private readonly FrameStartSystem frameStart;
     private NamedPipeClientStream? pipe;
     private volatile bool connected;
     private long frameIndex;
@@ -48,6 +49,10 @@ internal sealed class PlayAgentSystem : GameSystemBase
         tracker = new TreeTracker(Send);
         snapshots = new SnapshotTaker(tracker, Send);
         Enabled = true;
+        Visible = true;
+        DrawOrder = int.MaxValue;
+        frameStart = new FrameStartSystem(game.Services);
+        game.GameSystems.Add(frameStart);
         // After the scripts and the scene system: the snapshot sees the state at the end of the frame's update.
         UpdateOrder = int.MaxValue;
         if (!meterOnly && pipeName is not null)
@@ -61,6 +66,8 @@ internal sealed class PlayAgentSystem : GameSystemBase
         if (firstFrameTimestamp == 0)
             firstFrameTimestamp = start;
         meter.OnFrame(start);
+        if (frameStart.UpdateStart != 0)
+            meter.OnUpdatePhase(start - frameStart.UpdateStart);
 
         if (meterOnly)
         {
@@ -79,6 +86,12 @@ internal sealed class PlayAgentSystem : GameSystemBase
         }
 
         meter.OnAgentWork(Stopwatch.GetTimestamp() - start);
+    }
+
+    public override void Draw(GameTime gameTime)
+    {
+        if (frameStart.DrawStart != 0)
+            meter.OnDrawPhase(Stopwatch.GetTimestamp() - frameStart.DrawStart);
     }
 
     private void RunMeterOnly(GameTime gameTime)
