@@ -15,6 +15,9 @@ public sealed class YarnDocument
     /// </summary>
     internal const char ByteOrderMark = (char)0xFEFF;
 
+    // The statements of the nodes, read when first asked for
+    private readonly Dictionary<YarnNodeSpan, IReadOnlyList<YarnStatementSpan>> statements = new(ReferenceEqualityComparer.Instance);
+
     private YarnDocument(string text, string newLine, IReadOnlyList<YarnNodeSpan> nodes)
     {
         Text = text;
@@ -49,6 +52,23 @@ public sealed class YarnDocument
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// The statements of the body of a node of the document, in the order of the text.
+    /// </summary>
+    public IReadOnlyList<YarnStatementSpan> StatementsOf(YarnNodeSpan node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        if (!Nodes.Any(n => ReferenceEquals(n, node)))
+            throw new ArgumentException("The node is not of this document: parse the text again after each change.", nameof(node));
+
+        if (!statements.TryGetValue(node, out var read))
+        {
+            statements[node] = read = YarnBodyReader.Read(Text, node);
+        }
+
+        return read;
     }
 
     /// <summary>

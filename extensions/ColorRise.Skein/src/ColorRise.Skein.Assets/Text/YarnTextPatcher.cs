@@ -235,6 +235,111 @@ public static partial class YarnTextPatcher
     }
 
     /// <summary>
+    /// Adds <c>&lt;&lt;jump target&gt;&gt;</c> as the last line of what an option, a line group item or a branch of a
+    /// block holds, indented as what it holds.
+    /// </summary>
+    /// <param name="branch">A statement of the node that <see cref="YarnStatementSpan.IsBranch"/>.</param>
+    /// <param name="detour">Whether to add <c>&lt;&lt;detour target&gt;&gt;</c> instead: the dialogue comes back once the target ends.</param>
+    public static IReadOnlyList<YarnTextEdit> AppendJump(YarnDocument document, YarnNodeSpan node, YarnStatementSpan branch, string target, bool detour = false)
+    {
+        var statements = Check(document, node, branch);
+        ArgumentException.ThrowIfNullOrEmpty(target);
+        if (!branch.IsBranch)
+            throw new ArgumentException("A jump goes under an option, a line group item or a branch of a block.", nameof(branch));
+
+        var index = IndexOf(statements, branch);
+        var last = LastWithin(statements, index);
+        var indentation = last > index ? statements[index + 1].Indentation : Deeper(branch.Indentation);
+        var offset = statements[last].LineEnd;
+        var text = (IsLineStart(document.Text, offset) ? "" : document.NewLine) + indentation + (detour ? "<<detour " : "<<jump ") + target + ">>" + document.NewLine;
+        return [new YarnTextEdit(offset, 0, text)];
+    }
+
+    /// <summary>
+    /// Gives a line, an option or a line group item another text. Its condition, its hashtags (its line id among them)
+    /// and its comment stay.
+    /// </summary>
+    /// <param name="text">The text as the user wrote it: the characters that would end it (<c>#</c>, <c>//</c>,
+    /// <c>&lt;&lt;</c>) are escaped.</param>
+    /// <exception cref="ArgumentException">The text cannot be the text of the statement.</exception>
+    public static IReadOnlyList<YarnTextEdit> SetStatementText(YarnDocument document, YarnNodeSpan node, YarnStatementSpan statement, string text)
+    {
+        Check(document, node, statement);
+        if (!statement.IsText)
+            throw new ArgumentException("Only a line, an option or a line group item has a text to edit.", nameof(statement));
+
+        var written = TextOfStatement(text);
+        if (written == statement.Text)
+            return [];
+
+        // A condition or a hashtag right after the text is kept apart from it
+        var source = document.Text;
+        var apart = statement.TextEnd < statement.LineEnd && source[statement.TextEnd] is not (' ' or '\t' or '\r' or '\n') ? " " : "";
+        return [new YarnTextEdit(statement.TextStart, statement.TextEnd - statement.TextStart, written + apart)];
+    }
+
+    /// <summary>
+    /// Removes a statement that holds nothing, with its line.
+    /// </summary>
+    /// <exception cref="ArgumentException">Other statements are in it.</exception>
+    public static IReadOnlyList<YarnTextEdit> DeleteStatement(YarnDocument document, YarnNodeSpan node, YarnStatementSpan statement)
+    {
+        var statements = Check(document, node, statement);
+        var index = IndexOf(statements, statement);
+        if (LastWithin(statements, index) > index || statement.Kind is YarnStatementKind.If or YarnStatementKind.Once)
+            throw new ArgumentException("The statement holds others: remove them in the text.", nameof(statement));
+
+        return [new YarnTextEdit(statement.LineStart, statement.LineEnd - statement.LineStart, "")];
+    }
+
+    /// <summary>
+    /// Adds a line at the end of a node: before the jumps and the <c>&lt;&lt;stop&gt;&gt;</c> that end it, indented as
+    /// the statements at the top of its body.
+    /// </summary>
+    /// <param name="text">The text as the user wrote it, as for <see cref="SetStatementText"/>.</param>
+    /// <exception cref="ArgumentException">The text cannot be a line.</exception>
+    public static IReadOnlyList<YarnTextEdit> AddLine(YarnDocument document, YarnNodeSpan node, string text)
+    {
+        Check(document, node);
+        var written = TextOfStatement(text);
+        var statements = document.StatementsOf(node);
+
+        var index = statements.Count;
+        while (index > 0 && statements[index - 1] is { Depth: 0 } last
+            && (last.Kind == YarnStatementKind.Jump || (last.Kind == YarnStatementKind.Command && last.Text is "stop" or "return")))
+        {
+            index--;
+        }
+
+        var newLine = document.NewLine;
+        var line = new StringBuilder();
+        int offset;
+        string indentation;
+        if (index < statements.Count)
+        {
+            offset = statements[index].LineStart;
+            indentation = statements[index].Indentation;
+        }
+        else
+        {
+            offset = statements.Count > 0 ? statements[^1].LineEnd : node.BodyStart;
+            indentation = statements.FirstOrDefault(s => s.Depth == 0)?.Indentation ?? "";
+            if (!IsLineStart(document.Text, offset))
+            {
+                line.Append(newLine);
+            }
+
+            if (node.DelimiterStart < 0)
+            {
+                line.Append("---").Append(newLine);
+            }
+        }
+
+        line.Append(indentation).Append(written).Append(newLine);
+        return [new YarnTextEdit(offset, 0, line.ToString())];
+    }
+
+    /// <summary>
     /// Gives a node another title. The jumps to the node are <see cref="RenameJumps"/>'s to change.
     /// </summary>
     /// <exception cref="ArgumentException">The title cannot be written as a header.</exception>
@@ -314,6 +419,93 @@ public static partial class YarnTextPatcher
                 }
             }
         }
+    }
+
+    private static IReadOnlyList<YarnStatementSpan> Check(YarnDocument document, YarnNodeSpan node, YarnStatementSpan statement)
+    {
+        Check(document, node);
+        ArgumentNullException.ThrowIfNull(statement);
+        var statements = document.StatementsOf(node);
+        if (!statements.Any(s => ReferenceEquals(s, statement)))
+            throw new ArgumentException("The statement is not of this node: read the statements again after each change.", nameof(statement));
+
+        return statements;
+    }
+
+    private static int IndexOf(IReadOnlyList<YarnStatementSpan> statements, YarnStatementSpan statement)
+    {
+        for (var i = 0; i < statements.Count; i++)
+        {
+            if (ReferenceEquals(statements[i], statement))
+                return i;
+        }
+
+        return -1;
+    }
+
+    // The last statement that is in a statement, or the statement itself when nothing is in it
+    private static int LastWithin(IReadOnlyList<YarnStatementSpan> statements, int index)
+    {
+        var last = index;
+        for (var i = index + 1; i < statements.Count && IsWithin(statements, i, index); i++)
+        {
+            last = i;
+        }
+
+        return last;
+    }
+
+    private static bool IsWithin(IReadOnlyList<YarnStatementSpan> statements, int index, int container)
+    {
+        for (var parent = statements[index].Parent; parent >= 0; parent = statements[parent].Parent)
+        {
+            if (parent == container)
+                return true;
+        }
+
+        return false;
+    }
+
+    // One step deeper than an indentation: a tab where it has tabs, else four spaces
+    private static string Deeper(string indentation) => indentation + (indentation.Contains('\t') ? "\t" : "    ");
+
+    /// <summary>
+    /// The text of a line or an option as the user wrote it, made safe for the file: one line, without the spaces
+    /// around it, and with what would end it escaped.
+    /// </summary>
+    private static string TextOfStatement(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        text = text.Trim();
+        if (text.AsSpan().IndexOfAny('\r', '\n') >= 0)
+            throw new ArgumentException("A line of the dialogue is one line of text.", nameof(text));
+        if (text.Length == 0)
+            throw new ArgumentException("A line of the dialogue needs a text.", nameof(text));
+        if (text.StartsWith("->", StringComparison.Ordinal) || text.StartsWith("=>", StringComparison.Ordinal) || text.StartsWith("===", StringComparison.Ordinal))
+            throw new ArgumentException($"A line cannot start with '{text[..2]}': in the text, that starts an option, a line group item or the end of the node.", nameof(text));
+
+        var escaped = new StringBuilder(text.Length);
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            var next = i + 1 < text.Length ? text[i + 1] : '\0';
+            if (c == '\\' && next != '\0')
+            {
+                // Already escaped
+                escaped.Append(c).Append(next);
+                i++;
+            }
+            else if (c == '#' || (c == '/' && next == '/') || (c == '<' && next == '<'))
+            {
+                escaped.Append('\\').Append(c);
+            }
+            else
+            {
+                escaped.Append(c);
+            }
+        }
+
+        return escaped.ToString();
     }
 
     private static void Check(YarnDocument document, YarnNodeSpan node)
