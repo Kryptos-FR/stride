@@ -75,9 +75,15 @@ public sealed record YarnActionParameter
 
     /// <summary>
     /// What scripts write there: <c>number</c>, <c>string</c>, <c>bool</c>, or <c>any</c> for the name of an object.
-    /// An enum is a <c>string</c> with <see cref="Choices"/>.
+    /// An enum is a <c>string</c> with <see cref="Choices"/>, and a type with a converter a <c>string</c>.
     /// </summary>
     public required string Type { get; init; }
+
+    /// <summary>
+    /// The C# type of a parameter whose type scripts do not have: an enum, an object found by name, or a type with a
+    /// converter. Null for a boolean, a number or a string.
+    /// </summary>
+    public string? TypeName { get; init; }
 
     /// <summary>
     /// Whether scripts may leave it out.

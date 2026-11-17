@@ -59,6 +59,28 @@ public sealed class YarnActionRegistryTests
         public static TaskCompletionSource Gate { get; set; } = new();
     }
 
+    private sealed record Tool(string Name);
+
+    private static class Tools
+    {
+        [YarnConverter(typeof(Tool))]
+        public static bool TryTool(string text, out Tool tool)
+        {
+            tool = new Tool(text.ToUpperInvariant());
+            return text != "spoon";
+        }
+
+        [YarnCommand("dig")]
+        public static void Dig(Tool tool, params Tool[] spares) => Calls.Add($"dig {tool.Name} {string.Join('|', spares.Select(s => s.Name))}");
+    }
+
+    // Generic, so that registering the whole assembly skips it
+    private static class BadConverters<TUnused>
+    {
+        [YarnConverter(typeof(Tool))]
+        public static Tool NoTry(string text) => new(text);
+    }
+
     private sealed class Doors(params (string Name, Door Door)[] doors) : IYarnTargetResolver
     {
         public object? Find(string name, Type type)
@@ -390,6 +412,52 @@ public sealed class YarnActionRegistryTests
         Assert.Contains("count", command.Message);
 
         Assert.Throws<ArgumentException>(() => registry.AddCommandHandler("two words", () => { }));
+    }
+
+    [Fact]
+    public async Task A_converter_makes_a_parameter_of_its_type_from_a_word()
+    {
+        var registry = new YarnActionRegistry();
+        registry.RegisterType(typeof(Tools));
+
+        Assert.True(await Run(registry, "dig shovel pick rake"));
+        Assert.Equal(["dig SHOVEL PICK|RAKE"], Calls);
+
+        var refused = await Assert.ThrowsAsync<YarnCommandException>(() => Run(registry, "dig spoon"));
+        Assert.Contains("'spoon' is not a Tool for the parameter 'tool'", refused.Message);
+
+        // Scripts write a word: the tools of Yarn Spinner see a string, the editors the type
+        var tool = registry.Describe().Single(d => d.Name == "dig").Parameters[0];
+        Assert.Equal(("string", "Tool"), (tool.Type, tool.TypeName));
+    }
+
+    [Fact]
+    public async Task A_converter_added_by_hand_wins_over_the_reading_of_an_enum()
+    {
+        var registry = Registry();
+        registry.AddConverter<Pace>((string text, out Pace pace) =>
+        {
+            pace = text == "briskly" ? Pace.Fast : Pace.Slow;
+            return text is "briskly" or "lazily";
+        });
+
+        Assert.True(await Run(registry, "walk Odile briskly"));
+        Assert.Equal(["walk Odile Fast False"], Calls);
+        await Assert.ThrowsAsync<YarnCommandException>(() => Run(registry, "walk Odile fast"));
+
+        // One converter for a type
+        var twice = Assert.Throws<InvalidOperationException>(() => registry.AddConverter<Pace>((string text, out Pace pace) => Enum.TryParse(text, out pace)));
+        Assert.Contains("Pace", twice.Message);
+        Assert.True(registry.RemoveConverter(typeof(Pace)));
+        Assert.True(await Run(registry, "walk Odile fast"));
+    }
+
+    [Fact]
+    public void A_converter_that_does_not_try_is_refused_by_name()
+    {
+        var result = Assert.Throws<ArgumentException>(() => new YarnActionRegistry().RegisterType(typeof(BadConverters<int>)));
+        Assert.Contains("NoTry", result.Message);
+        Assert.Contains("out", result.Message);
     }
 
     [Fact]

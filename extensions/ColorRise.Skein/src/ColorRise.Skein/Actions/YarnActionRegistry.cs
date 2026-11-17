@@ -19,6 +19,7 @@ public sealed class YarnActionRegistry
 
     private readonly Dictionary<string, Command> commands = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Function> functions = new(StringComparer.Ordinal);
+    private readonly Dictionary<Type, Converter> converters = [];
 
     /// <summary>
     /// What finds the objects commands name. Without it, only static commands and commands added by hand run.
@@ -61,7 +62,23 @@ public sealed class YarnActionRegistry
     public bool RemoveFunction(string name) => functions.Remove(name);
 
     /// <summary>
-    /// Adds the methods of an assembly that carry <see cref="YarnCommandAttribute"/> or <see cref="YarnFunctionAttribute"/>.
+    /// Adds the converter of a type: the parameters of that type take the words of commands through it.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The type has a converter.</exception>
+    public void AddConverter<T>(YarnConvert<T> converter)
+    {
+        ArgumentNullException.ThrowIfNull(converter);
+        AddConverter(new Converter(typeof(T), text => converter(text, out var value) ? (true, value) : (false, null), converter.Method));
+    }
+
+    /// <summary>
+    /// Removes the converter of a type.
+    /// </summary>
+    /// <returns>Whether there was one.</returns>
+    public bool RemoveConverter(Type type) => converters.Remove(type);
+
+    /// <summary>
+    /// Adds the methods of an assembly that carry <see cref="YarnCommandAttribute"/>, <see cref="YarnFunctionAttribute"/> or <see cref="YarnConverterAttribute"/>.
     /// Adding an assembly again changes nothing.
     /// </summary>
     /// <exception cref="ArgumentException">A method cannot be a command or a function; the message names it.</exception>
@@ -110,7 +127,7 @@ public sealed class YarnActionRegistry
     }
 
     /// <summary>
-    /// Adds the methods of a type that carry <see cref="YarnCommandAttribute"/> or <see cref="YarnFunctionAttribute"/>.
+    /// Adds the methods of a type that carry <see cref="YarnCommandAttribute"/>, <see cref="YarnFunctionAttribute"/> or <see cref="YarnConverterAttribute"/>.
     /// Adding a type again changes nothing.
     /// </summary>
     /// <exception cref="ArgumentException">A method cannot be a command or a function; the message names it.</exception>
@@ -142,6 +159,29 @@ public sealed class YarnActionRegistry
 
     private void RegisterMethod(Type type, MethodInfo method)
     {
+        if (method.GetCustomAttribute<YarnConverterAttribute>() is { } converter
+            && !(converters.TryGetValue(converter.Type, out var sameConverter) && sameConverter.Method == method))
+        {
+            var parameters = method.GetParameters();
+            if (!method.IsStatic || method.IsGenericMethodDefinition || method.ReturnType != typeof(bool) || parameters.Length != 2
+                || parameters[0].ParameterType != typeof(string) || !parameters[1].IsOut || parameters[1].ParameterType != converter.Type.MakeByRefType())
+                throw new ArgumentException($"The converter of {converter.Type.Name} ({Name(method)}) must be 'static bool {method.Name}(string text, out {converter.Type.Name} value)'.");
+
+            AddConverter(new Converter(converter.Type, text =>
+            {
+                object?[] arguments = [text, null];
+                try
+                {
+                    return method.Invoke(null, arguments) is true ? (true, arguments[1]) : (false, null);
+                }
+                catch (TargetInvocationException exception) when (exception.InnerException is not null)
+                {
+                    ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
+                    throw;
+                }
+            }, method));
+        }
+
         if (method.GetCustomAttribute<YarnCommandAttribute>() is { } command
             && !(commands.TryGetValue(command.Name, out var sameCommand) && sameCommand.Method == method))
         {
@@ -244,7 +284,7 @@ public sealed class YarnActionRegistry
             {
                 Name = command.Name,
                 Kind = YarnActionKind.Command,
-                Parameters = [.. command.Method.GetParameters().Where(p => p.ParameterType != typeof(CancellationToken)).Select(Describe)],
+                Parameters = [.. command.Method.GetParameters().Where(p => p.ParameterType != typeof(CancellationToken)).Select(DescribeParameter)],
                 TargetType = command.TargetType?.Name,
                 IsAsync = typeof(Task).IsAssignableFrom(command.Method.ReturnType) || command.Method.ReturnType == typeof(ValueTask),
                 Documentation = command.Documentation,
@@ -258,7 +298,7 @@ public sealed class YarnActionRegistry
             {
                 Name = function.Name,
                 Kind = YarnActionKind.Function,
-                Parameters = [.. function.Delegate.Method.GetParameters().Select(Describe)],
+                Parameters = [.. function.Delegate.Method.GetParameters().Select(DescribeParameter)],
                 ReturnType = YarnType(function.Delegate.Method.ReturnType),
                 Documentation = function.Documentation,
                 Method = Name(function.Delegate.Method),
@@ -302,6 +342,14 @@ public sealed class YarnActionRegistry
         commands.Add(command.Name, command);
     }
 
+    private void AddConverter(Converter converter)
+    {
+        if (converters.TryGetValue(converter.Type, out var existing))
+            throw new InvalidOperationException($"Two converters make a {converter.Type.Name}: {Name(existing.Method)} and {Name(converter.Method)}.");
+
+        converters.Add(converter.Type, converter);
+    }
+
     private void AddFunction(Function function)
     {
         var method = function.Delegate.Method;
@@ -323,7 +371,7 @@ public sealed class YarnActionRegistry
         functions.Add(function.Name, function);
     }
 
-    private static object?[] Bind(string commandText, Command command, IReadOnlyList<string> words, int next, IYarnTargetResolver? targets, CancellationToken cancellation)
+    private object?[] Bind(string commandText, Command command, IReadOnlyList<string> words, int next, IYarnTargetResolver? targets, CancellationToken cancellation)
     {
         var parameters = command.Method.GetParameters();
         var arguments = new object?[parameters.Length];
@@ -355,7 +403,7 @@ public sealed class YarnActionRegistry
             }
             else
             {
-                throw new YarnCommandException(commandText, $"the parameter '{parameter.Name}' ({Describe(parameter).Type}) is missing.");
+                throw new YarnCommandException(commandText, $"the parameter '{parameter.Name}' ({DescribeParameter(parameter).Type}) is missing.");
             }
         }
 
@@ -368,9 +416,16 @@ public sealed class YarnActionRegistry
         return arguments;
     }
 
-    private static object? Convert(string commandText, IYarnTargetResolver? targets, string word, Type type, ParameterInfo parameter)
+    private object? Convert(string commandText, IYarnTargetResolver? targets, string word, Type type, ParameterInfo parameter)
     {
         type = Nullable.GetUnderlyingType(type) ?? type;
+        if (converters.TryGetValue(type, out var converter))
+        {
+            return converter.Convert(word) is (true, var value)
+                ? value
+                : throw new YarnCommandException(commandText, $"'{word}' is not a {type.Name} for the parameter '{parameter.Name}'.");
+        }
+
         if (type == typeof(string))
             return word;
 
@@ -423,19 +478,21 @@ public sealed class YarnActionRegistry
             ?? throw new YarnCommandException(commandText, $"no {type.Name} named '{name}' was found for {role}.");
     }
 
-    private static YarnActionParameter Describe(ParameterInfo parameter)
+    private YarnActionParameter DescribeParameter(ParameterInfo parameter)
     {
         var isParams = IsParams(parameter);
         var type = isParams ? parameter.ParameterType.GetElementType()! : parameter.ParameterType;
         type = Nullable.GetUnderlyingType(type) ?? type;
+        var converted = converters.ContainsKey(type);
         return new YarnActionParameter
         {
             Name = parameter.Name ?? "",
-            Type = type.IsEnum ? "string" : YarnType(type) ?? "any",
+            Type = converted || type.IsEnum ? "string" : YarnType(type) ?? "any",
+            TypeName = YarnType(type) is null ? type.Name : null,
             IsOptional = parameter.HasDefaultValue || isParams,
             DefaultValue = parameter.HasDefaultValue ? DefaultText(parameter.DefaultValue) : null,
             IsParams = isParams,
-            Choices = type.IsEnum ? Enum.GetNames(type) : [],
+            Choices = type.IsEnum && !converted ? Enum.GetNames(type) : [],
         };
     }
 
@@ -474,4 +531,6 @@ public sealed class YarnActionRegistry
     private sealed record Command(string Name, MethodInfo Method, object? Target, Type? TargetType, string? Documentation);
 
     private sealed record Function(string Name, Delegate Delegate, string? Documentation);
+
+    private sealed record Converter(Type Type, Func<string, (bool Converted, object? Value)> Convert, MethodInfo Method);
 }

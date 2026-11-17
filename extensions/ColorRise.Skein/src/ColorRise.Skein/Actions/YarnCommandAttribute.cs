@@ -6,7 +6,8 @@ namespace ColorRise.Skein;
 /// <remarks>
 /// A static method is called as is. For an instance method, the first word after the command names the object to call
 /// it on (an entity, for a method of a component). The other words are the parameters, converted from text: strings,
-/// booleans, numbers, enums, and objects found by name as the target is. Optional parameters, a <c>params</c> array and a
+/// booleans, numbers, enums, objects found by name as the target is, and the types of the game that have a
+/// converter (<see cref="YarnConverterAttribute"/>). Optional parameters, a <c>params</c> array and a
 /// <see cref="CancellationToken"/> work. The method returns nothing, or a task the dialogue waits for.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method)]
