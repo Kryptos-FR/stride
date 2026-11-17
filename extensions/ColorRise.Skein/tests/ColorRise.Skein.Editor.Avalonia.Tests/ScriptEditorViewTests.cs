@@ -139,6 +139,29 @@ public sealed class ScriptEditorViewTests
     }
 
     [AvaloniaFact]
+    public void The_links_are_drawn_by_their_kind_and_labelled_with_the_option_they_leave_from()
+    {
+        using var view = Open(
+            "title: Start\nposition: 0,0\n---\n-> Ask about the pier\n    <<jump Pier>>\n-> Leave\n    <<detour Harbour>>\n<<jump {$next}>>\n<<jump Nowhere>>\n===\n"
+            + "title: Pier\nposition: 340,0\n---\nFisher: Hi.\n===\n");
+        var (editor, graph) = (view.Editor, view.View.NodeGraph);
+        var resolver = graph.LinkResolver!;
+        NodeGraphLinkStyle? StyleTo(string title) => resolver.GetStyle(editor.Links.Single(l => l.Target is IYarnGraphNode node && node.Title == title));
+
+        // A label shows only on a link long enough for its option to be out of sight
+        Assert.Equal(420, graph.LinkLabelMinLength);
+        Assert.Equal(new NodeGraphLinkStyle { Label = "Ask about the pier" }, StyleTo("Pier"));
+
+        var detour = StyleTo("Harbour")!;
+        Assert.Equal("Leave", detour.Label);
+        Assert.Equal([4.0, 3.0], detour.DashStyle!.Dashes!);
+        Assert.Equal([1.0, 2.0], StyleTo("{$next}")!.DashStyle!.Dashes!);
+        Assert.Equal((null, null), (StyleTo("{$next}")!.Label, StyleTo("{$next}")!.Brush));
+        Assert.NotNull(StyleTo("Nowhere")!.Brush);
+        Assert.Null(StyleTo("Nowhere")!.DashStyle);
+    }
+
+    [AvaloniaFact]
     public void The_messages_of_the_compiler_are_underlined_and_listed()
     {
         var broken = Act1.Replace("<<jump Pier>>", "<<jump Nowhere>>");

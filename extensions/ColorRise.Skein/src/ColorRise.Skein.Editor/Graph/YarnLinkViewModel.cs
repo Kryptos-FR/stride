@@ -5,6 +5,8 @@ namespace ColorRise.Skein.Editor.Graph;
 /// </summary>
 public sealed class YarnLinkViewModel
 {
+    private const int LabelLength = 40;
+
     internal YarnLinkViewModel(YarnNodeCardViewModel source, object target, bool isDetour, int line, YarnCardRowViewModel? row = null)
     {
         Source = source;
@@ -44,6 +46,22 @@ public sealed class YarnLinkViewModel
     /// for a jump at the top of the node's body.
     /// </summary>
     public YarnCardRowViewModel? Row { get; }
+
+    /// <summary>
+    /// What the player picks or the story checks before the jump, shortened: the text of the option, of the line group
+    /// item or of the branch the jump is under; null for a jump at the top of the node's body.
+    /// </summary>
+    public string? Label
+    {
+        get
+        {
+            if (Row?.Statement is null)
+                return null;
+
+            var text = Row.Display.Trim();
+            return text.Length > LabelLength ? text[..(LabelLength - 1)].TrimEnd() + "…" : text;
+        }
+    }
 
     /// <summary>
     /// The slot the link starts from: the one of its row while the card has the row, else the card's own.

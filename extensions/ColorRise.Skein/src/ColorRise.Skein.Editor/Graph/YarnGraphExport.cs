@@ -29,8 +29,6 @@ public enum YarnGraphFormat
 /// </summary>
 public static class YarnGraphExport
 {
-    private const int LabelLength = 40;
-
     /// <summary>
     /// The format of a file, from its extension: <c>.mmd</c> or <c>.mermaid</c>, <c>.md</c>, <c>.dot</c> or <c>.gv</c>.
     /// </summary>
@@ -105,7 +103,7 @@ public static class YarnGraphExport
             if (target is null)
                 continue;
 
-            var edge = new Edge(source, target, link.IsDetour, LabelOf(link.Row));
+            var edge = new Edge(source, target, link.IsDetour, link.Label);
             if (!edges.Contains(edge))
             {
                 edges.Add(edge);
@@ -113,16 +111,6 @@ public static class YarnGraphExport
         }
 
         return new Graph(nodes, edges);
-    }
-
-    // What the player picks or the story checks before the jump: an option, a line group item, a branch
-    private static string? LabelOf(YarnCardRowViewModel? row)
-    {
-        if (row?.Statement is null)
-            return null;
-
-        var text = row.Display.Trim();
-        return text.Length > LabelLength ? text[..(LabelLength - 1)].TrimEnd() + "…" : text;
     }
 
     private static string Mermaid(Graph graph)

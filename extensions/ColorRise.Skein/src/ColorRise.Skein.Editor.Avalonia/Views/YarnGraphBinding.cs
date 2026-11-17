@@ -2,6 +2,8 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows.Input;
 using Avalonia;
+using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using ColorRise.Skein.Editor.Graph;
 using ColorRise.Skein.Editor.ViewModels;
@@ -20,6 +22,10 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
     private readonly YarnScriptEditorViewModel editor;
     // The room around the nodes when the graph shows them all: the frames of the nodes and their labels fit in it
     private const double FitMargin = 60;
+
+    // In multiples of the thickness of the links
+    private static readonly IDashStyle DashedLink = new ImmutableDashStyle([4, 3], 0);
+    private static readonly IDashStyle DottedLink = new ImmutableDashStyle([1, 2], 0);
 
     private readonly List<INotifyPropertyChanged> observed = [];
     private bool fitted;
@@ -67,6 +73,27 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
 
     /// <inheritdoc />
     public object? GetTargetSlot(object link) => (link as YarnLinkViewModel)?.TargetSlot;
+
+    /// <summary>
+    /// The look of a link: a detour dashed, a jump to an expression dotted, a jump to a node that does not exist red, and
+    /// the option or the branch it leaves from as its label.
+    /// </summary>
+    public NodeGraphLinkStyle? GetStyle(object link)
+    {
+        if (link is not YarnLinkViewModel { } jump)
+            return null;
+
+        var computed = jump.Target is YarnStubCardViewModel { IsComputed: true };
+        if (!jump.IsDetour && !jump.IsBroken && !computed && jump.Label is null)
+            return null;
+
+        return new NodeGraphLinkStyle
+        {
+            Brush = jump.IsBroken ? YarnPalette.Error : null,
+            DashStyle = computed ? DottedLink : jump.IsDetour ? DashedLink : null,
+            Label = jump.Label,
+        };
+    }
 
     /// <summary>
     /// Zooms and pans the graph so that it shows every node with its frames, at a zoom of 1 at most.

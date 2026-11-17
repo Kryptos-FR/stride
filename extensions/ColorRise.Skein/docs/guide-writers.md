@@ -84,6 +84,8 @@ How the graph looks is written in the script itself, with headers that Yarn Spin
 
 The search box dims the cards that do not match: it looks in the titles, the headers and the text.
 
+A jump is a solid arrow, a detour a dashed one, a jump to an expression (`<<jump {$next}>>`) a dotted one, and a jump to a node that does not exist is red. A link between cards placed far apart shows, at its middle, the option or the branch it leaves from.
+
 *Export graph…* writes the graph of the script as text that documentation tools draw: a `.mmd` file (Mermaid), a `.md` file with the Mermaid chart under the name of the script (GitHub, GitLab and most wikis draw it), or a `.dot` or `.gv` file (Graphviz). The format follows the extension of the name. A node group is one box with its count of nodes, the notes stay out, a jump is a solid arrow and a detour a dashed one, each labelled with the option or the branch it leaves from, and the nodes of other scripts, missing nodes and jumps to an expression have a shape of their own.
 
 A card is as tall as its rows, and *Layout* places the cards for their height. The `position:` headers written before the cards had rows were made for shorter cards, so cards can overlap in an older script: *Layout* places them anew.
