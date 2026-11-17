@@ -3,6 +3,7 @@ using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Assets.Interop;
 using ColorRise.Skein.Assets.Localisation;
 using ColorRise.Skein.Assets.Text;
+using ColorRise.Skein.Assets.Voice;
 using ColorRise.Skein.Editor.ViewModels;
 using Stride.Core.Assets.Presentation.ViewModels;
 using Stride.Core.Diagnostics;
@@ -64,7 +65,19 @@ public sealed record YarnStringsFileResult
 /// <param name="Exists">Whether the strings file is there.</param>
 /// <param name="Status">How far the file is from the scripts; for the base language, every line counts as translated.</param>
 /// <param name="Problem">Why the file could not be read, or null.</param>
-public sealed record YarnLanguageStatus(string Language, bool IsBase, UFile? File, bool Exists, YarnStringsStatus Status, string? Problem);
+/// <param name="Voiced">The lines of <see cref="YarnStringsStatus.Lines"/> that have a voice-over clip in the language.</param>
+public sealed record YarnLanguageStatus(string Language, bool IsBase, UFile? File, bool Exists, YarnStringsStatus Status, string? Problem, int Voiced = 0);
+
+/// <summary>
+/// What "Export recording script" wrote for a language.
+/// </summary>
+/// <param name="Language">The language.</param>
+/// <param name="File">The file of the script, or null when none was written.</param>
+/// <param name="Rows">The lines in the script.</param>
+/// <param name="Recorded">The lines of the script that have their clip already.</param>
+/// <param name="Untranslated">The lines left out because the language has no text for them yet.</param>
+/// <param name="Problem">Why no script was written, or null.</param>
+public sealed record YarnRecordingScriptResult(string Language, UFile? File, int Rows, int Recorded, int Untranslated, string? Problem);
 
 /// <summary>
 /// The commands of Game Studio on the lines of a Yarn project: line ids, the strings files of the languages, and the
@@ -110,6 +123,26 @@ public sealed class YarnLocalisationService
     {
         ArgumentNullException.ThrowIfNull(project);
         return UPath.Combine(project.AssetItem.FullPath.GetFullDirectory(), new UFile($"Strings/{project.Name}.{language}.csv"));
+    }
+
+    /// <summary>
+    /// Where "Export recording script" writes the script of a language: <c>Recording/{project}.{language}.csv</c> in the
+    /// folder of the project.
+    /// </summary>
+    public static UFile RecordingScriptFile(YarnProjectViewModel project, string language)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        return UPath.Combine(project.AssetItem.FullPath.GetFullDirectory(), new UFile($"Recording/{project.Name}.{language}.csv"));
+    }
+
+    /// <summary>
+    /// Writes the recording script of each language of a project (<see cref="RecordingScriptFile"/>), over the one written
+    /// before: the lines that have an id and a text in the language, and whether their clip is recorded.
+    /// </summary>
+    public Task<IReadOnlyList<YarnRecordingScriptResult>> ExportRecordingScripts(YarnProjectViewModel project)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        return session.Dispatcher.InvokeTask(() => ExportRecordingScriptsAsync(project));
     }
 
     /// <summary>
@@ -276,6 +309,55 @@ public sealed class YarnLocalisationService
         return new YarnStringsFileResult { Language = language, File = file, Written = true, Rows = rows.Count };
     }
 
+    private async Task<IReadOnlyList<YarnRecordingScriptResult>> ExportRecordingScriptsAsync(YarnProjectViewModel project)
+    {
+        var asset = project.Asset;
+        var (compilation, problem) = await CompileStringsAsync(project);
+        var languages = YarnVoiceClips.LanguagesOf(asset).ToList();
+        if (compilation is null)
+            return [.. languages.Select(l => new YarnRecordingScriptResult(l, null, 0, 0, 0, problem))];
+
+        var voices = YarnVoiceClips.Find(project.AssetItem);
+        var baseRows = YarnStringsCsv.RowsOf(compilation, asset.BaseLanguage);
+        var results = new List<YarnRecordingScriptResult>();
+        foreach (var language in languages)
+        {
+            var clips = voices.Languages.FirstOrDefault(v => v.Language == language)?.Clips ?? new Dictionary<string, string>();
+            IReadOnlyDictionary<string, string>? translation = null;
+            if (language != asset.BaseLanguage)
+            {
+                if (asset.Localisations.FirstOrDefault(l => l.Language == language)?.Strings is not { } strings || !File.Exists(Absolute(project, strings).ToOSPath()))
+                {
+                    results.Add(new YarnRecordingScriptResult(language, null, 0, 0, 0, $"'{language}' has no strings file yet: export its strings and translate them first."));
+                    continue;
+                }
+
+                try
+                {
+                    var rows = YarnStringsCsv.Read(await File.ReadAllTextAsync(Absolute(project, strings).ToOSPath()));
+                    translation = YarnProjectBuilder.TableOf(language, baseRows, rows).Strings;
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException)
+                {
+                    results.Add(new YarnRecordingScriptResult(language, null, 0, 0, 0, $"{Absolute(project, strings).ToOSPath()}: {exception.Message}"));
+                    continue;
+                }
+            }
+
+            var script = YarnRecordingScript.RowsOf(compilation, language, translation, clips);
+            var file = RecordingScriptFile(project, language);
+            if (await WriteAsync(file.ToOSPath(), YarnRecordingScript.Write(script)) is { } failure)
+            {
+                results.Add(new YarnRecordingScriptResult(language, null, 0, 0, 0, failure));
+                continue;
+            }
+
+            results.Add(new YarnRecordingScriptResult(language, file, script.Count, script.Count(r => r.Recorded), baseRows.Count - script.Count, null));
+        }
+
+        return results;
+    }
+
     private static async Task<bool> IsStringsFileAsync(string path)
     {
         try
@@ -343,16 +425,22 @@ public sealed class YarnLocalisationService
             .Select(l => (l.Language, File: l.Strings is { } file ? Absolute(project, file) : null))
             .ToList();
 
+        // The sounds are assets of the session, read on its thread
+        var voices = YarnVoiceClips.Find(project.AssetItem);
         return await Task.Run(() =>
         {
             var baseRows = YarnStringsCsv.RowsOf(compilation, baseLanguage);
-            var languages = new List<YarnLanguageStatus> { new(baseLanguage, true, null, false, new YarnStringsStatus(baseRows.Count, baseRows.Count, 0, 0), null) };
+            int VoicedIn(string language) => voices.Languages.FirstOrDefault(v => v.Language == language) is { } folder
+                ? baseRows.Count(r => folder.Clips.ContainsKey(YarnVoiceClips.NameOf(r.Id)))
+                : 0;
+
+            var languages = new List<YarnLanguageStatus> { new(baseLanguage, true, null, false, new YarnStringsStatus(baseRows.Count, baseRows.Count, 0, 0), null, VoicedIn(baseLanguage)) };
             foreach (var (language, file) in others)
             {
                 var none = new YarnStringsStatus(baseRows.Count, 0, 0, 0);
                 if (file is null)
                 {
-                    languages.Add(new YarnLanguageStatus(language, false, null, false, none, null));
+                    languages.Add(new YarnLanguageStatus(language, false, null, false, none, null, VoicedIn(language)));
                     continue;
                 }
 
@@ -360,12 +448,12 @@ public sealed class YarnLocalisationService
                 try
                 {
                     languages.Add(File.Exists(path)
-                        ? new YarnLanguageStatus(language, false, file, true, YarnStringsStatus.Of(baseRows, YarnStringsCsv.Read(File.ReadAllText(path))), null)
-                        : new YarnLanguageStatus(language, false, file, false, none, $"The file is not there: {path}"));
+                        ? new YarnLanguageStatus(language, false, file, true, YarnStringsStatus.Of(baseRows, YarnStringsCsv.Read(File.ReadAllText(path))), null, VoicedIn(language))
+                        : new YarnLanguageStatus(language, false, file, false, none, $"The file is not there: {path}", VoicedIn(language)));
                 }
                 catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException)
                 {
-                    languages.Add(new YarnLanguageStatus(language, false, file, true, none, exception.Message));
+                    languages.Add(new YarnLanguageStatus(language, false, file, true, none, exception.Message, VoicedIn(language)));
                 }
             }
 

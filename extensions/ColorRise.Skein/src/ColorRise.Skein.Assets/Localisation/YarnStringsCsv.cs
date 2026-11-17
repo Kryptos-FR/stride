@@ -164,11 +164,17 @@ public static class YarnStringsCsv
     // The tags of a line tell a translator about it; the id and what the compiler adds do not
     private static string CommentOf(string id, IReadOnlyList<string> metadata)
     {
-        var tags = metadata.Where(t => t != id && t != "lastline" && !t.StartsWith("line:", StringComparison.Ordinal) && !t.StartsWith("shadow:", StringComparison.Ordinal)).ToList();
+        var tags = TagsOf(id, metadata);
         return tags.Count > 0 ? $"Line metadata: {string.Join(' ', tags)}" : "";
     }
 
-    private static void WriteRecord(StringBuilder csv, IReadOnlyList<string> fields)
+    /// <summary>
+    /// The hashtags a writer gave a line: its metadata without its id and what the compiler adds.
+    /// </summary>
+    internal static List<string> TagsOf(string id, IReadOnlyList<string> metadata)
+        => [.. metadata.Where(t => t != id && t != "lastline" && !t.StartsWith("line:", StringComparison.Ordinal) && !t.StartsWith("shadow:", StringComparison.Ordinal))];
+
+    internal static void WriteRecord(StringBuilder csv, IReadOnlyList<string> fields)
     {
         for (var i = 0; i < fields.Count; i++)
         {

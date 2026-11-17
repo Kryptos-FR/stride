@@ -12,6 +12,8 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <!-- Stride's test kit for the view models of editor plugins: a session opened the way Game Studio opens one, without its windows -->
     <PackageReference Include="Stride.Assets.Editor.Testing" Version="$(SkeinStrideVersion)" />
+    <!-- Sounds, the voice-over clips of a project -->
+    <PackageReference Include="Stride.Audio.Assets" Version="$(SkeinStrideVersion)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ColorRise.Skein.Editor\ColorRise.Skein.Editor.csproj" />

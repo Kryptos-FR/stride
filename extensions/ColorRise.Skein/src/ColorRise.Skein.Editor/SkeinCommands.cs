@@ -40,6 +40,11 @@ public static class SkeinCommands
     public const string ExportStrings = "ColorRise.Skein.ExportStrings";
 
     /// <summary>
+    /// "Export recording script" on a Yarn project.
+    /// </summary>
+    public const string ExportRecordingScript = "ColorRise.Skein.ExportRecordingScript";
+
+    /// <summary>
     /// Brings the strings files of the selected project up to date with its scripts.
     /// </summary>
     public const string UpdateStrings = "ColorRise.Skein.UpdateStrings";
@@ -97,6 +102,7 @@ public static class SkeinCommands
         yield return OnProject(AddLineIds, "Add line ids", 10, ["yarn", "localisation", "translation", "tag"], editor => editor.AddLineIds());
         yield return OnProject(ExportStrings, "Export strings", 20, ["yarn", "localisation", "translation", "csv"], editor => editor.ExportMissingStrings());
         yield return OnProject(UpdateStrings, "Update strings files", 30, ["yarn", "localisation", "translation", "csv"], editor => editor.UpdateStrings());
+        yield return OnProject(ExportRecordingScript, "Export recording script", 40, ["yarn", "voice", "voice-over", "audio", "actor", "csv"], editor => editor.ExportRecordingScripts());
     }
 
     /// <summary>

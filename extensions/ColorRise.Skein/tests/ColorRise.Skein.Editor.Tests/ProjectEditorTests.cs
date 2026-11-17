@@ -4,6 +4,7 @@ using ColorRise.Skein.Assets.Localisation;
 using ColorRise.Skein.Editor.Services;
 using ColorRise.Skein.Editor.Text;
 using ColorRise.Skein.Editor.ViewModels;
+using Stride.Audio.Assets;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.Testing;
@@ -19,16 +20,21 @@ public sealed class ProjectEditorTests
     private const string Act1 = "title: Arrival\n---\n/// The purse\n<<declare $gold = 5 as number>>\nNarrator: Here. #line:here\nNarrator: No id.\n-> Go on\n    <<jump Pier>>\n===\ntitle: Pier\n---\nNarrator: The pier.\n===\n";
     private const string Act2 = "title: Lighthouse\n---\n<<set $lit = true>>\nKeeper: Up. #line:up\n<<jump Nowhere>>\n===\n";
 
-    private static async DispatcherTask<SkeinSession> OpenAsync(params string[] languages)
+    private static async DispatcherTask<SkeinSession> OpenAsync(params string[] languages) => await OpenAsync(languages, []);
+
+    private static async DispatcherTask<SkeinSession> OpenAsync(string[] languages, string[] sounds)
     {
         var project = new YarnProjectAssetFactory().New();
         project.Localisations.AddRange(languages.Select(l => new YarnLocalisation { Language = l }));
         var (dialogs, _) = ExternalChangeTests.Dialogs.Answering(1);
         return await SkeinSession.OpenAsync(
             [dialogs, DispatchProxy.Create<IProgressWindowService, Silent>()],
-            ("Dialogue/Story", project),
-            SkeinSession.Script("Dialogue/Act1", Act1),
-            SkeinSession.Script("Dialogue/Act2", Act2));
+            [
+                ("Dialogue/Story", project),
+                SkeinSession.Script("Dialogue/Act1", Act1),
+                SkeinSession.Script("Dialogue/Act2", Act2),
+                .. sounds.Select(s => (s, (Asset)new SoundAsset())),
+            ]);
     }
 
     [Fact]
@@ -215,6 +221,33 @@ public sealed class ProjectEditorTests
         await editor.UpdateStrings();
         Assert.StartsWith("The scripts have errors: fix them first, so that no translation is lost. Dialogue/Act1.yarn(", editor.Message);
         Assert.Equal(before, File.ReadAllText(file));
+    }
+
+    [Fact]
+    public async Task The_overview_counts_the_voiced_lines_and_writes_a_recording_script_per_language()
+    {
+        await using var session = await OpenAsync(["fr"], ["Dialogue/Voice/en/here", "Dialogue/Voice/en/Pier/stray"]);
+        var editor = session.EditProject("Dialogue/Story");
+        var folder = Path.GetDirectoryName(session.FileOf("Dialogue/Story", ".sdyarn"))!;
+        await editor.WhenRefreshed();
+        Assert.Equal([("en", 2, 1), ("fr", 2, 0)], editor.Languages.Select(l => (l.Language, l.Lines, l.Voiced)));
+
+        // A language without a translation has nothing for the actors yet
+        await editor.ExportRecordingScripts();
+        Assert.Equal("en: Recording/Story.en.csv, 2 lines, 1 recorded.\nfr: 'fr' has no strings file yet: export its strings and translate them first.", editor.Message);
+        Assert.Equal(
+            "file,id,character,text,node,previous,tags,recorded\n"
+            + "here.wav,line:here,Narrator,Here.,Arrival,,,yes\n"
+            + "up.wav,line:up,Keeper,Up.,Lighthouse,,,\n",
+            File.ReadAllText(Path.Combine(folder, "Recording", "Story.en.csv")).ReplaceLineEndings("\n"));
+
+        // A line with a text in the language is in its script, and a line without one waits for its translation
+        await editor.ExportStrings("fr");
+        var strings = Path.Combine(folder, "Strings", "Story.fr.csv");
+        File.WriteAllText(strings, File.ReadAllText(strings).Replace("Keeper: Up.", "Gardien : En haut.").Replace("Narrator: Here.", ""));
+        await editor.ExportRecordingScripts();
+        Assert.EndsWith("fr: Recording/Story.fr.csv, 1 line, 0 recorded; 1 line without a translation left out.", editor.Message);
+        Assert.Contains("up.wav,line:up,Gardien,En haut.,Lighthouse,,,", File.ReadAllText(Path.Combine(folder, "Recording", "Story.fr.csv")));
     }
 
     [Fact]

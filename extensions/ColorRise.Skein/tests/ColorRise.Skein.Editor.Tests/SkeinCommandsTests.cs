@@ -76,16 +76,16 @@ public sealed class SkeinCommandsTests
         var commands = SkeinCommands.Create().ToList();
 
         Assert.Equal(
-            ["ColorRise.Skein.PlayFromHere", "ColorRise.Skein.PlayProject", "ColorRise.Skein.OpenDialoguePlayer", "ColorRise.Skein.AddLineIds", "ColorRise.Skein.ExportStrings", "ColorRise.Skein.UpdateStrings"],
+            ["ColorRise.Skein.PlayFromHere", "ColorRise.Skein.PlayProject", "ColorRise.Skein.OpenDialoguePlayer", "ColorRise.Skein.AddLineIds", "ColorRise.Skein.ExportStrings", "ColorRise.Skein.UpdateStrings", "ColorRise.Skein.ExportRecordingScript"],
             commands.Select(c => c.Id));
         Assert.All(commands, c => Assert.Equal(("Dialogue", true), (c.Category, c.ShowInPalette)));
         Assert.Equal(
-            ["Play from here", "Play dialogue", "Open dialogue player", "Add line ids", "Export strings", "Update strings files"],
+            ["Play from here", "Play dialogue", "Open dialogue player", "Add line ids", "Export strings", "Update strings files", "Export recording script"],
             commands.Select(c => c.Title()));
 
         // The asset view's menu shows what acts on a project; the graph's own menu binds "Play from here" by its id
         Assert.Equal(
-            [SkeinCommands.PlayProject, SkeinCommands.AddLineIds, SkeinCommands.ExportStrings, SkeinCommands.UpdateStrings],
+            [SkeinCommands.PlayProject, SkeinCommands.AddLineIds, SkeinCommands.ExportStrings, SkeinCommands.UpdateStrings, SkeinCommands.ExportRecordingScript],
             commands.Where(c => c.GetPlacement(CommandLocations.AssetViewContext) is not null).Select(c => c.Id));
         var playFromHere = commands[0];
         Assert.Empty(playFromHere.Placements);

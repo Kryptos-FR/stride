@@ -82,9 +82,10 @@ public sealed record YarnProjectActionItem(string Name, string Usage, string Des
 /// <param name="Translated">The lines with a translation made from the text the scripts have now.</param>
 /// <param name="ToUpdate">The lines whose translation was made from a text that changed since.</param>
 /// <param name="Missing">The lines without a translation.</param>
+/// <param name="Voiced">The lines that have a voice-over clip in the language.</param>
 /// <param name="Problem">Why the strings file could not be read, or null.</param>
 /// <param name="CanExport">Whether "Export strings" writes a file for the language: it never writes over translations.</param>
-public sealed record YarnProjectLanguageItem(string Language, bool IsBase, string File, int Lines, int Translated, int ToUpdate, int Missing, string? Problem, bool CanExport);
+public sealed record YarnProjectLanguageItem(string Language, bool IsBase, string File, int Lines, int Translated, int ToUpdate, int Missing, int Voiced, string? Problem, bool CanExport);
 
 /// <summary>
 /// The overview of a Yarn project: its scripts, its variables, what the compiler says of it, and its languages with the
@@ -123,6 +124,7 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
         AddLineIdsCommand = new AnonymousTaskCommand(ServiceProvider, AddLineIds);
         ExportStringsCommand = new AnonymousTaskCommand<string>(ServiceProvider, ExportStrings);
         UpdateStringsCommand = new AnonymousTaskCommand(ServiceProvider, UpdateStrings);
+        ExportRecordingScriptsCommand = new AnonymousTaskCommand(ServiceProvider, ExportRecordingScripts);
         RefreshCommand = new AnonymousCommand(ServiceProvider, RefreshLanguages);
         GoToCommand = new AnonymousTaskCommand<object>(ServiceProvider, GoTo);
     }
@@ -208,6 +210,11 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
     /// Brings the strings files of the languages up to date with the scripts.
     /// </summary>
     public ICommandBase UpdateStringsCommand { get; }
+
+    /// <summary>
+    /// Writes the recording script of each language, for the actors.
+    /// </summary>
+    public ICommandBase ExportRecordingScriptsCommand { get; }
 
     /// <summary>
     /// Reads the strings files again: a translator changes them outside Game Studio.
@@ -309,6 +316,19 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
             : string.Join("\n", results.Select(r => r.Problem ?? (r.Update is { Changed: true } update
                 ? $"{r.Language}: {update.Added} added, {update.Removed} removed, {update.NeedsUpdate} to update."
                 : $"{r.Language}: up to date.")));
+    });
+
+    /// <summary>
+    /// Writes the recording script of each language of the project.
+    /// </summary>
+    public Task ExportRecordingScripts() => Run(async service =>
+        {
+            var folder = Asset.AssetItem.FullPath.GetFullDirectory();
+            var results = await service.ExportRecordingScripts(Asset);
+            return string.Join("\n", results.Select(r => r.Problem is { } problem
+                ? $"{r.Language}: {problem}"
+                : $"{r.Language}: {r.File!.MakeRelative(folder)}, {Count(r.Rows, "line")}, {r.Recorded} recorded"
+                    + (r.Untranslated > 0 ? $"; {Count(r.Untranslated, "line")} without a translation left out." : ".")));
     });
 
     /// <summary>
@@ -431,6 +451,7 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
             l.Status.Translated,
             l.Status.ToUpdate,
             l.Status.Missing,
+            l.Voiced,
             l.Problem,
             l.IsBase || !l.Exists))];
     }

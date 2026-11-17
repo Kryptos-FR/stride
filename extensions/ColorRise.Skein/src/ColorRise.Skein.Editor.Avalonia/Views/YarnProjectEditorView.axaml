@@ -176,8 +176,10 @@
                   ToolTip.Tip="{sd:LocalizeString Give a #line: id to each line that has none: a line needs one to be translated, Context=ToolTip}"/>
           <Button x:Name="UpdateStringsButton" Content="{sd:LocalizeString Update strings files, Context=Button}" Command="{Binding UpdateStringsCommand}"
                   ToolTip.Tip="{sd:LocalizeString Bring the strings file of each language up to date with the scripts: new lines are added\, lines that are gone are removed\, and the translations of lines that changed are marked, Context=ToolTip}"/>
+          <Button x:Name="ExportRecordingScriptButton" Content="{sd:LocalizeString Export recording script, Context=Button}" Command="{Binding ExportRecordingScriptsCommand}"
+                  ToolTip.Tip="{sd:LocalizeString Write a CSV file per language for the actors: the file name of each clip\, who says the line\, its text and the line before it, Context=ToolTip}"/>
           <Button Content="{sd:LocalizeString Read the files again, Context=Button}" Command="{Binding RefreshCommand}"
-                  ToolTip.Tip="{sd:LocalizeString Count again what the strings files hold\, after a translator changed them, Context=ToolTip}"/>
+                  ToolTip.Tip="{sd:LocalizeString Count again what the strings files and the voice-over folders hold\, after a translator or a studio changed them, Context=ToolTip}"/>
           <TextBlock VerticalAlignment="Center" Margin="8,0,0,0" Text="{Binding LineIdNotice}"/>
         </StackPanel>
         <Grid Classes="header">
@@ -187,6 +189,7 @@
             <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageTranslated" MinWidth="80"/>
             <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageToUpdate" MinWidth="80"/>
             <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageMissing" MinWidth="80"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageVoiced" MinWidth="80"/>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageExport"/>
           </Grid.ColumnDefinitions>
@@ -195,7 +198,9 @@
           <TextBlock Grid.Column="2" Classes="column number" Text="{sd:LocalizeString Translated, Context=Column}"/>
           <TextBlock Grid.Column="3" Classes="column number" Text="{sd:LocalizeString To update, Context=Column}"/>
           <TextBlock Grid.Column="4" Classes="column number" Text="{sd:LocalizeString Missing, Context=Column}"/>
-          <TextBlock Grid.Column="5" Classes="column" Margin="18,0,0,0" Text="{sd:LocalizeString Strings file, Context=Column}"/>
+          <TextBlock Grid.Column="5" Classes="column number" Text="{sd:LocalizeString Voiced, Context=Column}"
+                     ToolTip.Tip="{sd:LocalizeString The lines that have a voice-over clip in the language\, in the voice-over folder of the project, Context=ToolTip}"/>
+          <TextBlock Grid.Column="6" Classes="column" Margin="18,0,0,0" Text="{sd:LocalizeString Strings file, Context=Column}"/>
         </Grid>
         <ItemsControl x:Name="LanguageList" ItemsSource="{Binding Languages}">
           <ItemsControl.ItemTemplate>
@@ -207,6 +212,7 @@
                   <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageTranslated"/>
                   <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageToUpdate"/>
                   <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageMissing"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageVoiced"/>
                   <ColumnDefinition Width="*"/>
                   <ColumnDefinition Width="Auto" SharedSizeGroup="LanguageExport"/>
                 </Grid.ColumnDefinitions>
@@ -218,11 +224,12 @@
                 <TextBlock Grid.Column="2" Classes="number" VerticalAlignment="Center" Text="{Binding Translated}"/>
                 <TextBlock Grid.Column="3" Classes="number" VerticalAlignment="Center" Text="{Binding ToUpdate}"/>
                 <TextBlock Grid.Column="4" Classes="number" VerticalAlignment="Center" Text="{Binding Missing}"/>
-                <StackPanel Grid.Column="5" Margin="18,0,12,0" VerticalAlignment="Center">
+                <TextBlock Grid.Column="5" Classes="number" VerticalAlignment="Center" Text="{Binding Voiced}"/>
+                <StackPanel Grid.Column="6" Margin="18,0,12,0" VerticalAlignment="Center">
                   <TextBlock Classes="faint" Text="{Binding File}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding File}"/>
                   <TextBlock Foreground="#FFE5534B" Text="{Binding Problem}" TextWrapping="Wrap" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                 </StackPanel>
-                <Button Grid.Column="6" Padding="8,2" Content="{sd:LocalizeString Export strings, Context=Button}" IsVisible="{Binding CanExport}" Click="OnExportClick"
+                <Button Grid.Column="7" Padding="8,2" Content="{sd:LocalizeString Export strings, Context=Button}" IsVisible="{Binding CanExport}" Click="OnExportClick"
                         ToolTip.Tip="{sd:LocalizeString Write the strings file of this language: the lines that have an id\, in the base language\, to translate in place, Context=ToolTip}"/>
               </Grid>
             </DataTemplate>

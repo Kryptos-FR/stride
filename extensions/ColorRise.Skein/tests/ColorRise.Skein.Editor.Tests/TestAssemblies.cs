@@ -21,5 +21,9 @@ internal static class TestAssemblies
     {
         AssemblyRegistry.Register(typeof(SkeinEditorPlugin).Assembly, AssemblyCommonCategories.Assets);
         AssemblyRegistry.Register(typeof(YarnScriptAsset).Assembly, AssemblyCommonCategories.Assets);
+
+        // Sounds, the voice-over clips of a project, and the type of their content
+        AssemblyRegistry.Register(typeof(Stride.Audio.Assets.SoundAsset).Assembly, AssemblyCommonCategories.Assets);
+        AssemblyRegistry.Register(typeof(Stride.Audio.Sound).Assembly, AssemblyCommonCategories.Assets);
     }
 }
