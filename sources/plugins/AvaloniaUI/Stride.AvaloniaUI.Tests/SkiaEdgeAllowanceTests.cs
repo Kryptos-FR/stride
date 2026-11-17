@@ -44,6 +44,7 @@ public sealed class SkiaEdgeAllowanceTests : GameTestBase
     public void SkiaOnTheGpuStaysWithinTheAllowance(string name)
     {
         Skip.IfNot(GraphicsDevice.Platform == GraphicsPlatform.Vulkan, $"Skia renders on the GPU with Vulkan only, and this game runs on {GraphicsDevice.Platform}.");
+        MacOS.SkipSkiaOnTheGpu();
         TestAvalonia.Run(() =>
         {
             var isPage = ReferenceViews.Pages.Contains(name);

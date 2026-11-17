@@ -136,9 +136,10 @@ public class SkiaFallbackCanvasTests
         canvas.Draw(commands);
     });
 
-    [Fact]
+    [SkippableFact]
     public void RenderTargetBitmapDrawsAtItsDpiAsSkiaDoes() => TestAvalonia.Run(() =>
     {
+        MacOS.SkipRenderTargetFormat();
         var channel = SkiaOracle.CreateChannel();
         var size = new PixelSize(80, 60);
         var dpi = new Vector(192, 192);
