@@ -31,6 +31,9 @@
       <Setter Property="Background" Value="#FF45454A"/>
       <Setter Property="CornerRadius" Value="12"/>
     </Style>
+    <Style Selector="sd|NodeGraphNode.computed">
+      <Setter Property="Background" Value="#FF3B4656"/>
+    </Style>
     <Style Selector="sd|NodeGraphNode.broken">
       <Setter Property="Background" Value="#FF5A2F2F"/>
       <Setter Property="BorderBrush" Value="#FFE5534B"/>
@@ -69,6 +72,8 @@
                PlaceholderText="{sd:LocalizeString Search titles\, headers and text, Context=Placeholder}"/>
       <ToggleButton DockPanel.Dock="Right" Classes="tool" Content="{sd:LocalizeString Whole file, Context=Button}" IsChecked="{Binding ShowWholeFile}"
                     ToolTip.Tip="{sd:LocalizeString Show the text of the whole file instead of the selected nodes, Context=ToolTip}"/>
+      <ToggleButton DockPanel.Dock="Right" Classes="tool" Content="{sd:LocalizeString Fold cards, Context=Button}" IsChecked="{Binding FoldCards}"
+                    ToolTip.Tip="{sd:LocalizeString Fold every card to its first lines and the rows its links leave from, Context=ToolTip}"/>
     </DockPanel>
 
     <!-- Where the script stands among the Yarn projects -->

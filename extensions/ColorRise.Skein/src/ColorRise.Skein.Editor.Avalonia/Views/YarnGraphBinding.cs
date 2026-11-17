@@ -116,9 +116,10 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
     private static Point ToPoint(YarnGraphPoint position) => new(position.X, position.Y);
 
     // A link dragged from an output of a card to the input of a card or of a stub; a link that is there cannot be moved
+    // A link from a row goes under the row
     private static YarnLinkRequest? ToRequest(object? parameter)
         => parameter is NodeGraphLinkRequest { SourceSlot: YarnCardSlot { IsInput: false, Card: YarnNodeCardViewModel source } from, TargetSlot: YarnCardSlot { IsInput: true } to, ReplacedLink: null }
-            ? new YarnLinkRequest(source, to.Card, ReferenceEquals(from, source.DetourSlot))
+            ? new YarnLinkRequest(source, to.Card, ReferenceEquals(from, source.DetourSlot), from.Row)
             : null;
 
     private void OnNodesChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -178,6 +179,7 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
         container.Classes.Set("visited", card?.PlayMark == YarnPlayMark.Visited);
         container.Classes.Set("stub", stub is not null);
         container.Classes.Set("broken", stub?.IsBroken == true);
+        container.Classes.Set("computed", stub?.IsComputed == true);
     }
 
     private void OnNodesMoved(object? sender, NodeGraphNodesMovedEventArgs e)

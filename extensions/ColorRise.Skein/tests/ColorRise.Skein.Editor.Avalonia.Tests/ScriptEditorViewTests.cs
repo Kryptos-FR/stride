@@ -254,4 +254,82 @@ public sealed class ScriptEditorViewTests
         Assert.Contains("filtered", view.View.NodeGraph.ContainerFromNode(editor.Cards[0])!.Classes);
         Assert.DoesNotContain("filtered", view.View.NodeGraph.ContainerFromNode(editor.Cards[1])!.Classes);
     }
+
+    [AvaloniaFact]
+    public void A_line_is_edited_in_a_box_on_its_card()
+    {
+        using var view = Open();
+        var (editor, graph, window) = (view.Editor, view.View.NodeGraph, view.Window);
+        var pier = editor.Cards[1];
+        var container = graph.ContainerFromNode(pier)!;
+        Control RowOf(YarnCardRowViewModel row) => container.GetVisualDescendants().OfType<Grid>().First(g => ReferenceEquals(g.DataContext, row));
+        Point Middle(Control control) => control.TranslatePoint(new Point(40, control.Bounds.Height / 2), window)!.Value;
+
+        // The rows show, and the options have the connectors their links leave from
+        Assert.Equal(4, pier.Rows.Count);
+        Assert.All(pier.Rows, r => Assert.True(RowOf(r).IsVisible));
+        var connectors = container.GetVisualDescendants().OfType<NodeGraphConnector>().Where(c => c.IsEffectivelyVisible).ToList();
+        Assert.Contains(connectors, c => ReferenceEquals(c.Slot, pier.Rows[1].OutSlot));
+        Assert.Contains(connectors, c => ReferenceEquals(c.Slot, pier.Rows[3].OutSlot));
+        Assert.DoesNotContain(connectors, c => ReferenceEquals(c.Slot, pier.Rows[0].OutSlot));
+
+        // A double click opens the box over the line, with the line as written
+        var line = Middle(RowOf(pier.Rows[0]));
+        view.Do(() =>
+        {
+            window.MouseDown(line, MouseButton.Left);
+            window.MouseUp(line, MouseButton.Left);
+            window.MouseDown(line, MouseButton.Left);
+            window.MouseUp(line, MouseButton.Left);
+        });
+        Assert.True(pier.Rows[0].IsEditing);
+        var box = RowOf(pier.Rows[0]).GetVisualDescendants().OfType<TextBox>().Single();
+        Assert.True(box.IsVisible);
+        Assert.True(box.IsFocused);
+        Assert.Equal("Fisher: Mind the nets.", box.Text);
+
+        // Enter writes it, as one step
+        view.Do(() =>
+        {
+            box.Text = "Fisher: Mind the boats.";
+            window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        });
+        Assert.False(pier.Rows[0].IsEditing);
+        Assert.Contains("Fisher: Mind the boats.\n-> Ask about the oil", editor.TextBuffer.Text);
+        Assert.Equal("Edit line", view.Session.Steps[^1]);
+
+        // Escape closes a box without writing it
+        view.Do(() => editor.BeginEdit(pier.Rows[2]));
+        view.Do(() =>
+        {
+            box = RowOf(pier.Rows[2]).GetVisualDescendants().OfType<TextBox>().Single();
+            box.Text = "Fisher: Something else.";
+            window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+        });
+        Assert.False(pier.Rows[2].IsEditing);
+        Assert.Contains("Fisher: None left.", editor.TextBuffer.Text);
+
+        // A click on the row that adds a line opens its box with the speaker of the last line; typing goes in it
+        var add = container.GetVisualDescendants().OfType<Panel>().First(p => ReferenceEquals(p.DataContext, pier.AddRow));
+        var addAt = Middle(add);
+        view.Do(() =>
+        {
+            window.MouseDown(addAt, MouseButton.Left);
+            window.MouseUp(addAt, MouseButton.Left);
+        });
+        Assert.True(pier.AddRow.IsEditing);
+        view.Do(() =>
+        {
+            window.KeyTextInput("Off you go.");
+            window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        });
+        Assert.Contains("-> Leave\nFisher: Off you go.\n===\n", editor.TextBuffer.Text);
+        Assert.Equal("Add line", view.Session.Steps[^1]);
+
+        // A folded card shows its preview and the rows links leave from
+        view.Do(() => pier.IsFolded = true);
+        Assert.False(RowOf(pier.Rows[0]).IsVisible);
+        Assert.True(RowOf(pier.Rows[1]).IsVisible);
+        Assert.False(add.IsEffectivelyVisible);
+    }
 }

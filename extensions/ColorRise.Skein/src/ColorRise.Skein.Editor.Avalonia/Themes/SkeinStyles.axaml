@@ -13,13 +13,51 @@
   <SolidColorBrush x:Key="SkeinErrorBrush" Color="#FFE5534B"/>
   <SolidColorBrush x:Key="SkeinChipBrush" Color="#40FFFFFF"/>
 
-  <!-- The card of a node: the title on the node's colour with the input, then what the node holds, then the outputs:
-       a detour comes back, a jump does not -->
+  <!-- A row of a card: a line or an option, edited in place (its box opens on a double click), or a command or a
+       block, shown in grey (a double click shows it in the text). The rows links leave from have a connector on the
+       right; a folded card shows only these. -->
+  <DataTemplate x:Key="SkeinRowTemplate" x:DataType="graph:YarnCardRowViewModel">
+    <Grid ColumnDefinitions="*,Auto" MinHeight="17" Background="Transparent" views:YarnRowEditing.Opens="DoubleClick"
+          IsVisible="{sd:MultiBinding {Binding !Card.IsFolded}, {Binding HasConnector}, Converter={sd:OrMulti}}">
+      <Panel Grid.Column="0" Margin="{Binding Depth, Converter={x:Static views:YarnConverters.Indent}}">
+        <TextBlock Foreground="{StaticResource SkeinCardText}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
+                   IsVisible="{sd:MultiBinding {Binding IsEditable}, {Binding !IsEditing}, Converter={sd:AndMulti}}"
+                   ToolTip.Tip="{sd:LocalizeString Double-click to edit, Context=ToolTip}">
+          <Run Text="{Binding Kind, Converter={x:Static views:YarnConverters.RowMark}}" Foreground="{StaticResource SkeinCardFaintText}"/><Run
+               Text="{Binding Speaker, Converter={x:Static views:YarnConverters.SpeakerLabel}}" Foreground="{StaticResource SkeinSpeakerText}" FontWeight="SemiBold"/><Run
+               Text="{Binding Display}"/><Run
+               Text="{Binding Condition, Converter={x:Static views:YarnConverters.ConditionLabel}}" Foreground="{StaticResource SkeinWhenText}" FontStyle="Italic" FontSize="11"/>
+        </TextBlock>
+        <TextBlock FontSize="11" FontStyle="Italic" Foreground="{StaticResource SkeinCardFaintText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                   Text="{Binding Display}" IsVisible="{Binding !IsEditable}"
+                   ToolTip.Tip="{sd:LocalizeString Double-click to show it in the text, Context=ToolTip}"/>
+        <TextBox Text="{Binding EditText}" IsVisible="{Binding IsEditing}" views:YarnRowEditing.IsEditBox="True"
+                 MinHeight="0" Padding="3,1" FontSize="12" AcceptsReturn="False"/>
+      </Panel>
+      <sd:NodeGraphConnector Grid.Column="1" Margin="3,1,1,0" VerticalAlignment="Top" Slot="{Binding OutSlot}" Direction="Output"
+                             IsVisible="{Binding HasConnector}"
+                             ToolTip.Tip="{sd:LocalizeString Drag to a node to add a jump under this option or branch, Context=ToolTip}"/>
+    </Grid>
+  </DataTemplate>
+
+  <!-- The row that adds a line at the end of a node: a click opens its box, with the speaker of the last line -->
+  <DataTemplate x:Key="SkeinAddRowTemplate" x:DataType="graph:YarnCardRowViewModel">
+    <Panel Margin="0,1,8,0" Background="Transparent" views:YarnRowEditing.Opens="Click">
+      <TextBlock FontSize="11" Foreground="{StaticResource SkeinCardFaintText}" Text="{sd:LocalizeString + line, Context=Button}" IsVisible="{Binding !IsEditing}"
+                 ToolTip.Tip="{sd:LocalizeString Add a line at the end of the node, Context=ToolTip}"/>
+      <TextBox Text="{Binding EditText}" IsVisible="{Binding IsEditing}" views:YarnRowEditing.IsEditBox="True"
+               MinHeight="0" Padding="3,1" FontSize="12" AcceptsReturn="False"/>
+    </Panel>
+  </DataTemplate>
+
+  <!-- The card of a node: the title on the node's colour with the input, then its rows (or, folded, its preview and
+       the rows links leave from), then the outputs of the jumps at the top of the node: a detour comes back, a jump
+       does not -->
   <DataTemplate x:Key="SkeinCardTemplate" x:DataType="graph:YarnNodeCardViewModel">
     <StackPanel Width="240">
-      <Border CornerRadius="2,2,0,0" Padding="2,3,6,3"
+      <Border CornerRadius="2,2,0,0" Padding="2,3,2,3"
               Background="{sd:MultiBinding {Binding Color}, {Binding IsNote}, Converter={x:Static views:YarnConverters.HeaderBrush}}">
-        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
           <sd:NodeGraphConnector Grid.Column="0" Margin="1,0,4,0" Slot="{Binding InSlot}" Direction="Input"/>
           <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="Bold" Foreground="{StaticResource SkeinCardTitleText}"
                      TextTrimming="CharacterEllipsis" Text="{Binding Title}" ToolTip.Tip="{Binding Title}"/>
@@ -35,10 +73,14 @@
                   ToolTip.Tip="{sd:LocalizeString This node has errors, Context=ToolTip}">
             <TextBlock Text="!" FontSize="11" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
+          <ToggleButton Grid.Column="4" Margin="4,0,0,0" Padding="4,0" MinHeight="0" VerticalAlignment="Center" Focusable="False"
+                        Background="Transparent" BorderThickness="0" Foreground="{StaticResource SkeinCardTitleText}"
+                        Content="{Binding IsFolded, Converter={x:Static views:YarnConverters.FoldGlyph}}" IsChecked="{Binding IsFolded}"
+                        ToolTip.Tip="{sd:LocalizeString Fold the card to its first lines\, or show all its lines, Context=ToolTip}"/>
         </Grid>
       </Border>
-      <StackPanel Margin="8,5,8,2" Spacing="3">
-        <ItemsControl ItemsSource="{Binding When}" IsVisible="{Binding !!When.Count}">
+      <StackPanel Margin="8,5,0,2" Spacing="1">
+        <ItemsControl Margin="0,0,8,0" ItemsSource="{Binding When}" IsVisible="{Binding !!When.Count}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="x:String">
               <TextBlock FontSize="11" FontStyle="Italic" Foreground="{StaticResource SkeinWhenText}" TextTrimming="CharacterEllipsis">
@@ -47,20 +89,15 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <TextBlock FontSize="11" Foreground="{StaticResource SkeinSpeakerText}" TextTrimming="CharacterEllipsis"
-                   Text="{Binding Speakers, Converter={x:Static views:YarnConverters.Join}}" IsVisible="{Binding !!Speakers.Count}"/>
-        <TextBlock Foreground="{StaticResource SkeinCardText}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
-                   Text="{Binding Preview}" IsVisible="{Binding Preview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-        <ItemsControl ItemsSource="{Binding Options}" IsVisible="{Binding !!Options.Count}" MaxHeight="70" ClipToBounds="True">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="x:String">
-              <TextBlock FontSize="11" Foreground="{StaticResource SkeinCardFaintText}" TextTrimming="CharacterEllipsis">
-                <Run Text="&#x2192;"/> <Run Text="{Binding}"/>
-              </TextBlock>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <WrapPanel Orientation="Horizontal">
+        <TextBlock Margin="0,0,8,0" FontSize="11" Foreground="{StaticResource SkeinSpeakerText}" TextTrimming="CharacterEllipsis"
+                   Text="{Binding Speakers, Converter={x:Static views:YarnConverters.Join}}"
+                   IsVisible="{sd:MultiBinding {Binding IsFolded}, {Binding !!Speakers.Count}, Converter={sd:AndMulti}}"/>
+        <TextBlock Margin="0,0,8,0" Foreground="{StaticResource SkeinCardText}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
+                   Text="{Binding Preview}"
+                   IsVisible="{sd:MultiBinding {Binding IsFolded}, {Binding Preview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}, Converter={sd:AndMulti}}"/>
+        <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource SkeinRowTemplate}"/>
+        <ContentControl Content="{Binding AddRow}" ContentTemplate="{StaticResource SkeinAddRowTemplate}" IsVisible="{Binding !IsFolded}"/>
+        <WrapPanel Margin="0,0,8,0" Orientation="Horizontal">
           <Border Margin="0,1,4,1" Padding="5,0" CornerRadius="7" Background="{Binding GroupValue, Converter={x:Static views:YarnConverters.ValueBrush}}"
                   IsVisible="{Binding GroupValue, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <TextBlock FontSize="10" Foreground="{StaticResource SkeinCardTitleText}" Text="{Binding GroupValue}"/>
@@ -83,14 +120,19 @@
           </ItemsControl>
         </WrapPanel>
       </StackPanel>
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,3" IsVisible="{Binding !IsNote}">
-        <TextBlock VerticalAlignment="Center" FontSize="10" Foreground="{StaticResource SkeinCardFaintText}" Text="{sd:LocalizeString detour, Context=Label}"/>
-        <sd:NodeGraphConnector Margin="3,0,8,0" Slot="{Binding DetourSlot}" Direction="Output"
-                               ToolTip.Tip="{sd:LocalizeString Drag to a node to add a detour: the dialogue goes there and comes back, Context=ToolTip}"/>
-        <TextBlock VerticalAlignment="Center" FontSize="10" Foreground="{StaticResource SkeinCardFaintText}" Text="{sd:LocalizeString jump, Context=Label}"/>
-        <sd:NodeGraphConnector Margin="3,0,1,0" Slot="{Binding OutSlot}" Direction="Output"
-                               ToolTip.Tip="{sd:LocalizeString Drag to a node to add a jump, Context=ToolTip}"/>
-      </StackPanel>
+      <DockPanel Margin="8,0,2,3" IsVisible="{Binding !IsNote}">
+        <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="10" Foreground="{StaticResource SkeinCardFaintText}"
+                   Text="{sd:LocalizeString ■ end, Context=Label}" IsVisible="{Binding IsEnd}"
+                   ToolTip.Tip="{sd:LocalizeString The dialogue ends in this node, Context=ToolTip}"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <TextBlock VerticalAlignment="Center" FontSize="10" Foreground="{StaticResource SkeinCardFaintText}" Text="{sd:LocalizeString detour, Context=Label}"/>
+          <sd:NodeGraphConnector Margin="3,0,8,0" Slot="{Binding DetourSlot}" Direction="Output"
+                                 ToolTip.Tip="{sd:LocalizeString Drag to a node to add a detour: the dialogue goes there and comes back, Context=ToolTip}"/>
+          <TextBlock VerticalAlignment="Center" FontSize="10" Foreground="{StaticResource SkeinCardFaintText}" Text="{sd:LocalizeString jump, Context=Label}"/>
+          <sd:NodeGraphConnector Margin="3,0,1,0" Slot="{Binding OutSlot}" Direction="Output"
+                                 ToolTip.Tip="{sd:LocalizeString Drag to a node to add a jump, Context=ToolTip}"/>
+        </StackPanel>
+      </DockPanel>
     </StackPanel>
   </DataTemplate>
 
@@ -104,6 +146,8 @@
                    IsVisible="{Binding !IsBroken}" ToolTip.Tip="{sd:LocalizeString Double-click to open this script, Context=ToolTip}"/>
         <TextBlock FontSize="10" Foreground="{StaticResource SkeinErrorBrush}" Text="{sd:LocalizeString no node of this title, Context=Label}"
                    IsVisible="{Binding IsBroken}"/>
+        <TextBlock FontSize="10" Foreground="{StaticResource SkeinCardFaintText}" Text="{sd:LocalizeString the node is known when it plays, Context=Label}"
+                   IsVisible="{Binding IsComputed}"/>
       </StackPanel>
     </Grid>
   </DataTemplate>
