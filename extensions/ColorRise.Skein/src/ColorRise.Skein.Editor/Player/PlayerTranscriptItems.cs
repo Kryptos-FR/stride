@@ -17,8 +17,14 @@ namespace ColorRise.Skein.Editor.Player;
 /// <param name="Changed">Whether the last replay made the step or made it differ.</param>
 /// <param name="Candidates">The candidates of a pick, with why each was or was not chosen.</param>
 /// <param name="SpeakerColor">The colour of the speaker, or null without one.</param>
-public sealed record PlayerTranscriptItem(int Step, PlayerStepKind Kind, string? Speaker, string Text, bool Changed, IReadOnlyList<PlayerCandidate> Candidates, Color3? SpeakerColor = null)
+/// <param name="VoiceOver">The URL of the voice-over clip of a line, or null.</param>
+public sealed record PlayerTranscriptItem(int Step, PlayerStepKind Kind, string? Speaker, string Text, bool Changed, IReadOnlyList<PlayerCandidate> Candidates, Color3? SpeakerColor = null, string? VoiceOver = null)
 {
+    /// <summary>
+    /// What the mark of a voiced line says.
+    /// </summary>
+    public string VoiceOverTip => $"Voice-over: {VoiceOver}. The game plays it; the dialogue player does not.";
+
     /// <summary>
     /// The transcript's item for a step, or null for a step the transcript does not show: the start, which the first
     /// node tells, and the options, which show as buttons while the run waits at them.
@@ -38,7 +44,7 @@ public sealed record PlayerTranscriptItem(int Step, PlayerStepKind Kind, string?
             PlayerStepKind.End => "The dialogue is over.",
             _ => step.Text,
         };
-        return text is null ? null : new PlayerTranscriptItem(index, step.Kind, step.Speaker, text, step.Changed, step.Candidates, step.Speaker is { } speaker ? characters?.Of(speaker) : null);
+        return text is null ? null : new PlayerTranscriptItem(index, step.Kind, step.Speaker, text, step.Changed, step.Candidates, step.Speaker is { } speaker ? characters?.Of(speaker) : null, step.VoiceOver);
     }
 }
 

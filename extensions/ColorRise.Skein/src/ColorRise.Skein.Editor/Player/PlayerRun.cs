@@ -77,6 +77,7 @@ internal sealed class PlayerRun : IDialogueResponder, IDialogueClock, IDisposabl
         {
             LineMetadata = content.LineMetadata,
             ShadowLines = content.ShadowLines,
+            VoiceTables = build.VoiceTableOf,
             Language = language,
         };
         session = new DialogueSession(build.Program, variables, lines, new YarnActionRegistry(), this, new DialogueSessionOptions
@@ -221,7 +222,7 @@ internal sealed class PlayerRun : IDialogueResponder, IDialogueClock, IDisposabl
 
     async ValueTask IDialogueResponder.HandleLineAsync(LocalizedLine line, LineCancellation cancellation)
     {
-        Steps.Add(NewStep(PlayerStepKind.Line, line.Text.Text, line.Id) with { Speaker = line.CharacterName, Body = line.TextWithoutCharacterName.Text });
+        Steps.Add(NewStep(PlayerStepKind.Line, line.Text.Text, line.Id) with { Speaker = line.CharacterName, Body = line.TextWithoutCharacterName.Text, VoiceOver = line.VoiceOver });
         await WaitAsync(PlayerStop.Line, cancellation.NextLine);
     }
 

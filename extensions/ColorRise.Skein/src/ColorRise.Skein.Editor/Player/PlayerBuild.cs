@@ -1,5 +1,6 @@
 using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Assets.Localisation;
+using ColorRise.Skein.Assets.Voice;
 using ColorRise.Skein.Editor.Services;
 using ColorRise.Skein.Editor.ViewModels;
 
@@ -31,6 +32,10 @@ internal sealed class PlayerBuild
         {
             titles.TryAdd(node.UniqueTitle, node.Title);
         }
+
+        // The clips of the project's folders as they are when the run starts
+        var (voices, _) = YarnVoiceTables.Make(project.Name, (IReadOnlyCollection<string>?)Analysis.Build.BaseStrings?.Strings.Keys ?? [], Content.ShadowLines, YarnVoiceClips.Find(project.AssetItem));
+        Voices = voices.ToDictionary(v => v.Language);
 
         Variables = [.. Compilation.Variables.Where(v => !v.IsInternal)];
         foreach (var function in Compilation.Functions)
@@ -86,6 +91,13 @@ internal sealed class PlayerBuild
             return null;
         }
     }
+
+    /// <summary>
+    /// The voice-over clips of a language, or null for a language without any.
+    /// </summary>
+    public YarnVoiceTable? VoiceTableOf(string language) => Voices.GetValueOrDefault(language);
+
+    private Dictionary<string, YarnVoiceTable> Voices { get; }
 
     /// <summary>
     /// The title of a node from its name in the program: the nodes of a group share a title.

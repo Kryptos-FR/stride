@@ -2,6 +2,8 @@ using ColorRise.Skein.Assets;
 using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Editor.Player;
 using ColorRise.Skein.Editor.Text;
+using Stride.Audio.Assets;
+using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Testing;
 
 namespace ColorRise.Skein.Editor.Tests.Player;
@@ -59,6 +61,32 @@ public sealed class DialoguePlayerTests
     {
         var buffer = session.ScriptAt("Dialogue/Act1").TextBuffer;
         buffer.Replace(buffer.Text.IndexOf(old, StringComparison.Ordinal), old.Length, text, YarnTextBuffer.TypingActionName);
+    }
+
+    [Fact]
+    public async Task A_line_with_a_clip_in_the_language_of_the_run_is_marked_voiced()
+    {
+        var project = new YarnProjectAssetFactory().New();
+        project.Localisations.Add(new YarnLocalisation { Language = "fr" });
+        await using var session = await SkeinSession.OpenAsync(
+            ("Dialogue/Story", project),
+            SkeinSession.Script("Dialogue/Act1", Lamp),
+            ("Dialogue/Voice/en/tide", (Asset)new SoundAsset()));
+        var player = session.Player;
+
+        await player.Start(session.ProjectAt("Dialogue/Story"), "Start");
+        await player.Continue();
+        // The test kit's session names its assets from the root of its package
+        Assert.Equal("/TestGame/Dialogue/Voice/en/tide", player.Steps[2].VoiceOver);
+        Assert.Null(player.Steps[3].VoiceOver);
+        var item = PlayerTranscriptItem.Of(player.Steps[2], 2);
+        Assert.Equal("/TestGame/Dialogue/Voice/en/tide", item?.VoiceOver);
+        Assert.Equal("Voice-over: /TestGame/Dialogue/Voice/en/tide. The game plays it; the dialogue player does not.", item?.VoiceOverTip);
+
+        // The French run has no French clip: its lines are not voiced
+        player.Language = "fr";
+        await player.Start(session.ProjectAt("Dialogue/Story"), "Start");
+        Assert.Null(player.Steps[2].VoiceOver);
     }
 
     [Fact]

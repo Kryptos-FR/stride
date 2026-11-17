@@ -115,7 +115,7 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="player:PlayerTranscriptItem">
                 <StackPanel Margin="0,2">
-                  <Grid ColumnDefinitions="9,Auto,Auto,*">
+                  <Grid ColumnDefinitions="9,Auto,Auto,*,Auto">
                     <Ellipse Grid.Column="0" Width="6" Height="6" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,6,0,0" Fill="{x:Static views:PlayBrushes.Changed}"
                              IsVisible="{Binding Changed}" ToolTip.Tip="{sd:LocalizeString New or different since the last replay, Context=ToolTip}"/>
                     <TextBlock Grid.Column="1" Classes="faint" Margin="0,0,5,0" Text="{Binding Kind, Converter={x:Static views:DialoguePlayerView.StepSign}}"
@@ -125,6 +125,11 @@
                                IsVisible="{Binding Speaker, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     <SelectableTextBlock Grid.Column="3" TextWrapping="Wrap" Text="{Binding Text}"
                                          Foreground="{Binding Kind, Converter={x:Static views:PlayBrushes.StepBrush}}"/>
+                    <!-- A line the game speaks: a loudspeaker -->
+                    <Path x:Name="VoiceOverMark" Grid.Column="4" Width="12" Height="11" Margin="6,3,0,0" VerticalAlignment="Top" Stretch="Uniform"
+                          Fill="{x:Static views:PlayBrushes.Speaker}" ToolTip.Tip="{Binding VoiceOverTip}"
+                          IsVisible="{Binding VoiceOver, Converter={x:Static ObjectConverters.IsNotNull}}"
+                          Data="M0,4 L3,4 L7,0 L7,12 L3,8 L0,8 Z M9,3 L10,2.2 C11.4,3.6 11.4,8.4 10,9.8 L9,9 C10,8 10,4 9,3 Z"/>
                   </Grid>
                   <!-- Why a pick chose what it chose: each candidate with its score, or the condition that ruled it out -->
                   <ItemsControl Margin="25,1,0,2" ItemsSource="{Binding Candidates}" IsVisible="{Binding !!Candidates.Count}">

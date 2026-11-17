@@ -138,6 +138,11 @@ public sealed record PlayerStep
     public string Body { get; init; } = "";
 
     /// <summary>
+    /// The URL of the voice-over clip of a line in the language of the run, or null.
+    /// </summary>
+    public string? VoiceOver { get; init; }
+
+    /// <summary>
     /// The options offered, for <see cref="PlayerStepKind.Options"/>.
     /// </summary>
     public IReadOnlyList<PlayerOption> Options { get; init; } = [];
