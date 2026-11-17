@@ -22,6 +22,8 @@
     <ProjectReference Include="../../engine/Stride.Assets/Stride.Assets.csproj" />
     <ProjectReference Include="../../tools/Stride.TextureConverter/Stride.TextureConverter.csproj" />
     <ProjectReference Include="../../core/Stride.Core.MicroThreading/Stride.Core.MicroThreading.csproj" />
+    <!-- The play session reads the agent's snapshots with its codec -->
+    <ProjectReference Include="../../engine/Stride.PlayMode.Agent/Stride.PlayMode.Agent.csproj" />
   </ItemGroup>
 
   <!-- Resources -->

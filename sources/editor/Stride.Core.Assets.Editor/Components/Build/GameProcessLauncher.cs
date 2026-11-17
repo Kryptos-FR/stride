@@ -20,7 +20,20 @@ public sealed class GameProcessLauncher : IGameLauncher
         ArgumentNullException.ThrowIfNull(assemblyPath);
         ArgumentNullException.ThrowIfNull(output);
 
-        var startInfo = CreateStartInfo(assemblyPath);
+        return new GameProcess(StartProcess(CreateStartInfo(assemblyPath), output));
+    }
+
+    /// <summary>
+    /// Starts a game's process with its console output sent to a logger, as <see cref="Start"/> does.
+    /// </summary>
+    /// <param name="startInfo">The start line, from <see cref="CreateStartInfo"/>, with any variables the caller adds.</param>
+    /// <param name="output">The logger that receives what the game writes to its standard output (info) and error (errors).</param>
+    /// <returns>The started process; the caller disposes it.</returns>
+    public static Process StartProcess(ProcessStartInfo startInfo, ILogger output)
+    {
+        ArgumentNullException.ThrowIfNull(startInfo);
+        ArgumentNullException.ThrowIfNull(output);
+
         startInfo.RedirectStandardOutput = true;
         startInfo.RedirectStandardError = true;
         var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
@@ -43,7 +56,7 @@ public sealed class GameProcessLauncher : IGameLauncher
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-        return new GameProcess(process);
+        return process;
     }
 
     /// <summary>
