@@ -2,6 +2,7 @@
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Stride.Core.Diagnostics;
 
 namespace Stride.Core.Assets.Editor.Components.Build;
@@ -29,6 +30,7 @@ public sealed class GameProcessLauncher : IGameLauncher
     /// <param name="startInfo">The start line, from <see cref="CreateStartInfo"/>, with any variables the caller adds.</param>
     /// <param name="output">The logger that receives what the game writes to its standard output (info) and error (errors).</param>
     /// <returns>The started process; the caller disposes it.</returns>
+    [Experimental("STREXP012")]
     public static Process StartProcess(ProcessStartInfo startInfo, ILogger output)
     {
         ArgumentNullException.ThrowIfNull(startInfo);

@@ -35,14 +35,13 @@ public sealed class PlayTreeTracker : IDisposable
     private readonly Dictionary<Entity, int> addedThisFrame = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Scene, int> scenesAddedThisFrame = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Entity, (int Handle, int Index)> removedThisFrame = new(ReferenceEqualityComparer.Instance);
-    private SceneInstance? instance;
     private Scene? rootScene;
     private int nextHandle = 1;
 
     /// <summary>
     /// The scene instance followed, or <c>null</c> before the first <see cref="Update"/> with one.
     /// </summary>
-    public SceneInstance? SceneInstance => instance;
+    public SceneInstance? SceneInstance { get; private set; }
 
     /// <summary>
     /// The number of operations dropped by coalescing since the start (an entity added and removed in the same frame, a
@@ -68,7 +67,7 @@ public sealed class PlayTreeTracker : IDisposable
     /// (<see cref="BuildTree"/>), and the pending changes were dropped.</returns>
     public bool Update(SceneInstance? sceneInstance)
     {
-        if (ReferenceEquals(sceneInstance, instance) && ReferenceEquals(sceneInstance?.RootScene, rootScene))
+        if (ReferenceEquals(sceneInstance, SceneInstance) && ReferenceEquals(sceneInstance?.RootScene, rootScene))
             return false;
         Attach(sceneInstance);
         return true;
@@ -197,12 +196,12 @@ public sealed class PlayTreeTracker : IDisposable
 
     private void Attach(SceneInstance? sceneInstance)
     {
-        if (instance is not null)
+        if (SceneInstance is { } previous)
         {
-            instance.EntityAdded -= OnEntityAdded;
-            instance.EntityRemoved -= OnEntityRemoved;
-            instance.HierarchyChanged -= OnHierarchyChanged;
-            instance.ComponentChanged -= OnComponentChanged;
+            previous.EntityAdded -= OnEntityAdded;
+            previous.EntityRemoved -= OnEntityRemoved;
+            previous.HierarchyChanged -= OnHierarchyChanged;
+            previous.ComponentChanged -= OnComponentChanged;
         }
         foreach (var scene in sceneHandles.Keys)
             scene.Children.CollectionChanged -= OnSceneChildrenChanged;
@@ -217,7 +216,7 @@ public sealed class PlayTreeTracker : IDisposable
         scenesAddedThisFrame.Clear();
         removedThisFrame.Clear();
 
-        instance = sceneInstance;
+        SceneInstance = sceneInstance;
         rootScene = sceneInstance?.RootScene;
         if (sceneInstance is null)
             return;

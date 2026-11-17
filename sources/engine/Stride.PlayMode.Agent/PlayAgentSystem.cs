@@ -39,7 +39,6 @@ public sealed class PlayAgentSystem : GameSystemBase
     private readonly Game game;
     private readonly ConcurrentQueue<Stream> newStreams = new();
     private readonly List<PlaySubscriber> subscribers = [];
-    private readonly PlayTreeTracker tracker = new();
     private readonly ConcurrentQueue<PlayLog> logs = new();
     private readonly ConcurrentQueue<Assembly> loadedAssemblies = new();
     private readonly HashSet<string> sentAssemblies = [];
@@ -82,7 +81,7 @@ public sealed class PlayAgentSystem : GameSystemBase
     /// <summary>
     /// The tree tracker, on the game thread.
     /// </summary>
-    public PlayTreeTracker Tracker => tracker;
+    public PlayTreeTracker Tracker { get; } = new();
 
     /// <summary>
     /// Adds a subscriber connected on this stream (a pipe, a socket); it gets its hello and the tree on the next frame. Can
@@ -102,8 +101,8 @@ public sealed class PlayAgentSystem : GameSystemBase
         if (subscribers.Count == 0 && newStreams.IsEmpty)
         {
             // Nobody listens: follow nothing, so that nothing piles up
-            if (tracker.SceneInstance is not null)
-                tracker.Update(null);
+            if (Tracker.SceneInstance is not null)
+                Tracker.Update(null);
             DropLogs();
             return;
         }
@@ -113,18 +112,18 @@ public sealed class PlayAgentSystem : GameSystemBase
         var joined = AddNewSubscribers();
         HandleCommands();
 
-        var replaced = tracker.Update(game.SceneSystem.SceneInstance);
+        var replaced = Tracker.Update(game.SceneSystem.SceneInstance);
         if (frame - lastPollFrame >= PollPeriodFrames)
         {
             lastPollFrame = frame;
-            tracker.Poll();
+            Tracker.Poll();
         }
         if (replaced)
         {
             foreach (var subscriber in subscribers)
                 subscriber.NeedsTree = true;
         }
-        else if (tracker.TakeBatch(frame) is { } batch)
+        else if (Tracker.TakeBatch(frame) is { } batch)
         {
             // The subscribers that join now get the tree, which already has these changes
             Broadcast(batch, x => !x.NeedsTree);
@@ -150,7 +149,7 @@ public sealed class PlayAgentSystem : GameSystemBase
         GlobalLogger.GlobalMessageLogged -= OnMessageLogged;
         AppDomain.CurrentDomain.AssemblyLoad -= OnAssemblyLoad;
         game.Exiting -= OnGameExiting;
-        tracker.Dispose();
+        Tracker.Dispose();
         foreach (var subscriber in subscribers)
             subscriber.Connection.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(1));
         subscribers.Clear();
@@ -212,7 +211,7 @@ public sealed class PlayAgentSystem : GameSystemBase
         {
             if (!subscriber.NeedsTree)
                 continue;
-            tree ??= tracker.BuildTree(frame).Encode();
+            tree ??= Tracker.BuildTree(frame).Encode();
             subscriber.Connection.SendFrame(tree);
             subscriber.NeedsTree = false;
         }
@@ -222,7 +221,7 @@ public sealed class PlayAgentSystem : GameSystemBase
     {
         prepared = true;
         // The first snapshot would create the serializers (5 to 15 ms): make them off the game thread now
-        var types = tracker.Entities.Values.SelectMany(x => x.Components).Select(x => x.GetType()).Distinct().ToList();
+        var types = Tracker.Entities.Values.SelectMany(x => x.Components).Select(x => x.GetType()).Distinct().ToList();
         _ = Task.Run(() =>
         {
             try
@@ -251,9 +250,9 @@ public sealed class PlayAgentSystem : GameSystemBase
             {
                 if (!frameSnapshots.TryGetValue(handle, out var bytes))
                 {
-                    if (!tracker.Entities.TryGetValue(handle, out var entity))
+                    if (!Tracker.Entities.TryGetValue(handle, out var entity))
                         continue;
-                    bytes = PlaySnapshot.EncodeEntity(PlaySnapshotWriter.Write(entity, tracker.GetHandle));
+                    bytes = PlaySnapshot.EncodeEntity(PlaySnapshotWriter.Write(entity, Tracker.GetHandle));
                     frameSnapshots.Add(handle, bytes);
                 }
                 encoded.Add(bytes);
