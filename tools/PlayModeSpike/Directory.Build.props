@@ -1,0 +1,12 @@
+<Project>
+  <!-- Spike code (play mode, phase 0): out of the solution and of the solution filter. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <StrideSpikeVersion>4.5.4-dev</StrideSpikeVersion>
+    <!-- The games run on Vulkan on Linux; the graphics assemblies of both sides must match theirs. -->
+    <StrideGraphicsApi>Vulkan</StrideGraphicsApi>
+  </PropertyGroup>
+</Project>

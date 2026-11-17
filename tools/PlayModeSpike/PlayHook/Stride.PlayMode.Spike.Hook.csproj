@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The startup hook. It references no Stride assembly: the agent's module initializer (the generated serializer
+       factory) needs assemblies the game does not have, so the resolver must be installed before the agent loads. -->
+  <PropertyGroup>
+    <AssemblyName>Stride.PlayMode.Spike.Hook</AssemblyName>
+    <RootNamespace>Stride.PlayMode.Spike</RootNamespace>
+  </PropertyGroup>
+</Project>

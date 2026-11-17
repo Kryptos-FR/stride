@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The play agent, loaded into the game by DOTNET_STARTUP_HOOKS. Its folder holds the assemblies the game does not
+       have (the design-time ones of the YAML snapshots); the startup hook resolves them from there. -->
+  <PropertyGroup>
+    <AssemblyName>Stride.PlayMode.Spike.Agent</AssemblyName>
+    <RootNamespace>Stride.PlayMode.Spike</RootNamespace>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared\PlayProtocol.cs" Link="Shared\PlayProtocol.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The hook sits next to the agent: DOTNET_STARTUP_HOOKS names it, it loads the agent. -->
+    <ProjectReference Include="..\PlayHook\Stride.PlayMode.Spike.Hook.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Engine" Version="$(StrideSpikeVersion)" />
+    <PackageReference Include="Stride.Core.Assets" Version="$(StrideSpikeVersion)" />
+  </ItemGroup>
+</Project>

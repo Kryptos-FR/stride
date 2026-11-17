@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The editor side of the play mode spike, a console program in place of the editor. It references what the editor
+       has loaded (the engine, its modules and the asset assemblies) and copies the agent next to itself. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Stride.PlayMode.Spike.Host</AssemblyName>
+    <RootNamespace>Stride.PlayMode.Spike</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared\PlayProtocol.cs" Link="Shared\PlayProtocol.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Engine" Version="$(StrideSpikeVersion)" />
+    <PackageReference Include="Stride.Physics" Version="$(StrideSpikeVersion)" />
+    <PackageReference Include="Stride.Particles" Version="$(StrideSpikeVersion)" />
+    <PackageReference Include="Stride.UI" Version="$(StrideSpikeVersion)" />
+    <PackageReference Include="Stride.Navigation" Version="$(StrideSpikeVersion)" />
+    <PackageReference Include="Stride.Audio" Version="$(StrideSpikeVersion)" />
+    <PackageReference Include="Stride.Core.Assets" Version="$(StrideSpikeVersion)" />
+    <PackageReference Include="Stride.Assets" Version="$(StrideSpikeVersion)" />
+  </ItemGroup>
+</Project>
