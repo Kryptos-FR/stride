@@ -1,0 +1,49 @@
+// Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
+// Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
+
+namespace Stride.AvaloniaUI.Rendering.Native
+{
+    /// <summary>
+    /// Draws the instances of the native canvas of the Avalonia UI: quads in pixels of the target, each filled with a
+    /// premultiplied color, or with a region of Texture0 sampled one texel to one pixel.
+    /// </summary>
+    shader AvaloniaCanvasShader : ShaderBase, Texturing
+    {
+        cbuffer PerDraw
+        {
+            // The size of the target, in pixels
+            stage float2 TargetSize;
+        }
+
+        // The vertex of the quad, a strip of four: its corner is (index & 1, index >> 1)
+        stage stream uint VertexID : SV_VertexID;
+
+        // Per instance: the quad in pixels (left, top, right, bottom)
+        stage stream float4 QuadRect : QUAD_RECT;
+
+        // Per instance: the premultiplied color, which multiplies the texture's
+        stage stream float4 QuadColor : QUAD_COLOR;
+
+        // Per instance: the texel of Texture0 at the quad's top-left corner (xy), and 1 to sample it, 0 not to (z)
+        stage stream float4 QuadTexture : QUAD_TEXTURE;
+
+        stage override void VSMain()
+        {
+            float2 corner = float2(streams.VertexID & 1, streams.VertexID >> 1);
+            float2 pixel = lerp(streams.QuadRect.xy, streams.QuadRect.zw, corner);
+            streams.ShadingPosition = float4(pixel / TargetSize * float2(2, -2) + float2(-1, 1), 0, 1);
+        }
+
+        stage override void PSMain()
+        {
+            float4 color = streams.QuadColor;
+            if (streams.QuadTexture.z > 0.5)
+            {
+                // The position is the pixel's center: its whole part is the pixel
+                int2 texel = int2(floor(streams.ShadingPosition.xy - streams.QuadRect.xy + streams.QuadTexture.xy));
+                color *= Texture0.Load(int3(texel, 0));
+            }
+            streams.ColorTarget = color;
+        }
+    };
+}
