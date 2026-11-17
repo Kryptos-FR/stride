@@ -42,7 +42,7 @@ public sealed class PlayModeSpikeController
     {
         entityName = entity.Name ?? "Entity";
         recording = MirrorRecorder.Record(MirrorRecorder.MakeRuntimeEntity(entity), FrameCount);
-        properties = new MirrorPropertiesViewModel(session) { BatchFinalizeTree = true, InPlaceCollections = true };
+        properties = new MirrorPropertiesViewModel(session) { InPlaceCollections = true };
         timer = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Background, (_, _) => OnTick(session));
         Log($"recorded {FrameCount} snapshots of {entityName}: capture {recording.CaptureAverage.TotalMilliseconds:F3} ms, {recording.AverageSize:F0} bytes on average");
     }

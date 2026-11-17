@@ -96,6 +96,44 @@ public sealed class PlayModeSpikeMirrorTests
     }
 
     [AvaloniaFact]
+    public async Task TheColorEditorFollowsTheSnapshots()
+    {
+        // The color of a light is an inlined value ([InlineProperty] on ColorRgbProvider.Value): each write refreshes the parent
+        // presenter, which needs FinalizeTree to inline the value again. With BatchFinalizeTree, the editor stays on the first
+        // written value (see the report).
+        using var fixture = await ShellSessionFixture.OpenAsync((ModelLocation, new ModelAsset()));
+        var (player, _) = MakeSmallScene();
+        var recording = MirrorRecorder.Record(player, 6, growLists: false);
+        var properties = new MirrorPropertiesViewModel(fixture.Session);
+        var window = new Window { Width = 500, Height = 1400, Content = new PropertyGridView { DataContext = properties } };
+        await window.ShowAsync();
+        try
+        {
+            await properties.ApplyAsync(recording.Snapshots[0]);
+            await WindowTestHelper.PumpAsync();
+            (await ItemAsync(window, x => x.Name == "Components")).IsExpanded = true;
+            (await ItemAsync(window, x => x.NodeValue is LightComponent)).IsExpanded = true;
+            (await ItemAsync(window, x => x.NodeValue is LightPoint)).IsExpanded = true;
+            await WindowTestHelper.PumpAsync();
+            for (var frame = 1; frame < 6; frame++)
+            {
+                await properties.ApplyAsync(recording.Snapshots[frame]);
+                await WindowTestHelper.PumpAsync();
+                var expected = ((ColorRgbProvider)((LightPoint)MirrorSnapshotSerializer.Restore(recording.Snapshots[frame]).Get<LightComponent>()!.Type).Color).Value;
+                // The editor shows the color as text (#RRGGBB): a byte per channel
+                var shown = window.GetVisualDescendants().OfType<Color3Editor>().Single().Value;
+                Assert.True(Math.Abs(shown.R - expected.R) <= 1 / 255f && Math.Abs(shown.G - expected.G) <= 1 / 255f && Math.Abs(shown.B - expected.B) <= 1 / 255f,
+                    $"frame {frame}: the editor shows {shown}, the snapshot holds {expected}");
+            }
+        }
+        finally
+        {
+            await window.CloseAsync();
+            properties.ViewModel?.Destroy();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task AListThatGrowsIsChangedInPlaceWhenAsked()
     {
         using var fixture = await ShellSessionFixture.OpenAsync((ModelLocation, new ModelAsset()));
@@ -397,11 +435,15 @@ public sealed class PlayModeSpikeMirrorTests
 
     private static int CountNodes(NodeViewModel node) => 1 + node.Children.Sum(CountNodes);
 
-    private static NodeViewModel Node(GraphViewModel viewModel, string components, Type componentType, string member)
+    private static NodeViewModel Node(GraphViewModel viewModel, string components, Type componentType, params string[] path)
     {
-        var component = viewModel.RootNode.Children.Single(x => x.Name == components).Children.First(x => x.NodeValue?.GetType() == componentType);
-        return component.Children.Single(x => x.Name == member);
+        var node = viewModel.RootNode.Children.Single(x => x.Name == components).Children.First(x => x.NodeValue?.GetType() == componentType);
+        foreach (var member in path)
+            node = node.Children.Single(x => x.Name == member);
+        return node;
     }
+
+    private static IEnumerable<NodeViewModel> Descendants(NodeViewModel node) => node.Children.SelectMany(x => Descendants(x).Prepend(x));
 
     private static async Task<PropertyViewItem> ItemAsync(Window window, Func<NodeViewModel, bool> match)
     {

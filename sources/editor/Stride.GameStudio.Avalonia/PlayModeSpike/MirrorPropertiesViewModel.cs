@@ -68,6 +68,10 @@ public sealed class MirrorPropertiesViewModel : SessionObjectPropertiesViewModel
     /// Whether the updaters finalize the tree once after the writes of a snapshot instead of after each write (an experiment of
     /// the spike, measured in its report).
     /// </summary>
+    /// <remarks>
+    /// Not correct as it is: a write of an inlined value (the color of a light) refreshes the parent presenter, which needs the
+    /// finalization at once to inline the value again; without it the row keeps the presenter of the first write.
+    /// </remarks>
     public bool BatchFinalizeTree { get; set; }
 
     /// <summary>
