@@ -94,6 +94,7 @@
       "sources\\tests\\Stride.XunitRunner\\Stride.XunitRunner.csproj",
       "sources\\tools\\Stride.Importer.3D\\Stride.Importer.3D.csproj",
       "sources\\tools\\Stride.Importer.Common\\Stride.Importer.Common.csproj",
+      "sources\\tools\\Stride.PlayMode.Probe\\Stride.PlayMode.Probe.csproj",
       "sources\\tools\\Stride.TextureConverter\\Stride.TextureConverter.csproj"
     ]
   }

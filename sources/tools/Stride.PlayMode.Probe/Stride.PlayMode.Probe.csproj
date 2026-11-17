@@ -1,0 +1,18 @@
+<Project>
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'Directory.Build.props'))/sdk/Stride.Build.Sdk.Editor/Sdk/Sdk.props" />
+  <!-- A debug entry point of play mode: plays a built game with a play session, as the editor will, and prints what the agent
+       sends (hello, tree, changes, snapshots, heartbeats). Not shipped. -->
+  <PropertyGroup>
+    <TargetFramework>$(StrideXplatEditorTargetFramework)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\editor\Stride.Editor\Stride.Editor.csproj" />
+  </ItemGroup>
+  <Import Project="..\..\engine\Stride.PlayMode.Hook\Stride.PlayMode.Files.targets" />
+  <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk.Editor/Sdk/Sdk.targets" />
+</Project>

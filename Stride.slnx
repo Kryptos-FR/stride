@@ -176,6 +176,7 @@
     <Project Path="sources/engine/Stride.PlayMode.Agent/Stride.PlayMode.Agent.csproj" />
     <Project Path="sources/engine/Stride.PlayMode.Hook/Stride.PlayMode.Hook.csproj" />
     <Project Path="sources/engine/Stride.PlayMode.Protocol/Stride.PlayMode.Protocol.csproj" />
+    <Project Path="sources/tools/Stride.PlayMode.Probe/Stride.PlayMode.Probe.csproj" />
   </Folder>
   <Folder Name="/60-Editor/Avalonia/">
     <Project Path="sources/editor/Stride.Assets.Editor.Avalonia/Stride.Assets.Editor.Avalonia.csproj" />
