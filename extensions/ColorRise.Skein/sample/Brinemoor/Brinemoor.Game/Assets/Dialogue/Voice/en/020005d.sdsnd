@@ -1,0 +1,9 @@
+!Sound
+Id: 67152c7e-ba95-522e-879b-b8b9b85dc28e
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: ../../../../Resources/Voice/en/020005d.wav
+SampleRate: 22050
+CompressionRatio: 10
+StreamFromDisk: false
+Spatialized: false

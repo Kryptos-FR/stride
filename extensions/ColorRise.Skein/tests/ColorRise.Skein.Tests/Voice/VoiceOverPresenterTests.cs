@@ -133,6 +133,27 @@ public sealed class VoiceOverPresenterTests
     }
 
     [Fact]
+    public void Without_audio_the_lines_wait_for_the_player_and_the_log_says_why_once()
+    {
+        using var harness = new GameHarness();
+        var (runner, _, output, text) = Setup(harness, new() { ["line:post"] = "Voice/en/post", ["line:wait"] = "Voice/en/wait" });
+        text.LineGates.Enqueue(new TaskCompletionSource());
+        output.Silent = true;
+
+        var dialogue = runner.StartDialogue("Start");
+        harness.Step(30);
+        Assert.Equal("line: Odile: The post is late.", text.Seen[^1]);
+
+        runner.RequestNextLine();
+        harness.Step(30);
+        Assert.Equal("line: Odile: Then we wait.", text.Seen[^1]);
+        Assert.False(dialogue.IsCompleted);
+        Assert.Single(harness.Logged(Stride.Core.Diagnostics.LogMessageType.Warning), m => m.StartsWith("The voice-over is silent", StringComparison.Ordinal));
+        runner.Stop();
+        harness.Step();
+    }
+
+    [Fact]
     public void A_clip_that_is_not_in_the_content_is_a_warning_and_the_line_waits_for_the_others()
     {
         using var harness = new GameHarness();
@@ -159,6 +180,11 @@ internal sealed class FakeVoiceOutput : IVoiceOutput
 
     public HashSet<string> Missing { get; } = [];
 
+    /// <summary>
+    /// Whether the clips do not play, as without an audio device.
+    /// </summary>
+    public bool Silent { get; set; }
+
     public FakeSound? Playing { get; private set; }
 
     public AudioEmitterComponent? Speaker { get; private set; }
@@ -174,8 +200,11 @@ internal sealed class FakeVoiceOutput : IVoiceOutput
 
     public void Unload(string url) => Seen.Add($"unload {url}");
 
-    public IPlayableSound Play(string url, AudioEmitterComponent? speaker)
+    public IPlayableSound? Play(string url, AudioEmitterComponent? speaker)
     {
+        if (Silent)
+            return null;
+
         Seen.Add($"play {url}");
         Speaker = speaker;
         Playing = new FakeSound();

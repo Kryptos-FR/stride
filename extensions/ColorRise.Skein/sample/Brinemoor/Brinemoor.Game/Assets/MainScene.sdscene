@@ -716,6 +716,7 @@ Hierarchy:
                             4e835c732daa5f1bb93de06183136f31: ref!! b579e976-4078-529f-a6f1-e8d9edea06ec
                             1ce26ae0f0c65a378993d1d34ae6a054: ref!! 3c462eb7-5d77-5c2b-bba5-4ba8d3d292dc
                             5c5eee32b83759db98dedfa80d8928d6: ref!! 3dc74872-fe1f-5e99-9a3b-fc7cb9fb2a51
+                            10a608794f60536a90a191f9862dd9b7: ref!! 31a0dcb6-6b4a-54c8-8f38-36d906fccbd6
                         Saliency: null
                         OptionsFallThrough: true
                     56d9a866f38e5659bf9f12e4c3134160: !SkeinLinePresenter
@@ -743,6 +744,13 @@ Hierarchy:
                         AdvanceWithPointer: true
                     4eda3f39f9af59cf8393027d627bb236: !Brinemoor.MoodPresenter,Brinemoor.Game
                         Id: 3dc74872-fe1f-5e99-9a3b-fc7cb9fb2a51
+                    24e98722d38655619fdd36c7b3652e0d: !SkeinVoiceOverPresenter
+                        Id: 31a0dcb6-6b4a-54c8-8f38-36d906fccbd6
+                        EndLineWhenVoiceEnds: true
+                        DelayBefore: 0.0
+                        DelayAfter: 0.0
+                        FadeOut: 0.05
+                        Volume: 1.0
         -   Entity:
                 Id: b05ec1e7-74b0-5cd1-a21c-8f38ef624f27
                 Name: Story

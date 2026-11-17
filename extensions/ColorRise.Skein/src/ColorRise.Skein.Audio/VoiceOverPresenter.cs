@@ -12,7 +12,7 @@ namespace ColorRise.Skein.Audio;
 /// </summary>
 /// <remarks>
 /// The clips of a node are loaded when the dialogue enters it and unloaded when it leaves it. A line without a clip in the
-/// current language is not spoken, and waits for the other presenters.
+/// current language is not spoken, and waits for the other presenters; so does every line when the game's audio does not run.
 /// </remarks>
 [DataContract("SkeinVoiceOverPresenter")]
 [Display("Voice-over presenter")]
@@ -71,6 +71,9 @@ public sealed class VoiceOverPresenter : DialoguePresenter
     // The clips loaded for the node the dialogue is in, by URL
     private HashSet<string> Loaded { get; } = [];
 
+    // Whether the log said that the game's audio does not run
+    private bool SaidSilent { get; set; }
+
     /// <inheritdoc />
     public override async Task PrepareForLinesAsync(IReadOnlyList<string> lineIds)
     {
@@ -115,7 +118,15 @@ public sealed class VoiceOverPresenter : DialoguePresenter
             return;
 
         var speaker = SpeakerOf(line);
-        var playing = Output.Play(url, speaker);
+        if (Output.Play(url, speaker) is not { } playing)
+        {
+            // Without audio, the line waits for the player as a line without a clip does
+            if (!SaidSilent)
+                Log.Warning("The voice-over is silent: the game's audio does not run (no audio device). The lines wait for the player.");
+            SaidSilent = true;
+            return;
+        }
+
         try
         {
             playing.Volume = Volume;

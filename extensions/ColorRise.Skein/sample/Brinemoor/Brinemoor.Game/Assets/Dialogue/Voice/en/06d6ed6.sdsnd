@@ -1,0 +1,9 @@
+!Sound
+Id: 73cf501e-ebc0-5e81-ad46-ebc41f84c2bf
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: ../../../../Resources/Voice/en/06d6ed6.wav
+SampleRate: 22050
+CompressionRatio: 10
+StreamFromDisk: false
+Spatialized: false

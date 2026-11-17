@@ -1,0 +1,9 @@
+!Sound
+Id: 133a8602-d49c-5d6a-bf51-f45b2d0fd5e4
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: ../../../../Resources/Voice/en/033f504.wav
+SampleRate: 22050
+CompressionRatio: 10
+StreamFromDisk: false
+Spatialized: false

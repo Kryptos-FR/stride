@@ -1,6 +1,7 @@
 using Stride.Audio;
 using Stride.Core.Serialization.Contents;
 using Stride.Engine;
+using Stride.Media;
 
 namespace ColorRise.Skein.Audio;
 
@@ -31,12 +32,17 @@ internal sealed class ContentVoiceOutput(ContentManager content) : IVoiceOutput
         }
     }
 
-    public IPlayableSound Play(string url, AudioEmitterComponent? speaker)
+    public IPlayableSound? Play(string url, AudioEmitterComponent? speaker)
     {
         var sound = Sounds[url];
         IPlayableSound playing = speaker is not null ? speaker.AttachSound(sound) : sound.CreateInstance();
         playing.Play();
-        return playing;
+        if (playing.PlayState == PlayState.Playing)
+            return playing;
+
+        // An audio engine without a device drops the call, and the clip would end at once
+        Release(url, speaker, playing);
+        return null;
     }
 
     public void Release(string url, AudioEmitterComponent? speaker, IPlayableSound playing)

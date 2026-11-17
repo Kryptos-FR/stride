@@ -22,9 +22,10 @@ internal interface IVoiceOutput
     /// <summary>
     /// Plays a loaded clip, from a speaker's entity when it has an audio emitter.
     /// </summary>
+    /// <returns>The clip playing, or null when it does not play: the game's audio does not run (no audio device).</returns>
     /// <param name="url">The URL of the clip.</param>
     /// <param name="speaker">The emitter of the speaker, or null to play the clip as a plain sound.</param>
-    IPlayableSound Play(string url, AudioEmitterComponent? speaker);
+    IPlayableSound? Play(string url, AudioEmitterComponent? speaker);
 
     /// <summary>
     /// Stops a clip <see cref="Play"/> started and lets go of what playing it took.
