@@ -31,6 +31,48 @@ public sealed record YarnProjectScriptItem(YarnScriptViewModel Script, string Na
 public sealed record YarnProjectVariableItem(string Name, string Type, string Default, string Description, string File, int Line, bool IsSmart, bool IsDeclared);
 
 /// <summary>
+/// A command or a function of the game in the project's overview.
+/// </summary>
+/// <param name="Name">The name scripts write.</param>
+/// <param name="Usage">How a script calls it: <c>&lt;&lt;walk who: string [running: bool = false]&gt;&gt;</c>, <c>has_item(item: string) → bool</c>.</param>
+/// <param name="Description">What its attribute says it does.</param>
+/// <param name="Method">The C# method, as <c>Type.Method</c>.</param>
+/// <param name="IsCommand">Whether it is a command; a function otherwise.</param>
+/// <param name="Waits">Whether the dialogue waits for the command to end.</param>
+public sealed record YarnProjectActionItem(string Name, string Usage, string Description, string Method, bool IsCommand, bool Waits)
+{
+    /// <summary>
+    /// The item of a command or a function the game's code declares.
+    /// </summary>
+    public static YarnProjectActionItem From(YarnActionDescription action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        var parameters = action.Parameters.Select(ParameterText).ToList();
+        if (action.Kind != YarnActionKind.Command)
+            return new YarnProjectActionItem(action.Name, $"{action.Name}({string.Join(", ", parameters)}) → {action.ReturnType}", action.Documentation ?? "", action.Method, IsCommand: false, Waits: false);
+
+        // The first word of a command on an object names the object
+        if (action.TargetType is { Length: > 0 } target)
+        {
+            parameters.Insert(0, $"{char.ToLowerInvariant(target[0])}{target[1..]}: {target}");
+        }
+
+        return new YarnProjectActionItem(action.Name, $"<<{string.Join(' ', [action.Name, .. parameters])}>>", action.Documentation ?? "", action.Method, IsCommand: true, action.IsAsync);
+    }
+
+    // An optional parameter in brackets with its default, the cases of an enum, the C# type of an object
+    private static string ParameterText(YarnActionParameter parameter)
+    {
+        var text = $"{parameter.Name}: {(parameter.Choices.Count > 0 ? string.Join(" | ", parameter.Choices) : parameter.TypeName ?? parameter.Type)}";
+        if (parameter.IsParams)
+            return text + "...";
+
+        return parameter.IsOptional ? $"[{text}{(parameter.DefaultValue is { } value ? " = " + value : "")}]" : text;
+    }
+}
+
+/// <summary>
 /// A language of a project in the project's overview.
 /// </summary>
 /// <param name="Language">The language code.</param>
@@ -94,6 +136,11 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
     /// The variables of the project, by name: the declared ones, and the ones the scripts only use.
     /// </summary>
     public IReadOnlyList<YarnProjectVariableItem> Variables { get => variables; private set => SetValue(ref variables, value); }
+
+    /// <summary>
+    /// The commands and the functions of the game, commands first, each kind by name.
+    /// </summary>
+    public IReadOnlyList<YarnProjectActionItem> Actions { get; private set => SetValue(ref field, value); } = [];
 
     /// <summary>
     /// The errors, warnings and remarks of the compiler for the whole project.
@@ -343,6 +390,7 @@ public sealed class YarnProjectEditorViewModel : AssetEditorViewModel<YarnProjec
             .Where(v => !v.IsInternal)
             .OrderBy(v => v.Name, StringComparer.OrdinalIgnoreCase)
             .Select(v => new YarnProjectVariableItem(v.Name, v.Type, DefaultOf(v), v.Description ?? "", v.File ?? "", v.Line, v.IsSmart, !v.IsImplicit))];
+        Actions = [.. current.Actions.Actions.Select(YarnProjectActionItem.From)];
         Diagnostics = compilation.Diagnostics;
         Warnings = current.Build.Warnings;
         NodeCount = current.Nodes.Count;

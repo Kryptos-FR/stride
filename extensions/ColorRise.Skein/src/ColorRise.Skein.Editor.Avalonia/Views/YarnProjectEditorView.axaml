@@ -131,6 +131,43 @@
         </ListBox>
       </StackPanel>
 
+      <!-- The commands and the functions the game's code gives the scripts -->
+      <StackPanel Grid.IsSharedSizeScope="True">
+        <TextBlock Classes="section" Text="{sd:LocalizeString Commands and functions, Context=Title}"/>
+        <Grid Classes="header" IsVisible="{Binding !!Actions.Count}">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="ActionUsage" MinWidth="200"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="ActionMethod"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Classes="column" Text="{sd:LocalizeString How a script writes it, Context=Column}"/>
+          <TextBlock Grid.Column="1" Classes="column" Text="{sd:LocalizeString Description, Context=Column}"/>
+          <TextBlock Grid.Column="2" Classes="column" Text="{sd:LocalizeString In the code, Context=Column}"/>
+        </Grid>
+        <ListBox x:Name="ActionList" Classes="rows" ItemsSource="{Binding Actions}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:YarnProjectActionItem">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="ActionUsage"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="ActionMethod"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,0,14,0">
+                  <TextBlock FontFamily="Cascadia Code,Consolas,Menlo,DejaVu Sans Mono,monospace" Text="{Binding Usage}"/>
+                  <TextBlock Classes="faint" FontStyle="Italic" Text="{sd:LocalizeString waits, Context=Label}" IsVisible="{Binding Waits}"
+                             ToolTip.Tip="{sd:LocalizeString The dialogue waits for the command to end, Context=ToolTip}"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1" Margin="0,0,14,0" Text="{Binding Description}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Description}"/>
+                <TextBlock Grid.Column="2" Classes="faint" Text="{Binding Method}"/>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <TextBlock Classes="faint" Margin="8,2" IsVisible="{Binding !Actions.Count}"
+                   Text="{sd:LocalizeString The code of the game gives the scripts no command and no function yet: see the guide for developers., Context=Label}"/>
+      </StackPanel>
+
       <!-- The languages, their strings files, and the commands on the lines -->
       <StackPanel Grid.IsSharedSizeScope="True">
         <TextBlock Classes="section" Text="{sd:LocalizeString Languages, Context=Title}"/>

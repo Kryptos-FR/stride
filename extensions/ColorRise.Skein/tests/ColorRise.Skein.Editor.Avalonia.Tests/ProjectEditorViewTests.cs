@@ -55,6 +55,8 @@ public sealed class ProjectEditorViewTests
             Assert.Contains("Jump to undefined node: 'Nowhere'", texts);
             Assert.Contains(texts, t => t.Contains("1 line has no line id", StringComparison.Ordinal));
             Assert.Contains("1 line has no id and cannot be translated.", texts);
+            Assert.Contains("Commands and functions", texts);
+            Assert.Contains(texts, t => t.StartsWith("The code of the game gives the scripts no command", StringComparison.Ordinal));
 
             // The page takes the width of the window, whatever its rows hold
             var page = view!.GetVisualDescendants().OfType<StackPanel>().First();
