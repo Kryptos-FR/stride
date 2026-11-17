@@ -22,6 +22,23 @@ public sealed class GraphLayoutTests
     }
 
     [Fact]
+    public void A_card_goes_under_the_one_before_it_whatever_its_height()
+    {
+        // 0 jumps to 1, 2 and 3, which are a column of cards of their own heights
+        const int Gap = YarnGraphLayout.RowGap;
+        var places = YarnGraphLayout.Compute(5, [(0, 1), (0, 2), (0, 3)], heights: [100, 400, 50, 120, 90]);
+
+        Assert.Equal(new YarnGraphPoint(0, 0), places[0]);
+        Assert.Equal([new YarnGraphPoint(W, 0), new YarnGraphPoint(W, 400 + Gap), new YarnGraphPoint(W, 400 + Gap + 50 + Gap)], places[1..4]);
+
+        // The next strand starts under the tallest column of the one before, or beside it
+        Assert.True(places[4] == new YarnGraphPoint(0, 400 + 50 + 120 + 3 * Gap) || places[4].Y == 0 && places[4].X >= 2 * W);
+
+        // Without heights, every card is of the default height
+        Assert.Equal(YarnGraphLayout.Compute(5, [(0, 1)]), YarnGraphLayout.Compute(5, [(0, 1)], heights: [.. Enumerable.Repeat(YarnGraphLayout.DefaultHeight, 5)]));
+    }
+
+    [Fact]
     public void Nodes_that_nothing_links_fill_rows()
     {
         var places = YarnGraphLayout.Compute(9, []);

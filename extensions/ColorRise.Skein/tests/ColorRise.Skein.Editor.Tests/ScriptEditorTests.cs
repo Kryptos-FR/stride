@@ -57,7 +57,7 @@ public sealed class ScriptEditorTests
         Assert.True(pier.HasPosition);
         Assert.Equal(new YarnGraphPoint(340, 0), pier.Position);
         Assert.False(lamp.HasPosition);
-        Assert.Equal(new YarnGraphPoint(0, YarnGraphLayout.RowHeight), lamp.Position);
+        Assert.Equal(new YarnGraphPoint(0, Math.Max(start.Height, pier.Height) + YarnGraphLayout.RowGap), lamp.Position);
     }
 
     [Fact]
@@ -105,7 +105,8 @@ public sealed class ScriptEditorTests
     [Fact]
     public async Task A_stub_takes_the_free_row_nearest_to_its_card()
     {
-        const string text = "title: Start\nposition: 0,0\n---\n<<jump Harbour>>\n<<jump Nowhere>>\n===\ntitle: Near\nposition: 280,0\n---\nHere.\n===\n";
+        // A card of six lines, about as tall as the room a stub looks for
+        const string text = "title: Start\nposition: 0,0\n---\n<<jump Harbour>>\n<<jump Nowhere>>\n===\ntitle: Near\nposition: 280,0\n---\nHere.\nHere.\nHere.\nHere.\nHere.\nHere.\n===\n";
         await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", text), SkeinSession.Script("Dialogue/Act2", Act2));
         var editor = session.Edit("Dialogue/Act1");
         await session.Analysis.WhenIdle();
@@ -260,7 +261,7 @@ public sealed class ScriptEditorTests
         Assert.Equal(Patched(
             YarnTextPatcher.SetPosition(document, document.Nodes[0], 0, 0),
             YarnTextPatcher.SetPosition(document, document.Nodes[1], YarnGraphLayout.ColumnWidth, 0),
-            YarnTextPatcher.SetPosition(document, document.Nodes[2], 0, YarnGraphLayout.RowHeight)), script.TextBuffer.Text);
+            YarnTextPatcher.SetPosition(document, document.Nodes[2], 0, Math.Max(editor.Cards[0].Height, editor.Cards[1].Height) + YarnGraphLayout.RowGap)), script.TextBuffer.Text);
         UndoTo("Lay out nodes");
     }
 

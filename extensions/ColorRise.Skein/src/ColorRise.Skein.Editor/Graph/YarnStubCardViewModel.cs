@@ -11,9 +11,10 @@ public sealed class YarnStubCardViewModel : ViewModelBase, IYarnGraphNode
 {
     private YarnGraphPoint position;
 
-    internal YarnStubCardViewModel(YarnNodeCardViewModel source, string title, string? fileName, YarnScriptViewModel? script)
+    internal YarnStubCardViewModel(YarnNodeCardViewModel source, string title, string? fileName, YarnScriptViewModel? script, bool isComputed = false)
     {
         Source = source;
+        IsComputed = isComputed;
         Title = title;
         FileName = fileName;
         Script = script;
@@ -26,7 +27,7 @@ public sealed class YarnStubCardViewModel : ViewModelBase, IYarnGraphNode
     public YarnNodeCardViewModel Source { get; }
 
     /// <summary>
-    /// The title the jump names.
+    /// The title the jump names; for a jump to an expression, the expression.
     /// </summary>
     public string Title { get; }
 
@@ -41,9 +42,14 @@ public sealed class YarnStubCardViewModel : ViewModelBase, IYarnGraphNode
     public YarnScriptViewModel? Script { get; }
 
     /// <summary>
+    /// Whether the jump names an expression (<c>&lt;&lt;jump {$next}&gt;&gt;</c>): the node is known when it plays.
+    /// </summary>
+    public bool IsComputed { get; }
+
+    /// <summary>
     /// Whether the jump leads nowhere.
     /// </summary>
-    public bool IsBroken => FileName is null;
+    public bool IsBroken => FileName is null && !IsComputed;
 
     /// <summary>
     /// Where the stub is on the graph.

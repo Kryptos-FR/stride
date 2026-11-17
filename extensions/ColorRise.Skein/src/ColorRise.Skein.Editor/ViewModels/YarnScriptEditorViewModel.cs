@@ -39,7 +39,6 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     private const int StubRowHeight = 60;
     // About the room a card and a stub take on the graph, to keep the stubs clear of the cards
     private const int CardWidth = 240;
-    private const int CardHeight = 180;
     private const int StubWidth = 220;
     private const int StubHeight = 44;
     private const int StubMargin = 10;
@@ -47,6 +46,12 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     private const int FrameLabelHeight = 60;
     private const int PreviewLines = 3;
     private const int PreviewLineLength = 100;
+    // About the room the parts of a card take, to estimate its height: the title bar and the connectors under the
+    // rows, a header or a row of chips, a line of text, and the characters a line of a row holds
+    private const int CardFrameHeight = 56;
+    private const int CardLineHeight = 17;
+    private const int RowCharacters = 34;
+    private const int RowMaxLines = 3;
 
     // The headers that are not for grouping: each node has its own title and place, a condition is not a name, and
     // the colour and the style are looks
@@ -85,7 +90,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         DuplicateCommand = new AnonymousCommand(ServiceProvider, Duplicate);
         DeleteSelectionCommand = new AnonymousCommand(ServiceProvider, DeleteSelection);
         SetColorCommand = new AnonymousCommand<string>(ServiceProvider, SetColor);
-        LinkCommand = new AnonymousCommand<YarnLinkRequest>(ServiceProvider, request => Link(request.Source, request.Target, request.IsDetour));
+        LinkCommand = new AnonymousCommand<YarnLinkRequest>(ServiceProvider, request => Link(request.Source, request.Target, request.IsDetour, request.Row));
         MoveCommand = new AnonymousCommand<IReadOnlyList<YarnCardMove>>(ServiceProvider, Move);
         LayoutCommand = new AnonymousCommand(ServiceProvider, Layout);
         OpenTargetCommand = new AnonymousTaskCommand<YarnStubCardViewModel>(ServiceProvider, OpenTarget);
@@ -161,6 +166,25 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     /// Whether the text pane shows the whole file, or only the selected nodes.
     /// </summary>
     public bool ShowWholeFile { get => showWholeFile; set => SetValue(ref showWholeFile, value); }
+
+    /// <summary>
+    /// Whether the cards show the preview of their lines instead of all their rows: setting it folds or unfolds every
+    /// card, and the cards of new nodes come so.
+    /// </summary>
+    public bool FoldCards
+    {
+        get;
+        set
+        {
+            if (SetValue(ref field, value))
+            {
+                foreach (var card in Cards)
+                {
+                    card.IsFolded = value;
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Raised when the text pane is to show a place: <see cref="TakeRequestedPlace"/> gives it.
@@ -484,10 +508,12 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     }
 
     /// <summary>
-    /// Adds a jump to a node at the end of another: <paramref name="target"/> is a card of the script or a stub.
+    /// Adds a jump to a node at the end of another, or at the end of what a row of it holds: <paramref name="target"/>
+    /// is a card of the script or a stub.
     /// </summary>
     /// <param name="detour">Whether to add a detour, from which the dialogue comes back, instead of a jump.</param>
-    public void Link(YarnNodeCardViewModel source, object target, bool detour = false)
+    /// <param name="row">The row of an option, a line group item or a branch of a block to add the jump under; null for the end of the node.</param>
+    public void Link(YarnNodeCardViewModel source, object target, bool detour = false, YarnCardRowViewModel? row = null)
     {
         var title = target switch
         {
@@ -499,7 +525,114 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             return;
 
         var current = Synchronize();
-        Apply("Link nodes", YarnTextPatcher.AppendJump(current, source.Span, title, detour));
+        if (row is not null && source.Rows.Contains(row) && row.Statement is { IsBranch: true } branch)
+        {
+            Apply("Link nodes", YarnTextPatcher.AppendJump(current, source.Span, branch, title, detour));
+        }
+        else
+        {
+            Apply("Link nodes", YarnTextPatcher.AppendJump(current, source.Span, title, detour));
+        }
+    }
+
+    /// <summary>
+    /// Opens the box that edits the text of a row on its card: a line, an option, a line group item, or the row that
+    /// adds a line, which starts with the speaker of the last line. Any other box that is open closes without writing.
+    /// </summary>
+    /// <returns>Whether the row is being edited.</returns>
+    public bool BeginEdit(YarnCardRowViewModel row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        if (!Knows(row.Card) || !row.IsEditable)
+            return false;
+
+        foreach (var card in Cards)
+        {
+            foreach (var other in card.Rows.Append(card.AddRow))
+            {
+                other.IsEditing = false;
+            }
+        }
+
+        var speaker = row.Card.Rows.LastOrDefault(r => r.Speaker is not null)?.Speaker;
+        row.EditText = row.IsAdd ? (speaker is null ? "" : speaker + ": ") : row.Statement!.Text;
+        row.IsEditing = true;
+        return true;
+    }
+
+    /// <summary>
+    /// Closes the box of a row without writing it.
+    /// </summary>
+    public void CancelEdit(YarnCardRowViewModel row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        row.IsEditing = false;
+    }
+
+    /// <summary>
+    /// Writes what the box of a row has into the text, as one step, and closes it: a line takes the text and keeps its
+    /// id, its hashtags and its condition; a line left empty goes; the row that adds a line adds it, unless nothing
+    /// was written after the speaker. When the text cannot be written, <see cref="Problem"/> says why.
+    /// </summary>
+    /// <returns>Whether the text changed.</returns>
+    public bool CommitEdit(YarnCardRowViewModel row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        if (!row.IsEditing)
+            return false;
+
+        row.IsEditing = false;
+        if (!Knows(row.Card))
+            return false;
+
+        var card = row.Card;
+        var text = row.EditText.Trim();
+        var current = Synchronize();
+        try
+        {
+            if (row.IsAdd)
+            {
+                // A speaker alone is no line
+                var colon = text.IndexOf(':', StringComparison.Ordinal);
+                var words = colon >= 0 ? text[(colon + 1)..].Trim() : text;
+                return words.Length > 0 && Apply("Add line", YarnTextPatcher.AddLine(current, card.Span, text));
+            }
+
+            if (row.Statement is not { IsText: true } statement)
+                return false;
+
+            if (text.Length == 0)
+            {
+                if (statement.Kind != YarnStatementKind.Line)
+                {
+                    Problem = "An option or a line of a line group needs a text: to remove it, remove it in the text.";
+                    return false;
+                }
+
+                return Apply("Delete line", YarnTextPatcher.DeleteStatement(current, card.Span, statement));
+            }
+
+            return Apply(statement.Kind == YarnStatementKind.Option ? "Edit option" : "Edit line", YarnTextPatcher.SetStatementText(current, card.Span, statement, text));
+        }
+        catch (ArgumentException exception)
+        {
+            Problem = exception.Message;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Selects the card of a row and shows the row's line in the text pane: for the rows the card does not edit, such
+    /// as commands and blocks.
+    /// </summary>
+    public void ShowInText(YarnCardRowViewModel row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        if (!Knows(row.Card) || row.Statement is not { } statement)
+            return;
+
+        Select(row.Card);
+        RequestPlace(new YarnTextPlace(statement.Line, statement.TextStart - statement.LineStart + 1));
     }
 
     /// <summary>
@@ -542,7 +675,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     public void Layout()
     {
         var current = Synchronize();
-        var places = YarnGraphLayout.Compute(Cards.Count, CardLinks(), NodeGroups(Cards), Sections(Cards));
+        var places = YarnGraphLayout.Compute(Cards.Count, CardLinks(), NodeGroups(Cards), Sections(Cards), [.. Cards.Select(c => c.Height)]);
         var edits = Cards.Select((card, i) => YarnTextPatcher.SetPosition(current, card.Span, places[i].X, places[i].Y)).ToArray();
         Apply("Lay out nodes", edits);
     }
@@ -787,6 +920,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             PruneLinks();
         }
 
+        RefreshEnds();
         Place();
         RefreshNodes();
 
@@ -877,7 +1011,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         var spare = new Queue<YarnNodeCardViewModel>(Cards.Where(byTitle.ContainsValue));
         for (var i = 0; i < nodes.Count; i++)
         {
-            cards[i] ??= spare.TryDequeue(out var card) ? card : new YarnNodeCardViewModel(nodes[i]);
+            cards[i] ??= spare.TryDequeue(out var card) ? card : NewCard(nodes[i]);
         }
 
         var counts = nodes.GroupBy(n => n.Title, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
@@ -911,6 +1045,8 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             card.Preview = PreviewOf(node);
             card.HasPosition = node.Position is not null;
             card.IsFilteredOut = !Matches(node);
+            RefreshRows(card, document.StatementsOf(node));
+            card.Height = HeightOf(card);
         }
 
         Synchronize(Cards, [.. cards.OfType<YarnNodeCardViewModel>()]);
@@ -923,23 +1059,127 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         var stubs = new List<YarnStubCardViewModel>();
         foreach (var source in Cards)
         {
-            if (!compiled.TryGetValue((source.Title, source.GroupIndex), out var data))
-                continue;
-
-            foreach (var jump in data.Jumps)
+            // The lines of the analysis are the ones of the text only when it is the text that was analysed
+            var statements = IsAnalysisCurrent ? document.StatementsOf(source.Span) : null;
+            if (compiled.TryGetValue((source.Title, source.GroupIndex), out var data))
             {
-                // A jump to a node group shows on the first node of the group
-                object target = Cards.FirstOrDefault(c => c.Title == jump.Target) is { } card ? card : StubOf(stubs, source, jump.Target, fileName);
-                if (links.Exists(l => l.Source == source && l.Target == target && l.IsDetour == jump.IsDetour))
-                    continue;
+                foreach (var jump in data.Jumps)
+                {
+                    // A jump to a node group shows on the first node of the group
+                    object target = Cards.FirstOrDefault(c => c.Title == jump.Target) is { } card ? card : StubOf(stubs, source, jump.Target, fileName);
+                    Add(source, target, jump.IsDetour, jump.Line, RowOf(source, statements, jump.Line));
+                }
+            }
 
-                links.Add(Links.FirstOrDefault(l => l.Source == source && l.Target == target && l.IsDetour == jump.IsDetour && l.Line == jump.Line)
-                    ?? new YarnLinkViewModel(source, target, jump.IsDetour, jump.Line));
+            // A jump to an expression leads to a node known when it plays
+            foreach (var statement in statements ?? [])
+            {
+                if (statement is { Kind: YarnStatementKind.Jump or YarnStatementKind.Detour, Target: ['{', ..] expression })
+                {
+                    var stub = stubs.Find(s => s.Source == source && s.IsComputed && s.Title == expression)
+                        ?? Stubs.FirstOrDefault(s => s.Source == source && s.IsComputed && s.Title == expression)
+                        ?? new YarnStubCardViewModel(source, expression, null, null, isComputed: true);
+                    if (!stubs.Contains(stub))
+                        stubs.Add(stub);
+
+                    Add(source, stub, statement.Kind == YarnStatementKind.Detour, statement.Line, RowOf(source, statements, statement.Line));
+                }
             }
         }
 
         Synchronize(Stubs, stubs);
         Synchronize(Links, links);
+
+        void Add(YarnNodeCardViewModel source, object target, bool isDetour, int line, YarnCardRowViewModel? row)
+        {
+            if (links.Exists(l => l.Source == source && l.Target == target && l.IsDetour == isDetour && l.Row == row))
+                return;
+
+            links.Add(Links.FirstOrDefault(l => l.Source == source && l.Target == target && l.IsDetour == isDetour && l.Line == line && l.Row == row)
+                ?? new YarnLinkViewModel(source, target, isDetour, line, row));
+        }
+    }
+
+    // The row a jump of a line is under: its option, its line group item or its branch of a block; null at the top of the body
+    private static YarnCardRowViewModel? RowOf(YarnNodeCardViewModel source, IReadOnlyList<YarnStatementSpan>? statements, int line)
+    {
+        var statement = statements?.FirstOrDefault(s => s.Line == line);
+        return statement is { Parent: >= 0 } && statement.Parent < source.Rows.Count ? source.Rows[statement.Parent] : null;
+    }
+
+    private YarnNodeCardViewModel NewCard(YarnNodeSpan node)
+    {
+        var card = new YarnNodeCardViewModel(node) { IsFolded = FoldCards };
+        card.PropertyChanged += (_, e) =>
+        {
+            // A card that folds or unfolds takes another room
+            if (e.PropertyName == nameof(YarnNodeCardViewModel.IsFolded) && Cards.Contains(card))
+            {
+                card.Height = HeightOf(card);
+                Place();
+            }
+        };
+        return card;
+    }
+
+    // A row stays with its rank: the slots of the rows are what the links of the graph hold
+    private static void RefreshRows(YarnNodeCardViewModel card, IReadOnlyList<YarnStatementSpan> statements)
+    {
+        while (card.Rows.Count > statements.Count)
+        {
+            card.Rows.RemoveAt(card.Rows.Count - 1);
+        }
+
+        for (var i = 0; i < statements.Count; i++)
+        {
+            if (i == card.Rows.Count)
+            {
+                card.Rows.Add(new YarnCardRowViewModel(card));
+            }
+
+            card.Rows[i].Statement = statements[i];
+        }
+    }
+
+    // The dialogue ends in a node that stops, or that jumps nowhere and is no detour's target
+    private void RefreshEnds()
+    {
+        foreach (var card in Cards)
+        {
+            var statements = document.StatementsOf(card.Span);
+            card.IsEnd = !card.IsNote
+                && (statements.Any(s => s is { Kind: YarnStatementKind.Command, Text: "stop" })
+                    || (!statements.Any(s => s.Kind == YarnStatementKind.Jump) && !Links.Any(l => l.IsDetour && l.Target == card)));
+        }
+    }
+
+    /// <summary>
+    /// About the height of a card as it shows: its title bar, its conditions, its rows (or its preview when folded),
+    /// its chips and its connectors.
+    /// </summary>
+    private static int HeightOf(YarnNodeCardViewModel card)
+    {
+        var lines = card.When.Count + (card.Tags.Count > 0 || card.GroupValue is not null ? 1 : 0);
+        IEnumerable<YarnCardRowViewModel> rows = card.Rows;
+        if (card.IsFolded)
+        {
+            lines += (card.Speakers.Count > 0 ? 1 : 0) + (card.Preview.Length == 0 ? 0 : Math.Min(PreviewLines, card.Preview.Split('\n').Length));
+            rows = rows.Where(r => r.HasConnector);
+        }
+        else if (!card.IsNote || card.Rows.Count > 0)
+        {
+            // The row that adds a line
+            lines++;
+        }
+
+        foreach (var row in rows)
+        {
+            var length = (row.Speaker?.Length + 2 ?? 0) + row.Display.Length + (row.Condition?.Length + 3 ?? 0);
+            var room = Math.Max(10, RowCharacters - 2 * row.Depth);
+            lines += Math.Clamp((length + room - 1) / room, 1, RowMaxLines);
+        }
+
+        return CardFrameHeight + lines * CardLineHeight;
     }
 
     private YarnStubCardViewModel StubOf(List<YarnStubCardViewModel> stubs, YarnNodeCardViewModel source, string title, string? fileName)
@@ -1024,8 +1264,9 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
         free.AddRange(Cards.Where(c => !c.HasPosition));
         free.AddRange(Stubs.Where(s => !s.Source.HasPosition));
         var links = Links.Select(l => (free.IndexOf(l.Source), free.IndexOf(l.Target))).ToList();
-        var places = YarnGraphLayout.Compute(free.Count, links, NodeGroups(free), Sections(free));
-        var top = Cards.Where(c => c.HasPosition).Select(c => c.Span.Position!.Value.Y + YarnGraphLayout.RowHeight).DefaultIfEmpty(0).Max();
+        var heights = free.Select(n => n is YarnNodeCardViewModel card ? card.Height : YarnGraphLayout.DefaultHeight).ToList();
+        var places = YarnGraphLayout.Compute(free.Count, links, NodeGroups(free), Sections(free), heights);
+        var top = Cards.Where(c => c.HasPosition).Select(c => c.Span.Position!.Value.Y + c.Height + YarnGraphLayout.RowGap).DefaultIfEmpty(0).Max();
 
         foreach (var card in Cards)
         {
@@ -1034,7 +1275,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
 
         // The stubs of a card with a place go on its right, one under the other, each in the free row nearest to its own,
         // with room over a card for the label of a frame
-        var taken = Cards.Select(c => (c.Position.X, Y: c.Position.Y - FrameLabelHeight, Width: CardWidth, Height: CardHeight + FrameLabelHeight)).ToList();
+        var taken = Cards.Select(c => (c.Position.X, Y: c.Position.Y - FrameLabelHeight, Width: CardWidth, Height: c.Height + FrameLabelHeight)).ToList();
         var rows = new Dictionary<YarnNodeCardViewModel, int>();
         foreach (var stub in Stubs)
         {
@@ -1194,7 +1435,8 @@ public sealed record YarnRenameRequest(YarnNodeCardViewModel Card, string Title)
 /// it leads to.
 /// </summary>
 /// <param name="IsDetour">Whether the dialogue comes back from the target.</param>
-public sealed record YarnLinkRequest(YarnNodeCardViewModel Source, object Target, bool IsDetour = false);
+/// <param name="Row">The row of the source the jump goes under: an option, a line group item or a branch of a block; null for the end of the node.</param>
+public sealed record YarnLinkRequest(YarnNodeCardViewModel Source, object Target, bool IsDetour = false, YarnCardRowViewModel? Row = null);
 
 /// <summary>
 /// A place in the text of a script, from 1.

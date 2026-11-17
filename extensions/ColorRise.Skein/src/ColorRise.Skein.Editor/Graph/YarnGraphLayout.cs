@@ -14,9 +14,20 @@ public static class YarnGraphLayout
     public const int ColumnWidth = 340;
 
     /// <summary>
-    /// The distance between the tops of two cards of a column.
+    /// The distance between the tops of two cards of a column, for cards of the height they have without a height of
+    /// their own: <see cref="DefaultHeight"/> and <see cref="RowGap"/>.
     /// </summary>
-    public const int RowHeight = 240;
+    public const int RowHeight = DefaultHeight + RowGap;
+
+    /// <summary>
+    /// The height of a node the layout is not given a height for.
+    /// </summary>
+    public const int DefaultHeight = 180;
+
+    /// <summary>
+    /// The room between a card and the next one down its column.
+    /// </summary>
+    public const int RowGap = 60;
 
     /// <summary>
     /// The room between two sections, across and down, for their frames and the labels of the frames.
@@ -36,7 +47,9 @@ public static class YarnGraphLayout
     /// blocks in the order of their first node, and the nodes without a section come last. A group stays in the section
     /// of its first node.
     /// </param>
-    public static YarnGraphPoint[] Compute(int count, IReadOnlyCollection<(int Source, int Target)> links, IReadOnlyList<int>? groups = null, IReadOnlyList<string?>? sections = null)
+    /// <param name="heights">For each node, its height on the graph; null for <see cref="DefaultHeight"/> for all.</param>
+    public static YarnGraphPoint[] Compute(int count, IReadOnlyCollection<(int Source, int Target)> links, IReadOnlyList<int>? groups = null, IReadOnlyList<string?>? sections = null,
+        IReadOnlyList<int>? heights = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(count);
         ArgumentNullException.ThrowIfNull(links);
@@ -44,9 +57,11 @@ public static class YarnGraphLayout
             throw new ArgumentException("There is not one group for each node.", nameof(groups));
         if (sections is not null && sections.Count != count)
             throw new ArgumentException("There is not one section for each node.", nameof(sections));
+        if (heights is not null && heights.Count != count)
+            throw new ArgumentException("There is not one height for each node.", nameof(heights));
 
         if (sections is not null && sections.Any(s => !string.IsNullOrEmpty(s)))
-            return ComputeSections(count, links, groups, sections);
+            return ComputeSections(count, links, groups, sections, heights);
 
         var members = new Dictionary<int, List<int>>();
         for (var i = 0; i < count && groups is not null; i++)
@@ -113,7 +128,8 @@ public static class YarnGraphLayout
                 }
             }
 
-            sizes.Add((filled.Count, filled.Max()));
+            // The height comes once every strand has its columns
+            sizes.Add((filled.Count, 0));
         }
 
         for (var i = 0; i < count; i++)
@@ -133,14 +149,26 @@ public static class YarnGraphLayout
             }
         }
 
+        // Down a column, each card under the one before, with its own height: the height of a strand is the one of its
+        // longest column
+        var tops = new int[count];
+        var bottoms = new Dictionary<(int Strand, int Column), int>();
+        foreach (var i in Enumerable.Range(0, count).OrderBy(i => strand[i]).ThenBy(i => column[i]).ThenBy(i => row[i]))
+        {
+            var key = (strand[i], column[i]);
+            tops[i] = bottoms.GetValueOrDefault(key);
+            bottoms[key] = tops[i] + HeightOf(heights, i) + RowGap;
+            sizes[strand[i]] = (sizes[strand[i]].Width, Math.Max(sizes[strand[i]].Height, bottoms[key]));
+        }
+
         // The strands fill rows: a script whose nodes are all entry points is a block, not one tall column. Of the
         // widths a row can have, the one that gives the whole the shape nearest to a screen's
         var origins = new (int X, int Y)[sizes.Count];
         var (width, distance) = (0, double.MaxValue);
         for (var limit = sizes.Select(s => s.Width).DefaultIfEmpty(0).Max(); limit <= sizes.Sum(s => s.Width); limit++)
         {
-            var (columns, rows) = Pack(limit);
-            var shape = columns * ColumnWidth / (double)(rows * RowHeight);
+            var (columns, height) = Pack(limit);
+            var shape = columns * ColumnWidth / (double)height;
             if (Math.Abs(Math.Log(shape / Shape)) is var away && away < distance)
             {
                 (width, distance) = (limit, away);
@@ -149,7 +177,7 @@ public static class YarnGraphLayout
 
         Pack(width);
 
-        (int Columns, int Rows) Pack(int limit)
+        (int Columns, int Height) Pack(int limit)
         {
             var (x, y, height, columns) = (0, 0, 0, 0);
             for (var i = 0; i < sizes.Count; i++)
@@ -172,13 +200,16 @@ public static class YarnGraphLayout
         for (var i = 0; i < count; i++)
         {
             var origin = origins[strand[i]];
-            places[i] = new YarnGraphPoint((origin.X + column[i]) * ColumnWidth, (origin.Y + row[i]) * RowHeight);
+            places[i] = new YarnGraphPoint((origin.X + column[i]) * ColumnWidth, origin.Y + tops[i]);
         }
 
         return places;
     }
 
-    private static YarnGraphPoint[] ComputeSections(int count, IReadOnlyCollection<(int Source, int Target)> links, IReadOnlyList<int>? groups, IReadOnlyList<string?> sections)
+    private static int HeightOf(IReadOnlyList<int>? heights, int node) => heights is null ? DefaultHeight : Math.Max(0, heights[node]);
+
+    private static YarnGraphPoint[] ComputeSections(int count, IReadOnlyCollection<(int Source, int Target)> links, IReadOnlyList<int>? groups, IReadOnlyList<string?> sections,
+        IReadOnlyList<int>? heights)
     {
         // A group goes with the section of its first node
         var sectionOfGroup = new Dictionary<int, string?>();
@@ -218,13 +249,13 @@ public static class YarnGraphLayout
             }
 
             var inside = links.Where(l => local.ContainsKey(l.Source) && local.ContainsKey(l.Target)).Select(l => (local[l.Source], local[l.Target])).ToList();
-            var blockPlaces = Compute(block.Count, inside, groups is null ? null : [.. block.Select(i => groups[i])]);
+            var blockPlaces = Compute(block.Count, inside, groups is null ? null : [.. block.Select(i => groups[i])], heights: heights is null ? null : [.. block.Select(i => heights[i])]);
             for (var i = 0; i < block.Count; i++)
             {
                 places[block[i]] = blockPlaces[i];
             }
 
-            sizes.Add((blockPlaces.Max(p => p.X) + ColumnWidth + SectionGap, blockPlaces.Max(p => p.Y) + RowHeight + SectionGap));
+            sizes.Add((blockPlaces.Max(p => p.X) + ColumnWidth + SectionGap, block.Max(i => places[i].Y + HeightOf(heights, i)) + RowGap + SectionGap));
         }
 
         var origins = Pack(sizes);

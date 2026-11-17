@@ -1,4 +1,5 @@
 using ColorRise.Skein.Assets.Text;
+using Stride.Core.Presentation.Collections;
 using Stride.Core.Presentation.ViewModels;
 
 namespace ColorRise.Skein.Editor.Graph;
@@ -34,6 +35,7 @@ public sealed class YarnNodeCardViewModel : ViewModelBase, IYarnGraphNode
         InSlot = new YarnCardSlot(this, isInput: true);
         OutSlot = new YarnCardSlot(this, isInput: false);
         DetourSlot = new YarnCardSlot(this, isInput: false);
+        AddRow = new YarnCardRowViewModel(this, isAdd: true);
     }
 
     /// <summary>
@@ -131,6 +133,31 @@ public sealed class YarnNodeCardViewModel : ViewModelBase, IYarnGraphNode
     /// What the player did with the node in the run that is open.
     /// </summary>
     public YarnPlayMark PlayMark { get => playMark; set => SetValue(ref playMark, value); }
+
+    /// <summary>
+    /// The rows of the card: the statements of the node's body, in the order of the text.
+    /// </summary>
+    public ObservableList<YarnCardRowViewModel> Rows { get; } = [];
+
+    /// <summary>
+    /// The row that adds a line at the end of the node.
+    /// </summary>
+    public YarnCardRowViewModel AddRow { get; }
+
+    /// <summary>
+    /// Whether the card shows the preview of its lines instead of all its rows; it still shows the rows links leave from.
+    /// </summary>
+    public bool IsFolded { get; set => SetValue(ref field, value); }
+
+    /// <summary>
+    /// Whether the dialogue ends in the node: it has a <c>&lt;&lt;stop&gt;&gt;</c>, or it jumps nowhere and is no detour's target.
+    /// </summary>
+    public bool IsEnd { get; internal set => SetValue(ref field, value); }
+
+    /// <summary>
+    /// About the height of the card on the graph, from what it shows: the automatic layout leaves room for it.
+    /// </summary>
+    public int Height { get; internal set => SetValue(ref field, value); } = 180;
 
     /// <summary>
     /// The slot the links to the node arrive on.

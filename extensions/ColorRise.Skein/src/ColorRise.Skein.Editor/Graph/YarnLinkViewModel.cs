@@ -1,13 +1,14 @@
 namespace ColorRise.Skein.Editor.Graph;
 
 /// <summary>
-/// A link of the graph: the jumps, or the detours, of one node to another.
+/// A link of the graph: the jumps, or the detours, of one node, or of one row of it, to another node.
 /// </summary>
 public sealed class YarnLinkViewModel
 {
-    internal YarnLinkViewModel(YarnNodeCardViewModel source, object target, bool isDetour, int line)
+    internal YarnLinkViewModel(YarnNodeCardViewModel source, object target, bool isDetour, int line, YarnCardRowViewModel? row = null)
     {
         Source = source;
+        Row = row;
         Target = target;
         IsDetour = isDetour;
         Line = line;
@@ -39,9 +40,15 @@ public sealed class YarnLinkViewModel
     public int Line { get; }
 
     /// <summary>
-    /// The slot the link starts from.
+    /// The row of the source the jump is in: the option, the line group item or the branch of a block it is under; null
+    /// for a jump at the top of the node's body.
     /// </summary>
-    public YarnCardSlot SourceSlot => IsDetour ? Source.DetourSlot : Source.OutSlot;
+    public YarnCardRowViewModel? Row { get; }
+
+    /// <summary>
+    /// The slot the link starts from: the one of its row while the card has the row, else the card's own.
+    /// </summary>
+    public YarnCardSlot SourceSlot => Row is { HasConnector: true } row && Source.Rows.Contains(row) ? row.OutSlot : IsDetour ? Source.DetourSlot : Source.OutSlot;
 
     /// <summary>
     /// The slot the link arrives on.
