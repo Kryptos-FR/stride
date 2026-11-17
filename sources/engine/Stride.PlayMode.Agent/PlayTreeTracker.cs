@@ -141,20 +141,22 @@ public sealed class PlayTreeTracker : IDisposable
                 removed.Add(change.Entity!);
         }
 
-        // Scenes added first (their entities refer to them), scenes removed last (their entities go before them)
+        // Scenes added first (their entities refer to them), then entities added, parents before children (the engine adds
+        // the children first), then the other changes, and scenes removed last (their entities go before them)
         var operations = new List<PlayTreeOperation>(pending.Count);
         foreach (var change in pending)
         {
             if (change.Kind == PlayTreeOperationKind.SceneAdded)
                 operations.Add(new PlaySceneAdded(Describe(change.Scene!)));
         }
+        foreach (var change in pending.Where(x => x.Kind == PlayTreeOperationKind.EntityAdded).OrderBy(x => Depth(x.Entity!)))
+            operations.Add(new PlayEntityAdded(Describe(change.Entity!)));
         var moved = new HashSet<Entity>(ReferenceEqualityComparer.Instance);
         foreach (var change in pending)
         {
             switch (change.Kind)
             {
                 case PlayTreeOperationKind.EntityAdded:
-                    operations.Add(new PlayEntityAdded(Describe(change.Entity!)));
                     break;
                 case PlayTreeOperationKind.EntityRemoved:
                     operations.Add(new PlayEntityRemoved(change.Handle));
@@ -362,6 +364,14 @@ public sealed class PlayTreeTracker : IDisposable
         foreach (var component in entity.Components)
             components.Add(new PlayComponentInfo(component.Id, PlayMirrorSerializer.TypeNameOf(component.GetType())));
         return components;
+    }
+
+    private static int Depth(Entity entity)
+    {
+        var depth = 0;
+        for (var parent = entity.Transform.Parent; parent is not null; parent = parent.Parent)
+            depth++;
+        return depth;
     }
 
     private int ParentHandle(Entity entity) => entity.Transform.Parent?.Entity is { } parent ? GetHandle(parent) : 0;

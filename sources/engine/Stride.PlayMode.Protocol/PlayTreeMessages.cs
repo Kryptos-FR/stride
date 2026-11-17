@@ -248,7 +248,8 @@ public sealed record PlayEntityStateChanged(int Handle, string? Name, bool Enabl
 
 /// <summary>
 /// The changes of the tree during one frame, coalesced: an entity added and removed in the frame is not in it, and a change of
-/// an entity removed in the frame is not either. Scenes added come first and scenes removed last.
+/// an entity removed in the frame is not either. Scenes added come first, then entities added (parents before children),
+/// and scenes removed last.
 /// </summary>
 /// <param name="Frame">The game's frame.</param>
 /// <param name="Operations">The changes, in order.</param>
