@@ -86,13 +86,13 @@ public sealed class YarnProjectAsset : Asset
     public Dictionary<string, YarnSeverity> DiagnosticSeverities { get; } = [];
 
     /// <summary>
-    /// The colours of the characters in Game Studio, by the name a line gives its speaker, where the project wants another
-    /// than the one Skein makes from the name. The game does not use them.
+    /// The colours of the characters in Game Studio, where the project wants another than the one Skein makes from the
+    /// name. The game does not use them.
     /// </summary>
-    /// <userdoc>The colour of a character's name on the cards, in the text and in the dialogue player, by the name the lines give it (Odile). A character that is not here gets a colour made from its name. The game does not use these colours.</userdoc>
+    /// <userdoc>The colour of a character's name on the cards, in the text and in the dialogue player. A character that is not here gets a colour made from its name. The game does not use these colours.</userdoc>
     [DataMember(75)]
     [Display("Character colours")]
-    public Dictionary<string, Color3> CharacterColors { get; } = [];
+    public List<YarnCharacterColor> CharacterColors { get; } = [];
 
     /// <summary>
     /// Whether Skein keeps a <c>.yarnproject</c> file and a definitions file beside this asset, for Yarn Spinner's own tools.
@@ -127,6 +127,28 @@ public sealed class YarnLocalisation
     [DataMember(20)]
     [Display("Strings file")]
     public UFile? Strings { get; set; }
+}
+
+/// <summary>
+/// The colour of a character of a Yarn project in Game Studio.
+/// </summary>
+[DataContract("YarnCharacterColor")]
+public sealed class YarnCharacterColor
+{
+    /// <summary>
+    /// The name the lines give the character (<c>Odile</c>), whatever its case.
+    /// </summary>
+    /// <userdoc>The name the lines give the character (Odile), whatever its case.</userdoc>
+    [DataMember(10)]
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// The colour of the character's name.
+    /// </summary>
+    /// <userdoc>The colour of the character's name. Game Studio makes it lighter or darker where it would not read.</userdoc>
+    [DataMember(20)]
+    [Display("Colour")]
+    public Color3 Color { get; set; } = new(0.56f, 0.78f, 0.91f);
 }
 
 /// <summary>

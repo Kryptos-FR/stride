@@ -1,3 +1,4 @@
+using ColorRise.Skein.Assets;
 using Stride.Core.Mathematics;
 
 namespace ColorRise.Skein.Editor.Services;
@@ -27,6 +28,22 @@ public sealed class YarnCharacterColors
         {
             this.chosen[name.Trim()] = color;
         }
+    }
+
+    /// <summary>
+    /// The colours a project chose: the first colour of a name wins, a colour without a name is none.
+    /// </summary>
+    public static YarnCharacterColors From(YarnProjectAsset project)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        var chosen = new Dictionary<string, Color3>(StringComparer.OrdinalIgnoreCase);
+        foreach (var character in project.CharacterColors)
+        {
+            if (!string.IsNullOrWhiteSpace(character.Name))
+                chosen.TryAdd(character.Name.Trim(), character.Color);
+        }
+
+        return new YarnCharacterColors(chosen);
     }
 
     /// <summary>

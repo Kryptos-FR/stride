@@ -1,3 +1,4 @@
+using ColorRise.Skein.Assets;
 using ColorRise.Skein.Editor.Graph;
 using ColorRise.Skein.Editor.Player;
 using ColorRise.Skein.Editor.Services;
@@ -24,6 +25,11 @@ public sealed class CharacterColorsTests
         Assert.Equal(new Color3(1, 0, 0), colors.Of("fisher"));
         Assert.False(colors.SameAs(other));
         Assert.True(other.SameAs(YarnCharacterColors.Default));
+
+        // A project's first colour of a name wins; a colour without a name is none
+        var project = new YarnProjectAsset { CharacterColors = { new() { Name = "Odile", Color = new Color3(0, 0, 1) }, new() { Name = "ODILE" }, new() { Name = " " } } };
+        Assert.Equal(new Color3(0, 0, 1), YarnCharacterColors.From(project).Of("odile"));
+        Assert.Equal(colors.Of("Kye"), YarnCharacterColors.From(project).Of("Kye"));
 
         // A colour that does not read on a background is made lighter or darker
         var navy = new Color3(0, 0, 0.3f);
@@ -54,7 +60,9 @@ public sealed class CharacterColorsTests
         var build = session.Analysis.AnalysisOf(project)!.Build;
         var changes = 0;
         session.Player.Changed += () => changes++;
-        project.Asset.CharacterColors["odile"] = new Color3(1, 0, 0);
+        project.Asset.CharacterColors.Add(new YarnCharacterColor { Name = "odile", Color = new Color3(1, 0, 0) });
+        project.Asset.CharacterColors.Add(new YarnCharacterColor { Name = "Odile", Color = new Color3(0, 1, 0) });
+        project.Asset.CharacterColors.Add(new YarnCharacterColor());
         session.Analysis.Invalidate();
         await session.Analysis.WhenIdle();
 

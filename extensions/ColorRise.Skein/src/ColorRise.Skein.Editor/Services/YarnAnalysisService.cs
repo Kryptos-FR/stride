@@ -259,7 +259,7 @@ public sealed class YarnAnalysisService
             if (unit.Input is { } last && last.Matches(input))
             {
                 // Only the colours of the characters changed: the analysis stays, with them
-                var characters = new YarnCharacterColors(input.Settings.CharacterColors);
+                var characters = YarnCharacterColors.From(input.Settings);
                 if (unit.Latest is { } latest && !latest.Characters.SameAs(characters))
                 {
                     unit.Input = input;
@@ -300,7 +300,7 @@ public sealed class YarnAnalysisService
                 Build = build,
                 Nodes = unit.GoodNodes ?? build.Compilation.Nodes,
                 Actions = gameActions,
-                Characters = new YarnCharacterColors(input.Settings.CharacterColors),
+                Characters = YarnCharacterColors.From(input.Settings),
             };
             List<(NodeFilter Filter, ObservableList<string> Names)> lists;
             lock (nodeNames)
@@ -358,10 +358,7 @@ public sealed class YarnAnalysisService
             settings.DiagnosticSeverities[code] = severity;
         }
 
-        foreach (var (name, color) in asset.CharacterColors)
-        {
-            settings.CharacterColors[name] = color;
-        }
+        settings.CharacterColors.AddRange(asset.CharacterColors.Select(c => new YarnCharacterColor { Name = c.Name, Color = c.Color }));
 
         return new Input(settings, project.Url, scripts, actionsVersion);
     }
