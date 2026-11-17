@@ -120,7 +120,8 @@
                              IsVisible="{Binding Changed}" ToolTip.Tip="{sd:LocalizeString New or different since the last replay, Context=ToolTip}"/>
                     <TextBlock Grid.Column="1" Classes="faint" Margin="0,0,5,0" Text="{Binding Kind, Converter={x:Static views:DialoguePlayerView.StepSign}}"
                                IsVisible="{Binding $self.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <TextBlock Grid.Column="2" Margin="0,0,6,0" FontWeight="Bold" Foreground="{x:Static views:PlayBrushes.Speaker}" Text="{Binding Speaker}"
+                    <TextBlock Grid.Column="2" Margin="0,0,6,0" FontWeight="Bold" Text="{Binding Speaker}"
+                               Foreground="{Binding SpeakerColor, Converter={x:Static views:YarnConverters.SpeakerOnAny}, FallbackValue={x:Static views:PlayBrushes.Speaker}}"
                                IsVisible="{Binding Speaker, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     <SelectableTextBlock Grid.Column="3" TextWrapping="Wrap" Text="{Binding Text}"
                                          Foreground="{Binding Kind, Converter={x:Static views:PlayBrushes.StepBrush}}"/>

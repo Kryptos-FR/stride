@@ -166,6 +166,11 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
     public bool IsAnalysisCurrent { get => isAnalysisCurrent; private set => SetValue(ref isAnalysisCurrent, value); }
 
     /// <summary>
+    /// The colours of the characters of the script's project.
+    /// </summary>
+    public YarnCharacterColors Characters { get; private set => SetValue(ref field, value); } = YarnCharacterColors.Default;
+
+    /// <summary>
     /// Whether the text pane shows the whole file, or only the selected nodes.
     /// </summary>
     public bool ShowWholeFile { get => showWholeFile; set => SetValue(ref showWholeFile, value); }
@@ -355,6 +360,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             analysisService.Changed += OnAnalysisChanged;
             analysis = analysisService.AnalysisOf(Asset);
             KnowledgeOfAnalysis = null;
+            Characters = analysis?.Characters ?? YarnCharacterColors.Default;
         }
 
         player = DialoguePlayerService.Of(Session);
@@ -1034,6 +1040,11 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
 
         analysis = mine;
         KnowledgeOfAnalysis = null;
+        if (!Characters.SameAs(mine.Characters))
+        {
+            Characters = mine.Characters;
+        }
+
         Refresh(withLinks: true);
     }
 
@@ -1065,6 +1076,7 @@ public sealed class YarnScriptEditorViewModel : AssetEditorViewModel<YarnScriptV
             foreach (var row in card.Rows)
             {
                 row.IsLinked = Links.Any(l => l.Row == row);
+                row.SpeakerColor = row.Speaker is { } speaker ? Characters.Of(speaker) : null;
             }
 
             card.Height = HeightOf(card);

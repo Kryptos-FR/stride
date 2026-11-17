@@ -2,6 +2,7 @@ using ColorRise.Skein.Assets.Compilation;
 using Stride.Core;
 using Stride.Core.Assets;
 using Stride.Core.IO;
+using Stride.Core.Mathematics;
 
 namespace ColorRise.Skein.Assets;
 
@@ -83,6 +84,15 @@ public sealed class YarnProjectAsset : Asset
     [DataMember(70)]
     [Display("Severities")]
     public Dictionary<string, YarnSeverity> DiagnosticSeverities { get; } = [];
+
+    /// <summary>
+    /// The colours of the characters in Game Studio, by the name a line gives its speaker, where the project wants another
+    /// than the one Skein makes from the name. The game does not use them.
+    /// </summary>
+    /// <userdoc>The colour of a character's name on the cards, in the text and in the dialogue player, by the name the lines give it (Odile). A character that is not here gets a colour made from its name. The game does not use these colours.</userdoc>
+    [DataMember(75)]
+    [Display("Character colours")]
+    public Dictionary<string, Color3> CharacterColors { get; } = [];
 
     /// <summary>
     /// Whether Skein keeps a <c>.yarnproject</c> file and a definitions file beside this asset, for Yarn Spinner's own tools.

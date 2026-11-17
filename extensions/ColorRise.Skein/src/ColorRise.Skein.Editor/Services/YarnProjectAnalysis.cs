@@ -44,6 +44,11 @@ public sealed record YarnProjectAnalysis
     public required GameActions Actions { get; init; }
 
     /// <summary>
+    /// The colours of the characters in Game Studio.
+    /// </summary>
+    public YarnCharacterColors Characters { get; init; } = YarnCharacterColors.Default;
+
+    /// <summary>
     /// The result of the compiler.
     /// </summary>
     public YarnCompilation Compilation => Build.Compilation;

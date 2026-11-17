@@ -249,6 +249,15 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
         TextArea.TextView.Redraw();
     }
 
+    private void ShowCharacters()
+    {
+        if (!ReferenceEquals(highlighter.Characters, observedEditor?.Characters))
+        {
+            highlighter.Characters = observedEditor?.Characters;
+            TextArea.TextView.Redraw();
+        }
+    }
+
     /// <summary>
     /// Follows an editor, or none: its selection, its messages and the places it asks to show.
     /// </summary>
@@ -272,6 +281,7 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
             }
         }
 
+        ShowCharacters();
         if (editor is not null)
         {
             ShowMessages();
@@ -311,6 +321,9 @@ public sealed class YarnTextPane : TextEditor, IEditCommandHandler
                 break;
             case nameof(YarnScriptEditorViewModel.PlayLine):
                 ShowPlayLine(follow: true);
+                break;
+            case nameof(YarnScriptEditorViewModel.Characters):
+                ShowCharacters();
                 break;
         }
     }

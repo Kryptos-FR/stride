@@ -339,7 +339,7 @@ public sealed class DialoguePlayerViewModel : PanelViewModel
         var items = new List<PlayerTranscriptItem>();
         for (var i = 0; i <= Service.Cursor && i < Service.Steps.Count; i++)
         {
-            if (PlayerTranscriptItem.Of(Service.Steps[i], i) is { } item)
+            if (PlayerTranscriptItem.Of(Service.Steps[i], i, Service.Characters) is { } item)
                 items.Add(item);
         }
 

@@ -1,4 +1,5 @@
 using ColorRise.Skein.Assets.Text;
+using Stride.Core.Mathematics;
 using Stride.Core.Presentation.ViewModels;
 
 namespace ColorRise.Skein.Editor.Graph;
@@ -59,6 +60,11 @@ public sealed class YarnCardRowViewModel : ViewModelBase
     /// The speaker of a line, or null.
     /// </summary>
     public string? Speaker => Statement?.Speaker;
+
+    /// <summary>
+    /// The colour of the speaker of a line, from the colours of the characters of the script's project; null without a speaker.
+    /// </summary>
+    public Color3? SpeakerColor { get; internal set => SetValue(ref field, value); }
 
     /// <summary>
     /// What the row shows: the words of a line after its speaker, the text of an option, or the command as Yarn writes

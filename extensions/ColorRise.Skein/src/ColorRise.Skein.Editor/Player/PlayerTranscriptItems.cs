@@ -1,5 +1,7 @@
 using System.Globalization;
 using ColorRise.Skein.Assets.Compilation;
+using ColorRise.Skein.Editor.Services;
+using Stride.Core.Mathematics;
 using Stride.Core.Presentation.Commands;
 using Stride.Core.Presentation.ViewModels;
 
@@ -14,13 +16,17 @@ namespace ColorRise.Skein.Editor.Player;
 /// <param name="Text">The line without its speaker, the title of the node, the command between its brackets, the choice, the answer, the variable, what was picked, the failure.</param>
 /// <param name="Changed">Whether the last replay made the step or made it differ.</param>
 /// <param name="Candidates">The candidates of a pick, with why each was or was not chosen.</param>
-public sealed record PlayerTranscriptItem(int Step, PlayerStepKind Kind, string? Speaker, string Text, bool Changed, IReadOnlyList<PlayerCandidate> Candidates)
+/// <param name="SpeakerColor">The colour of the speaker, or null without one.</param>
+public sealed record PlayerTranscriptItem(int Step, PlayerStepKind Kind, string? Speaker, string Text, bool Changed, IReadOnlyList<PlayerCandidate> Candidates, Color3? SpeakerColor = null)
 {
     /// <summary>
     /// The transcript's item for a step, or null for a step the transcript does not show: the start, which the first
     /// node tells, and the options, which show as buttons while the run waits at them.
     /// </summary>
-    public static PlayerTranscriptItem? Of(PlayerStep step, int index)
+    /// <param name="step">The step.</param>
+    /// <param name="index">The index of the step in the run.</param>
+    /// <param name="characters">The colours of the characters; none when null.</param>
+    public static PlayerTranscriptItem? Of(PlayerStep step, int index, YarnCharacterColors? characters = null)
     {
         ArgumentNullException.ThrowIfNull(step);
         var text = step.Kind switch
@@ -32,7 +38,7 @@ public sealed record PlayerTranscriptItem(int Step, PlayerStepKind Kind, string?
             PlayerStepKind.End => "The dialogue is over.",
             _ => step.Text,
         };
-        return text is null ? null : new PlayerTranscriptItem(index, step.Kind, step.Speaker, text, step.Changed, step.Candidates);
+        return text is null ? null : new PlayerTranscriptItem(index, step.Kind, step.Speaker, text, step.Changed, step.Candidates, step.Speaker is { } speaker ? characters?.Of(speaker) : null);
     }
 }
 

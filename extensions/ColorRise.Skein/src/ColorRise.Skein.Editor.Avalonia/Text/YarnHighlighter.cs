@@ -3,6 +3,7 @@ using Avalonia.Media.Immutable;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using ColorRise.Skein.Assets.Text;
+using ColorRise.Skein.Editor.Services;
 
 namespace ColorRise.Skein.Editor.Avalonia.Text;
 
@@ -73,6 +74,11 @@ internal sealed class YarnHighlighter : DocumentColorizingTransformer
     public bool IsDark { get; set; }
 
     /// <summary>
+    /// The colours of the characters, for the speakers of the lines; null to show every speaker in one colour.
+    /// </summary>
+    public YarnCharacterColors? Characters { get; set; }
+
+    /// <summary>
     /// The tokens of the text as it is, in the order of the text.
     /// </summary>
     public IReadOnlyList<YarnToken> Tokens => tokens ??= YarnTokenizer.Tokenize(document.Text);
@@ -103,11 +109,21 @@ internal sealed class YarnHighlighter : DocumentColorizingTransformer
             var token = all[i];
             var from = Math.Max(token.Offset, start);
             var to = Math.Min(token.Offset + token.Length, end);
-            if (from < to && brushes.TryGetValue(token.Kind, out var brush))
+            if (from < to && (SpeakerBrush(token) ?? brushes.GetValueOrDefault(token.Kind)) is { } brush)
             {
                 ChangeLinePart(from, to, element => element.TextRunProperties.SetForegroundBrush(brush));
             }
         }
+    }
+
+    // The colour of the character a speaker token names, made readable on the background of the pane
+    private IBrush? SpeakerBrush(YarnToken token)
+    {
+        if (token.Kind != YarnTokenKind.Speaker || Characters is not { } characters)
+            return null;
+
+        var name = document.GetText(token.Offset, token.Length).Trim().TrimEnd(':').Trim();
+        return name.Length == 0 ? null : Views.YarnPalette.BrushOf(YarnCharacterColors.Readable(characters.Of(name), IsDark));
     }
 
     // The index of the first token that ends after a place: the tokens are in the order of the text and do not overlap

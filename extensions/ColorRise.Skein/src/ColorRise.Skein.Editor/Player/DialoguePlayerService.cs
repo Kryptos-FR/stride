@@ -50,6 +50,11 @@ public sealed class DialoguePlayerService
     public YarnProjectViewModel? Project { get; private set; }
 
     /// <summary>
+    /// The colours of the characters of <see cref="Project"/>, from its latest analysis.
+    /// </summary>
+    public YarnCharacterColors Characters { get; private set; } = YarnCharacterColors.Default;
+
+    /// <summary>
     /// The node the run started at, or the last one played.
     /// </summary>
     public string? StartNode { get; private set; }
@@ -298,6 +303,7 @@ public sealed class DialoguePlayerService
         }
 
         build = next;
+        Characters = latest!.Characters;
         if (!next.Content.Languages.Contains(language))
             language = next.Content.BaseLanguage;
         Seed = Random.Shared.Next();
@@ -487,6 +493,7 @@ public sealed class DialoguePlayerService
         var before = Steps.ToList();
         var cursor = Cursor;
         build = new PlayerBuild(latest!, project);
+        Characters = latest!.Characters;
         IsStale = false;
         Problem = null;
         Restart();
@@ -641,8 +648,19 @@ public sealed class DialoguePlayerService
 
     private void OnAnalysisChanged(YarnProjectAnalysis latest)
     {
-        if (run is null || build is null || IsStale || latest.Project != Project || ReferenceEquals(latest, build.Analysis))
+        if (latest.Project != Project)
             return;
+
+        // The colours of the characters change without a new build: the run stays as it is
+        var recoloured = !Characters.SameAs(latest.Characters);
+        Characters = latest.Characters;
+        if (run is null || build is null || IsStale || ReferenceEquals(latest.Build, build.Analysis.Build))
+        {
+            if (recoloured)
+                OnChanged();
+
+            return;
+        }
 
         IsStale = true;
         OnChanged();

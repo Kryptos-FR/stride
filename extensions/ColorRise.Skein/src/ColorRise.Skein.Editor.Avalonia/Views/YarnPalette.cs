@@ -1,6 +1,8 @@
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using ColorRise.Skein.Assets.Compilation;
+using Stride.Core.Mathematics;
+using Color = Avalonia.Media.Color;
 
 namespace ColorRise.Skein.Editor.Avalonia.Views;
 
@@ -66,12 +68,20 @@ internal static class YarnPalette
         return new HslColor(1, hash % 360, 0.55, 0.62).ToRgb();
     }
 
+    /// <summary>
+    /// A brush of a colour of the editor's models.
+    /// </summary>
+    public static IBrush BrushOf(Color3 color)
+        => new ImmutableSolidColorBrush(Color.FromRgb(ToByte(color.R), ToByte(color.G), ToByte(color.B)));
+
     public static IBrush OfSeverity(YarnSeverity severity) => severity switch
     {
         YarnSeverity.Error => Error,
         YarnSeverity.Warning => Warning,
         _ => Info,
     };
+
+    private static byte ToByte(float value) => (byte)Math.Round(Math.Clamp(value, 0, 1) * 255);
 
     private static IBrush Brush(byte r, byte g, byte b) => new ImmutableSolidColorBrush(Color.FromRgb(r, g, b));
 }

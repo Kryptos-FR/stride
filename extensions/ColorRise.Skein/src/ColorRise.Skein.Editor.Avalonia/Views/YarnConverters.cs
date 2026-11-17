@@ -6,6 +6,8 @@ using Avalonia.Media.Immutable;
 using ColorRise.Skein.Assets.Compilation;
 using ColorRise.Skein.Assets.Text;
 using ColorRise.Skein.Editor.Conditions;
+using ColorRise.Skein.Editor.Services;
+using Stride.Core.Mathematics;
 
 namespace ColorRise.Skein.Editor.Avalonia.Views;
 
@@ -90,6 +92,18 @@ public static class YarnConverters
     /// The speaker of a line as a row starts with it: <c>Odile: </c>, or nothing.
     /// </summary>
     public static readonly IValueConverter SpeakerLabel = new FuncValueConverter<string?, string>(speaker => speaker is null ? "" : speaker + ": ");
+
+    /// <summary>
+    /// The colour of a speaker on a card, readable on its dark background; nothing without a colour.
+    /// </summary>
+    public static readonly IValueConverter SpeakerOnCard = new FuncValueConverter<Color3?, object?>(
+        color => color is { } value ? YarnPalette.BrushOf(YarnCharacterColors.Readable(value, onDark: true)) : AvaloniaProperty.UnsetValue);
+
+    /// <summary>
+    /// The colour of a speaker in the dialogue player, readable on a light and on a dark background; nothing without a colour.
+    /// </summary>
+    public static readonly IValueConverter SpeakerOnAny = new FuncValueConverter<Color3?, object?>(
+        color => color is { } value ? YarnPalette.BrushOf(YarnCharacterColors.ReadableOnBoth(value)) : AvaloniaProperty.UnsetValue);
 
     /// <summary>
     /// The glyph of the button that folds a card: what a click does.

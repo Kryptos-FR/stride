@@ -29,7 +29,7 @@ public sealed class YarnProjectAssetTests
         Assert.NotNull(grid);
         Assert.True(properties.CanDisplayProperties, properties.FallbackMessage);
         Assert.Equal(
-            ["SourceFiles", "ExcludedFiles", "BaseLanguage", "Localisations", "LineIdStyle", "Saliency", "DiagnosticSeverities", "WriteYarnProjectFile"],
+            ["SourceFiles", "ExcludedFiles", "BaseLanguage", "Localisations", "LineIdStyle", "Saliency", "DiagnosticSeverities", "CharacterColors", "WriteYarnProjectFile"],
             grid.RootNode.Children.Select(x => x.Name));
         Assert.Equal("**/*.yarn", Assert.Single(Child(grid, "SourceFiles").Children).NodeValue);
 

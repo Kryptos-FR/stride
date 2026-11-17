@@ -33,7 +33,8 @@
                    IsVisible="{sd:MultiBinding {Binding IsEditable}, {Binding !IsEditing}, Converter={sd:AndMulti}}"
                    ToolTip.Tip="{sd:LocalizeString Double-click to edit, Context=ToolTip}">
           <Run Text="{Binding Kind, Converter={x:Static views:YarnConverters.RowMark}}" Foreground="{StaticResource SkeinCardFaintText}"/><Run
-               Text="{Binding Speaker, Converter={x:Static views:YarnConverters.SpeakerLabel}}" Foreground="{StaticResource SkeinSpeakerText}" FontWeight="SemiBold"/><Run
+               Text="{Binding Speaker, Converter={x:Static views:YarnConverters.SpeakerLabel}}" FontWeight="SemiBold"
+               Foreground="{Binding SpeakerColor, Converter={x:Static views:YarnConverters.SpeakerOnCard}, FallbackValue={StaticResource SkeinSpeakerText}}"/><Run
                Text="{Binding Display}"/><InlineUIContainer BaselineAlignment="Center">
             <Border Classes="condition" Margin="5,0,0,0" Padding="4,0" CornerRadius="6" Background="#30E3B565" Cursor="Hand"
                     views:YarnBuilderPopups.OpensCondition="True" IsVisible="{Binding Condition, Converter={x:Static ObjectConverters.IsNotNull}}"
