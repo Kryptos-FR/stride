@@ -201,7 +201,23 @@ Things to know:
 - *Descriptive* ids are made of the node, a number and the speaker: `line:Tavern_0100_Odile`. Words before a colon that do not read as a name (narration such as "A mark on the wall: a circle") are left out of the id. A node whose title other scripts use too, as the nodes of a node group often do, gets the name of its script in its ids: `line:Events_Mill_0100_Odile`.
 - `[select]`, `[plural]` and `[ordinal]` work in every language, with the rules of the language of the line. A translation can give other cases than the original: French has no "few", and its rules call "many" what English calls "other". A case that the marker does not give falls back to its `other` text, so `other` is the one to always write.
 
-## 9. With Visual Studio Code, on the same files
+## 9. Voice-over
+
+A line is voiced by a sound named after its id, in the **voice-over folder** of its language. Nothing is listed by hand.
+
+1. **The folder.** The project's *Voice-over folder*, in the property grid, is a path from the project's folder with `{language}` in it: `Voice/{language}` by default, so `Dialogue/Voice/en` and `Dialogue/Voice/fr` for a project in `Dialogue`. An empty setting means no voice-over.
+2. **The clips.** Import each recording as a Sound asset in the folder of its language, named after the id of its line without `line:`: `033f504` for `#line:033f504`, `Tavern_0100_Odile` for `#line:Tavern_0100_Odile`. Subfolders are fine. The name of the source file does not matter, the name of the asset does.
+3. **The recording script.** *Export recording script*, on the project, writes `Recording/<project>.<language>.csv` beside the project, for each language: one row per line, for the actors and the studio. Its columns are the file to record (`033f504.wav`), the id, the character, the text without the speaker's name and markup, the node, the line before it for context, the line's hashtags (`#angry`) and whether the clip is there already (`yes`). A translated language needs its strings file first: a line without a translation is left out. The notes of the writer (`style: note`) are left out too. It writes over the file each time.
+
+The overview has a **Voiced** column: how many lines of each language have a clip. The build of the game says, per language, how many lines have none, and warns about a sound whose name is no line's id or two sounds with the same name. In the dialogue player, a line with a clip has a loudspeaker mark; its tooltip names the clip. The player does not play it: Game Studio does not run the game's audio.
+
+Things to know:
+
+- A line speaks only in its own language. A French line with no French clip is silent, it does not speak English.
+- A line with a clip goes on by itself when the clip ends (the programmers can change this). A line without a clip waits for the player, as before.
+- A shadow line (`#shadow:`) speaks with the clip of the line it copies.
+
+## 10. With Visual Studio Code, on the same files
 
 Yarn Spinner has an extension for Visual Studio Code, with completion, hover, and a graph of its own. It works on the files of a Skein project as they are:
 
@@ -213,7 +229,7 @@ Yarn Spinner has an extension for Visual Studio Code, with completion, hover, an
 
 The same holds for a pull from version control, and for any text editor. Scripts are text: they merge and compare line by line.
 
-## 10. Good to know
+## 11. Good to know
 
 Things that surprised us while writing Brinemoor. All are how Yarn Spinner works, not rules of Skein.
 
@@ -230,7 +246,7 @@ You have {$coins} [plural value={$coins} one="coin" other="coins" /].
 - **A jump to a node that does not exist** is an error in a new project, at the build and in the editor. Yarn Spinner alone only warns, and the dialogue would stop there in the game.
 - **A command the game does not have** does not fail the build: the scripts are allowed to be ahead of the code. In the game, the log has a warning and the dialogue goes on. The descriptions of the commands that exist are in the `.ysls.json` file.
 
-## 11. The commands
+## 12. The commands
 
 All are in the command palette (Ctrl+Shift+P, category *Dialogue*).
 
@@ -242,3 +258,4 @@ All are in the command palette (Ctrl+Shift+P, category *Dialogue*).
 | Add line ids | Menu of the asset view on a project, overview | Gives an id to each line that has none. |
 | Export strings | Menu of the asset view on a project | Writes the strings file of each language that has none. |
 | Update strings files | Menu of the asset view on a project, overview | Brings the strings files up to date with the scripts. |
+| Export recording script | Menu of the asset view on a project, overview | Writes the recording script of each language (section 9). |

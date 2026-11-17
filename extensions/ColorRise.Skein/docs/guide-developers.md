@@ -17,6 +17,7 @@ A game references two packages, in the project that holds its assets (the one be
 
 - `ColorRise.Skein` is the runtime. Every game that plays Yarn dialogue needs it.
 - `ColorRise.Skein.UI` has presenters made with Stride's UI: a line presenter with a typewriter, an options presenter, a line advancer. Leave it out when the game shows its dialogue its own way.
+- `ColorRise.Skein.Audio`, a third package the game can add, has the voice-over presenter (section 4). It brings Stride's audio (`Stride.Audio`); a game without voices leaves it out, and the other packages do not need audio.
 
 A game never references `ColorRise.Skein.Assets`, `ColorRise.Skein.Editor` or `ColorRise.Skein.Editor.Avalonia`. The runtime declares them as its companions: the asset compiler loads the first one when it builds the game, and Game Studio loads all of them when it opens the game. Both restore them by themselves, from the package sources of the game's `nuget.config`.
 
@@ -206,6 +207,24 @@ public sealed class Shaker : StartupScript
     }
 }
 ```
+
+### The voice-over presenter of `ColorRise.Skein.Audio`
+
+The voice-over presenter (`VoiceOverPresenter`) plays the clip of each line in the current language, the Sound asset that the writers put in the project's voice-over folder (the writers' guide says how). *Add entity > Dialogue runner* adds it when the game references `ColorRise.Skein.Audio`; otherwise add it to the runner's entity and to the runner's `Presenters`, beside the line presenter.
+
+| Setting | Default | What it does |
+|---|---|---|
+| End Line When Voice Ends | on | The line goes on when its clip ends. Off, it waits for the player (a line advancer) or another presenter. |
+| Delay Before, Delay After | 0 | Seconds before the clip starts, and after it ends before the next line. |
+| Fade Out | 0.05 | Seconds the clip takes to fade when the player goes on before it ends. |
+| Volume | 1 | From 0 to 1. |
+
+- **Where the voice comes from.** When the speaker is an entity with an audio emitter (`AudioEmitterComponent`), the clip plays from it, positional; the speaker is found as a command's target is (a `DialogueActorComponent` of that name first, then an entity of that name). Otherwise it plays as a plain sound. A positional sound needs an audio listener in the scene, as any of Stride's.
+- **Loading.** The clips of a node are loaded when the dialogue enters it (`PrepareForLinesAsync`) and unloaded when it leaves it, or when the dialogue ends.
+- **A line without a clip** is not spoken and waits for the player, as without the presenter. A clip that the build did not put in the game is a warning in the log.
+- **No audio device.** When the game's audio does not run (a machine with no sound card, a server), the presenter logs one warning and the lines wait for the player instead of going on at once.
+
+A presenter of the game reads the same clip: `LocalizedLine.VoiceOver` is the URL of the Sound asset in the current language, or null. There is no fallback to the base language: a French line with no French clip has none. `ILineProvider.GetVoiceOver(lineId)` gives it for any line, which a presenter that loads its clips ahead of time uses. A game that does not use Skein's clips at all gives a runner its own `ILineProvider` (`LinesOverride`).
 
 ### A presenter of the game
 
@@ -505,7 +524,8 @@ public sealed class LanguageKey : SyncScript
 - A line that has no translation shows in the base language, with one warning in the log per line. The build says how many lines lack a translation.
 - **The texts of the game's own screen** can be lines too. Brinemoor has a node that nothing plays, with one line per word of its screen and an id written by hand (`Carrying #line:ui_carrying`). The game reads them with `GetLineProvider(project).GetLine("line:ui_carrying", [])`, so they are translated in the same file as the story.
 - Markup: `select`, `plural` and `ordinal` work in every language, with the rules of the language of the line. A `plural` or an `ordinal` shows its `other` text for a case it does not give. A game adds its own replacement markers on `GetLineProvider(project).Markup`, which is Yarn Spinner's `LineParser`.
-- For voice-over, or lines that come from elsewhere, give a runner its own `ILineProvider` (`LinesOverride`).
+- The voice-over follows the language too: each line speaks with the clip of the current language, or not at all (section 4).
+- For lines that come from elsewhere, give a runner its own `ILineProvider` (`LinesOverride`).
 
 ## 9. Testing a story without a game
 
@@ -538,7 +558,7 @@ Registering a type twice changes nothing, so this is safe beside the search by a
 - A dialogue cannot be saved while it runs (section 7).
 - One Yarn Spinner version: 3.2.2, taken from nuget.org unchanged. Scripts use the language of Yarn Spinner 3.
 - The build and the editor know the commands and functions with attributes only (section 5).
-- No voice-over presenter and no audio: a game writes its own presenter and line provider for them.
+- Voice-over clips are found by name in one folder per language. A clip per line and language only: no lip sync, no subtitles timed on the clip, and Game Studio's dialogue player shows which lines have a clip but does not play them.
 - The UI presenters use Stride's UI. Their look is a UI page, or the default one; the UI editor of the cross-platform Game Studio is not there yet, so a page is made in code or in the Windows Game Studio.
 - Trimmed and ahead-of-time builds are not tried (section 10).
 - Skein is built against a development version of Stride (section 1).

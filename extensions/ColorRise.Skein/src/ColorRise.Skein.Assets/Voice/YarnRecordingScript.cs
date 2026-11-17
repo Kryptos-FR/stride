@@ -34,7 +34,8 @@ public static class YarnRecordingScript
     private static readonly string[] Columns = ["file", "id", "character", "text", "node", "previous", "tags", "recorded"];
 
     /// <summary>
-    /// The rows of a language, in the order of the scripts: every line that has an id of its own and a text in the language.
+    /// The rows of a language, in the order of the scripts: every line that has an id of its own and a text in the language,
+    /// out of the notes of the writer (<c>style: note</c>), which the story never runs.
     /// </summary>
     /// <param name="compilation">The scripts of the project.</param>
     /// <param name="language">The language of the script.</param>
@@ -47,8 +48,9 @@ public static class YarnRecordingScript
 
         var rows = new List<YarnRecordingRow>();
         var parser = new LineParser();
+        var notes = compilation.Nodes.Where(n => n.IsNote).SelectMany(n => (string[])[n.Title, n.UniqueTitle]).ToHashSet(StringComparer.Ordinal);
         (string File, string Node, string Text)? previous = null;
-        foreach (var source in YarnStringsCsv.RowsOf(compilation, language))
+        foreach (var source in YarnStringsCsv.RowsOf(compilation, language).Where(r => !notes.Contains(r.Node)))
         {
             var said = translation is null ? source.Text : translation.GetValueOrDefault(source.Id);
             var context = previous is { } before && before.File == source.File && before.Node == source.Node ? before.Text : "";

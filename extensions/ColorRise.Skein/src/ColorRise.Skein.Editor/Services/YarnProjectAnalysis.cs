@@ -67,7 +67,7 @@ public sealed record YarnProjectAnalysis
     /// The titles of the nodes a dialogue can start at, by name: a note of the writer is a node the story never runs.
     /// </summary>
     public IReadOnlyList<string> StartNodes => [.. Nodes
-        .Where(n => !IsNote(n))
+        .Where(n => !n.IsNote)
         .Select(n => n.Title)
         .Distinct(StringComparer.Ordinal)
         .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)];
@@ -83,7 +83,7 @@ public sealed record YarnProjectAnalysis
 
         var byTitle = string.Equals(attribute.FilterHeader, "title", StringComparison.OrdinalIgnoreCase);
         return [.. Nodes
-            .Where(n => !IsNote(n) && (byTitle
+            .Where(n => !n.IsNote && (byTitle
                 ? attribute.Matches(n.Title)
                 : n.Headers.Any(h => string.Equals(h.Key, attribute.FilterHeader, StringComparison.OrdinalIgnoreCase) && attribute.Matches(h.Value))))
             .Select(n => n.Title)
@@ -101,7 +101,7 @@ public sealed record YarnProjectAnalysis
         if (script is not null)
         {
             var file = FileNameOf(script);
-            return Nodes.Where(n => n.File == file && !IsNote(n)).MinBy(n => n.HeaderStartLine)?.Title;
+            return Nodes.Where(n => n.File == file && !n.IsNote).MinBy(n => n.HeaderStartLine)?.Title;
         }
 
         var nodes = StartNodes;
@@ -150,6 +150,4 @@ public sealed record YarnProjectAnalysis
 
         return null;
     }
-
-    private static bool IsNote(YarnNodeData node) => node.Headers.Any(h => h.Key == "style" && h.Value == "note");
 }

@@ -26,6 +26,11 @@ public sealed record YarnNodeData
     public IReadOnlyList<YarnHeaderData> Headers { get; init; } = [];
 
     /// <summary>
+    /// Whether the node is a note of the writer (<c>style: note</c>), which the story never runs.
+    /// </summary>
+    public bool IsNote => Headers.Any(h => h.Key == "style" && h.Value == "note");
+
+    /// <summary>
     /// The words of the <c>tags:</c> header.
     /// </summary>
     public IReadOnlyList<string> Tags { get; init; } = [];

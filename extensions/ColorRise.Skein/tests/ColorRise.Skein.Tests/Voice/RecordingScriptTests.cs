@@ -21,10 +21,15 @@ public sealed class RecordingScriptTests
         ---
         Fisher: Mind the nets. #line:Pier_0100_Fisher #shout
         ===
+        title: CutGulls
+        style: note
+        ---
+        Cut the gulls if the scene runs long. #line:cut
+        ===
         """;
 
     [Fact]
-    public void Each_line_with_an_id_has_its_file_its_speaker_its_text_its_context_and_its_tags()
+    public void Each_line_with_an_id_out_of_the_notes_has_its_file_its_speaker_its_text_its_context_and_its_tags()
     {
         var compilation = Scripts.Compile(Harbour);
         var rows = YarnRecordingScript.RowsOf(compilation, "en", null, new Dictionary<string, string> { ["post"] = "Dialogue/Voice/en/post" });

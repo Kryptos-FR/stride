@@ -18,6 +18,8 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="$(SkeinAvaloniaVersion)" />
     <!-- Stride's test kit for the view models of editor plugins: the views of these tests show the editors of its session -->
     <PackageReference Include="Stride.Assets.Editor.Testing" Version="$(SkeinStrideVersion)" />
+    <!-- Sounds, the voice-over clips of a project (the test kit's assemblies are shared with ColorRise.Skein.Editor.Tests) -->
+    <PackageReference Include="Stride.Audio.Assets" Version="$(SkeinStrideVersion)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ColorRise.Skein.Editor.Avalonia\ColorRise.Skein.Editor.Avalonia.csproj" />
