@@ -53,6 +53,19 @@ internal sealed class RecordingDialogService : IEditorDialogService, IProgressWi
     }
 
     /// <summary>
+    /// Picks the asset of the next asset pickers opened with options, which may wait (for the cancellation of the options,
+    /// for example); <c>null</c> picks with <see cref="PickAsset"/>.
+    /// </summary>
+    public Func<AssetPickerViewModel, CancellationToken, Task<AssetViewModel?>>? PickAssetAsync { get; set; }
+
+    public Task<AssetViewModel?> OpenAssetPickerAsync(ISessionViewModel session, AssetPickerOptions options)
+    {
+        var picker = new AssetPickerViewModel(session, options);
+        AssetPickers.Add(picker);
+        return PickAssetAsync is { } pick ? pick(picker, options.Cancellation) : Task.FromResult(PickAsset(picker));
+    }
+
+    /// <summary>
     /// The Add asset dialogs opened so far (their templates).
     /// </summary>
     public List<AddAssetTemplateCollectionViewModel> AddAssetDialogs { get; } = [];

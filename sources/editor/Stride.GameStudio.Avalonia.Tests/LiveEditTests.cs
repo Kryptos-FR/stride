@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
 using Stride.Assets.Editor.PlayMode;
+using Stride.Assets.Editor.Quantum.NodePresenters.Commands;
 using Stride.Assets.Editor.Quantum.NodePresenters.Keys;
 using Stride.Assets.Models;
 using Stride.Core;
@@ -31,7 +32,7 @@ namespace Stride.GameStudio.Avalonia.Tests;
 /// Live edits from the property grid: the grid of a play session whose game, a fake on the session's real pipe, answers the
 /// edits as the test says (the agent's own tests apply them to a real game).
 /// </summary>
-public sealed class LiveEditTests : IAsyncLifetime
+public sealed partial class LiveEditTests : IAsyncLifetime
 {
     private const string Version = "1.0.0-test";
     private const string ModelLocation = "Models/Box";
@@ -336,15 +337,16 @@ public sealed class LiveEditTests : IAsyncLifetime
     }
 
     [AvaloniaFact]
-    public async Task ReferencesComponentsAndPlaceholdersStayReadOnlyAndSayWhy()
+    public async Task ComponentsAndPlaceholdersStayReadOnlyAndSayWhyAndReferencesCanChange()
     {
         using var fixture = await OpenAsync();
         var properties = await ShowAsync(fixture, PlayerHandle);
         try
         {
+            // A reference changes, with the live picker
             var reference = Node(properties, nameof(LiveEditTestScript.Target));
-            Assert.True(reference.IsReadOnly);
-            Assert.Equal(LiveEditNodeUpdater.ReferenceReason, reference[LiveEditData.Tip]);
+            Assert.False(reference.IsReadOnly);
+            Assert.Contains(reference.NodePresenters.Single().Commands, x => x is LivePickupEntityCommand);
             var components = properties.ViewModel!.RootNode.Children.Single(x => x.Name == nameof(Entity.Components));
             Assert.True(components.IsReadOnly);
             Assert.Equal(LiveEditNodeUpdater.ComponentsReason, components[LiveEditData.Tip]);
@@ -352,15 +354,19 @@ public sealed class LiveEditTests : IAsyncLifetime
             // The transform's values change
             var position = components.Children.Single(x => x.NodeValue is TransformComponent).Children.Single(x => x.Name == nameof(TransformComponent.Position));
             Assert.False(position.IsReadOnly);
-            // No command of an asset (paste, replace, pick, the references) nor of the components
+            // No command of an asset (paste, replace, the asset pickers) nor of the components: the pickers are the live ones
             var allowed = new HashSet<string>
             {
                 CopyPropertyCommand.CommandName, FetchAssetCommand.CommandName, AddNewItemCommand.CommandName, RemoveItemCommand.CommandName,
                 AddPrimitiveKeyCommand.CommandName, CreateNewInstanceCommand.CommandName, MoveItemCommand.CommandName, RenameStringKeyCommand.CommandName,
                 FlagEnumSelectAllCommand.CommandName, FlagEnumSelectNoneCommand.CommandName, FlagEnumSelectInvertCommand.CommandName,
+                PickupAssetCommand.CommandName, PickupEntityCommand.CommandName, PickupEntityComponentCommand.CommandName,
             };
             var names = Descendants(properties.ViewModel.RootNode).SelectMany(x => x.NodePresenters).SelectMany(x => x.Commands).Select(x => x.Name).ToHashSet();
             Assert.Subset(allowed, names);
+            var pickers = Descendants(properties.ViewModel.RootNode).SelectMany(x => x.NodePresenters).SelectMany(x => x.Commands)
+                .Where(x => x.Name is PickupAssetCommand.CommandName or PickupEntityCommand.CommandName or PickupEntityComponentCommand.CommandName);
+            Assert.All(pickers, x => Assert.True(x is LivePickupAssetCommand or LivePickupEntityCommand, x.GetType().Name));
             Assert.DoesNotContain(components.NodePresenters.Single().Commands, x => x.Name == AddNewItemCommand.CommandName);
 
             // A member the engine reads once

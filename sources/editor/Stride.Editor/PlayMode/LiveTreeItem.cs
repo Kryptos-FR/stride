@@ -147,6 +147,7 @@ public sealed class LiveEntityItem : LiveTreeItem
         : base(owner, info.Handle, info.Id, info.Name)
     {
         IsEnabled = info.Enabled;
+        Components = info.Components;
         ComponentTypeNames = [.. info.Components.Select(x => x.TypeName)];
         SceneHandle = info.SceneHandle;
     }
@@ -161,6 +162,11 @@ public sealed class LiveEntityItem : LiveTreeItem
     /// its main component's.
     /// </summary>
     public IReadOnlyList<string> ComponentTypeNames { get; internal set => SetValue(ref field, value); }
+
+    /// <summary>
+    /// Its components, in order: their ids and type names (a live reference to a component is set by its id).
+    /// </summary>
+    public IReadOnlyList<PlayComponentInfo> Components { get; internal set; }
 
     /// <summary>
     /// The handle of the scene it is in.

@@ -50,10 +50,19 @@
         <ListBox x:Name="Assets"
                  ItemsSource="{Binding FilteredAssets}"
                  SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
-                 DoubleTapped="OnAssetDoubleTapped">
+                 DoubleTapped="OnAssetDoubleTapped"
+                 ContainerPrepared="OnAssetContainerPrepared">
+          <ListBox.Styles>
+            <!-- An asset with a note (changed since it was used, for example) is marked -->
+            <Style Selector="ListBoxItem.noted TextBlock.mark">
+              <Setter Property="IsVisible" Value="True"/>
+            </Style>
+          </ListBox.Styles>
           <ListBox.ItemTemplate>
             <DataTemplate DataType="capvm:AssetViewModel">
-              <StackPanel Orientation="Horizontal" Spacing="6" ToolTip.Tip="{Binding Url}">
+              <!-- The tooltip is the container's: the URL, the reason the asset cannot be picked, or its note -->
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Classes="mark" Text="&#x25CF;" FontSize="8" VerticalAlignment="Center" IsVisible="False"/>
                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding TypeDisplayName}"
                            Opacity="0.6" FontSize="11"
@@ -72,7 +81,7 @@
       <Button x:Name="OkButton"
               Content="{sd:LocalizeString OK, Context=Button}"
               IsDefault="True"
-              IsEnabled="{Binding SelectedAsset, Converter={sd:ObjectToBool}}"
+              IsEnabled="{Binding CanPick}"
               Click="OnOkClick" MinWidth="80"/>
       <Button x:Name="CancelButton"
               Content="{sd:LocalizeString Cancel, Context=Button}"

@@ -35,4 +35,9 @@ public sealed record LiveSelection(PlaySession Session, IReadOnlyList<int> Handl
     /// given (the names then come from the session's tree).
     /// </summary>
     public IReadOnlyList<string>? Names { get; init; }
+
+    /// <summary>
+    /// The tree of the Live tab, which the pickers of live references list; <c>null</c> when not given.
+    /// </summary>
+    public LiveTree? Tree { get; init; }
 }

@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using Stride.Core.Assets.Editor.Components.Build;
 using Stride.Core.Diagnostics;
 using Stride.PlayMode.Protocol;
+using Stride.PlayMode.Snapshots;
 
 namespace Stride.Editor.PlayMode;
 
@@ -438,6 +439,29 @@ public sealed class PlaySession : IAsyncDisposable
     public event EventHandler<PlayEditAnswer>? EditAnswered;
 
     /// <summary>
+    /// The local time the session was made: when the game started, once it was built. An asset changed since (its
+    /// <see cref="Stride.Core.Assets.AssetItem.ModifiedTime"/> is later) is in the game's build as it was before.
+    /// </summary>
+    public DateTime StartTime { get; } = DateTime.Now;
+
+    /// <summary>
+    /// The URLs of the game's built content, which the agent sends when asked at the connection; <c>null</c> until then. A live
+    /// reference to content can only be set to one of them: the game loads content from its build.
+    /// </summary>
+    public IReadOnlySet<string>? BuildContent { get; private set; }
+
+    /// <summary>
+    /// Raised when <see cref="BuildContent"/> is received, on the session's reading task.
+    /// </summary>
+    public event EventHandler<IReadOnlySet<string>>? BuildContentReceived;
+
+    /// <summary>
+    /// Makes the stand-in of a live entity or component for a reference the user picked (see
+    /// <see cref="LiveMirrorReader.CreateStandIn"/>).
+    /// </summary>
+    public (object StandIn, IReadOnlyDictionary<object, PlayMirrorReference> Map)? CreateStandIn(PlayMirrorReference reference) => mirrorReader.CreateStandIn(reference);
+
+    /// <summary>
     /// The edits sent and not answered yet.
     /// </summary>
     public int PendingEditCount => pendingEdits.Count;
@@ -594,7 +618,11 @@ public sealed class PlaySession : IAsyncDisposable
                 if (!PlayAgentFiles.AreSameVersion(hello.StrideVersion, agentFiles.StrideVersion))
                     SetState(PlaySessionState.VersionMismatch, $"The game runs Stride {hello.StrideVersion} and the editor {agentFiles.StrideVersion}: play mode needs the same version.");
                 else if (SetState(PlaySessionState.Connected, null))
+                {
                     respondingWatch = WatchRespondingAsync();
+                    // The live pickers offer the content of the build: ask once, at the start
+                    SendIfConnected(new PlayContentRequest());
+                }
                 return;
             case PlayGoodbye:
                 goodbye = true;
@@ -633,6 +661,11 @@ public sealed class PlaySession : IAsyncDisposable
             case PlayScriptException exception:
                 LastScriptException = exception;
                 Raise(ScriptExceptionReceived, exception);
+                break;
+            case PlayContentIndex index:
+                var urls = index.Urls.ToHashSet(StringComparer.Ordinal);
+                BuildContent = urls;
+                Raise(BuildContentReceived, (IReadOnlySet<string>)urls);
                 break;
             case PlayEditResult result:
                 if (pendingEdits.TryRemove(result.Id, out var pending))

@@ -25,5 +25,21 @@ namespace Stride.Core.Assets.Editor.Services
         /// <param name="message">A message shown at the top of the picker, or <c>null</c>.</param>
         /// <returns>The picked asset, or <c>null</c> if the picker was cancelled.</returns>
         Task<AssetViewModel> OpenAssetPickerAsync(ISessionViewModel session, IEnumerable<Type> acceptedTypes, Func<AssetViewModel, bool> filter = null, AssetViewModel initialAsset = null, DirectoryBaseViewModel initialLocation = null, string message = null);
+
+        /// <summary>
+        /// Opens the asset picker as a modal dialog with the given options and returns the picked asset.
+        /// </summary>
+        /// <param name="session">The session whose assets are listed.</param>
+        /// <param name="options">What the picker lists, and how.</param>
+        /// <returns>The picked asset, or <c>null</c> if the picker was cancelled.</returns>
+        /// <remarks>By default, the assets that cannot be picked are not listed, the notes are not shown, and the cancellation
+        /// is only checked once the picker closed.</remarks>
+        [System.Diagnostics.CodeAnalysis.Experimental("STREXP012")]
+        async Task<AssetViewModel> OpenAssetPickerAsync(ISessionViewModel session, AssetPickerOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+            var picked = await OpenAssetPickerAsync(session, options.AcceptedTypes, x => (options.Filter?.Invoke(x) ?? true) && options.DisabledReason?.Invoke(x) is null, options.InitialAsset, options.InitialLocation, options.Message);
+            return options.Cancellation.IsCancellationRequested ? null : picked;
+        }
     }
 }

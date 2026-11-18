@@ -206,6 +206,7 @@ public sealed class LiveTree
                 break;
             case PlayEntityComponentsChanged componentsChanged:
                 if (entities.TryGetValue(componentsChanged.Handle, out var changed))
+                    changed.Components = componentsChanged.Components;
                     changed.ComponentTypeNames = [.. componentsChanged.Components.Select(x => x.TypeName)];
                 break;
             case PlayEntityStateChanged stateChanged:

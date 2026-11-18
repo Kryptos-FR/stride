@@ -221,6 +221,25 @@ internal class EditorDialogService : DialogService, IEditorDialogService, IProgr
         });
     }
 
+    /// <inheritdoc/>
+    /// <remarks>The assets that cannot be picked are listed disabled, with the reason in their tooltip; a cancellation closes
+    /// the picker.</remarks>
+    public async Task<AssetViewModel?> OpenAssetPickerAsync(ISessionViewModel session, AssetPickerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (MainWindow is null || options.Cancellation.IsCancellationRequested) return null;
+
+        return await Dispatcher.InvokeTask(async () =>
+        {
+            var picker = new AssetPickerViewModel(session, options);
+            var window = new AssetPickerWindow { DataContext = picker };
+            // Cancelled from any thread (the game stopped): the picker closes without a pick
+            await using var registration = options.Cancellation.Register(() => Dispatcher.InvokeAsync(() => window.Close(false)).Forget());
+            var picked = await window.ShowDialog<bool>(ActiveWindow ?? MainWindow);
+            return picked && !options.Cancellation.IsCancellationRequested ? picker.SelectedAsset : null;
+        });
+    }
+
     public async Task<bool> ShowFixAssetReferencesDialogAsync(FixAssetReferencesViewModel fixReferences)
     {
         ArgumentNullException.ThrowIfNull(fixReferences);

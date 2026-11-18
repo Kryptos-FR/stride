@@ -78,15 +78,19 @@ internal sealed class LiveNodePresenterFactory(INodeBuilder nodeBuilder, IReadOn
 
     private void Add(ILiveNodePresenter presenter, object value)
     {
-        if (Editor?.Add(presenter, value) != true)
+        if (Editor?.Add(presenter, NewItem(value)) != true)
             Refuse(presenter, "an item added");
     }
 
     private void Insert(ILiveNodePresenter presenter, object value, NodeIndex index)
     {
-        if (Editor?.Insert(presenter, value, index) != true)
+        if (Editor?.Insert(presenter, NewItem(value), index) != true)
             Refuse(presenter, "an item added");
     }
+
+    // A new item of a collection of entities or components is empty, and is then picked from the Live tab: an entity or a
+    // component made in the editor is in no running scene of the game, which refuses it
+    private static object? NewItem(object value) => value is Entity or EntityComponent ? null : value;
 
     private void Remove(ILiveNodePresenter presenter, NodeIndex index)
     {

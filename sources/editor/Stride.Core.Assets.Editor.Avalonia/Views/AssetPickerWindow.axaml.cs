@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Stride.Core.Assets.Editor.ViewModels;
+using Stride.Core.Assets.Presentation.ViewModels;
 
 namespace Stride.Core.Assets.Editor.Avalonia.Views;
 
@@ -35,13 +36,26 @@ public sealed partial class AssetPickerWindow : Window
 
     private void OnAssetDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (Picker?.SelectedAsset is not null)
+        if (Picker?.CanPick == true)
             Close(true);
     }
 
     private void OnOkClick(object? sender, RoutedEventArgs e)
     {
-        Close(Picker?.SelectedAsset is not null);
+        Close(Picker?.CanPick == true);
+    }
+
+    // An asset that cannot be picked is listed disabled, with the reason in its tooltip; one with a note is marked
+    private void OnAssetContainerPrepared(object? sender, ContainerPreparedEventArgs e)
+    {
+        if (Picker is not { } picker || Assets.ItemFromContainer(e.Container) is not AssetViewModel asset)
+            return;
+        var reason = picker.GetDisabledReason(asset);
+        var note = picker.GetNote(asset);
+        e.Container.IsEnabled = reason is null;
+        e.Container.Classes.Set("noted", note is not null);
+        ToolTip.SetTip(e.Container, reason is not null ? $"{asset.Url}: {reason}" : note is not null ? $"{asset.Url}: {note}" : asset.Url);
+        ToolTip.SetShowOnDisabled(e.Container, true);
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)

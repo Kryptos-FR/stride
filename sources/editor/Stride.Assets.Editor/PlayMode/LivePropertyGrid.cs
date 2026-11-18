@@ -96,6 +96,7 @@ public sealed class LivePropertyGrid : ILiveSelectionView
             liveSession = selection.Session;
         }
         var properties = Properties;
+        properties.Tree = selection.Tree ?? properties.Tree;
         if (session.ActiveProperties != properties)
             previous = session.ActiveProperties;
         if (selection.IsStopped)

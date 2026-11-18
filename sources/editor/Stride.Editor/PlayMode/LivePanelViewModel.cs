@@ -702,7 +702,7 @@ public sealed class LivePanelViewModel : PanelViewModel
         var handles = entities.Select(x => x.Handle).ToList();
         if (Selection is { } current && current.Session == followed && current.Handles.SequenceEqual(handles))
             return;
-        Selection = handles.Count > 0 ? new LiveSelection(followed, handles) { Names = entities.Select(x => x.Name).ToList() } : null;
+        Selection = handles.Count > 0 ? new LiveSelection(followed, handles) { Names = entities.Select(x => x.Name).ToList(), Tree = Tree } : null;
     }
 
     private void ClearSelectedItems()

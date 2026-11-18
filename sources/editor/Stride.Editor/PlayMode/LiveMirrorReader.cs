@@ -48,6 +48,21 @@ public sealed class LiveMirrorReader
     }
 
     /// <summary>
+    /// Makes the stand-in of a live entity, or of one of its components, that a reference picked in the editor (from the Live
+    /// tab) holds: an entity with the live entity's id and name, or a component of the live component's type and id on such an
+    /// entity. The stand-ins of a snapshot are made the same way.
+    /// </summary>
+    /// <param name="reference">The live entity or component.</param>
+    /// <returns>The stand-in, with what each stand-in made stands for (a component's entity too); <c>null</c> for a component
+    /// whose type the editor does not have in the game's build.</returns>
+    public (object StandIn, IReadOnlyDictionary<object, PlayMirrorReference> Map)? CreateStandIn(PlayMirrorReference reference)
+    {
+        // No entity of a snapshot is the mirror here: every reference gets a stand-in
+        var standIns = new StandIns(this, -1, new Entity { Id = Guid.Empty });
+        return standIns.Resolve(reference) is { } standIn ? (standIn, standIns.Map) : null;
+    }
+
+    /// <summary>
     /// Reads one entity of a snapshot.
     /// </summary>
     public LiveEntityMirror Read(PlayEntitySnapshot snapshot)

@@ -9,6 +9,7 @@ using Stride.Core.Assets.Editor.Quantum.NodePresenters.Keys;
 using Stride.Core.Diagnostics;
 using Stride.Core.Extensions;
 using Stride.Core.Presentation.Quantum.Presenters;
+using Stride.Core.Reflection;
 using Stride.Core.Yaml;
 using Stride.Engine;
 using Stride.Rendering.Compositing;
@@ -49,23 +50,24 @@ internal sealed class LiveEntityNodeUpdater(Func<SceneCameraSlotId, string?> fin
 /// <remarks>
 /// <para>
 /// A property stays read-only, with the reason in its tooltip (<see cref="LiveEditData.ReadOnlyReasonKey"/>), when it is in a
-/// component the editor could not read (a placeholder), is a reference to an entity, a component or content, is computed by
-/// the editor (a virtual property other than the fields of a vector), or is a member the engine reads once
-/// (<see cref="LiveMemberSupport"/>); the inside of such a property too. The components themselves cannot be added, removed,
-/// replaced or reordered. With edits off, every property is read-only.
+/// component the editor could not read (a placeholder), is inside a reference to another entity or component, is inside
+/// content (which everything that uses it shares), is computed by the editor (a virtual property other than the fields of a
+/// vector), or is a member the engine reads once (<see cref="LiveMemberSupport"/>); the inside of such a property too. The
+/// components themselves cannot be added, removed, replaced or reordered. With edits off, every property is read-only.
 /// </para>
 /// <para>
-/// The commands kept on a property that can change: copy, select the asset, add and remove items, add a key, a new instance,
-/// the flags of an enum, and the moves of items and renames of keys, which the game does on the item itself
-/// (<see cref="LiveMoveItemCommand"/>, <see cref="LiveRenameStringKeyCommand"/>). Paste, replace, pick and the reference
-/// commands go: they are for assets and references.
+/// The commands kept on a property that can change: copy, select the asset, add and remove items, add a key, a new instance
+/// (and the clearing of a reference), the flags of an enum, and the moves of items and renames of keys, which the game does on
+/// the item itself (<see cref="LiveMoveItemCommand"/>, <see cref="LiveRenameStringKeyCommand"/>). The pickers of references
+/// are the live ones (<see cref="LivePickupAssetCommand"/>, <see cref="LivePickupEntityCommand"/>), and an asset dropped on a
+/// reference to content goes through <see cref="LiveContentReferenceViewModel"/>. Paste and replace go: they are for assets.
 /// </para>
 /// </remarks>
-internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEditor?> editor) : NodePresenterUpdaterBase
+internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEditor?> editor, LiveReferenceContext? references = null) : NodePresenterUpdaterBase
 {
     public const string PlaceholderReason = "The editor does not know this component's type: its values cannot change here.";
-    public const string ReferenceReason = "A reference to an entity or a component: references cannot change while the game runs yet.";
-    public const string ContentReason = "A reference to content (a model, a texture, a material...): it cannot change while the game runs yet.";
+    public const string InsideReferenceReason = "Inside a reference to an entity or a component: select that entity in the Live tab to change it.";
+    public const string SharedContentReason = "Inside content (a model, a texture, a material...), which everything that uses it shares: it cannot change while the game runs. Set the reference to another asset instead.";
     public const string ComputedReason = "Computed by the editor: it is not a value of the game.";
     public const string ComponentsReason = "Components cannot be added, removed or reordered while the game runs yet.";
 
@@ -80,6 +82,14 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
 
     private readonly LiveMoveItemCommand move = new(editor);
     private readonly LiveRenameStringKeyCommand rename = new(editor);
+    private readonly LivePickupAssetCommand? pickAsset = references is null ? null : new(references);
+    private readonly LivePickupEntityCommand? pickEntity = references is null ? null : new(references, pickComponent: false);
+    private readonly LivePickupEntityCommand? pickComponent = references is null ? null : new(references, pickComponent: true);
+
+    /// <summary>
+    /// The pickers of live references opened (assets, entities and components).
+    /// </summary>
+    public int OpenedPickers => (pickAsset?.Opened ?? 0) + (pickEntity?.Opened ?? 0) + (pickComponent?.Opened ?? 0);
 
     public override void UpdateNode(INodePresenter node)
     {
@@ -102,6 +112,24 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
             node.Commands.Add(move);
         if (canRename)
             node.Commands.Add(rename);
+        if (references is null || node.Descriptor is CollectionBaseDescriptor)
+            return;
+        // The references: set by the live pickers, and content by an asset dropped too
+        if (pickAsset!.CanAttach(node))
+        {
+            node.Commands.Add(pickAsset);
+            node.AttachedProperties.Set(ReferenceData.Key, new LiveContentReferenceViewModel(references));
+        }
+        else if (pickComponent!.CanAttach(node))
+        {
+            node.Commands.Add(pickComponent);
+            node.AttachedProperties.Remove(ReferenceData.Key);
+        }
+        else if (pickEntity!.CanAttach(node))
+        {
+            node.Commands.Add(pickEntity);
+            node.AttachedProperties.Remove(ReferenceData.Key);
+        }
     }
 
     /// <summary>
@@ -115,10 +143,14 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
         {
             if (current.Value is IUnloadable)
                 return PlaceholderReason;
-            if (!IsComponentItem(current) && (LiveNodePresenterFactory.IsOutsideOfMirror(current) || IsReferenceType(current.Type)))
-                return ReferenceReason;
-            if (AssetRegistry.CanBeAssignedToContentTypes(current.Type, checkIsUrlType: true))
-                return ContentReason;
+            // A reference itself can change; what it holds cannot from here
+            if (current != node && !IsComponentItem(current))
+            {
+                if (LiveNodePresenterFactory.IsOutsideOfMirror(current) || IsEntityReferenceType(current.Type))
+                    return InsideReferenceReason;
+                if (AssetRegistry.CanBeAssignedToContentTypes(current.Type, checkIsUrlType: true))
+                    return SharedContentReason;
+            }
             switch (current)
             {
                 case MemberNodePresenter member when member.MemberDescriptor.MemberInfo is { DeclaringType: { } type } info:
@@ -138,7 +170,7 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
         return null;
     }
 
-    private static bool IsReferenceType(Type type)
+    private static bool IsEntityReferenceType(Type type)
         => typeof(Entity).IsAssignableFrom(type) || typeof(EntityComponent).IsAssignableFrom(type);
 
     // A component of the entity: its members change, not the component itself

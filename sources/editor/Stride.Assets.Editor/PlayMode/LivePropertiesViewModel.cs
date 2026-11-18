@@ -55,6 +55,7 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
     private readonly LiveNodePresenterFactory presenterFactory;
     private readonly LiveMirrorApplier applier;
     private readonly LiveEditor editor;
+    private readonly LiveEditNodeUpdater editUpdater;
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly List<Entry> entries = [];
     private PlaySession? playSession;
@@ -83,9 +84,11 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
         foreach (var updater in source.NodePresenterUpdaters)
             RegisterNodePresenterUpdater(new GuardedNodeUpdater(updater, Log));
         RegisterNodePresenterUpdater(new GuardedNodeUpdater(new LiveEntityNodeUpdater(FindCameraSlot), Log));
-        RegisterNodePresenterUpdater(new LiveEditNodeUpdater(() => EditsEnabled, () => EditsEnabled ? editor : null));
+        var references = new LiveReferenceContext(session, () => playSession, () => Tree, () => EditsEnabled ? editor : null, Log);
+        editUpdater = new LiveEditNodeUpdater(() => EditsEnabled, () => EditsEnabled ? editor : null, references);
+        RegisterNodePresenterUpdater(editUpdater);
 
-        editor = new LiveEditor(() => playSession, FindMirror, Dispatcher, Log);
+        editor = new LiveEditor(() => playSession, FindMirror, url => session.GetAssetByUrl(url)?.Id, Dispatcher, Log);
         editor.Answered += (_, e) => EditAnswered?.Invoke(this, e);
         presenterFactory = new LiveNodePresenterFactory(mirrorNodes.NodeBuilder, ViewModelService.AvailableCommands, ViewModelService.AvailableUpdaters, Log) { Editor = editor };
         ViewModelService.NodePresenterFactory = presenterFactory;
@@ -132,6 +135,17 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
     public string LiveNotice => EditsEnabled
         ? "Edits change the running game only: they are not saved."
         : "Edits are off: the values are read-only.";
+
+    /// <summary>
+    /// The tree of the Live tab, which the pickers of entity and component references list; <c>null</c> when there is none
+    /// (the references to entities and components cannot be picked then).
+    /// </summary>
+    public LiveTree? Tree { get; set; }
+
+    /// <summary>
+    /// The pickers of live references opened (assets, entities and components).
+    /// </summary>
+    public int OpenedPickers => editUpdater.OpenedPickers;
 
     /// <summary>
     /// The edits sent to the game.

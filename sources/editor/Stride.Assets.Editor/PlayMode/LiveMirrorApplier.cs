@@ -395,6 +395,15 @@ public sealed class LiveMirrorReferences
     public PlayMirrorReference? Find(object standIn) => references.TryGetValue(standIn, out var reference) ? reference : null;
 
     /// <summary>
+    /// Keeps what the stand-ins of a reference picked in the editor stand for (see <see cref="Stride.Editor.PlayMode.PlaySession.CreateStandIn"/>).
+    /// </summary>
+    internal void Remember(IReadOnlyDictionary<object, PlayMirrorReference> standIns)
+    {
+        foreach (var (standIn, reference) in standIns)
+            references[standIn] = reference;
+    }
+
+    /// <summary>
     /// Keeps what a stand-in written into the mirror stands for.
     /// </summary>
     internal void Learn(object? value, LiveEntityMirror incoming)

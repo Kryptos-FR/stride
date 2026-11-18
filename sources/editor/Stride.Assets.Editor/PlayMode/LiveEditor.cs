@@ -3,12 +3,14 @@
 
 using System.Diagnostics;
 using Stride.Assets.Editor.Quantum.NodePresenters.Keys;
+using Stride.Core.Assets;
 using Stride.Core.Diagnostics;
 using Stride.Core.Extensions;
 using Stride.Core.Presentation.Quantum.Presenters;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Quantum;
 using Stride.Core.Reflection;
+using Stride.Core.Serialization;
 using Stride.Editor.PlayMode;
 using Stride.Engine;
 using Stride.PlayMode.Protocol;
@@ -53,10 +55,15 @@ internal interface ILiveNodePresenter : INodePresenter
 /// mirror: the snapshot the game sends after them shows the collection.
 /// </para>
 /// <para>
+/// References: content (a model, a material, a prefab...) goes by its URL, which the game loads from its build; an entity or a
+/// component goes by the agent's handle of its entity and its id (<see cref="SetReference"/> for one picked from the Live tab).
+/// The game's answer reads back what the reference holds: the stand-in of the entity or the component, or the content's URL.
+/// </para>
+/// <para>
 /// Live edits never reach the session's undo stack or an asset: the mirror belongs to no asset.
 /// </para>
 /// </remarks>
-internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMirrorReferences?> findMirror, IDispatcherService dispatcher, Logger log)
+internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMirrorReferences?> findMirror, Func<string, AssetId?>? findAsset, IDispatcherService dispatcher, Logger log)
 {
     private readonly Dictionary<INodePresenter, PendingSet> sets = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<INodePresenter, int> operations = new(ReferenceEqualityComparer.Instance);
@@ -134,7 +141,7 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
         PlayEditValue encoded;
         try
         {
-            encoded = Encode(value, target.Mirror);
+            encoded = Encode(value, target.References);
         }
         catch (Exception e)
         {
@@ -143,6 +150,7 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
         }
 
         // The value shows at once, marked as pending until the game answers
+        var original = presenter.Value;
         presenter.WriteLocal(value);
         var started = clock.Elapsed;
         if (sets.TryGetValue(presenter, out var pending))
@@ -153,11 +161,61 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
             pending.Waiting = (encoded, started);
             return true;
         }
-        pending = new PendingSet();
+        pending = new PendingSet { Original = original };
         sets.Add(presenter, pending);
         SetState(presenter, LiveEditData.Pending, null);
         Send(playSession, presenter, pending, target, encoded, started);
         return true;
+    }
+
+    /// <summary>
+    /// Sets a reference to a live entity, or to one of its components, picked in the editor (from the Live tab).
+    /// </summary>
+    /// <returns><c>false</c> when the reference cannot be sent (see <see cref="Set"/>), or the editor cannot make the stand-in
+    /// of the component (its type is not in the game's build as the editor knows it).</returns>
+    public bool SetReference(ILiveNodePresenter presenter, PlayMirrorReference reference)
+    {
+        if (Locate(presenter) is not { } target || session() is not { State: PlaySessionState.Connected } playSession)
+            return false;
+        object? standIn;
+        if (reference.EntityHandle == target.References.Mirror.Handle)
+        {
+            // The entity of the grid itself, or one of its components
+            var mirror = target.References.Mirror.Entity;
+            standIn = reference.Kind == PlayMirrorReferenceKind.Entity ? mirror : mirror.Components.FirstOrDefault(x => x.Id == reference.ComponentId);
+        }
+        else if (playSession.CreateStandIn(reference) is { } made)
+        {
+            target.References.Remember(made.Map);
+            standIn = made.StandIn;
+        }
+        else
+        {
+            standIn = null;
+        }
+        if (standIn is null)
+        {
+            log.Warning($"The reference of {target.Display} cannot be set to {reference.EntityName}: the editor does not know the type of its component ({reference.ComponentTypeName}).");
+            return false;
+        }
+        return Set(presenter, standIn);
+    }
+
+    /// <summary>
+    /// The live entity or component that a reference of the grid holds, or <c>null</c>.
+    /// </summary>
+    public PlayMirrorReference? FindReference(INodePresenter presenter)
+    {
+        if (presenter.Root.Value is not Entity entity || findMirror(entity) is not { } references)
+            return null;
+        var mirror = references.Mirror;
+        return presenter.Value switch
+        {
+            Entity self when self == mirror.Entity => new PlayMirrorReference(PlayMirrorReferenceKind.Entity, mirror.Handle, self.Id, self.Name, Guid.Empty, null),
+            EntityComponent own when own.Entity == mirror.Entity => new PlayMirrorReference(PlayMirrorReferenceKind.Component, mirror.Handle, mirror.Entity.Id, mirror.Entity.Name, own.Id, PlayMirrorSerializer.TypeNameOf(own.GetType())),
+            { } value => references.Find(value),
+            _ => null,
+        };
     }
 
     /// <summary>
@@ -194,9 +252,9 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
         {
             var path = located.Path.ToList();
             if (index is { } item)
-                path.Add(Segment(collection, item, located.Mirror));
-            var targetSegment = target is { } to ? Segment(collection, to, located.Mirror) : null;
-            var encoded = operation is PlayEditOperation.Add or PlayEditOperation.Insert ? Encode(value, located.Mirror) : PlayEditValue.Null;
+                path.Add(Segment(collection, item, located.References));
+            var targetSegment = target is { } to ? Segment(collection, to, located.References) : null;
+            var encoded = operation is PlayEditOperation.Add or PlayEditOperation.Insert ? Encode(value, located.References) : PlayEditValue.Null;
             edit = new PlayEdit(playSession.NextEditId(), located.Handle, located.ComponentId, path, operation, encoded, targetSegment);
         }
         catch (Exception e)
@@ -251,10 +309,10 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
             return;
         }
         sets.Remove(presenter);
-        Answer(presenter, edit, result, started, stillPending: false, applyReadBack: true);
+        Answer(presenter, edit, result, started, stillPending: false, applyReadBack: true, target, pending.Original);
     }
 
-    private void Answer(ILiveNodePresenter presenter, PlayEdit edit, PlayEditResult result, TimeSpan started, bool stillPending, bool applyReadBack)
+    private void Answer(ILiveNodePresenter presenter, PlayEdit edit, PlayEditResult result, TimeSpan started, bool stillPending, bool applyReadBack, Target? target = null, object? original = null)
     {
         var elapsed = clock.Elapsed - started;
         // The game stopped before it answered (the session answers for it): nothing was refused, the grid is closing
@@ -268,8 +326,13 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
         }
         if (!presenter.IsDisposed)
         {
-            if (applyReadBack && !cutShort && result.ReadBack.Kind != PlayEditValueKind.NewInstance && edit.Operation == PlayEditOperation.Set)
-                ApplyReadBack(presenter, result);
+            if (applyReadBack && !cutShort && edit.Operation == PlayEditOperation.Set)
+            {
+                if (target is not null && IsReference(presenter))
+                    ApplyReferenceReadBack(presenter, target.References, result, original);
+                else if (result.ReadBack.Kind != PlayEditValueKind.NewInstance)
+                    ApplyReadBack(presenter, result);
+            }
             if (stillPending)
                 SetState(presenter, LiveEditData.Pending, null);
             else if (refused)
@@ -303,6 +366,96 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
         if (!Equals(value, presenter.Value))
             presenter.WriteLocal(value);
     }
+
+    private void ApplyReferenceReadBack(ILiveNodePresenter presenter, LiveMirrorReferences references, PlayEditResult result, object? original)
+    {
+        object? value;
+        if (result.Status == PlayEditStatus.Gone)
+        {
+            // Nothing changed in the game (the entity edited, or the one referenced, left it)
+            value = original;
+        }
+        else
+        {
+            try
+            {
+                value = ReadReference(result.ReadBack, references);
+            }
+            catch (Exception e)
+            {
+                log.Warning($"The reference the game read back for {presenter.Name} could not be read: {e.Message}");
+                return;
+            }
+        }
+        var accessor = presenter.GetNodeAccessor();
+        settled[(accessor.Node, accessor.Index)] = result.Frame;
+        // The same live object or content: the value shown stays (no write, no refresh of the property)
+        if (!SameReference(value, presenter.Value, references))
+            presenter.WriteLocal(value);
+    }
+
+    /// <summary>
+    /// Reads a reference the game read back: the stand-in of an entity or a component (the grid's own entity, or a stand-in it
+    /// remembers), or content by URL mapped to its asset.
+    /// </summary>
+    private object? ReadReference(PlayEditValue readBack, LiveMirrorReferences references)
+    {
+        if (readBack.Kind != PlayEditValueKind.Value)
+            return null;
+        var mirror = references.Mirror;
+        var value = PlayMirrorSerializer.ReadValue(readBack.Payload, reference =>
+        {
+            if (reference.EntityHandle == mirror.Handle)
+                return reference.Kind == PlayMirrorReferenceKind.Entity ? mirror.Entity : mirror.Entity.Components.FirstOrDefault(x => x.Id == reference.ComponentId);
+            if (session()?.CreateStandIn(reference) is not { } made)
+                return null;
+            references.Remember(made.Map);
+            return made.StandIn;
+        });
+        if (findAsset is not null && AttachedReferenceManager.GetAttachedReference(value) is { } content && content.Id == AssetId.Empty && !string.IsNullOrEmpty(content.Url) && findAsset(content.Url) is { } id)
+            content.Id = id;
+        return value;
+    }
+
+    private static bool SameReference(object? a, object? b, LiveMirrorReferences references)
+    {
+        if (a is null || b is null)
+            return a is null && b is null;
+        if (ReferenceEquals(a, b))
+            return true;
+        var contentA = AttachedReferenceManager.GetAttachedReference(a);
+        var contentB = AttachedReferenceManager.GetAttachedReference(b);
+        if (contentA is not null || contentB is not null)
+            return contentA?.Url == contentB?.Url && a.GetType() == b.GetType();
+        if (a is UrlReferenceBase urlA && b is UrlReferenceBase urlB)
+            return urlA.Url == urlB.Url && a.GetType() == b.GetType();
+        return KeyOf(a, references) is { } key && Equals(key, KeyOf(b, references));
+    }
+
+    private static (PlayMirrorReferenceKind Kind, int Handle, Guid ComponentId)? KeyOf(object value, LiveMirrorReferences references)
+    {
+        var mirror = references.Mirror;
+        return value switch
+        {
+            Entity entity when entity == mirror.Entity => (PlayMirrorReferenceKind.Entity, mirror.Handle, Guid.Empty),
+            EntityComponent component when component.Entity == mirror.Entity => (PlayMirrorReferenceKind.Component, mirror.Handle, component.Id),
+            _ => references.Find(value) is { } found ? (found.Kind, found.EntityHandle, found.ComponentId) : null,
+        };
+    }
+
+    /// <summary>
+    /// Whether a property holds a reference: to an entity, a component or content.
+    /// </summary>
+    internal static bool IsReference(INodePresenter presenter)
+        => IsReferenceType(presenter.Type) || presenter.Value is Entity or EntityComponent || AttachedReferenceManager.GetAttachedReference(presenter.Value) is not null;
+
+    /// <summary>
+    /// Whether a type is a reference to an entity, a component (an interface that components implement too) or content.
+    /// </summary>
+    internal static bool IsReferenceType(Type type)
+        => typeof(Entity).IsAssignableFrom(type) || typeof(EntityComponent).IsAssignableFrom(type)
+            || type.IsInterface && type.IsImplementedOnAny<EntityComponent>()
+            || AssetRegistry.CanBeAssignedToContentTypes(type, checkIsUrlType: true);
 
     private static void SetState(INodePresenter presenter, string? state, string? error)
     {
@@ -350,45 +503,65 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
             path.Insert(0, current switch
             {
                 MemberNodePresenter member => PlayPathSegment.Member(member.MemberDescriptor.MemberInfo?.Name ?? member.Name),
-                ItemNodePresenter item => Segment(item.OwnerCollection, item.Index, references.Mirror),
+                ItemNodePresenter item => Segment(item.OwnerCollection, item.Index, references),
                 _ => throw new InvalidOperationException($"{current.Name} is computed by the editor: it has no value in the game."),
             });
         }
         var display = $"{references.Mirror.Name} > {(componentName is null ? string.Empty : componentName + ".")}{PlayPathSegment.Format(path)}";
-        return new Target(references.Mirror.Handle, componentId, path, references.Mirror, display);
+        return new Target(references.Mirror.Handle, componentId, path, references, display);
     }
 
-    private static PlayPathSegment Segment(INodePresenter collection, NodeIndex index, LiveEntityMirror mirror)
+    private static PlayPathSegment Segment(INodePresenter collection, NodeIndex index, LiveMirrorReferences references)
     {
         if (collection.Descriptor is DictionaryDescriptor)
-            return PlayPathSegment.ForKey(PlayMirrorSerializer.WriteValue(index.Value, x => HandleOf(x, mirror)), index.Value?.ToString());
+            return PlayPathSegment.ForKey(PlayMirrorSerializer.WriteValue(index.Value, x => HandleOf(x, references)), index.Value?.ToString());
         if (index.Value is int position)
             return PlayPathSegment.Item(position);
         throw new InvalidOperationException($"{collection.Name} is not a list or a dictionary.");
     }
 
-    private static PlayEditValue Encode(object? value, LiveEntityMirror mirror)
+    private static PlayEditValue Encode(object? value, LiveMirrorReferences references)
     {
         if (value is null)
             return PlayEditValue.Null;
         var type = value.GetType();
-        // An object of a class: the game makes its own of that type (the grid makes new instances by type)
-        if (!type.IsValueType && value is not string)
-            return PlayEditValue.NewInstanceOf(PlayMirrorSerializer.TypeNameOf(type));
-        return PlayEditValue.Of(PlayMirrorSerializer.WriteValue(value, x => HandleOf(x, mirror)));
+        switch (value)
+        {
+            // A live entity or component: by the handle of its entity (and its id)
+            case Entity or EntityComponent:
+                return PlayEditValue.Of(PlayMirrorSerializer.WriteValue(value, x => HandleOf(x, references)));
+            // Content: by its URL, which the game loads from its build
+            case not null when AttachedReferenceManager.GetAttachedReference(value) is { } content:
+                if (string.IsNullOrEmpty(content.Url))
+                    throw new InvalidOperationException($"the {type.Name} was made by the game at run time: it has no URL to send.");
+                return PlayEditValue.Of(PlayMirrorSerializer.WriteValue(value, x => HandleOf(x, references)));
+            case UrlReferenceBase:
+                return PlayEditValue.Of(PlayMirrorSerializer.WriteValue(value, x => HandleOf(x, references)));
+            // Content made at run time, which the grid shows without a URL
+            case not null when !type.IsValueType && AssetRegistry.IsExactContentType(type):
+                throw new InvalidOperationException($"the {type.Name} was made by the game at run time: it has no URL to send.");
+            // An object of a class: the game makes its own of that type (the grid makes new instances by type)
+            case not string when !type.IsValueType:
+                return PlayEditValue.NewInstanceOf(PlayMirrorSerializer.TypeNameOf(type));
+            default:
+                return PlayEditValue.Of(PlayMirrorSerializer.WriteValue(value, x => HandleOf(x, references)));
+        }
     }
 
-    private static int HandleOf(Entity entity, LiveEntityMirror mirror)
-        => entity == mirror.Entity ? mirror.Handle : mirror.StandIns.TryGetValue(entity, out var reference) ? reference.EntityHandle : 0;
+    private static int HandleOf(Entity entity, LiveMirrorReferences references)
+        => entity == references.Mirror.Entity ? references.Mirror.Handle : references.Find(entity)?.EntityHandle ?? 0;
 
     private string Describe(INodePresenter presenter, PlayEdit edit)
         => presenter.Root.Value is Entity entity && findMirror(entity) is { } references ? $"{references.Mirror.Name} > {edit.PathText}" : edit.PathText;
 
-    private sealed record Target(int Handle, Guid ComponentId, IReadOnlyList<PlayPathSegment> Path, LiveEntityMirror Mirror, string Display);
+    private sealed record Target(int Handle, Guid ComponentId, IReadOnlyList<PlayPathSegment> Path, LiveMirrorReferences References, string Display);
 
     private sealed class PendingSet
     {
         public int InFlight { get; set; }
+
+        // The value before the first write: the game keeps it when it refuses the edit and reads nothing back
+        public object? Original { get; init; }
 
         public (PlayEditValue Value, TimeSpan Started)? Waiting { get; set; }
     }

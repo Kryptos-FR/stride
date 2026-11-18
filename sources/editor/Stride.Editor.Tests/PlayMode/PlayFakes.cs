@@ -140,7 +140,16 @@ internal sealed class FakeAgent : IAsyncDisposable
     public void Send(PlayMessage message) => Assert.True(connection.Send(message));
 
     public async Task<T> ReceiveAsync<T>() where T : PlayMessage
-        => Assert.IsType<T>(await received.Reader.ReadAsync().AsTask().WaitAsync(PlaySessionTests.Timeout));
+    {
+        while (true)
+        {
+            var message = await received.Reader.ReadAsync().AsTask().WaitAsync(PlaySessionTests.Timeout);
+            // The session asks for the build's content when it connects; the tests that want it read it as any message
+            if (message is PlayContentRequest && typeof(T) != typeof(PlayContentRequest))
+                continue;
+            return Assert.IsType<T>(message);
+        }
+    }
 
     public async Task CloseAsync()
     {
