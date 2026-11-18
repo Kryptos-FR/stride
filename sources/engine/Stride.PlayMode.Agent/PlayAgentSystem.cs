@@ -33,8 +33,9 @@ namespace Stride.PlayMode.Agent;
 /// <para>
 /// The options of the launch (<see cref="PlayLaunchOptions"/>) apply from the agent's creation, before the game's first update
 /// and without waiting for a subscriber: a game started paused runs no script until it is resumed or stepped, the key of the
-/// game's window pauses it and frees the mouse (and resumes it), and a script's exception pauses it instead of ending it. A
-/// game that no editor connects to (<see cref="NoEditor"/>) plays, and its exceptions end it again.
+/// game's window pauses it and frees the mouse (and resumes it), a script's exception pauses it instead of ending it, and the
+/// game starts on another scene than its default one (<see cref="PlayLaunchOptions.Scene"/>). A game that no editor connects
+/// to (<see cref="NoEditor"/>) plays, and its exceptions end it again.
 /// </para>
 /// </remarks>
 public sealed class PlayAgentSystem : GameSystemBase
@@ -83,6 +84,15 @@ public sealed class PlayAgentSystem : GameSystemBase
     /// <param name="game">The game it serves.</param>
     /// <param name="options">What the editor asked for when it started the game; none otherwise.</param>
     public PlayAgentSystem(Game game, PlayLaunchOptions? options = null)
+        : this(game, options, null)
+    {
+    }
+
+    /// <param name="game">The game it serves.</param>
+    /// <param name="options">What the editor asked for when it started the game; none otherwise.</param>
+    /// <param name="sceneExists">Whether the game's content has a URL; the game's content manager otherwise (the tests give
+    /// their own, for a game that is not run).</param>
+    internal PlayAgentSystem(Game game, PlayLaunchOptions? options, Func<string, bool>? sceneExists)
         : base(game?.Services ?? throw new ArgumentNullException(nameof(game)))
     {
         this.game = game;
@@ -107,6 +117,9 @@ public sealed class PlayAgentSystem : GameSystemBase
             if (!exceptionWatcher.Start())
                 log.Warning("Play mode cannot catch the scripts' exceptions in this game (its engine differs): a script's exception ends the game.");
         }
+        // Before the scene system loads the default scene (Play this scene)
+        if (Options.Scene is { Length: > 0 } scene)
+            StartsOnScene = PlayStartScene.Apply(game.SceneSystem, scene, sceneExists ?? (url => game.Content.Exists(url)), log);
         // Before the first update of the scene: no script starts
         if (Options.StartPaused)
             PauseController.Pause(PlayPauseReason.StartPaused);
@@ -116,6 +129,12 @@ public sealed class PlayAgentSystem : GameSystemBase
     /// What the editor asked for when it started the game.
     /// </summary>
     public PlayLaunchOptions Options { get; }
+
+    /// <summary>
+    /// Whether the game starts on the scene of <see cref="PlayLaunchOptions.Scene"/>: <c>false</c> when it asked for none, or
+    /// when that scene is not in the game's built data (the game then starts on its default scene).
+    /// </summary>
+    public bool StartsOnScene { get; }
 
     /// <summary>
     /// Whether a script's exception pauses the game now (<see cref="PlayLaunchOptions.PauseOnScriptException"/>, while an editor

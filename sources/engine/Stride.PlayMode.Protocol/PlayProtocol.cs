@@ -56,6 +56,12 @@ public static class PlayProtocol
     public const string PauseOnScriptExceptionVariable = "STRIDE_PLAY_PAUSE_ON_SCRIPT_EXCEPTION";
 
     /// <summary>
+    /// The variable that gives the URL of the scene the game starts on instead of its default scene (Play this scene); absent or
+    /// empty for the default scene.
+    /// </summary>
+    public const string SceneVariable = "STRIDE_PLAY_SCENE";
+
+    /// <summary>
     /// The prefix of the play mode's variables: the startup hook removes every variable that starts with it from the game's
     /// environment, and hands them to the agent.
     /// </summary>
@@ -65,5 +71,5 @@ public static class PlayProtocol
     /// The variables that a played game removes from its own environment once its agent is loaded, so that the processes it
     /// starts do not load an agent too. The hook also removes the other variables that start with <see cref="VariablePrefix"/>.
     /// </summary>
-    public static IReadOnlyList<string> GameVariables { get; } = [StartupHooksVariable, PipeVariable, EngineVersionVariable, HotkeyVariable, StartPausedVariable, PauseOnScriptExceptionVariable];
+    public static IReadOnlyList<string> GameVariables { get; } = [StartupHooksVariable, PipeVariable, EngineVersionVariable, HotkeyVariable, StartPausedVariable, PauseOnScriptExceptionVariable, SceneVariable];
 }

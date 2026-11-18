@@ -10,7 +10,9 @@ namespace Stride.PlayMode.Protocol;
 /// <param name="StartPaused">Whether the game pauses before its first update: no script starts until Resume or Step.</param>
 /// <param name="PauseOnScriptException">Whether a script's exception pauses the game instead of ending it.</param>
 /// <param name="Hotkey">The key that pauses the game from its window, frees the mouse, and resumes it; <c>null</c> for none.</param>
-public sealed record PlayLaunchOptions(bool StartPaused = false, bool PauseOnScriptException = false, PlayHotkey? Hotkey = null)
+/// <param name="Scene">The URL of the scene the game starts on instead of its default scene (Play this scene); <c>null</c> for the
+/// default scene. The scene must be in the game's built data.</param>
+public sealed record PlayLaunchOptions(bool StartPaused = false, bool PauseOnScriptException = false, PlayHotkey? Hotkey = null, string? Scene = null)
 {
     /// <summary>
     /// The options of a game started without any: it plays at once, a script's exception ends it as without play mode, and no
@@ -28,7 +30,8 @@ public sealed record PlayLaunchOptions(bool StartPaused = false, bool PauseOnScr
         return new PlayLaunchOptions(
             IsOn(variables, PlayProtocol.StartPausedVariable),
             IsOn(variables, PlayProtocol.PauseOnScriptExceptionVariable),
-            variables.TryGetValue(PlayProtocol.HotkeyVariable, out var hotkey) && PlayHotkey.TryParse(hotkey, out var parsed) ? parsed : null);
+            variables.TryGetValue(PlayProtocol.HotkeyVariable, out var hotkey) && PlayHotkey.TryParse(hotkey, out var parsed) ? parsed : null,
+            variables.TryGetValue(PlayProtocol.SceneVariable, out var scene) && !string.IsNullOrWhiteSpace(scene) ? scene : null);
     }
 
     /// <summary>
@@ -43,6 +46,8 @@ public sealed record PlayLaunchOptions(bool StartPaused = false, bool PauseOnScr
             variables[PlayProtocol.PauseOnScriptExceptionVariable] = "1";
         if (Hotkey is { } hotkey)
             variables[PlayProtocol.HotkeyVariable] = hotkey.ToString();
+        if (!string.IsNullOrWhiteSpace(Scene))
+            variables[PlayProtocol.SceneVariable] = Scene;
         return variables;
     }
 

@@ -161,13 +161,14 @@ public sealed class PlayProtocolTests
     [Fact]
     public void TheLaunchOptionsGoThroughTheGameVariables()
     {
-        var options = new PlayLaunchOptions(StartPaused: true, PauseOnScriptException: true, Hotkey: new PlayHotkey("F7", PlayHotkeyModifiers.Shift));
+        var options = new PlayLaunchOptions(StartPaused: true, PauseOnScriptException: true, Hotkey: new PlayHotkey("F7", PlayHotkeyModifiers.Shift), Scene: "/MyGame/Scenes/Level2");
 
         var variables = options.ToVariables();
 
         Assert.Equal("1", variables[PlayProtocol.StartPausedVariable]);
         Assert.Equal("1", variables[PlayProtocol.PauseOnScriptExceptionVariable]);
         Assert.Equal("Shift+F7", variables[PlayProtocol.HotkeyVariable]);
+        Assert.Equal("/MyGame/Scenes/Level2", variables[PlayProtocol.SceneVariable]);
         Assert.All(variables.Keys, x => Assert.StartsWith(PlayProtocol.VariablePrefix, x));
         Assert.All(variables.Keys, x => Assert.Contains(x, PlayProtocol.GameVariables));
         Assert.Equal(options, PlayLaunchOptions.FromVariables(variables));
@@ -182,6 +183,7 @@ public sealed class PlayProtocolTests
         {
             [PlayProtocol.StartPausedVariable] = "0",
             [PlayProtocol.HotkeyVariable] = "None",
+            [PlayProtocol.SceneVariable] = " ",
         }));
     }
 

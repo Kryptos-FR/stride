@@ -5,6 +5,7 @@ using System.IO.Pipes;
 using System.Reflection;
 using System.Threading.Channels;
 using Scheduler = Stride.Core.MicroThreading.Scheduler;
+using Stride.Core.Diagnostics;
 using Stride.Engine;
 using Stride.Games;
 using Stride.PlayMode.Agent;
@@ -185,9 +186,60 @@ public sealed class PlayAgentOptionsTests : IDisposable
         Assert.Equal("EarlyThrower", exception.EntityName);
     }
 
-    private PlayAgentSystem CreateAgent(PlayLaunchOptions options)
+    [Fact]
+    public void TheGameStartsOnTheSceneOfTheLaunchOptions()
     {
-        var agent = new PlayAgentSystem(game, options);
+        game.SceneSystem.InitialSceneUrl = "MainScene";
+
+        var agent = CreateAgent(new PlayLaunchOptions(Scene: "Scenes/Level2"), url => url is "Scenes/Level2" or "MainScene");
+
+        // Before the scene system loads its content: it loads this scene instead of the default one
+        Assert.True(agent.StartsOnScene);
+        Assert.Equal("Scenes/Level2", game.SceneSystem.InitialSceneUrl);
+        // The other options are not changed by it
+        Assert.False(agent.PauseController.IsPaused);
+    }
+
+    [Fact]
+    public void ASceneThatIsNotInTheBuiltDataLeavesTheDefaultScene()
+    {
+        game.SceneSystem.InitialSceneUrl = "MainScene";
+        var messages = new List<ILogMessage>();
+        void OnLogged(ILogMessage message) => messages.Add(message);
+        GlobalLogger.GlobalMessageLogged += OnLogged;
+        try
+        {
+            var agent = CreateAgent(new PlayLaunchOptions(StartPaused: true, Scene: "Scenes/Level3"), url => url == "MainScene");
+
+            Assert.False(agent.StartsOnScene);
+            Assert.Equal("MainScene", game.SceneSystem.InitialSceneUrl);
+            // The editor's Output gets why, from the agent's log
+            var warning = Assert.Single(messages, x => x.Module == "PlayMode" && x.Type == LogMessageType.Warning);
+            Assert.Contains("Scenes/Level3", warning.Text);
+            Assert.Contains("MainScene", warning.Text);
+            // The game still starts paused
+            Assert.True(agent.PauseController.IsPaused);
+        }
+        finally
+        {
+            GlobalLogger.GlobalMessageLogged -= OnLogged;
+        }
+    }
+
+    [Fact]
+    public void WithoutASceneTheDefaultSceneStays()
+    {
+        game.SceneSystem.InitialSceneUrl = "MainScene";
+
+        var agent = CreateAgent(PlayLaunchOptions.None, _ => throw new InvalidOperationException("No scene is looked for."));
+
+        Assert.False(agent.StartsOnScene);
+        Assert.Equal("MainScene", game.SceneSystem.InitialSceneUrl);
+    }
+
+    private PlayAgentSystem CreateAgent(PlayLaunchOptions options, Func<string, bool>? sceneExists = null)
+    {
+        var agent = new PlayAgentSystem(game, options, sceneExists);
         disposables.Add(agent);
         return agent;
     }
