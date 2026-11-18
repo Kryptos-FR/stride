@@ -25,8 +25,9 @@ internal sealed class CameraSlotNodeUpdater : AssetNodePresenterUpdaterBase
             node.Children.ForEach(x => x.IsVisible = false);
             node.AttachedProperties.Set(DisplayData.AttributeDisplayNameKey, value.Name);
         }
-        else if (node.Value is SceneCameraSlotId)
+        else if (node.Value is SceneCameraSlotId && node.Asset is not null)
         {
+            // Without an asset (a live entity of a running game) there are no compositors to choose from
             // Grab all graphics compositor of the same package as the asset.
             // TODO: we do not take all package dependencies for now because we don't want to include Stride package compositors.
             var graphicsCompositors = node.Asset.Directory.Package.Assets.Where(x => x.AssetType == typeof(GraphicsCompositorAsset));

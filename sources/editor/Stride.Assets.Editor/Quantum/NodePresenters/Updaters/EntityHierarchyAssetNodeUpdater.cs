@@ -22,25 +22,7 @@ internal sealed class EntityHierarchyAssetNodeUpdater : AssetNodePresenterUpdate
         if (node.Asset?.Asset is not EntityHierarchyAssetBase)
             return;
 
-        if (node.Value is EntityComponent && node.Parent?.Type == typeof(EntityComponentCollection))
-        {
-            // Apply the display name of the component
-            var displayAttribute = TypeDescriptorFactory.Default.AttributeRegistry.GetAttribute<DisplayAttribute>(node.Value.GetType());
-            if (!string.IsNullOrEmpty(displayAttribute?.Name))
-                node.DisplayName = displayAttribute.Name;
-
-            node.CombineKey = node.Value.GetType().Name;
-            if (node.Value is TransformComponent)
-            {
-                // Always put the transformation component in first.
-                node.Order = -1;
-                var removeCommand = node.Commands.FirstOrDefault(x => x.Name == RemoveItemCommand.CommandName);
-                node.Commands.Remove(removeCommand);
-
-                // Remove the Children property of the transformation component (it should be accessible via the scene graph)
-                node[nameof(TransformComponent.Children)].IsVisible = false;
-            }
-        }
+        EntityNodeDisplay.UpdateComponent(node);
         if (node.Type == typeof(EntityComponentCollection))
         {
             var types = typeof(EntityComponent).GetInheritedInstantiableTypes()
@@ -59,20 +41,7 @@ internal sealed class EntityHierarchyAssetNodeUpdater : AssetNodePresenterUpdate
 
             node.AttachedProperties.Add(EntityHierarchyData.EntityComponentAvailableTypeGroupsKey, typeGroups);
 
-            // Cannot replace entity component collection.
-            var replaceCommandIndex = node.Commands.IndexOf(x => x.Name == ReplacePropertyCommand.CommandName);
-            if (replaceCommandIndex >= 0)
-                node.Commands.RemoveAt(replaceCommandIndex);
-
-            // Combine components by type, but also append a index in case multiple components of the same types exist in the same collection.
-            var componentCount = new Dictionary<Type, int>();
-            foreach (var componentNode in node.Children)
-            {
-                var type = componentNode.Value.GetType();
-                componentCount.TryGetValue(type, out var count);
-                componentNode.CombineKey = $"{type.Name}@{count}";
-                componentCount[type] = ++count;
-            }
+            EntityNodeDisplay.UpdateComponentCollection(node);
         }
         if (typeof(EntityComponent).IsAssignableFrom(node.Type)
             || node.Type.IsInterface && node.Type.IsImplementedOnAny<EntityComponent>())
