@@ -33,6 +33,12 @@ namespace Stride.Graphics
         ///   UNorm one (<see cref="VulkanInterop.CreateRenderTarget"/>). Set before the Texture is initialized.
         /// </summary>
         internal bool IsFormatMutable;
+
+        /// <summary>
+        ///   Whether the MTLTexture behind the image can be exported, on a device that runs on Metal
+        ///   (<see cref="VulkanInterop.GetMetalTexture"/>). Set before the Texture is initialized.
+        /// </summary>
+        internal bool IsMetalTextureExportable;
         internal VkBuffer NativeBuffer;
         internal VkImageView NativeColorAttachmentView;
         internal VkImageView NativeDepthStencilView;
@@ -357,6 +363,15 @@ namespace Stride.Graphics
                 createInfo.pNext = &externalMemoryInfo;
                 createInfo.flags |= VkImageCreateFlags.MutableFormat;
             }
+
+            var exportMetalTexture = new VkExportMetalObjectCreateInfoEXT
+            {
+                sType = VkStructureType.ExportMetalObjectCreateInfoEXT,
+                pNext = createInfo.pNext,
+                exportObjectType = VkExportMetalObjectTypeFlagsEXT.MetalTexture,
+            };
+            if (IsMetalTextureExportable)
+                createInfo.pNext = &exportMetalTexture;
 
             // Create native image
             // TODO: flags, usage, etc.

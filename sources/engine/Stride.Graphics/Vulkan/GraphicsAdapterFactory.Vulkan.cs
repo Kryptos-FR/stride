@@ -339,6 +339,23 @@ namespace Stride.Graphics
             if (enableSyncValidation)
                 instanceCreateInfo.pNext = &validationFeatures;
 
+            // On MoltenVK, another renderer that draws with Metal on the device gets its MTLDevice and MTLCommandQueue
+            // (VulkanInterop.GetMetalDevice), which the instance must allow (VK_EXT_metal_objects); other drivers ignore it
+            var exportMetalCommandQueue = new VkExportMetalObjectCreateInfoEXT
+            {
+                sType = VkStructureType.ExportMetalObjectCreateInfoEXT,
+                pNext = instanceCreateInfo.pNext,
+                exportObjectType = VkExportMetalObjectTypeFlagsEXT.MetalCommandQueue,
+            };
+            var exportMetalDevice = new VkExportMetalObjectCreateInfoEXT
+            {
+                sType = VkStructureType.ExportMetalObjectCreateInfoEXT,
+                pNext = &exportMetalCommandQueue,
+                exportObjectType = VkExportMetalObjectTypeFlagsEXT.MetalDevice,
+            };
+            if (Platform.Type == PlatformType.macOS || Platform.Type == PlatformType.iOS)
+                instanceCreateInfo.pNext = &exportMetalDevice;
+
             // Silence MoltenVK's per-instance info dump (153-line extension list, device banner).
             // Set via env var instead of VkLayerSettingsCreateInfoEXT — the layer-settings struct
             // requires VK_EXT_layer_settings to be enabled, and MoltenVK acting as ICD without the

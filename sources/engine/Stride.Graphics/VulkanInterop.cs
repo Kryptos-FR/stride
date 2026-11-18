@@ -30,6 +30,14 @@ internal readonly record struct VulkanDeviceHandles(nint Instance, nint Physical
 internal readonly record struct VulkanImageHandles(ulong Image, ulong Memory, ulong MemorySize, uint Format, uint Tiling, uint Usage, uint LevelCount, uint SampleCount);
 
 /// <summary>
+///   The Metal objects behind a Vulkan graphics device that runs on Metal (MoltenVK), as another renderer that draws with
+///   Metal on the device needs them.
+/// </summary>
+/// <param name="Device">The <c>MTLDevice</c>.</param>
+/// <param name="CommandQueue">The <c>MTLCommandQueue</c> behind the queue the device submits its command lists to.</param>
+internal readonly record struct MetalDeviceHandles(nint Device, nint CommandQueue);
+
+/// <summary>
 ///   Lets another renderer that shares a Vulkan graphics device, such as Skia, draw into Stride Textures on the device's queue.
 /// </summary>
 /// <remarks>
@@ -58,6 +66,16 @@ internal readonly record struct VulkanImageHandles(ulong Image, ulong Memory, ul
 ///   <para>
 ///     Stride never sees the other renderer's commands: what it tracks of the Texture stays right because the Texture
 ///     is in the same layout before and after them.
+///   </para>
+///   <para>
+///     On Apple platforms the device runs on Metal (MoltenVK), and a renderer that draws with Metal (Skia, which has no
+///     Vulkan there) shares it through its Metal objects: the <c>MTLDevice</c> and the <c>MTLCommandQueue</c> of the
+///     device's queue (<see cref="GetMetalDevice"/>), and the <c>MTLTexture</c> of a Texture of
+///     <see cref="CreateRenderTarget"/> (<see cref="GetMetalTexture"/>). It commits its command buffers to that queue under
+///     <see cref="GetQueueLock"/>, but the queue doesn't order them with Stride's: MoltenVK orders its own commands with
+///     Metal fences, which the other renderer's commands don't wait for nor signal. So the other renderer waits for the
+///     queue to finish Stride's commands before it draws (<see cref="WaitForQueue"/>), after step 1, and for its own
+///     commands to finish before the Texture is used again, after step 2.
 ///   </para>
 /// </remarks>
 internal static partial class VulkanInterop
@@ -138,6 +156,46 @@ internal static partial class VulkanInterop
     }
 
     /// <summary>
+    ///   Gets the Metal objects behind a graphics device that runs on Metal (MoltenVK with VK_EXT_metal_objects).
+    /// </summary>
+    /// <param name="device">The graphics device.</param>
+    /// <returns>The Metal objects, or <see langword="null"/> if the device doesn't run on Metal.</returns>
+    /// <exception cref="NotSupportedException">The device is not a Vulkan device (see <see cref="IsSupported"/>).</exception>
+    public static MetalDeviceHandles? GetMetalDevice(GraphicsDevice device)
+    {
+        ThrowIfNotSupported(device);
+        return GetMetalDeviceImpl(device);
+    }
+
+    /// <summary>
+    ///   Gets the <c>MTLTexture</c> behind a Texture of <see cref="CreateRenderTarget"/>, on a device that runs on Metal.
+    /// </summary>
+    /// <param name="texture">The Texture (not a View).</param>
+    /// <returns>The <c>MTLTexture</c>, which the Texture keeps alive (it is not retained for the caller).</returns>
+    /// <exception cref="NotSupportedException">
+    ///   The Texture is not on a device that runs on Metal (see <see cref="GetMetalDevice"/>).
+    /// </exception>
+    public static nint GetMetalTexture(Texture texture)
+    {
+        ArgumentNullException.ThrowIfNull(texture);
+        ThrowIfNotSupported(texture.GraphicsDevice);
+        if (texture.ParentTexture != null)
+            throw new ArgumentException("A Texture View shares the image of its parent: pass the parent.", nameof(texture));
+        return GetMetalTextureImpl(texture);
+    }
+
+    /// <summary>
+    ///   Waits until the device's queue has finished all the commands submitted to it.
+    /// </summary>
+    /// <param name="device">The graphics device.</param>
+    /// <exception cref="NotSupportedException">The device is not a Vulkan device (see <see cref="IsSupported"/>).</exception>
+    public static void WaitForQueue(GraphicsDevice device)
+    {
+        ThrowIfNotSupported(device);
+        WaitForQueueImpl(device);
+    }
+
+    /// <summary>
     ///   Gets the lock under which the commands are submitted to the device's queue. Another renderer submits its own
     ///   commands under it too.
     /// </summary>
@@ -169,6 +227,12 @@ internal static partial class VulkanInterop
 
     private static partial object GetQueueLockImpl(GraphicsDevice device);
 
+    private static unsafe partial MetalDeviceHandles? GetMetalDeviceImpl(GraphicsDevice device);
+
+    private static unsafe partial nint GetMetalTextureImpl(Texture texture);
+
+    private static partial void WaitForQueueImpl(GraphicsDevice device);
+
 #if !STRIDE_GRAPHICS_API_VULKAN
     private static partial bool IsSupportedImpl(GraphicsDevice device) => false;
 
@@ -181,5 +245,11 @@ internal static partial class VulkanInterop
     private static partial VulkanImageHandles GetImageImpl(Texture texture) => throw new NotSupportedException();
 
     private static partial object GetQueueLockImpl(GraphicsDevice device) => throw new NotSupportedException();
+
+    private static unsafe partial MetalDeviceHandles? GetMetalDeviceImpl(GraphicsDevice device) => throw new NotSupportedException();
+
+    private static unsafe partial nint GetMetalTextureImpl(Texture texture) => throw new NotSupportedException();
+
+    private static partial void WaitForQueueImpl(GraphicsDevice device) => throw new NotSupportedException();
 #endif
 }

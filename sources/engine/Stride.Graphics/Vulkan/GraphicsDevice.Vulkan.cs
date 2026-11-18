@@ -214,10 +214,11 @@ namespace Stride.Graphics
         internal bool HasAndroidHardwareBufferSupport { get; private set; }
 #endif
 
-#if STRIDE_PLATFORM_IOS || STRIDE_PLATFORM_MACOS
-        // True when VK_EXT_metal_objects was enabled — lets us import CVPixelBuffer IOSurfaces as VkImage.
+        /// <summary>
+        ///   Whether VK_EXT_metal_objects is enabled: the device runs on Metal (MoltenVK), and its Metal objects can be
+        ///   exported (<see cref="VulkanInterop.GetMetalDevice"/>) or imported (IOSurfaces of CVPixelBuffers on iOS and macOS).
+        /// </summary>
         internal bool HasMetalObjectsSupport { get; private set; }
-#endif
 
         /// <summary>
         /// Whether <c>scalarBlockLayout</c> is enabled: needed by shaders whose structured buffers use Direct3D's tight layout
@@ -530,10 +531,9 @@ namespace Stride.Graphics
                 VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
                 // Exclusive full screen controlled by the swapchain (Windows)
                 VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME,
-#if STRIDE_PLATFORM_IOS || STRIDE_PLATFORM_MACOS
-                // IOSurface-backed VkImage import (zero-copy CVPixelBuffer upload on Apple platforms).
+                // The Metal objects behind the device on Apple platforms, which MoltenVK alone offers: IOSurface-backed VkImage
+                // import (zero-copy CVPixelBuffer upload), and export to another renderer that draws with Metal
                 VK_EXT_METAL_OBJECTS_EXTENSION_NAME,
-#endif
 #if STRIDE_PLATFORM_ANDROID
                 // AHardwareBuffer import (zero-copy buffers from camera / MediaCodec / etc.).
                 VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME,
@@ -563,13 +563,12 @@ namespace Stride.Graphics
             if (isPortabilitySubsetDevice)
                 desiredExtensionProperties.Add(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 
-#if STRIDE_PLATFORM_IOS || STRIDE_PLATFORM_MACOS
-            // VK_EXT_metal_objects lets us import IOSurface-backed CVPixelBuffers as VkImages for
-            // zero-copy video upload. MoltenVK 1.2+ supports it; no extra dependency extensions needed.
+            // VK_EXT_metal_objects lets us import IOSurface-backed CVPixelBuffers as VkImages for zero-copy video upload, and
+            // another renderer draw with Metal on the device's Metal objects. MoltenVK 1.2+ supports it; no extra dependency
+            // extensions needed. A desktop game runs on MoltenVK on macOS too, so it is enabled on every platform that has it.
             HasMetalObjectsSupport = availableExtensionProperties.Contains(VK_EXT_METAL_OBJECTS_EXTENSION_NAME);
             if (HasMetalObjectsSupport)
                 desiredExtensionProperties.Add(VK_EXT_METAL_OBJECTS_EXTENSION_NAME);
-#endif
 
 #if STRIDE_PLATFORM_ANDROID
             // All extensions in the AHardwareBuffer → VkImage chain must be present together.
