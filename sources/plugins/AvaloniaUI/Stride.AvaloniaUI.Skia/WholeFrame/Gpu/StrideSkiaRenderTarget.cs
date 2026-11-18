@@ -16,7 +16,8 @@ namespace Stride.AvaloniaUI.Skia.WholeFrame;
 /// </summary>
 /// <remarks>
 /// The texture is in the render target layout when Skia draws and stays in it (see <see cref="VulkanInterop"/>): the
-/// game moves it to the shader resource layout when it draws it.
+/// game moves it to the shader resource layout when it draws it. With Metal, Skia draws into the <c>MTLTexture</c>
+/// behind it.
 /// </remarks>
 internal sealed class StrideSkiaRenderTarget : ISkiaGpuRenderTarget
 {
@@ -53,8 +54,20 @@ internal sealed class StrideSkiaRenderTarget : ISkiaGpuRenderTarget
         }
         gpu.PrepareForSkia(texture);
 
+        grContext.ResetContext();
+        using var backendRenderTarget = gpu.IsOnMetal
+            ? new GRBackendRenderTarget(size.Width, size.Height, new GRMtlTextureInfo(VulkanInterop.GetMetalTexture(texture)))
+            : new GRBackendRenderTarget(size.Width, size.Height, GetImageInfo(texture));
+        // The texture is UNorm: Skia blends the sRGB colors as on the CPU, and the game samples them as sRGB when it draws in linear
+        var surface = SKSurface.Create(grContext, backendRenderTarget, GRSurfaceOrigin.TopLeft, SKColorType.Rgba8888, SKColorSpace.CreateSrgb())
+            ?? throw new InvalidOperationException("Skia can't draw into the texture of a view.");
+        return new Session(this, grContext, surface, sceneInfo.Scaling);
+    }
+
+    private GRVkImageInfo GetImageInfo(Texture texture)
+    {
         var image = VulkanInterop.GetImage(texture);
-        var imageInfo = new GRVkImageInfo
+        return new GRVkImageInfo
         {
             CurrentQueueFamily = gpu.QueueFamilyIndex,
             Format = image.Format,
@@ -66,13 +79,6 @@ internal sealed class StrideSkiaRenderTarget : ISkiaGpuRenderTarget
             SampleCount = image.SampleCount,
             Alloc = new GRVkAlloc { Memory = image.Memory, Size = image.MemorySize },
         };
-
-        grContext.ResetContext();
-        using var backendRenderTarget = new GRBackendRenderTarget(size.Width, size.Height, imageInfo);
-        // The texture is UNorm: Skia blends the sRGB colors as on the CPU, and the game samples them as sRGB when it draws in linear
-        var surface = SKSurface.Create(grContext, backendRenderTarget, GRSurfaceOrigin.TopLeft, SKColorType.Rgba8888, SKColorSpace.CreateSrgb())
-            ?? throw new InvalidOperationException("Skia can't draw into the texture of a view.");
-        return new Session(this, grContext, surface, sceneInfo.Scaling);
     }
 
     /// <summary>

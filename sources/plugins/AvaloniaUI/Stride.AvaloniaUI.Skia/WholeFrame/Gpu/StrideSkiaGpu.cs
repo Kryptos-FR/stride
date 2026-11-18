@@ -24,6 +24,11 @@ namespace Stride.AvaloniaUI.Skia.WholeFrame;
 /// on the CPU, into the framebuffer of each top level.
 /// </para>
 /// <para>
+/// On Apple platforms the device runs on Metal (MoltenVK), and Skia has no Vulkan there: it renders with Metal, on the
+/// Metal objects behind the device (<see cref="IsOnMetal"/>). The queue doesn't order Skia's commands with the game's
+/// there, so Skia waits for the queue before it draws and for its own commands after (see <see cref="VulkanInterop"/>).
+/// </para>
+/// <para>
 /// It is lost when its device goes or another one comes (<see cref="Lose"/>): Avalonia then asks
 /// <see cref="StridePlatformGraphics"/> for the current one at its next frame, and renders the top levels again.
 /// </para>
@@ -34,17 +39,18 @@ internal sealed class StrideSkiaGpu
 
     private readonly List<StrideSkiaRenderTarget> renderTargets = [];
     private readonly List<LayerSurface> layers = [];
-    private readonly GRVkBackendContext? backendContext;
+    private readonly IDisposable? backendContext;
     private readonly object? queueLock;
     private GRContext? grContext;
     private CommandList? commandList;
 
-    private StrideSkiaGpu(GraphicsDevice? device, GRVkBackendContext? backendContext, GRContext? grContext, uint queueFamilyIndex)
+    private StrideSkiaGpu(GraphicsDevice? device, IDisposable? backendContext, GRContext? grContext, uint queueFamilyIndex, bool isOnMetal)
     {
         Device = device;
         this.backendContext = backendContext;
         this.grContext = grContext;
         QueueFamilyIndex = queueFamilyIndex;
+        IsOnMetal = isOnMetal;
         if (device != null)
             queueLock = VulkanInterop.GetQueueLock(device);
     }
@@ -64,15 +70,20 @@ internal sealed class StrideSkiaGpu
     /// </summary>
     public uint QueueFamilyIndex { get; }
 
+    /// <summary>
+    /// Gets whether Skia renders with Metal, on the Metal objects behind the device (MoltenVK), rather than with Vulkan.
+    /// </summary>
+    public bool IsOnMetal { get; }
+
     public bool IsLost { get; private set; }
 
     /// <summary>
     /// Creates a GPU that renders on the CPU, for when the game has no graphics device Skia can share.
     /// </summary>
-    public static StrideSkiaGpu CreateWithoutDevice() => new(null, null, null, 0);
+    public static StrideSkiaGpu CreateWithoutDevice() => new(null, null, null, 0, isOnMetal: false);
 
     /// <summary>
-    /// Creates Skia's context on a graphics device.
+    /// Creates Skia's context on a graphics device: with Metal where the device runs on Metal, otherwise with Vulkan.
     /// </summary>
     /// <returns><c>null</c> if Skia can't share the device (not Vulkan, or Skia failed).</returns>
     public static StrideSkiaGpu? TryCreate(GraphicsDevice device)
@@ -80,6 +91,12 @@ internal sealed class StrideSkiaGpu
         if (!VulkanInterop.IsSupported(device))
             return null;
 
+        // Skia's Vulkan backend isn't in SkiaSharp on Apple platforms, its Metal backend is
+        return VulkanInterop.GetMetalDevice(device) is { } metal ? TryCreateOnMetal(device, metal) : TryCreateOnVulkan(device);
+    }
+
+    private static StrideSkiaGpu? TryCreateOnVulkan(GraphicsDevice device)
+    {
         var handles = VulkanInterop.GetDevice(device);
         var backendContext = new GRVkBackendContext
         {
@@ -92,24 +109,41 @@ internal sealed class StrideSkiaGpu
             GetProcedureAddress = (name, instance, nativeDevice) => VulkanInterop.GetProcAddress(device, name, instance, nativeDevice),
         };
 
-        GRContext? grContext;
-        try
-        {
-            lock (VulkanInterop.GetQueueLock(device))
-                grContext = GRContext.CreateVulkan(backendContext);
-        }
-        catch (Exception e)
-        {
-            Log.Warning("Skia can't render the Avalonia views on the game's Vulkan device: they render on the CPU.", e);
-            grContext = null;
-        }
-
+        var grContext = TryCreateContext(device, () => GRContext.CreateVulkan(backendContext), "Vulkan");
         if (grContext == null)
         {
             backendContext.Dispose();
             return null;
         }
-        return new StrideSkiaGpu(device, backendContext, grContext, handles.QueueFamilyIndex);
+        return new StrideSkiaGpu(device, backendContext, grContext, handles.QueueFamilyIndex, isOnMetal: false);
+    }
+
+    private static StrideSkiaGpu? TryCreateOnMetal(GraphicsDevice device, MetalDeviceHandles handles)
+    {
+        // Skia commits its command buffers to the queue of the game's command lists
+        var backendContext = new GRMtlBackendContext { DeviceHandle = handles.Device, QueueHandle = handles.CommandQueue };
+
+        var grContext = TryCreateContext(device, () => GRContext.CreateMetal(backendContext), "Metal");
+        if (grContext == null)
+        {
+            backendContext.Dispose();
+            return null;
+        }
+        return new StrideSkiaGpu(device, backendContext, grContext, 0, isOnMetal: true);
+    }
+
+    private static GRContext? TryCreateContext(GraphicsDevice device, Func<GRContext?> create, string api)
+    {
+        try
+        {
+            lock (VulkanInterop.GetQueueLock(device))
+                return create();
+        }
+        catch (Exception e)
+        {
+            Log.Warning($"Skia can't render the Avalonia views on the game's device with {api}: they render on the CPU.", e);
+            return null;
+        }
     }
 
     /// <summary>
@@ -175,6 +209,10 @@ internal sealed class StrideSkiaGpu
     /// <summary>
     /// Moves a texture to the render target layout Skia draws in, with a command list submitted before Skia's commands.
     /// </summary>
+    /// <remarks>
+    /// With Metal, it then waits for the queue, so that the game's commands that use the texture are done before Skia's
+    /// start.
+    /// </remarks>
     internal void PrepareForSkia(Texture texture)
     {
         var device = Device ?? throw new InvalidOperationException("Skia renders on the CPU.");
@@ -182,17 +220,22 @@ internal sealed class StrideSkiaGpu
         commandList.Reset();
         commandList.ResourceBarrierTransition(texture, BarrierLayout.RenderTarget);
         device.ExecuteCommandList(commandList.Close());
+        if (IsOnMetal)
+            VulkanInterop.WaitForQueue(device);
     }
 
     /// <summary>
     /// Submits what Skia drew to the device's queue.
     /// </summary>
+    /// <remarks>
+    /// With Metal, it waits for Skia's commands to be done, before the game's commands that use the texture start.
+    /// </remarks>
     internal void Submit()
     {
         if (GrContext is not { } context)
             return;
         lock (queueLock!)
-            context.Flush(true, false);
+            context.Flush(submit: true, synchronous: IsOnMetal);
     }
 
     internal void Remove(StrideSkiaRenderTarget renderTarget) => renderTargets.Remove(renderTarget);
