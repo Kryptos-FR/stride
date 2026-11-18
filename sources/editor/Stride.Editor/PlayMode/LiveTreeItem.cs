@@ -119,7 +119,7 @@ public abstract class LiveTreeItem : INotifyPropertyChanged
 public sealed class LiveSceneItem : LiveTreeItem
 {
     internal LiveSceneItem(LiveTree owner, PlaySceneInfo info)
-        : base(owner, info.Handle, info.Id, string.IsNullOrEmpty(info.Name) ? info.Url : info.Name)
+        : base(owner, info.Handle, info.Id, DisplayName(info))
     {
         Info = info;
     }
@@ -128,6 +128,13 @@ public sealed class LiveSceneItem : LiveTreeItem
     /// The scene as the game sent it: its URL finds its asset.
     /// </summary>
     public PlaySceneInfo Info { get; }
+
+    /// <summary>
+    /// The name of the scene's asset, as the user knows the scene (a loaded scene keeps the default name of a scene), else
+    /// the name the game gave it.
+    /// </summary>
+    private static string? DisplayName(PlaySceneInfo info)
+        => string.IsNullOrEmpty(info.Url) ? info.Name : info.Url[(info.Url.LastIndexOf('/') + 1)..];
 }
 
 /// <summary>

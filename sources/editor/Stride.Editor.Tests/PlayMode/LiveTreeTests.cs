@@ -230,7 +230,8 @@ public sealed class LiveTreeTests
     }
 
     internal static PlayTree Tree() => new(1,
-        [new PlaySceneInfo(1, SceneId, "MainScene", "MainScene", 0)],
+        // A loaded scene keeps the default name of a scene: the tree shows the name of its asset
+        [new PlaySceneInfo(1, SceneId, "Scene", "MainScene", 0)],
         [
             Entity(2, PlayerId, "Player", 0, Transform),
             Entity(3, CameraId, "Camera", 2, "Stride.Engine.CameraComponent, Stride.Engine"),
