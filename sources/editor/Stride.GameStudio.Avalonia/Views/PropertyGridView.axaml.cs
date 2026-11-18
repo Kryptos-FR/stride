@@ -1,14 +1,20 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Input;
+using Avalonia.VisualTree;
+using Stride.Assets.Editor.PlayMode;
 using Stride.Core.Assets.Editor.Components.Properties;
 using Stride.Core.Assets.Editor.Quantum.NodePresenters.Commands;
 using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Presentation.Avalonia.Commands;
 using Stride.Core.Presentation.Avalonia.Controls;
+using Stride.Core.Presentation.Quantum.Presenters;
+using Stride.Core.Presentation.Quantum.ViewModels;
+using Stride.Core.Quantum;
 
 namespace Stride.GameStudio.Avalonia.Views;
 
@@ -19,6 +25,55 @@ public partial class PropertyGridView : UserControl
         InitializeComponent();
         // The event is declared as a non-generic RoutedEvent, which the XAML compiler cannot wire to a typed handler
         Properties.PrepareItem += OnPrepareItem;
+    }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        ShowLive(DataContext as LivePropertiesViewModel);
+    }
+
+    /// <summary>
+    /// The live grid of a running game gets its header ("Live" with a lock, the refresh status), and asks the view which values
+    /// not to overwrite: the one under the pointer and the one with the keyboard focus, so that the user can read or copy them.
+    /// </summary>
+    private void ShowLive(LivePropertiesViewModel? live)
+    {
+        LiveBadge.DataContext = live;
+        LiveStatus.DataContext = live;
+        if (live is not null)
+            live.ProtectedValues = GetProtectedValues;
+    }
+
+    /// <summary>
+    /// The value nodes of the property under the pointer and of the property with the keyboard focus, with the nodes their row
+    /// shows without a row of their own (an inlined value, the X, Y and Z of a vector).
+    /// </summary>
+    private IReadOnlyCollection<(IGraphNode Node, NodeIndex Index)> GetProtectedValues()
+    {
+        var nodes = new HashSet<(IGraphNode, NodeIndex)>();
+        Add(Properties.HoveredItem);
+        var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Visual;
+        if (focused is not null && focused.FindAncestorOfType<PropertyView>(includeSelf: true) == Properties)
+            Add(focused.FindAncestorOfType<PropertyViewItem>(includeSelf: true));
+        return nodes;
+
+        void Add(PropertyViewItem? item)
+        {
+            if (item?.DataContext is NodeViewModel viewModel)
+                AddPresenters(viewModel.NodePresenters);
+        }
+
+        void AddPresenters(IEnumerable<INodePresenter> presenters)
+        {
+            foreach (var presenter in presenters)
+            {
+                var accessor = presenter.GetNodeAccessor();
+                if (accessor.Node is not null)
+                    nodes.Add((accessor.Node, accessor.Index));
+                AddPresenters(presenter.Children.Where(x => !x.IsVisible));
+            }
+        }
     }
 
     /// <summary>

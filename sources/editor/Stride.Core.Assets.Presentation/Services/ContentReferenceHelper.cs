@@ -12,6 +12,11 @@ namespace Stride.Core.Assets.Presentation.Services
     public class ContentReferenceHelper
     {
         public const string BrokenReference = "(Broken reference)";
+
+        /// <summary>
+        /// The text shown for content that a running game made itself: it has no URL and no asset.
+        /// </summary>
+        public const string CreatedAtRunTime = "(created at run time)";
         public const string EmptyReference = "(No asset selected)";
 
         /// <summary>

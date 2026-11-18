@@ -188,7 +188,8 @@ public sealed class NumericTextBox : TemplatedControl
             Key.Down or Key.PageDown => -(large ? LargeChange : SmallChange),
             _ => null,
         };
-        if (delta is not { } change || e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+        // A read-only box (a value that cannot be changed) shows its value only
+        if (delta is not { } change || e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Alt) || TextBox is { IsReadOnly: true })
             return;
 
         // Increasing an empty value starts from the minimum, decreasing it from the maximum

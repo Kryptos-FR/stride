@@ -5,6 +5,7 @@
              xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
              xmlns:cmd="using:Stride.Core.Assets.Editor.Avalonia.Commands"
              xmlns:cmdl="using:Stride.Core.Assets.Editor.Commands"
+             xmlns:aepm="using:Stride.Assets.Editor.PlayMode"
              xmlns:caeb="using:Stride.Core.Assets.Editor.Avalonia.Behaviors"
              xmlns:caecp="using:Stride.Core.Assets.Editor.Components.Properties"
              xmlns:capqvm="using:Stride.Core.Assets.Presentation.Quantum.ViewModels"
@@ -16,6 +17,7 @@
              x:DataType="caecp:SessionObjectPropertiesViewModel">
   <UserControl.Resources>
     <ResourceDictionary>
+      <SolidColorBrush x:Key="LivePropertiesBadgeBackground" Color="#B03A2E"/>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://Stride.Core.Assets.Editor.Avalonia/Themes/PropertyViewTheme.axaml"/>
         <ResourceInclude Source="avares://Stride.Core.Assets.Editor.Avalonia/Views/ImageResources.axaml"/>
@@ -23,6 +25,7 @@
     </ResourceDictionary>
   </UserControl.Resources>
   <UserControl.Styles>
+    <StyleInclude Source="avares://Stride.Core.Assets.Editor.Avalonia/Themes/PropertyViewStyles.axaml"/>
     <Style Selector="sd|PropertyViewItem[IsHovered=True]">
       <Setter Property="Background" Value="{DynamicResource PropertyHoveredBackground}"/>
     </Style>
@@ -88,6 +91,20 @@
           <Image Source="{StaticResource ImageNext}" Width="16" Height="16"/>
         </Button>
       </StackPanel>
+      <!-- A live entity of a running game: a "Live" badge with a lock, since the values are the game's and read-only.
+           The code-behind gives it the live grid as its data context. -->
+      <Border x:Name="LiveBadge" x:DataType="aepm:LivePropertiesViewModel"
+              DockPanel.Dock="Left" Margin="0,0,6,0" Padding="5,1" CornerRadius="3" VerticalAlignment="Center"
+              Background="{DynamicResource LivePropertiesBadgeBackground}"
+              IsVisible="{Binding IsLive, FallbackValue={sd:False}}"
+              ToolTip.Tip="{sd:LocalizeString The values of the running game. They are read-only and are refreshed while the game runs., Context=ToolTip}">
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <!-- A padlock -->
+          <Path Width="9" Height="11" Stretch="Uniform" VerticalAlignment="Center" Fill="White"
+                Data="M 2 5 V 3.5 A 3 3 0 0 1 8 3.5 V 5 H 9 V 11 H 1 V 5 Z M 3.5 5 H 6.5 V 3.5 A 1.5 1.5 0 0 0 3.5 3.5 Z"/>
+          <TextBlock Text="{sd:LocalizeString Live}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Border>
       <!-- Description -->
       <TextBlock x:Name="SelectionDescription" TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
         <Run Text="{Binding TypeDescription, Mode=OneWay}" FontWeight="Bold"/>
@@ -130,6 +147,11 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
     <DockPanel Grid.Row="2" Margin="6,2">
+      <!-- What the live grid says about its refresh: the game's frame, the entities refreshed less often -->
+      <TextBlock x:Name="LiveStatus" x:DataType="aepm:LivePropertiesViewModel"
+                 DockPanel.Dock="Top" Margin="0,0,0,4" Opacity="0.7" TextTrimming="CharacterEllipsis"
+                 Text="{Binding LiveStatus, FallbackValue={x:Null}}"
+                 IsVisible="{Binding IsLive, FallbackValue={sd:False}}"/>
       <!-- Open in editor -->
       <Button x:Name="EditSelectedContentButton" DockPanel.Dock="Top" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"
               Command="{Binding ((caevm:SessionViewModel)Session).EditSelectedContentCommand}"

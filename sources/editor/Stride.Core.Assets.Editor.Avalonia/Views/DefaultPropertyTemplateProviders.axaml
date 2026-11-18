@@ -244,6 +244,7 @@
                     Margin="2,0" HorizontalAlignment="Left" VerticalAlignment="Center"
                     IsChecked="{ReflectionBinding [Enabled]?.NodeValue, Converter={caec:DifferentValuesToParam}, ConverterParameter={x:Null}, TargetNullValue={x:False}}"
                     IsThreeState="{ReflectionBinding [Enabled]?.NodeValue, Converter={sd:IsEqualToParam}, ConverterParameter={x:Static cpqvm:NodeViewModel.DifferentValues}, TargetNullValue={x:False}}"
+                    IsEnabled="{ReflectionBinding [Enabled]?.IsReadOnly, Converter={sd:InvertBool}, FallbackValue={sd:True}, TargetNullValue={sd:True}}"
                     IsVisible="{Binding [HasChild_Enabled], FallbackValue={x:False}}"/>
           <Interaction.Behaviors>
             <DataTriggerBehavior Binding="{sd:MultiBinding {Binding ConverterParameter=[IsOverridden], Converter={caec:NodePathToObject}},
@@ -267,8 +268,12 @@
         </Grid>
       </Border>
       <GridSplitter Grid.Column="2" Width="2" ResizeBehavior="PreviousAndNext" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+      <!-- readOnly: the value cannot be changed, the editor only shows it (Themes/PropertyViewStyles.axaml). Collections and
+           dictionaries keep their buttons, which follow their commands. -->
       <Border Grid.Column="3" x:Name="PART_Editor"
-              HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,0,5,0">
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,0,5,0"
+              Classes.readOnly="{sd:MultiBinding {Binding IsReadOnly}, {Binding !HasCollection}, {Binding !HasDictionary},
+                                                 Converter={sd:AndMulti}}">
         <ContentControl x:Name="PART_ValueContainer"
                         Focusable="False" VerticalAlignment="Center"
                         Content="{Binding}"
@@ -313,6 +318,7 @@
         <StackPanel Orientation="Horizontal" Margin="8,0,0,0">
           <CheckBox Margin="4,0" VerticalAlignment="Center"
                     IsVisible="{Binding [HasChild_Enabled]}"
+                    IsEnabled="{ReflectionBinding [Enabled]?.IsReadOnly, Converter={sd:InvertBool}, FallbackValue={sd:True}, TargetNullValue={sd:True}}"
                     IsChecked="{ReflectionBinding [Enabled]?.NodeValue, Converter={caec:DifferentValuesToParam}, ConverterParameter={x:Null}, TargetNullValue={x:False}}"
                     IsThreeState="{ReflectionBinding [Enabled]?.NodeValue, Converter={sd:IsEqualToParam}, ConverterParameter={x:Static cpqvm:NodeViewModel.DifferentValues}, TargetNullValue={x:False}}"/>
           <Image Source="{Binding NodeValue, Converter={sd:Chained {sd:ObjectToType}, {caec:TypeToResource}}}"
@@ -917,15 +923,17 @@
           <ColumnDefinition Width="3*"/>
           <ColumnDefinition Width="*" MinWidth="60"/>
         </Grid.ColumnDefinitions>
-        <Slider Grid.Column="0"
-                Height="22" VerticalAlignment="Center"
-                IsEnabled="{sd:MultiBinding {Binding [Minimum]}, {Binding [Maximum]},
-                                            Converter={sd:MultiChained {sd:AllEqualMulti}, {sd:InvertBool}}}"
-                Value="{Binding NodeValue, Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}}"
-                Minimum="{Binding [Minimum], Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}, FallbackValue={x:Static s:Double.MinValue}}"
-                Maximum="{Binding [Maximum], Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}, FallbackValue={x:Static s:Double.MaxValue}}"
-                SmallChange="{Binding [SmallStep], Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}}"
-                LargeChange="{Binding [LargeStep], Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}}"/>
+        <!-- The slider sets its own IsEnabled (a range): the panel disables it when the value is read-only -->
+        <Panel Grid.Column="0" IsEnabled="{Binding !IsReadOnly}">
+          <Slider Height="22" VerticalAlignment="Center"
+                  IsEnabled="{sd:MultiBinding {Binding [Minimum]}, {Binding [Maximum]},
+                                              Converter={sd:MultiChained {sd:AllEqualMulti}, {sd:InvertBool}}}"
+                  Value="{Binding NodeValue, Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}}"
+                  Minimum="{Binding [Minimum], Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}, FallbackValue={x:Static s:Double.MinValue}}"
+                  Maximum="{Binding [Maximum], Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}, FallbackValue={x:Static s:Double.MaxValue}}"
+                  SmallChange="{Binding [SmallStep], Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}}"
+                  LargeChange="{Binding [LargeStep], Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}}"/>
+        </Panel>
         <sd:NumericTextBox Grid.Column="1"
                            Margin="6,2,2,2"
                            Value="{Binding NodeValue, Converter={sd:Chained {caec:DifferentValuesToNull}, {sd:ToDouble}}, UpdateSourceTrigger=Explicit}"
@@ -1510,7 +1518,9 @@
                          IsVisible="{Binding ThumbnailData, Converter={sd:Chained {sd:ObjectToBool}, {sd:InvertBool}}, FallbackValue={sd:False}}"/>
             <Border Width="64" Height="64"
                     Background="Transparent"
-                    IsVisible="{Binding NodeValue, Converter={sd:Chained {caec:ContentReferenceToAsset}, {sd:ObjectToBool}, {sd:InvertBool}}}"
+                    IsVisible="{sd:MultiBinding {Binding NodeValue, Converter={sd:Chained {caec:ContentReferenceToAsset}, {sd:ObjectToBool}, {sd:InvertBool}}},
+                                                {Binding [HasCommand_PickupAsset]},
+                                                Converter={sd:AndMulti}}"
                     ToolTip.Tip="{sd:LocalizeString Select an asset, Context=ToolTip}">
               <Image x:Name="PickupImage"
                      Width="16" Height="16"

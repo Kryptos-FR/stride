@@ -23,9 +23,15 @@ public sealed class ContentReferenceToUrl : ValueConverterBase<ContentReferenceT
         if (value == NodeViewModel.DifferentValues)
             return Tr._("(Different values)");
 
-        var contentReference = value as IReference ?? AttachedReferenceManager.GetOrCreateAttachedReference(value);
+        var contentReference = value as IReference ?? AttachedReferenceManager.GetAttachedReference(value);
+        // Content a running game made itself: it has no URL and no asset
+        if (contentReference is null || contentReference.Id == AssetId.Empty && string.IsNullOrEmpty(contentReference.Location))
+            return ContentReferenceHelper.CreatedAtRunTime;
         var asset = contentReference.Id != AssetId.Empty ? SessionViewModel.Instance.GetAssetById(contentReference.Id) : null;
-        return asset is not null ? asset.Url : ContentReferenceHelper.BrokenReference;
+        if (asset is not null)
+            return asset.Url;
+        // Content of a running game that the session does not have: its URL tells what it is
+        return contentReference.Id == AssetId.Empty && !string.IsNullOrEmpty(contentReference.Location) ? contentReference.Location : ContentReferenceHelper.BrokenReference;
     }
 
     public override object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

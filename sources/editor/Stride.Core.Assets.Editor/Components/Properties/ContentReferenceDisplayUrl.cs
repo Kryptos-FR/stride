@@ -25,7 +25,8 @@ public static class ContentReferenceDisplayUrl
     /// <returns>
     /// The location without the trailing slash (directories, and the package root when the namespace of the asset isn't in
     /// scope for the session), and the name of the asset. The location is empty for an empty or a broken reference, whose
-    /// name is the text to show.
+    /// name is the text to show. Content of a running game that the session does not have shows its URL, and content the
+    /// game made itself (no URL) shows <see cref="ContentReferenceHelper.CreatedAtRunTime"/>.
     /// </returns>
     public static (string Location, string Name) Split(object? value, SessionViewModel session, string differentValues)
     {
@@ -36,9 +37,18 @@ public static class ContentReferenceDisplayUrl
             return (string.Empty, differentValues);
 
         var contentReference = value as IReference ?? AttachedReferenceManager.GetAttachedReference(value);
-        var asset = contentReference is not null && contentReference.Id != AssetId.Empty ? session.GetAssetById(contentReference.Id) : null;
+        // Content a running game made itself: it has no URL and no asset
+        if (contentReference is null || contentReference.Id == AssetId.Empty && string.IsNullOrEmpty(contentReference.Location))
+            return (string.Empty, ContentReferenceHelper.CreatedAtRunTime);
+
+        var asset = contentReference.Id != AssetId.Empty ? session.GetAssetById(contentReference.Id) : null;
         if (asset is null)
+        {
+            // Content of a running game that the session does not have: its URL tells what it is
+            if (contentReference.Id == AssetId.Empty && !string.IsNullOrEmpty(contentReference.Location))
+                return SplitUrl(contentReference.Location);
             return (string.Empty, ContentReferenceHelper.BrokenReference);
+        }
 
         // In-scope namespaces resolve by unqualified URL for the open game; display them unqualified too
         var url = asset.Url;
@@ -48,6 +58,11 @@ public static class ContentReferenceDisplayUrl
             url = container.Unqualify(url).FullPath;
         }
 
+        return SplitUrl(url);
+    }
+
+    private static (string Location, string Name) SplitUrl(string url)
+    {
         var slash = url.LastIndexOf('/');
         return slash < 0 ? (string.Empty, url) : (url[..slash], url[(slash + 1)..]);
     }
