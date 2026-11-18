@@ -92,35 +92,47 @@
           <Image Source="{StaticResource ImageNext}" Width="16" Height="16"/>
         </Button>
       </StackPanel>
-      <!-- A live entity of a running game: a "Live" badge with a lock, since the values are the game's and read-only. A grey
-           "Stopped" badge with no lock once the game stopped: the grid then has no values. The code-behind gives it the live
-           grid as its data context. -->
+      <!-- A live entity of a running game: a "Live" badge, and the lock of its edits (open: a value changed in the grid changes
+           in the running game; closed: the values are read-only). A grey "Stopped" badge and no lock once the game stopped: the
+           grid then has no values. The code-behind gives them the live grid as their data context. -->
       <Border x:Name="LiveBadge" x:DataType="aepm:LivePropertiesViewModel"
-              DockPanel.Dock="Left" Margin="0,0,6,0" Padding="5,1" CornerRadius="3" VerticalAlignment="Center"
+              DockPanel.Dock="Left" Margin="0,0,4,0" Padding="5,1" CornerRadius="3" VerticalAlignment="Center"
               Classes.stopped="{Binding IsStopped, FallbackValue={sd:False}}"
               IsVisible="{Binding IsLive, FallbackValue={sd:False}}">
         <Border.Styles>
           <!-- Styles, not local values, so that the stopped style can replace them -->
           <Style Selector="Border#LiveBadge">
             <Setter Property="Background" Value="{DynamicResource LivePropertiesBadgeBackground}"/>
-            <Setter Property="ToolTip.Tip" Value="{sd:LocalizeString The values of the running game. They are read-only and are refreshed while the game runs., Context=ToolTip}"/>
+            <Setter Property="ToolTip.Tip" Value="{sd:LocalizeString The values of the running game. They are refreshed while it runs. Edits change the running game only: they are not saved., Context=ToolTip}"/>
           </Style>
           <Style Selector="Border#LiveBadge.stopped">
             <Setter Property="Background" Value="{DynamicResource StoppedLivePropertiesBadgeBackground}"/>
             <Setter Property="ToolTip.Tip" Value="{sd:LocalizeString The game has stopped: there are no values to show., Context=ToolTip}"/>
           </Style>
         </Border.Styles>
-        <StackPanel Orientation="Horizontal" Spacing="4">
-          <!-- A padlock -->
-          <Path x:Name="LiveBadgeLock" Width="9" Height="11" Stretch="Uniform" VerticalAlignment="Center" Fill="White"
-                IsVisible="{Binding !IsStopped, FallbackValue={sd:True}}"
-                Data="M 2 5 V 3.5 A 3 3 0 0 1 8 3.5 V 5 H 9 V 11 H 1 V 5 Z M 3.5 5 H 6.5 V 3.5 A 1.5 1.5 0 0 0 3.5 3.5 Z"/>
+        <Panel>
           <TextBlock x:Name="LiveBadgeText" Text="{sd:LocalizeString Live}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"
                      IsVisible="{Binding !IsStopped, FallbackValue={sd:True}}"/>
           <TextBlock x:Name="StoppedBadgeText" Text="{sd:LocalizeString Stopped}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"
                      IsVisible="{Binding IsStopped, FallbackValue={sd:False}}"/>
-        </StackPanel>
+        </Panel>
       </Border>
+      <ToggleButton x:Name="LiveEditsToggle" x:DataType="aepm:LivePropertiesViewModel"
+                    DockPanel.Dock="Left" Margin="0,0,6,0" Padding="4,2" VerticalAlignment="Center"
+                    IsVisible="{sd:MultiBinding {Binding IsLive, FallbackValue={sd:False}}, {Binding !IsStopped, FallbackValue={sd:False}}, Converter={sd:AndMulti}}"
+                    IsChecked="{Binding EditsEnabled, FallbackValue={sd:False}}"
+                    ToolTip.Tip="{sd:LocalizeString Edits on or off. On: a value changed here changes in the running game (it is not saved). Off: the values are read-only., Context=ToolTip}">
+        <Panel>
+          <!-- An open padlock: edits on -->
+          <Path Width="9" Height="11" Stretch="Uniform" VerticalAlignment="Center" Fill="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                IsVisible="{Binding EditsEnabled, FallbackValue={sd:False}}"
+                Data="M 2 5 V 3.5 A 3 3 0 0 1 8 3.5 H 6.5 A 1.5 1.5 0 0 0 3.5 3.5 V 5 H 9 V 11 H 1 V 5 Z"/>
+          <!-- A closed padlock: edits off -->
+          <Path Width="9" Height="11" Stretch="Uniform" VerticalAlignment="Center" Fill="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                IsVisible="{Binding !EditsEnabled, FallbackValue={sd:False}}"
+                Data="M 2 5 V 3.5 A 3 3 0 0 1 8 3.5 V 5 H 9 V 11 H 1 V 5 Z M 3.5 5 H 6.5 V 3.5 A 1.5 1.5 0 0 0 3.5 3.5 Z"/>
+        </Panel>
+      </ToggleButton>
       <!-- Description -->
       <TextBlock x:Name="SelectionDescription" TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
         <Run Text="{Binding TypeDescription, Mode=OneWay}" FontWeight="Bold"/>
@@ -167,6 +179,11 @@
       <TextBlock x:Name="LiveStatus" x:DataType="aepm:LivePropertiesViewModel"
                  DockPanel.Dock="Top" Margin="0,0,0,4" Opacity="0.7" TextTrimming="CharacterEllipsis"
                  Text="{Binding LiveStatus, FallbackValue={x:Null}}"
+                 IsVisible="{Binding IsLive, FallbackValue={sd:False}}"/>
+      <!-- What the edits do: they change the running game only, they are not saved; or they are off -->
+      <TextBlock x:Name="LiveNotice" x:DataType="aepm:LivePropertiesViewModel"
+                 DockPanel.Dock="Top" Margin="0,0,0,4" Opacity="0.7" TextTrimming="CharacterEllipsis"
+                 Text="{Binding LiveNotice, FallbackValue={x:Null}}"
                  IsVisible="{Binding IsLive, FallbackValue={sd:False}}"/>
       <!-- Open in editor -->
       <Button x:Name="EditSelectedContentButton" DockPanel.Dock="Top" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"

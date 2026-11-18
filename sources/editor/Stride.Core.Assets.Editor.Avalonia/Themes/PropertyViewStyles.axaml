@@ -18,4 +18,14 @@
   <Style Selector="Border#PART_Editor.readOnly Slider">
     <Setter Property="IsEnabled" Value="False"/>
   </Style>
+  <!-- The grid of a running game: a value sent to the game shows dimmed until the game reads it back; a value the game
+       refused gets a red frame, its tooltip says why. -->
+  <Style Selector="Border#PART_Editor.livePending">
+    <Setter Property="Opacity" Value="0.6"/>
+  </Style>
+  <Style Selector="Border#PART_Editor.liveRefused">
+    <Setter Property="BorderBrush" Value="#D04437"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="2"/>
+  </Style>
 </Styles>

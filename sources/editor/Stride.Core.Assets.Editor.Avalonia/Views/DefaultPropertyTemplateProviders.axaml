@@ -269,11 +269,17 @@
       </Border>
       <GridSplitter Grid.Column="2" Width="2" ResizeBehavior="PreviousAndNext" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
       <!-- readOnly: the value cannot be changed, the editor only shows it (Themes/PropertyViewStyles.axaml). Collections and
-           dictionaries keep their buttons, which follow their commands. -->
+           dictionaries keep their buttons, which follow their commands.
+           livePending, liveRefused: in the grid of a running game, the value was sent to the game and waits for the value it
+           reads back, or the game refused it; the tooltip says why, or why the value cannot change while the game runs. -->
       <Border Grid.Column="3" x:Name="PART_Editor"
               HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,0,5,0"
               Classes.readOnly="{sd:MultiBinding {Binding IsReadOnly}, {Binding !HasCollection}, {Binding !HasDictionary},
-                                                 Converter={sd:AndMulti}}">
+                                                 Converter={sd:AndMulti}}"
+              Classes.livePending="{Binding [LiveEditState], Converter={sd:IsEqualToParam}, ConverterParameter=Pending, FallbackValue={sd:False}}"
+              Classes.liveRefused="{Binding [LiveEditState], Converter={sd:IsEqualToParam}, ConverterParameter=Refused, FallbackValue={sd:False}}"
+              ToolTip.Tip="{Binding [LiveEditTip], FallbackValue={x:Null}}"
+              ToolTip.ShowOnDisabled="True">
         <ContentControl x:Name="PART_ValueContainer"
                         Focusable="False" VerticalAlignment="Center"
                         Content="{Binding}"

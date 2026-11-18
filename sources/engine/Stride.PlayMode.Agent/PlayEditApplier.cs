@@ -98,7 +98,8 @@ internal sealed class PlayEditApplier
         var entity = findEntity(edit.EntityHandle);
         if (entity is null)
             return Gone(edit, frame, "The entity is no longer in the game.");
-        var component = entity.Components.FirstOrDefault(x => x.Id == edit.ComponentId);
+        // No component: a member of the entity itself (its name)
+        object? component = edit.ComponentId == Guid.Empty ? entity : entity.Components.FirstOrDefault(x => x.Id == edit.ComponentId);
         if (component is null)
             return Gone(edit, frame, $"{entity.Name} no longer has this component.");
 
@@ -111,7 +112,7 @@ internal sealed class PlayEditApplier
                 case PlayEditOperation.Set:
                 {
                     if (edit.Path.Count == 0)
-                        throw new PlayEditException("An edit cannot replace the component itself.");
+                        throw new PlayEditException("An edit cannot replace the component or the entity itself.");
                     var value = CreateValue(edit.Value, Resolve);
                     var last = edit.Path[^1];
                     PlayEditPath.Change(component, edit.Path.Take(edit.Path.Count - 1).ToList(), x => PlayEditPath.SetStep(x, last, value, ReadKey), ReadKey);
@@ -221,7 +222,7 @@ internal sealed class PlayEditApplier
         throw new PlayEditException($"{last} is not an item of a list or a dictionary.");
     }
 
-    private static PlayEditValue ReadBack(EntityComponent component, IReadOnlyList<PlayPathSegment> path, Func<ReadOnlyMemory<byte>, object?> readKey, Func<Entity, int> handleOf)
+    private static PlayEditValue ReadBack(object component, IReadOnlyList<PlayPathSegment> path, Func<ReadOnlyMemory<byte>, object?> readKey, Func<Entity, int> handleOf)
     {
         var value = PlayEditPath.Get(component, path, readKey);
         return value is null ? PlayEditValue.Null : PlayEditValue.Of(PlayMirrorSerializer.WriteValue(value, handleOf));

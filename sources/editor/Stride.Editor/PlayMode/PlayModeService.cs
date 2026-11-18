@@ -152,6 +152,12 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
         }
         // The exception that paused the game, with its stack, next to the game's own output
         session.ScriptExceptionReceived += (_, exception) => output.Error(PlayPauseText.DescribeForOutput(exception));
+        // A live edit the game refused, while it runs (the edits a stop cut short are not refusals)
+        session.EditAnswered += (_, answer) =>
+        {
+            if (answer.Result.Status is PlayEditStatus.Failed or PlayEditStatus.Gone && session.State == PlaySessionState.Connected)
+                output.Warning(PlayEditText.DescribeRefusal(answer, session.Tree?.Entities.FirstOrDefault(x => x.Handle == answer.Edit.EntityHandle)?.Name));
+        };
         PlaySession? previous;
         lock (@lock)
         {

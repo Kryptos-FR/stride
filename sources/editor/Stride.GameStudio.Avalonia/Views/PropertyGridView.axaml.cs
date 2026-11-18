@@ -34,13 +34,16 @@ public partial class PropertyGridView : UserControl
     }
 
     /// <summary>
-    /// The live grid of a running game gets its header ("Live" with a lock, the refresh status), and asks the view which values
-    /// not to overwrite: the one under the pointer and the one with the keyboard focus, so that the user can read or copy them.
+    /// The live grid of a running game gets its header ("Live", the lock of its edits, the refresh status, what the edits do),
+    /// and asks the view which values not to overwrite: the one under the pointer and the one with the keyboard focus, so that
+    /// the user can read, copy or type them.
     /// </summary>
     private void ShowLive(LivePropertiesViewModel? live)
     {
         LiveBadge.DataContext = live;
+        LiveEditsToggle.DataContext = live;
         LiveStatus.DataContext = live;
+        LiveNotice.DataContext = live;
         if (live is not null)
             live.ProtectedValues = GetProtectedValues;
     }

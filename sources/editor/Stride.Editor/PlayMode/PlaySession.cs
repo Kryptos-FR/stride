@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Stride.Core.Assets.Editor.Components.Build;
@@ -8,6 +9,14 @@ using Stride.Core.Diagnostics;
 using Stride.PlayMode.Protocol;
 
 namespace Stride.Editor.PlayMode;
+
+/// <summary>
+/// An edit of a live value and its answer (<see cref="PlaySession.EditAnswered"/>).
+/// </summary>
+/// <param name="Edit">The edit sent.</param>
+/// <param name="Result">The game's answer, or the session's when the game could not answer.</param>
+[Experimental("STREXP012")]
+public sealed record PlayEditAnswer(PlayEdit Edit, PlayEditResult Result);
 
 /// <summary>
 /// Where a play session is.
@@ -101,6 +110,9 @@ public sealed class PlaySession : IAsyncDisposable
     private readonly LiveMirrorReader mirrorReader;
     private readonly CancellationTokenSource lifetime = new();
     private readonly TaskCompletionSource exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    // The edits sent and not answered yet, by id
+    private readonly ConcurrentDictionary<int, (PlayEdit Edit, TaskCompletionSource<PlayEditResult> Completion)> pendingEdits = new();
+    private int lastEditId;
     private PlayConnection? connection;
     private Task? exitWatch;
     private Task? connectionWatch;
@@ -407,6 +419,43 @@ public sealed class PlaySession : IAsyncDisposable
     public bool RequestQuit() => SendIfConnected(new PlayQuit());
 
     /// <summary>
+    /// Raised when an edit sent by <see cref="EditAsync"/> is answered, by the game or by the session when it ends first: on the
+    /// session's reading task, or on the thread that ends the session.
+    /// </summary>
+    public event EventHandler<PlayEditAnswer>? EditAnswered;
+
+    /// <summary>
+    /// The edits sent and not answered yet.
+    /// </summary>
+    public int PendingEditCount => pendingEdits.Count;
+
+    /// <summary>
+    /// Gives the id of a new edit: each edit of a session has its own.
+    /// </summary>
+    public int NextEditId() => Interlocked.Increment(ref lastEditId);
+
+    /// <summary>
+    /// Sends an edit of a live value to the game, which applies it at the start of its next frame and answers with the value
+    /// it reads back.
+    /// </summary>
+    /// <param name="edit">The edit, with an id from <see cref="NextEditId"/>.</param>
+    /// <returns>The game's answer. When the session is not connected, or it ends before the game answers (the game stopped or
+    /// its connection broke), a <see cref="PlayEditStatus.Failed"/> result that says so, made by the session.</returns>
+    public Task<PlayEditResult> EditAsync(PlayEdit edit)
+    {
+        ArgumentNullException.ThrowIfNull(edit);
+        var completion = new TaskCompletionSource<PlayEditResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!pendingEdits.TryAdd(edit.Id, (edit, completion)))
+            throw new ArgumentException($"An edit with the id {edit.Id} is already waiting for its result.", nameof(edit));
+        // A session that ended between the check and the add is caught by the end's own sweep
+        if (State != PlaySessionState.Connected || !SendIfConnected(edit))
+            FailEdit(edit.Id, State == PlaySessionState.Connected ? "The edit could not be sent to the game (its queue is full)." : NotConnectedMessage());
+        else if (State != PlaySessionState.Connected)
+            FailPendingEdits();
+        return completion.Task;
+    }
+
+    /// <summary>
     /// Ends the game: asks it to quit, and ends its process if it still runs after <see cref="PlaySessionOptions.StopGracePeriod"/>.
     /// </summary>
     public async Task StopAsync()
@@ -442,6 +491,7 @@ public sealed class PlaySession : IAsyncDisposable
         if (toClose is not null)
             await toClose.DisposeAsync().ConfigureAwait(false);
         await transport.DisposeAsync().ConfigureAwait(false);
+        FailPendingEdits();
         foreach (var task in new[] { exitWatch, connectionWatch, respondingWatch })
         {
             if (task is null)
@@ -571,7 +621,41 @@ public sealed class PlaySession : IAsyncDisposable
                 LastScriptException = exception;
                 Raise(ScriptExceptionReceived, exception);
                 break;
+            case PlayEditResult result:
+                if (pendingEdits.TryRemove(result.Id, out var pending))
+                {
+                    Raise(EditAnswered, new PlayEditAnswer(pending.Edit, result));
+                    pending.Completion.TrySetResult(result);
+                }
+                break;
         }
+    }
+
+    private string NotConnectedMessage() => State switch
+    {
+        PlaySessionState.GameExited => "The game stopped before the edit applied.",
+        PlaySessionState.Connected => string.Empty,
+        _ => "The game is not connected: the edit was not sent.",
+    };
+
+    private void FailEdit(int id, string error)
+    {
+        if (pendingEdits.TryRemove(id, out var pending))
+        {
+            var result = new PlayEditResult(id, 0, PlayEditStatus.Failed, PlayEditValue.Null, error);
+            Raise(EditAnswered, new PlayEditAnswer(pending.Edit, result));
+            pending.Completion.TrySetResult(result);
+        }
+    }
+
+    /// <summary>
+    /// The session is no longer connected: the edits sent will not be answered.
+    /// </summary>
+    private void FailPendingEdits()
+    {
+        var error = NotConnectedMessage();
+        foreach (var id in pendingEdits.Keys)
+            FailEdit(id, error.Length > 0 ? error : "The game stopped before the edit applied.");
     }
 
     private bool SetState(PlaySessionState state, string? message)
@@ -587,6 +671,8 @@ public sealed class PlaySession : IAsyncDisposable
             if (message is not null)
                 StateMessage = message;
         }
+        if (old == PlaySessionState.Connected)
+            FailPendingEdits();
         Raise(StateChanged, new PlaySessionStateChange(old, state, message));
         return true;
     }

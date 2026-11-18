@@ -21,13 +21,18 @@ namespace Stride.Assets.Editor.PlayMode;
 
 /// <summary>
 /// The property grid of the live entities of a running game: one or several entities (merged as the grid merges any
-/// selection), read-only, kept up to date by the snapshots of the play session.
+/// selection), kept up to date by the snapshots of the play session, whose values the user can change in the running game.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The grid is built on the mirrors of the entities with its own node container, with the commands and updaters of the
-/// session's grid (the plugins' too) and a few of its own (<see cref="LiveEntityNodeUpdater"/>). Every write from the view is
-/// refused.
+/// session's grid (the plugins' too) and a few of its own (<see cref="LiveEntityNodeUpdater"/>, <see cref="LiveEditNodeUpdater"/>).
+/// </para>
+/// <para>
+/// A write from the view goes to the game as an edit (see <see cref="LiveEditor"/>): the value shows at once, marked as
+/// pending, then the value the game read back replaces it, or the property says the game refused it. The edits change the
+/// running game only: the mirror belongs to no asset, so nothing is saved and nothing reaches the undo stack. With
+/// <see cref="EditsEnabled"/> off, every property is read-only.
 /// </para>
 /// <para>
 /// Each snapshot is compared with the mirrors the grid shows, and only the changed values are written, in a batch, through the
@@ -49,6 +54,7 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
     private readonly AssetNodeContainer mirrorNodes = new() { NodeBuilder = { NodeFactory = new AssetNodeFactory() } };
     private readonly LiveNodePresenterFactory presenterFactory;
     private readonly LiveMirrorApplier applier;
+    private readonly LiveEditor editor;
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly List<Entry> entries = [];
     private PlaySession? playSession;
@@ -77,9 +83,11 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
         foreach (var updater in source.NodePresenterUpdaters)
             RegisterNodePresenterUpdater(new GuardedNodeUpdater(updater, Log));
         RegisterNodePresenterUpdater(new GuardedNodeUpdater(new LiveEntityNodeUpdater(FindCameraSlot), Log));
-        RegisterNodePresenterUpdater(new LiveReadOnlyNodeUpdater());
+        RegisterNodePresenterUpdater(new LiveEditNodeUpdater(() => EditsEnabled, () => EditsEnabled ? editor : null));
 
-        presenterFactory = new LiveNodePresenterFactory(mirrorNodes.NodeBuilder, ViewModelService.AvailableCommands, ViewModelService.AvailableUpdaters, Log);
+        editor = new LiveEditor(() => playSession, FindMirror, Dispatcher, Log);
+        editor.Answered += (_, e) => EditAnswered?.Invoke(this, e);
+        presenterFactory = new LiveNodePresenterFactory(mirrorNodes.NodeBuilder, ViewModelService.AvailableCommands, ViewModelService.AvailableUpdaters, Log) { Editor = editor };
         ViewModelService.NodePresenterFactory = presenterFactory;
         applier = new LiveMirrorApplier { FindAsset = url => session.GetAssetByUrl(url)?.Id };
     }
@@ -90,9 +98,61 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
     public event EventHandler<LiveApplyEventArgs>? Applied;
 
     /// <summary>
-    /// Whether the grid shows the values of a running game (the header says "Live", with a lock).
+    /// Raised on the UI thread when the game answered an edit of the grid.
+    /// </summary>
+    public event EventHandler<LiveEditEventArgs>? EditAnswered;
+
+    /// <summary>
+    /// Whether the grid shows the values of a running game (the header says "Live").
     /// </summary>
     public bool IsLive => true;
+
+    /// <summary>
+    /// Whether the user can change the values in the running game (on by default). Off, every property is read-only, as a
+    /// guard against changing the game by mistake while reading it. A change builds the grid again.
+    /// </summary>
+    public bool EditsEnabled
+    {
+        get;
+        set
+        {
+            if (!SetValue(ref field, value))
+                return;
+            OnPropertyChanged(nameof(LiveNotice));
+            presenterFactory.Editor = value ? editor : null;
+            editor.Reset();
+            if (entries.Count > 0)
+                RebuildAsync(entries.Select(x => x.References.Mirror).ToList()).Forget();
+        }
+    } = true;
+
+    /// <summary>
+    /// What the header says about the edits: that they change the running game only and are not saved, or that they are off.
+    /// </summary>
+    public string LiveNotice => EditsEnabled
+        ? "Edits change the running game only: they are not saved."
+        : "Edits are off: the values are read-only.";
+
+    /// <summary>
+    /// The edits sent to the game.
+    /// </summary>
+    public int SentEdits => editor.SentEdits;
+
+    /// <summary>
+    /// The edits the game refused.
+    /// </summary>
+    public int RefusedEdits => editor.RefusedEdits;
+
+    /// <summary>
+    /// The values written into a property while its last edit was on its way, replaced by a later value before they could go
+    /// (the editor sends at most one edit of a property at a time).
+    /// </summary>
+    public int CoalescedWrites => editor.CoalescedWrites;
+
+    /// <summary>
+    /// The edits on their way to the game.
+    /// </summary>
+    public int PendingEdits => editor.PendingEdits;
 
     /// <summary>
     /// Whether the grid shows entities of a game that stopped (<see cref="ShowStopped"/>): it has no values, and the header says
@@ -143,7 +203,8 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
     public int BuildCount { get; private set; }
 
     /// <summary>
-    /// The writes the view tried and the grid refused (a template or a command that should not be offered on a live entity).
+    /// The writes the view tried and the grid refused: edits are off, the game is not connected, or a template or a command
+    /// wrote to a property that should not be offered.
     /// </summary>
     public int RefusedWrites => presenterFactory.RefusedWrites;
 
@@ -273,6 +334,7 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
             playSession = null;
         }
         Interlocked.Exchange(ref pending, null);
+        editor.Reset();
     }
 
     /// <summary>
@@ -316,7 +378,11 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
         var now = clock.Elapsed;
         var results = new List<(int Handle, LiveApplyResult Result, TimeSpan Elapsed)>();
         var protectedValues = ProtectedValues?.Invoke();
-        applier.IsProtected = protectedValues is { Count: > 0 } ? (node, index) => protectedValues.Contains((node, index)) : null;
+        // Also the values whose edit is on its way, or whose read-back is newer than the snapshot
+        var frame = snapshot.Frame;
+        applier.IsProtected = protectedValues is { Count: > 0 }
+            ? (node, index) => protectedValues.Contains((node, index)) || editor.IsProtected(node, index, frame)
+            : (node, index) => editor.IsProtected(node, index, frame);
         string? structuralChange = null;
         using (presenterFactory.BeginBatch())
         {
@@ -360,6 +426,8 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
 
     private async Task RebuildAsync(IReadOnlyList<LiveEntityMirror> mirrors)
     {
+        // The edits on their way belong to the presenters of the old grid: their answers change nothing in the new one
+        editor.Reset();
         entries.Clear();
         Throttle.Keep(mirrors.Select(x => x.Handle).ToList());
         foreach (var mirror in mirrors)
@@ -436,6 +504,9 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
                 Dispatcher.InvokeTask(ApplyPendingAsync).Forget();
         }
     }
+
+    private LiveMirrorReferences? FindMirror(Stride.Engine.Entity entity)
+        => entries.FirstOrDefault(x => x.References.Mirror.Entity == entity)?.References;
 
     private string? FindCameraSlot(SceneCameraSlotId slot)
     {
