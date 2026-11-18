@@ -12,6 +12,8 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://Stride.Assets.Editor.Avalonia/Views/SceneEditorImages.axaml"/>
+        <ResourceInclude Source="avares://Stride.Assets.Editor.Avalonia/Themes/PreviewImages.axaml"/>
+        <ResourceInclude Source="avares://Stride.Core.Assets.Editor.Avalonia/Views/ImageResources.axaml"/>
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </UserControl.Resources>
@@ -39,6 +41,12 @@
     <Style Selector="Border.notice.warning">
       <Setter Property="Background" Value="#40CA5100"/>
       <Setter Property="BorderBrush" Value="#A0CA5100"/>
+    </Style>
+    <Style Selector="Border.state.paused">
+      <Setter Property="Background" Value="#FF2B6CB0"/>
+    </Style>
+    <Style Selector="Border.state.paused TextBlock">
+      <Setter Property="Foreground" Value="White"/>
     </Style>
     <Style Selector="Border.state.notResponding">
       <Setter Property="Background" Value="#FFCA5100"/>
@@ -80,7 +88,7 @@
     <!-- The header: this tab shows the running game, not the scene assets -->
     <Border DockPanel.Dock="Top" Padding="6,4" Background="#20388934">
       <DockPanel>
-        <Border DockPanel.Dock="Right" Classes="state" Classes.playing="{Binding IsPlaying}" Classes.notResponding="{Binding IsNotResponding}">
+        <Border DockPanel.Dock="Right" Classes="state" Classes.playing="{Binding IsPlaying}" Classes.paused="{Binding IsPaused}" Classes.notResponding="{Binding IsNotResponding}">
           <TextBlock Name="StateText" Text="{Binding StateText}" FontSize="11"/>
         </Border>
         <TextBlock Name="HeaderText" Text="{sd:LocalizeString Running game, Context=Play}" FontWeight="Bold" VerticalAlignment="Center"
@@ -112,6 +120,36 @@
                 IsVisible="{Binding ReloadCodeCommand, Converter={x:Static ObjectConverters.IsNotNull}}"/>
       </StackPanel>
     </Border>
+    <!-- Pause (Resume while paused), Step one frame, the time scale, and the game's frame rate: the game draws while paused -->
+    <DockPanel DockPanel.Dock="Top" Name="PlayControls" Margin="2,2,2,0" DataContext="{Binding Controls}" x:DataType="pm:PlayControlsViewModel">
+      <TextBlock DockPanel.Dock="Right" Name="FramesPerSecond" VerticalAlignment="Center" Margin="4,0" Opacity="0.8"
+                 Text="{Binding FramesPerSecond, StringFormat={}{0:0} fps}" IsVisible="{Binding CanControl}"
+                 ToolTip.Tip="{sd:LocalizeString The frame rate of the game; it goes on drawing while paused, Context=ToolTip}"/>
+      <StackPanel Orientation="Horizontal" Spacing="2">
+        <Button Name="PauseButton" Focusable="False" Background="Transparent" Padding="4" Command="{Binding PauseCommand}"
+                ToolTip.Tip="{Binding PauseText}" ToolTip.ShowOnDisabled="True">
+          <Panel>
+            <Image Source="{StaticResource ImagePause}" Width="16" Height="16" IsVisible="{Binding !IsPaused}"/>
+            <Image Source="{StaticResource ImagePlay}" Width="16" Height="16" IsVisible="{Binding IsPaused}"/>
+          </Panel>
+        </Button>
+        <Button Name="StepButton" Focusable="False" Background="Transparent" Padding="4" Command="{Binding StepCommand}"
+                ToolTip.Tip="{sd:LocalizeString Step one frame: one update of the fixed step then pause, Context=ToolTip}" ToolTip.ShowOnDisabled="True">
+          <Image Source="{StaticResource ImageNext}" Width="16" Height="16"/>
+        </Button>
+        <ComboBox Name="TimeScale" VerticalAlignment="Center" MinWidth="70" Margin="4,0,0,0"
+                  ItemsSource="{x:Static pm:PlayControlsViewModel.TimeScales}"
+                  SelectedItem="{Binding TimeScale}"
+                  IsEnabled="{Binding CanControl}"
+                  ToolTip.Tip="{sd:LocalizeString The speed of the game time: it multiplies the time factor of the game, Context=ToolTip}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="x:Double">
+              <TextBlock Text="{Binding StringFormat={}{0}×}"/>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </StackPanel>
+    </DockPanel>
     <!-- The game stopped: the tree below is its last one, greyed, and its entities have no values any more -->
     <Border DockPanel.Dock="Top" Name="StoppedNotice" Classes="notice" IsVisible="{Binding StoppedNotice, Converter={x:Static ObjectConverters.IsNotNull}}">
       <TextBlock Name="StoppedNoticeText" TextWrapping="Wrap" Text="{Binding StoppedNotice}"/>

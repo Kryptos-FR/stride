@@ -49,6 +49,8 @@ internal static class GameStudioCommands
     public const string CancelBuildId = "Stride.Project.CancelBuild";
     public const string StopGameId = "Stride.Project.StopGame";
     public const string StartWithoutLiveViewId = "Stride.Project.StartWithoutLiveView";
+    public const string PauseGameId = "Stride.Project.PauseGame";
+    public const string StepGameId = "Stride.Project.StepGame";
     public const string ReloadGameAssembliesId = "Stride.Project.ReloadGameAssemblies";
     public const string DocumentationId = "Stride.Help.Documentation";
     public const string QuestionsId = "Stride.Help.Questions";
@@ -89,6 +91,9 @@ internal static class GameStudioCommands
         Wrap(StartProjectId, CommandCategories.Project, () => Tr._p("Menu", "Start project"), new KeyGesture(Key.F5), x => x.StartProjectCommand, keywords: ["run", "play", "launch", "game"]),
         Wrap(StartWithoutLiveViewId, CommandCategories.Project, () => Tr._p("Menu", "Start without the live view"), Primary(Key.F5), x => x.StartWithoutLiveViewCommand, keywords: ["run", "play", "launch", "game", "connection"]),
         Wrap(StopGameId, CommandCategories.Project, () => Tr._p("Menu", "Stop game"), new KeyGesture(Key.F5, KeyModifiers.Shift), x => x.StopGameCommand, keywords: ["play", "end", "quit", "exit"]),
+        // F7 and F10 are free in both editors (F5 and F6 are start and build, F2 rename); F10 steps over in Visual Studio
+        Wrap(PauseGameId, CommandCategories.Project, () => Tr._p("Menu", "Pause or resume game"), new KeyGesture(Key.F7), x => x.PlayControls?.PauseCommand, keywords: ["play", "pause", "resume", "continue", "freeze", "break"]),
+        Wrap(StepGameId, CommandCategories.Project, () => Tr._p("Menu", "Step one frame"), new KeyGesture(Key.F10), x => x.PlayControls?.StepCommand, keywords: ["play", "pause", "next", "frame", "advance"]),
         Wrap(CancelBuildId, CommandCategories.Project, () => Tr._p("Menu", "Cancel build"), Primary(Key.F6), x => x.Build.CancelBuildCommand, keywords: ["stop"]),
         Wrap(ReloadGameAssembliesId, CommandCategories.Project, () => Tr._p("Menu", "Reload game assemblies"), null, x => x.CodeReload.ReloadCommand, keywords: ["code", "scripts"]),
         // Help
@@ -146,6 +151,8 @@ internal static class GameStudioCommands
         StartProjectId => main.StartProjectCommand,
         StartWithoutLiveViewId => main.StartWithoutLiveViewCommand,
         StopGameId => main.StopGameCommand,
+        PauseGameId => main.PlayControls?.PauseCommand,
+        StepGameId => main.PlayControls?.StepCommand,
         CancelBuildId => main.Build.CancelBuildCommand,
         ReloadGameAssembliesId => main.CodeReload.ReloadCommand,
         SessionCommands.AddDependencyId => main.Session?.AddDependencyCommand,

@@ -119,6 +119,8 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
             PlayMode.PlayingChanged += PlayingChanged;
             PlayMode.SessionStarted += PlaySessionStarted;
             PlayStatus = new PlayStatusViewModel(serviceProvider, PlayMode);
+            // Pause game and Step one frame: the Live tab's toolbar and the main window's commands
+            PlayControls = new PlayControlsViewModel(serviceProvider, PlayMode);
         }
 
         // The panels of the main window: the editor's and the plugins' (the plugin host owns the registry, and removes the
@@ -203,6 +205,12 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     /// play sessions.
     /// </summary>
     public PlayStatusViewModel? PlayStatus { get; }
+
+    /// <summary>
+    /// Pause, Step and the time scale of the game started with Start project (the Live tab's toolbar, Pause game and Step one
+    /// frame); <c>null</c> when the host starts games without play sessions.
+    /// </summary>
+    public PlayControlsViewModel? PlayControls { get; }
 
     /// <summary>
     /// The router of the Edit commands of the main view (Undo, Copy, Paste...), which act on the control that last had the
@@ -617,7 +625,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
         {
             registry.Register(LivePanel.Create(context => new LivePanelViewModel(context, playMode, new LiveSceneAssets(context.Session),
                 context.Session is SessionViewModel session ? new LivePropertyGrid(session, () => Panels.GetPanel(BuiltInPanels.PropertyGrid)) : null,
-                CodeReload.ReloadCommand)), BuiltInPanelsOwner);
+                CodeReload.ReloadCommand, PlayControls)), BuiltInPanelsOwner);
         }
         // The preview service exists once the plugins have initialized the session, before the panels are created
         registry.Register(BuiltInPanels.CreatePreviewPanel(context => new AssetPreviewPanelViewModel(context, Preview ?? throw new InvalidOperationException("The session has no preview."))), BuiltInPanelsOwner);
@@ -947,6 +955,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
             PlayMode.SessionStarted -= PlaySessionStarted;
         }
         PlayStatus?.Destroy();
+        PlayControls?.Destroy();
         base.Destroy();
     }
 

@@ -164,6 +164,11 @@
             <Image Source="{StaticResource ImageStopBuild}"/>
           </MenuItem.Icon>
         </MenuItem>
+        <!-- Pause (or resume) the game that plays, and step it one frame -->
+        <MenuItem Name="PauseGameMenuItem"
+                  Command="{cmd:Command Stride.Project.PauseGame}"/>
+        <MenuItem Name="StepGameMenuItem"
+                  Command="{cmd:Command Stride.Project.StepGame}"/>
         <MenuItem Name="CancelBuildMenuItem"
                   Command="{cmd:Command Stride.Project.CancelBuild}">
           <MenuItem.Icon>
@@ -365,13 +370,14 @@
           IsVisible="{Binding Session, Converter={sd:ObjectToBool}}"
           ColumnDefinitions="2*, Auto, *, Auto, *, 100">
       <DockPanel Grid.Column="0">
-        <!-- The game started with Start project: green while it plays live, orange while it does not respond -->
+        <!-- The game started with Start project: green while it plays live, blue while paused, orange while it does not respond -->
         <Border Name="PlayStatus"
                 DockPanel.Dock="Right"
                 Margin="4,1"
                 Padding="6,0"
                 CornerRadius="3"
                 Classes.playing="{Binding PlayStatus.IsPlaying, FallbackValue=False}"
+                Classes.paused="{Binding PlayStatus.IsPaused, FallbackValue=False}"
                 Classes.notResponding="{Binding PlayStatus.IsNotResponding, FallbackValue=False}"
                 IsVisible="{Binding PlayStatus.IsVisible, FallbackValue=False}"
                 ToolTip.Tip="{Binding PlayStatus.Message}">
@@ -382,6 +388,10 @@
             </Style>
             <Style Selector="Border.playing">
               <Setter Property="Background" Value="#FF388934"/>
+              <Setter Property="TextElement.Foreground" Value="White"/>
+            </Style>
+            <Style Selector="Border.paused">
+              <Setter Property="Background" Value="#FF2B6CB0"/>
               <Setter Property="TextElement.Foreground" Value="White"/>
             </Style>
             <Style Selector="Border.notResponding">

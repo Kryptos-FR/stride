@@ -167,6 +167,12 @@ public sealed class PlaySession : IAsyncDisposable
     public event EventHandler<bool>? RespondingChanged;
 
     /// <summary>
+    /// Raised with each state of the game the agent sends (<see cref="GameState"/>): when it is paused, resumed or stepped, when
+    /// its time scale changes, and after each heartbeat.
+    /// </summary>
+    public event EventHandler<PlayGameState>? GameStateChanged;
+
+    /// <summary>
     /// The state.
     /// </summary>
     public PlaySessionState State { get; private set; }
@@ -200,6 +206,17 @@ public sealed class PlaySession : IAsyncDisposable
     /// The last heartbeat received, and when (UTC).
     /// </summary>
     public (PlayHeartbeat Heartbeat, DateTime ReceivedUtc)? LastHeartbeat { get; private set; }
+
+    /// <summary>
+    /// The last state of the game the agent sent: paused or playing, its time scale, frame rate and entities; <c>null</c> before
+    /// the first.
+    /// </summary>
+    public PlayGameState? GameState { get; private set; }
+
+    /// <summary>
+    /// Whether the connected game is paused (<see cref="Pause"/>, <see cref="Step"/>), as its agent last said.
+    /// </summary>
+    public bool IsPaused => State == PlaySessionState.Connected && GameState is { Paused: true };
 
     /// <summary>
     /// The comparison of the game's assemblies with the editor's.
@@ -314,6 +331,43 @@ public sealed class PlaySession : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(handles);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(rateHz);
         return SendIfConnected(new PlaySubscribe(handles, rateHz));
+    }
+
+    /// <summary>
+    /// Asks the game to pause: its time stops (animation, physics, particles), its scripts and the systems that follow the real
+    /// time stop, its audio pauses, and it goes on drawing and sending snapshots. <see cref="GameStateChanged"/> follows.
+    /// </summary>
+    /// <returns><c>false</c> when the session is not connected or the request could not be queued.</returns>
+    public bool Pause() => SendIfConnected(new PlayPause());
+
+    /// <summary>
+    /// Asks the paused game to go on as it was; the time paused is not counted.
+    /// </summary>
+    /// <returns><c>false</c> when the session is not connected or the request could not be queued.</returns>
+    public bool Resume() => SendIfConnected(new PlayResume());
+
+    /// <summary>
+    /// Asks the game to run updates of its fixed step and stay paused; a game that plays is paused first.
+    /// </summary>
+    /// <param name="frames">How many updates.</param>
+    /// <returns><c>false</c> when the session is not connected or the request could not be queued.</returns>
+    public bool Step(int frames = 1)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(frames);
+        return SendIfConnected(new PlayStep(frames));
+    }
+
+    /// <summary>
+    /// Sets the speed of the game time, a multiple of the game's own time factor; it is kept through pauses.
+    /// </summary>
+    /// <param name="scale">The speed, 1 for the game's own; the agent keeps it within
+    /// [<see cref="PlayGameState.MinTimeScale"/>, <see cref="PlayGameState.MaxTimeScale"/>].</param>
+    /// <returns><c>false</c> when the session is not connected or the request could not be queued.</returns>
+    public bool SetTimeScale(double scale)
+    {
+        if (!double.IsFinite(scale) || scale <= 0)
+            throw new ArgumentOutOfRangeException(nameof(scale), scale, "The time scale must be a positive number.");
+        return SendIfConnected(new PlayTimeScale(scale));
     }
 
     /// <summary>
@@ -478,6 +532,10 @@ public sealed class PlaySession : IAsyncDisposable
             case PlayHeartbeat heartbeat:
                 LastHeartbeat = (heartbeat, DateTime.UtcNow);
                 Raise(HeartbeatReceived, heartbeat);
+                break;
+            case PlayGameState state:
+                GameState = state;
+                Raise(GameStateChanged, state);
                 break;
         }
     }

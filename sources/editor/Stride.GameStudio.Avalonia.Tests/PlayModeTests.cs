@@ -435,6 +435,84 @@ public sealed class PlayModeTests : IAsyncLifetime
         }
     }
 
+    [AvaloniaFact]
+    public async Task F7PausesF10StepsAndTheLiveTabAndTheStatusBarSayPaused()
+    {
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode);
+        fixture.ReplaceProjectBuilder();
+        fixture.ReplaceDialogService();
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        try
+        {
+            // The Project menu has both, with their shortcuts; no game plays
+            var pause = MenuItem(window, "PauseGameMenuItem");
+            var step = MenuItem(window, "StepGameMenuItem");
+            Assert.Equal(new KeyGesture(Key.F7), pause.InputGesture);
+            Assert.Equal(new KeyGesture(Key.F10), step.InputGesture);
+            Assert.Equal(GameStudioCommands.PauseGameId, Assert.IsType<CommandReference>(pause.Command).Id);
+            Assert.Equal(GameStudioCommands.StepGameId, Assert.IsType<CommandReference>(step.Command).Id);
+            Assert.Contains(window.View.CommandSlots!.Shortcuts, x => x.Gesture == new KeyGesture(Key.F7) && x.Descriptor.Id == GameStudioCommands.PauseGameId);
+            Assert.Contains(window.View.CommandSlots!.Shortcuts, x => x.Gesture == new KeyGesture(Key.F10) && x.Descriptor.Id == GameStudioCommands.StepGameId);
+            Assert.False(await IsEnabledInOpenMenuAsync(pause));
+            Assert.False(await IsEnabledInOpenMenuAsync(step));
+
+            var game = await PlayAsync(window, fixture);
+            game.Send(GameState(paused: false, timeScale: 1));
+            var controls = fixture.Main.PlayControls!;
+            await WindowTestHelper.WaitUntilAsync(() => controls.CanControl && controls.FramesPerSecond == 60, "the controls enabled");
+            var view = window.GetVisualDescendants().OfType<LiveView>().Single();
+            var live = Assert.IsType<LivePanelViewModel>(view.DataContext);
+            var fps = view.GetVisualDescendants().OfType<TextBlock>().Single(x => x.Name == "FramesPerSecond");
+            await WindowTestHelper.WaitUntilAsync(() => fps.Text == "60 fps" && fps.IsEffectivelyVisible, "the frame rate");
+            Assert.True(await IsEnabledInOpenMenuAsync(pause));
+
+            // F7 pauses: the game says it is paused, the Live tab and the status bar say it
+            Press(window, Key.F7, RawInputModifiers.None, PhysicalKey.F7);
+            Assert.IsType<PlayPause>(await game.NextControlAsync());
+            game.Send(GameState(paused: true, timeScale: 1));
+            await WindowTestHelper.WaitUntilAsync(() => live.State == LiveTabState.Paused, "the Live tab paused");
+            Assert.Equal("Paused", view.GetVisualDescendants().OfType<TextBlock>().Single(x => x.Name == "StateText").Text);
+            var status = window.GetVisualDescendants().OfType<Border>().Single(x => x.Name == "PlayStatus");
+            await WindowTestHelper.WaitUntilAsync(() => status.Classes.Contains("paused"), "the status bar paused");
+            Assert.Equal("Game: Paused", window.GetVisualDescendants().OfType<TextBlock>().Single(x => x.Name == "PlayStatusText").Text);
+            Assert.Equal(Color.Parse("#FF2B6CB0"), Assert.IsAssignableFrom<ISolidColorBrush>(status.Background).Color);
+            Assert.Equal("Resume", controls.PauseText);
+
+            // F10 and the Step button step one frame each
+            Press(window, Key.F10, RawInputModifiers.None, PhysicalKey.F10);
+            Assert.Equal(1, Assert.IsType<PlayStep>(await game.NextControlAsync()).Frames);
+            Button(window, "StepButton").Command!.Execute(null);
+            Assert.Equal(1, Assert.IsType<PlayStep>(await game.NextControlAsync()).Frames);
+
+            // The time scale goes to the game; the game's state does not send it back
+            var scale = view.GetVisualDescendants().OfType<ComboBox>().Single(x => x.Name == "TimeScale");
+            Assert.Equal(1.0, scale.SelectedItem);
+            scale.SelectedItem = 0.25;
+            Assert.Equal(0.25, Assert.IsType<PlayTimeScale>(await game.NextControlAsync()).Scale);
+            game.Send(GameState(paused: true, timeScale: 0.25));
+
+            // F7 again resumes
+            Press(window, Key.F7, RawInputModifiers.None, PhysicalKey.F7);
+            Assert.IsType<PlayResume>(await game.NextControlAsync());
+            game.Send(GameState(paused: false, timeScale: 0.25));
+            await WindowTestHelper.WaitUntilAsync(() => live.State == LiveTabState.Playing && status.Classes.Contains("playing"), "playing again");
+            Assert.Equal(0.25, controls.TimeScale);
+            Assert.True(game.Controls.IsEmpty);
+
+            // Stopped: nothing to pause
+            game.ExitOnQuit = true;
+            Press(window, Key.F5, RawInputModifiers.Shift, PhysicalKey.F5);
+            await WindowTestHelper.WaitUntilAsync(() => live.State == LiveTabState.Stopped, "the stop of the game");
+            await WindowTestHelper.WaitUntilAsync(() => !controls.CanControl, "the controls disabled");
+            Assert.False(await IsEnabledInOpenMenuAsync(pause));
+        }
+        finally
+        {
+            await window.CloseAsync();
+        }
+    }
+
     /// <summary>
     /// F5, then the game connects as its agent does and sends its tree.
     /// </summary>
@@ -459,6 +537,12 @@ public sealed class PlayModeTests : IAsyncLifetime
         player.Transform.Position = new Stride.Core.Mathematics.Vector3(frame, 0, 0);
         return new PlaySnapshot(frame, frame / 60.0, [PlaySnapshotWriter.Write(player, x => x == player ? PlayerHandle : 0)]);
     }
+
+    /// <summary>
+    /// The state the agent sends: 60 frames a second, the three entities of <see cref="Tree"/>.
+    /// </summary>
+    private static PlayGameState GameState(bool paused, double timeScale)
+        => new(120, 100, paused, timeScale, 1, 60, 3, 0);
 
     private static PlayTree Tree()
     {
@@ -542,6 +626,8 @@ public sealed class PlayModeTests : IAsyncLifetime
             {
                 if (message is PlaySubscribe subscribe)
                     subscribes.Enqueue(subscribe);
+                if (message is PlayPause or PlayResume or PlayStep or PlayTimeScale)
+                    Controls.Enqueue(message);
                 if (message is not PlayQuit)
                     return;
                 quit.TrySetResult();
@@ -559,6 +645,21 @@ public sealed class PlayModeTests : IAsyncLifetime
         {
             PlaySubscribe? next = null;
             await WindowTestHelper.WaitUntilAsync(() => subscribes.TryDequeue(out next), "a request for snapshots");
+            return next!;
+        }
+
+        /// <summary>
+        /// The pause, resume, step and time scale messages the editor sent, not read yet.
+        /// </summary>
+        public ConcurrentQueue<PlayMessage> Controls { get; } = new();
+
+        /// <summary>
+        /// The next pause, resume, step or time scale message the editor sent.
+        /// </summary>
+        public async Task<PlayMessage> NextControlAsync()
+        {
+            PlayMessage? next = null;
+            await WindowTestHelper.WaitUntilAsync(() => Controls.TryDequeue(out next), "a pause, resume, step or time scale message");
             return next!;
         }
 

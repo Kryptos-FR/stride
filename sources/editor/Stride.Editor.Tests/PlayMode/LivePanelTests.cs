@@ -508,6 +508,66 @@ public sealed class LivePanelTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PauseStepAndTheTimeScaleGoToTheGameAndTheTabSaysPaused()
+    {
+        var status = dispatcher.Invoke(() => new PlayStatusViewModel(new ViewModelServiceProvider([dispatcher]), playMode));
+        try
+        {
+            var controls = panel.Controls;
+            Assert.False(Read(() => controls.CanControl));
+            Assert.False(Read(() => controls.PauseCommand.IsEnabled));
+
+            var game = Start();
+            var agent = await ConnectAsync();
+            agent.Send(new PlayGameState(10, 10, false, 1, 1, 59.6, 3, 0));
+            await WaitAsync(() => controls.CanControl && controls.FramesPerSecond == 59.6, "the controls");
+            Assert.True(Read(() => controls.StepCommand.IsEnabled));
+            Assert.Equal(3, Read(() => controls.EntityCount));
+            Assert.Equal("Pause", Read(() => controls.PauseText));
+
+            dispatcher.Invoke(() => controls.PauseCommand.Execute());
+            await agent.ReceiveAsync<PlayPause>();
+            agent.Send(new PlayGameState(11, 10, true, 1, 1, 59.6, 3, 0));
+            await WaitAsync(() => panel.State == LiveTabState.Paused, "paused");
+            Assert.Equal("Paused", Read(() => panel.StateText));
+            Assert.True(Read(() => panel.IsPaused));
+            // The tree still follows the paused game
+            Assert.True(Read(() => panel.IsLive));
+            Assert.Equal("Resume", Read(() => controls.PauseText));
+            await WaitAsync(() => status.State == LiveTabState.Paused, "the status bar");
+            Assert.Equal("Game: Paused", Read(() => status.Text));
+            Assert.True(Read(() => status.IsPaused));
+
+            dispatcher.Invoke(() => controls.StepCommand.Execute());
+            Assert.Equal(1, (await agent.ReceiveAsync<PlayStep>()).Frames);
+            agent.Send(new PlayGameState(12, 11, true, 1, 1, 59.6, 3, 0));
+            await WaitAsync(() => controls.PlayedFrames == 11, "the step");
+
+            dispatcher.Invoke(() => controls.TimeScale = 0.25);
+            Assert.Equal(0.25, (await agent.ReceiveAsync<PlayTimeScale>()).Scale);
+            // The game's state does not send the scale back
+            agent.Send(new PlayGameState(13, 11, true, 0.25, 1, 59.6, 3, 0));
+            await WaitAsync(() => controls.TimeScale == 0.25 && controls.PlayedFrames == 11, "the scale");
+
+            dispatcher.Invoke(() => controls.PauseCommand.Execute());
+            await agent.ReceiveAsync<PlayResume>();
+            agent.Send(new PlayGameState(14, 12, false, 0.25, 1, 59.6, 3, 0));
+            await WaitAsync(() => panel.State == LiveTabState.Playing && !controls.IsPaused, "playing again");
+            agent.Send(new PlayHeartbeat(15, 1, 60, new PlayAgentStats(60, 1, 1, 0, 0, 0, 0, 0)));
+            await agent.ReceiveAsync<PlayQuit>().WaitAsync(TimeSpan.FromMilliseconds(100)).ContinueWith(x => Assert.True(x.IsFaulted, "nothing else was sent"));
+
+            game.Exit(0);
+            await WaitAsync(() => !controls.CanControl && panel.State == LiveTabState.Stopped, "stopped");
+            Assert.False(Read(() => controls.PauseCommand.IsEnabled));
+            Assert.False(Read(() => controls.IsPaused));
+        }
+        finally
+        {
+            dispatcher.Invoke(status.Destroy);
+        }
+    }
+
+    [Fact]
     public void ClosingTheTabDisposesTheViewOfTheSelection()
     {
         dispatcher.Invoke(panel.Destroy);

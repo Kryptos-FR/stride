@@ -10,8 +10,8 @@ using Stride.Core.Translation;
 namespace Stride.Editor.PlayMode;
 
 /// <summary>
-/// The state of the game started with Start project, for the status bar: Connecting, Playing, Not connected, Not responding or
-/// Stopped, while a play session exists.
+/// The state of the game started with Start project, for the status bar: Connecting, Playing, Paused, Not connected, Not
+/// responding or Stopped, while a play session exists.
 /// </summary>
 /// <remarks>
 /// It follows the sessions of a <see cref="PlayModeService"/>; their events come on their reading tasks, and the state is
@@ -49,13 +49,18 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
     public LiveTabState State
     {
         get;
-        private set => SetValue(ref field, value, nameof(State), nameof(IsVisible), nameof(IsPlaying), nameof(IsNotResponding), nameof(Text));
+        private set => SetValue(ref field, value, nameof(State), nameof(IsVisible), nameof(IsPlaying), nameof(IsPaused), nameof(IsNotResponding), nameof(Text));
     } = LiveTabState.NotPlaying;
 
     /// <summary>
     /// Whether the game plays with the live connection.
     /// </summary>
     public bool IsPlaying => State == LiveTabState.Playing;
+
+    /// <summary>
+    /// Whether the game is paused.
+    /// </summary>
+    public bool IsPaused => State == LiveTabState.Paused;
 
     /// <summary>
     /// Whether the connected game has sent nothing for a few seconds.
@@ -69,6 +74,7 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
     {
         LiveTabState.Connecting => Tr._p("Play", "Game: Connecting"),
         LiveTabState.Playing => Tr._p("Play", "Game: Playing"),
+        LiveTabState.Paused => Tr._p("Play", "Game: Paused"),
         LiveTabState.NotConnected => Tr._p("Play", "Game: Not connected"),
         LiveTabState.NotResponding => Tr._p("Play", "Game: Not responding"),
         LiveTabState.Stopped => ExitCode is { } code ? string.Format(Tr._p("Play", "Game: Stopped (exit code {0})"), code) : Tr._p("Play", "Game: Stopped"),
@@ -103,6 +109,7 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
         session = followed;
         followed.StateChanged += SessionChanged;
         followed.RespondingChanged += SessionChanged;
+        followed.GameStateChanged += SessionChanged;
         Update();
     }
 
@@ -112,6 +119,7 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
             return;
         session.StateChanged -= SessionChanged;
         session.RespondingChanged -= SessionChanged;
+        session.GameStateChanged -= SessionChanged;
         session = null;
     }
 
@@ -130,7 +138,7 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
         State = current.State switch
         {
             PlaySessionState.Starting => LiveTabState.Connecting,
-            PlaySessionState.Connected => current.IsResponding ? LiveTabState.Playing : LiveTabState.NotResponding,
+            PlaySessionState.Connected => !current.IsResponding ? LiveTabState.NotResponding : current.IsPaused ? LiveTabState.Paused : LiveTabState.Playing,
             PlaySessionState.GameExited => LiveTabState.Stopped,
             _ => LiveTabState.NotConnected,
         };

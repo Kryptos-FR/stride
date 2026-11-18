@@ -31,6 +31,9 @@ public enum LiveTabState
     /// <summary>The game runs and its tree follows it.</summary>
     Playing,
 
+    /// <summary>The game is paused (Pause, Step): it goes on drawing, its tree and the selected entities follow it.</summary>
+    Paused,
+
     /// <summary>The game runs without the live connection (the agent did not connect, the connection broke, the versions
     /// differ, or the game was started without it): the tab keeps what it had, and says why.</summary>
     NotConnected,
@@ -75,6 +78,7 @@ public sealed class LivePanelViewModel : PanelViewModel
     private bool updatingSelection;
     // The silence of the game the user chose to wait through
     private bool waiting;
+    private readonly bool ownsControls;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LivePanelViewModel"/> class.
@@ -87,11 +91,15 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// <c>null</c> for none: the selection is then only exposed.</param>
     /// <param name="reloadCodeCommand">Reloads the game's code in the editor, offered when the game runs another build of it;
     /// <c>null</c> for none.</param>
-    public LivePanelViewModel(PanelContext context, PlayModeService playMode, ILiveSceneAssets? sceneAssets, ILiveSelectionView? selectionView = null, ICommandBase? reloadCodeCommand = null)
+    /// <param name="controls">Pause, Step and the time scale of the toolbar, shared with the main window's commands; a new one
+    /// the tab destroys otherwise.</param>
+    public LivePanelViewModel(PanelContext context, PlayModeService playMode, ILiveSceneAssets? sceneAssets, ILiveSelectionView? selectionView = null, ICommandBase? reloadCodeCommand = null, PlayControlsViewModel? controls = null)
         : base(context)
     {
         ArgumentNullException.ThrowIfNull(playMode);
         this.playMode = playMode;
+        ownsControls = controls is null;
+        Controls = controls ?? new PlayControlsViewModel(ServiceProvider, playMode);
         this.sceneAssets = sceneAssets;
         this.selectionView = selectionView;
         ReloadCodeCommand = reloadCodeCommand;
@@ -128,6 +136,11 @@ public sealed class LivePanelViewModel : PanelViewModel
     public ObservableCollection<object> SelectedItems { get; } = [];
 
     /// <summary>
+    /// Pause, Step, the time scale and the frame rate of the toolbar.
+    /// </summary>
+    public PlayControlsViewModel Controls { get; }
+
+    /// <summary>
     /// The live entities selected, with the session that plays them; <c>null</c> when no entity is selected or no game plays.
     /// </summary>
     public LiveSelection? Selection { get; private set => SetValue(ref field, value, () => selectionView?.Show(value)); }
@@ -138,13 +151,18 @@ public sealed class LivePanelViewModel : PanelViewModel
     public LiveTabState State
     {
         get;
-        private set => SetValue(ref field, value, nameof(State), nameof(IsLive), nameof(IsPlaying), nameof(IsNotResponding), nameof(StateText));
+        private set => SetValue(ref field, value, nameof(State), nameof(IsLive), nameof(IsPlaying), nameof(IsPaused), nameof(IsNotResponding), nameof(StateText));
     } = LiveTabState.NotPlaying;
 
     /// <summary>
     /// Whether the game plays and answers.
     /// </summary>
     public bool IsPlaying => State == LiveTabState.Playing;
+
+    /// <summary>
+    /// Whether the game is paused.
+    /// </summary>
+    public bool IsPaused => State == LiveTabState.Paused;
 
     /// <summary>
     /// Whether the connected game has sent nothing for a few seconds.
@@ -154,7 +172,7 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// <summary>
     /// Whether the tree follows a game that runs; otherwise it shows the last tree, greyed.
     /// </summary>
-    public bool IsLive => State is LiveTabState.Playing or LiveTabState.NotResponding;
+    public bool IsLive => State is LiveTabState.Playing or LiveTabState.Paused or LiveTabState.NotResponding;
 
     /// <summary>
     /// The state as the tab's header shows it.
@@ -163,6 +181,7 @@ public sealed class LivePanelViewModel : PanelViewModel
     {
         LiveTabState.Connecting => Tr._p("Play", "Connecting"),
         LiveTabState.Playing => Tr._p("Play", "Playing"),
+        LiveTabState.Paused => Tr._p("Play", "Paused"),
         LiveTabState.NotConnected => Tr._p("Play", "Not connected"),
         LiveTabState.NotResponding => Tr._p("Play", "Not responding"),
         LiveTabState.Stopped => ExitCode is { } code ? string.Format(Tr._p("Play", "Stopped (exit code {0})"), code) : Tr._p("Play", "Stopped"),
@@ -274,6 +293,8 @@ public sealed class LivePanelViewModel : PanelViewModel
         SelectedItems.CollectionChanged -= SelectedItemsChanged;
         lifetime.Cancel();
         selectionView?.Dispose();
+        if (ownsControls)
+            Controls.Destroy();
         base.Destroy();
     }
 
@@ -321,6 +342,7 @@ public sealed class LivePanelViewModel : PanelViewModel
         newSession.TreeChanged += SessionTreeChanged;
         newSession.RespondingChanged += SessionRespondingChanged;
         newSession.HeartbeatReceived += SessionHeartbeatReceived;
+        newSession.GameStateChanged += SessionGameStateChanged;
         State = LiveTabState.Connecting;
         Message = null;
         if (replay && newSession.Tree is { } tree)
@@ -338,6 +360,7 @@ public sealed class LivePanelViewModel : PanelViewModel
         old.TreeChanged -= SessionTreeChanged;
         old.RespondingChanged -= SessionRespondingChanged;
         old.HeartbeatReceived -= SessionHeartbeatReceived;
+        old.GameStateChanged -= SessionGameStateChanged;
         session = null;
         // The view of the selection gives its place back, and stops the snapshots
         Selection = null;
@@ -352,6 +375,13 @@ public sealed class LivePanelViewModel : PanelViewModel
     private void SessionRespondingChanged(object? sender, bool responding)
     {
         if (sender is PlaySession changed)
+            Track(dispatcher.InvokeAsync(() => UpdateState(changed), lifetime.Token));
+    }
+
+    private void SessionGameStateChanged(object? sender, PlayGameState state)
+    {
+        // Paused or playing: the header's badge
+        if (sender is PlaySession changed && (state.Paused != (State == LiveTabState.Paused)))
             Track(dispatcher.InvokeAsync(() => UpdateState(changed), lifetime.Token));
     }
 
@@ -387,7 +417,7 @@ public sealed class LivePanelViewModel : PanelViewModel
             case PlaySessionState.Connected:
                 if (changed.IsResponding)
                     waiting = false;
-                State = changed.IsResponding ? LiveTabState.Playing : LiveTabState.NotResponding;
+                State = !changed.IsResponding ? LiveTabState.NotResponding : changed.IsPaused ? LiveTabState.Paused : LiveTabState.Playing;
                 ShowsNotResponding = !changed.IsResponding && !waiting;
                 Message = null;
                 UpdateStaleNotice(changed);

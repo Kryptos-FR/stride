@@ -118,6 +118,50 @@ public sealed class PlaySessionTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PauseResumeStepAndTheTimeScaleAreSentToTheAgent()
+    {
+        Assert.False(session.Pause());
+        Assert.False(session.Step());
+        await ConnectAsync();
+
+        Assert.True(session.Pause());
+        Assert.True(session.Step(3));
+        Assert.True(session.SetTimeScale(0.25));
+        Assert.True(session.Resume());
+
+        await agent!.ReceiveAsync<PlayPause>();
+        Assert.Equal(3, (await agent.ReceiveAsync<PlayStep>()).Frames);
+        Assert.Equal(0.25, (await agent.ReceiveAsync<PlayTimeScale>()).Scale);
+        await agent.ReceiveAsync<PlayResume>();
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.Step(0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.SetTimeScale(0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.SetTimeScale(double.NaN));
+    }
+
+    [Fact]
+    public async Task TheGameStateIsKeptAndRaised()
+    {
+        await ConnectAsync();
+        Assert.Null(session.GameState);
+        Assert.False(session.IsPaused);
+
+        var raised = Wait<PlayGameState>(x => session.GameStateChanged += x);
+        agent!.Send(new PlayGameState(40, 30, true, 0.5, 1, 59, 12, 0));
+        var state = await raised;
+
+        Assert.Equal(new PlayGameState(40, 30, true, 0.5, 1, 59, 12, 0), state);
+        Assert.Equal(state, session.GameState);
+        Assert.True(session.IsPaused);
+
+        // An exited game is not paused any more
+        var exited = WaitForState(PlaySessionState.GameExited);
+        game!.Exit(0);
+        await exited;
+        Assert.False(session.IsPaused);
+        Assert.False(session.Resume());
+    }
+
+    [Fact]
     public async Task TheGamesExitEndsTheSession()
     {
         await ConnectAsync();
