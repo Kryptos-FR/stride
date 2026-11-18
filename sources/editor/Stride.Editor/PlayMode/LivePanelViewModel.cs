@@ -196,6 +196,11 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// </summary>
     internal PlaySession? Session => session;
 
+    /// <summary>
+    /// How many times the trees and batches received were applied (the tests check the rate).
+    /// </summary>
+    internal int ApplyCount { get; private set; }
+
     /// <inheritdoc/>
     public override void Destroy()
     {
@@ -379,6 +384,7 @@ public sealed class LivePanelViewModel : PanelViewModel
         }
         if (batches.Count > 0)
             removed.UnionWith(Tree.Apply(batches));
+        ++ApplyCount;
         EntityCount = Tree.EntityCount;
 
         // A selected entity that is gone leaves the selection

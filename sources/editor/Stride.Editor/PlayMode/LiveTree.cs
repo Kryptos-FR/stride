@@ -327,6 +327,12 @@ public sealed class LiveTree
         if (deferRows)
             return;
         var filter = Filter;
+        // The rows under a collapsed row are not visited: none of them matches any more
+        if (filter.Length == 0)
+        {
+            foreach (var item in scenes.Values.Cast<LiveTreeItem>().Concat(entities.Values))
+                item.IsMatch = false;
+        }
         var rows = new List<LiveTreeItem>(Rows.Count + 16);
         foreach (var root in roots)
         {
@@ -341,7 +347,6 @@ public sealed class LiveTree
     private static void AddRows(LiveTreeItem item, int depth, List<LiveTreeItem> rows)
     {
         item.Depth = depth;
-        item.IsMatch = false;
         rows.Add(item);
         if (!item.IsExpanded)
             return;
