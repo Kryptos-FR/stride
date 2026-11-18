@@ -202,7 +202,7 @@ public class RecordingDrawingContextTests
         using (var layerContext = layer.CreateDrawingContext())
             layerContext.DrawRectangle(Brush, null, RoundedRect);
         Assert.True(bitmap.Version > version);
-        Assert.Equal(new FallbackTarget(bitmap.Address, new PixelSize(30, 20), 120, PixelFormat.Bgra8888, new Vector(192, 192), true), fallback.Targets.Last());
+        Assert.Equal(new FallbackTarget(bitmap.Address, new PixelSize(30, 20), 120, StrideRenderInterface.PlatformPixelFormat, new Vector(192, 192), true), fallback.Targets.Last());
 
         var log = new DrawingCallLog();
         layer.Blit(log);

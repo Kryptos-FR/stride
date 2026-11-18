@@ -41,7 +41,9 @@ public class RenderInterfaceTests
 
         Assert.False(renderInterface.SupportsRegions);
         Assert.Throws<NotSupportedException>(() => renderInterface.CreateRegion());
-        Assert.Equal(PixelFormat.Bgra8888, renderInterface.DefaultPixelFormat);
+        // Skia's order of the bytes on this system: BGRA on Windows and Linux, RGBA on macOS
+        Assert.Equal(SkiaOracle.RenderInterface.DefaultPixelFormat, renderInterface.DefaultPixelFormat);
+        Assert.Equal(OperatingSystem.IsWindows() || OperatingSystem.IsLinux() ? PixelFormat.Bgra8888 : PixelFormat.Rgba8888, renderInterface.DefaultPixelFormat);
         Assert.Equal(AlphaFormat.Premul, renderInterface.DefaultAlphaFormat);
         Assert.True(renderInterface.IsSupportedBitmapPixelFormat(PixelFormat.Bgra8888));
         Assert.True(renderInterface.IsSupportedBitmapPixelFormat(PixelFormat.Rgba8888));
