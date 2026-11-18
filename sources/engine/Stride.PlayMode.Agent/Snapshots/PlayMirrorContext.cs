@@ -61,6 +61,10 @@ internal sealed class PlayMirrorContext
     public static PlayMirrorContext ForWrite(SerializerSelector inner, EntityComponent root, Func<Entity, int> handleOf)
         => new(inner, root, handleOf, null, []);
 
+    // A value of an edit: no root, every component met is a reference (RootStarted: none is taken for the root)
+    public static PlayMirrorContext ForWriteValue(SerializerSelector inner, Func<Entity, int> handleOf)
+        => new(inner, null, handleOf, null, []) { RootStarted = true };
+
     public static PlayMirrorContext ForRead(SerializerSelector inner, EntityComponent? root, IReadOnlyList<PlayMirrorReference> references, Func<PlayMirrorReference, object?> resolve)
         => new(inner, root, null, resolve, [.. references]) { resolved = new object?[references.Count] };
 

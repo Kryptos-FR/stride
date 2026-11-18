@@ -38,6 +38,9 @@ public enum PlayMessageType : byte
     /// <summary>A script threw an exception, which the engine caught (<see cref="PlayScriptException"/>).</summary>
     ScriptException = 10,
 
+    /// <summary>The game's answer to an edit (<see cref="PlayEditResult"/>).</summary>
+    EditResult = 11,
+
     /// <summary>A subscriber's choice of entities to receive snapshots of (<see cref="PlaySubscribe"/>).</summary>
     Subscribe = 32,
 
@@ -55,4 +58,7 @@ public enum PlayMessageType : byte
 
     /// <summary>A subscriber sets the speed of the game time (<see cref="PlayTimeScale"/>).</summary>
     TimeScale = 37,
+
+    /// <summary>A subscriber changes a value of a live entity (<see cref="PlayEdit"/>).</summary>
+    Edit = 38,
 }

@@ -265,6 +265,40 @@ public sealed class PlayProtocolTests
         Assert.Equal(new byte[] { 1, 2 }, read.Payload.ToArray());
     }
 
+    [Fact]
+    public async Task AnEditKeepsItsPathValueAndTarget()
+    {
+        var component = Guid.NewGuid();
+        var edit = new PlayEdit(3, 9, component, [PlayPathSegment.Member("Range"), PlayPathSegment.Member("Span"), PlayPathSegment.Member("X")], PlayEditOperation.Set, PlayEditValue.Of(new byte[] { 1, 2, 3 }));
+        var move = new PlayEdit(4, 9, component, [PlayPathSegment.Member("Values"), PlayPathSegment.Item(2)], PlayEditOperation.Move, PlayEditValue.Null, PlayPathSegment.Item(0));
+
+        var read = Assert.IsType<PlayEdit>(await RoundTripAsync(edit.Encode()));
+        var readMove = Assert.IsType<PlayEdit>(await RoundTripAsync(move.Encode()));
+
+        Assert.Equal(edit.Encode(), read.Encode());
+        Assert.Equal(edit.Path, read.Path);
+        Assert.Equal("Range.Span.X", read.PathText);
+        Assert.Equal(component, read.ComponentId);
+        Assert.Equal([1, 2, 3], read.Value.Payload.ToArray());
+        Assert.Equal(move.Path, readMove.Path);
+        Assert.Equal(move.Target, readMove.Target);
+        Assert.Equal("Values[2]", readMove.PathText);
+        Assert.Equal(0, readMove.Target!.Index);
+        Assert.Equal("Table[Fast]", PlayPathSegment.Format([PlayPathSegment.Member("Table"), PlayPathSegment.ForKey(new byte[] { 1 }, "Fast")]));
+    }
+
+    [Fact]
+    public async Task AnEditResultKeepsItsStatusReadBackAndError()
+    {
+        var result = new PlayEditResult(5, 200, PlayEditStatus.Failed, PlayEditValue.Of(new byte[] { 9 }), "Boom.");
+
+        var read = Assert.IsType<PlayEditResult>(await RoundTripAsync(result.Encode()));
+
+        Assert.Equal(result, read);
+        Assert.Equal(PlayEditValueKind.Value, read.ReadBack.Kind);
+        Assert.Equal("Boom.", read.Error);
+    }
+
     private static async Task<PlayMessage> RoundTripAsync(byte[] frame)
     {
         using var stream = new MemoryStream(frame);
@@ -304,6 +338,11 @@ public sealed class PlayProtocolTests
             ["Resume"] = new PlayResume(),
             ["Step"] = new PlayStep(3),
             ["TimeScale"] = new PlayTimeScale(0.25),
+            ["Edit"] = new PlayEdit(17, 4, Guid.NewGuid(), [PlayPathSegment.Member("Offset"), PlayPathSegment.Member("X")], PlayEditOperation.Set, PlayEditValue.Of(new byte[] { 5, 6 })),
+            ["EditMove"] = new PlayEdit(18, 4, Guid.NewGuid(), [PlayPathSegment.Member("Table"), PlayPathSegment.ForKey(new byte[] { 1 }, "Fast")], PlayEditOperation.Move, PlayEditValue.Null, PlayPathSegment.ForKey(new byte[] { 2 }, "Slow")),
+            ["EditNewInstance"] = new PlayEdit(19, 4, Guid.NewGuid(), [PlayPathSegment.Member("Shapes"), PlayPathSegment.Item(1)], PlayEditOperation.Insert, PlayEditValue.NewInstanceOf("Game.Box, Game")),
+            ["EditResult"] = new PlayEditResult(17, 120, PlayEditStatus.Applied, PlayEditValue.Of(new byte[] { 7 }), null),
+            ["EditResultFailed"] = new PlayEditResult(18, 121, PlayEditStatus.Failed, PlayEditValue.Null, "The setter threw."),
         };
     }
 }

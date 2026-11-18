@@ -18,6 +18,21 @@ internal sealed class PlaySubscriber(PlayConnection connection)
     /// <summary>The messages read, waiting for the game thread.</summary>
     public ConcurrentQueue<PlayMessage> Incoming { get; } = new();
 
+    /// <summary>The edits read, waiting for the start of the next frame (<see cref="PlayAgentSystem.ApplyEdits"/>).</summary>
+    public ConcurrentQueue<PlayEdit> Edits { get; } = new();
+
+    /// <summary>
+    /// Keeps a message read from the connection for the game thread: an edit for the start of the next frame, anything else for
+    /// the agent's update.
+    /// </summary>
+    public void Receive(PlayMessage message)
+    {
+        if (message is PlayEdit edit)
+            Edits.Enqueue(edit);
+        else
+            Incoming.Enqueue(message);
+    }
+
     /// <summary>Whether the subscriber still needs the whole tree (it just connected).</summary>
     public bool NeedsTree { get; set; } = true;
 

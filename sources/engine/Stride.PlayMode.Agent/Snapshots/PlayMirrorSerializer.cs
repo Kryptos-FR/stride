@@ -205,6 +205,63 @@ public static class PlayMirrorSerializer
         return component ?? throw new InvalidOperationException("The payload holds no component.");
     }
 
+    /// <summary>
+    /// Writes a value of an edit, or its read-back (a number, a vector, a color, an enum, a string, a struct, an object): its
+    /// type then its data, cut at the entity boundary as a component's snapshot is (an entity or a component it refers to is a
+    /// <see cref="PlayMirrorReference"/>).
+    /// </summary>
+    /// <param name="value">The value; <c>null</c> writes no type.</param>
+    /// <param name="handleOf">Gives the agent's handle of an entity the value refers to, or 0.</param>
+    /// <returns>The payload.</returns>
+    /// <exception cref="Exception">The value's type has no binary serializer.</exception>
+    public static byte[] WriteValue(object? value, Func<Entity, int> handleOf)
+    {
+        ArgumentNullException.ThrowIfNull(handleOf);
+        if (value is not null)
+            RegisterComponentTypes();
+
+        var (mirror, inner) = GetSelectors();
+        var context = PlayMirrorContext.ForWriteValue(inner, handleOf);
+        var data = new MemoryStream(64);
+        var writer = new BinarySerializationWriter(data);
+        writer.Context.SerializerSelector = mirror;
+        writer.Context.Set(PlayMirrorContext.Key, context);
+        writer.Context.Set(ContentSerializerContext.SerializeAttachedReferenceProperty, ContentSerializerContext.AttachedReferenceSerialization.AsSerializableVersion);
+        writer.SerializeExtended(value, ArchiveMode.Serialize);
+        writer.Flush();
+
+        var payload = new PlayWriter((int)data.Length + 64 * context.References.Count + 8);
+        payload.WriteBytes(data.GetBuffer().AsSpan(0, (int)data.Length));
+        payload.WriteList(context.References, PlayMirrorReference.Write);
+        return payload.WrittenSpan.ToArray();
+    }
+
+    /// <summary>
+    /// Reads a value written by <see cref="WriteValue"/>.
+    /// </summary>
+    /// <param name="payload">The payload.</param>
+    /// <param name="resolve">Gives what a reference stands for, or <c>null</c>.</param>
+    /// <returns>The value; <c>null</c> when <c>null</c> was written.</returns>
+    /// <exception cref="Exception">The reader does not have the value's type.</exception>
+    public static object? ReadValue(ReadOnlyMemory<byte> payload, Func<PlayMirrorReference, object?> resolve)
+    {
+        ArgumentNullException.ThrowIfNull(resolve);
+        var reader = new PlayReader(payload);
+        var data = reader.ReadBytes();
+        var references = reader.ReadList(PlayMirrorReference.Read, 43);
+        RegisterComponentTypes();
+
+        var (mirror, inner) = GetSelectors();
+        var context = PlayMirrorContext.ForRead(inner, null, references, resolve);
+        var stream = new BinarySerializationReader(new MemoryStream(data.ToArray(), writable: false));
+        stream.Context.SerializerSelector = mirror;
+        stream.Context.Set(PlayMirrorContext.Key, context);
+        stream.Context.Set(ContentSerializerContext.SerializeAttachedReferenceProperty, ContentSerializerContext.AttachedReferenceSerialization.AsSerializableVersion);
+        object? value = null;
+        stream.SerializeExtended(ref value, ArchiveMode.Deserialize);
+        return value;
+    }
+
     private static (SerializerSelector Mirror, SerializerSelector Inner) GetSelectors()
     {
         lock (RegistrationLock)

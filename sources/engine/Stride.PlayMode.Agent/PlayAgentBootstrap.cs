@@ -56,6 +56,8 @@ public static class PlayAgentBootstrap
             // Before the game's first update: a game started paused runs no script until the editor resumes it
             agent = new PlayAgentSystem(game, options);
             game.GameSystems.Add(agent);
+            // The edits apply at the start of each frame, before the scripts
+            game.GameSystems.Add(agent.EditSystem);
             if (connectedStream is not null)
                 agent.AddSubscriber(connectedStream);
             else if (connectionFailed)

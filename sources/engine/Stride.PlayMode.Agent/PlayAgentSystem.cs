@@ -62,6 +62,8 @@ public sealed class PlayAgentSystem : GameSystemBase
     private readonly ConcurrentQueue<Assembly> loadedAssemblies = new();
     private readonly HashSet<string> sentAssemblies = [];
     private readonly Dictionary<int, byte[]> frameSnapshots = [];
+    private readonly PlayEditApplier editApplier = new();
+    private readonly List<(PlaySubscriber Sender, PlayEdit Edit)> frameEdits = [];
     private readonly Stopwatch heartbeatClock = new();
     private long frame;
     private int queuedLogs;
@@ -103,6 +105,7 @@ public sealed class PlayAgentSystem : GameSystemBase
         Visible = true;
         DrawOrder = int.MaxValue;
         PauseController = new PlayPauseController(new PlayGamePauseHost(game, log));
+        EditSystem = new PlayEditSystem(this);
         GlobalLogger.GlobalMessageLogged += OnMessageLogged;
         AppDomain.CurrentDomain.AssemblyLoad += OnAssemblyLoad;
         game.Exiting += OnGameExiting;
@@ -156,6 +159,61 @@ public sealed class PlayAgentSystem : GameSystemBase
     /// Pauses, steps and resumes the game, on the game thread.
     /// </summary>
     internal PlayPauseController PauseController { get; }
+
+    /// <summary>
+    /// The game system that applies the subscribers' edits at the start of each frame (<see cref="ApplyEdits"/>): add it to the
+    /// game's systems with the agent.
+    /// </summary>
+    public GameSystemBase EditSystem { get; }
+
+    /// <summary>
+    /// The edits applied since the agent was made (coalesced ones included), and those the game refused.
+    /// </summary>
+    public (int Applied, int Failed) EditCounts { get; private set; }
+
+    /// <summary>
+    /// Applies the edits the subscribers sent since the last frame, and answers each one with its result. Called on the game
+    /// thread at the start of a frame, before the scripts (<see cref="EditSystem"/>), while the game plays and while it is
+    /// paused. The subscribers get a snapshot at the end of the frame, without waiting for their rate, so that the grid
+    /// follows the edit at once.
+    /// </summary>
+    public void ApplyEdits()
+    {
+        frameEdits.Clear();
+        foreach (var subscriber in subscribers)
+        {
+            while (subscriber.Edits.TryDequeue(out var edit))
+                frameEdits.Add((subscriber, edit));
+        }
+        if (frameEdits.Count == 0)
+            return;
+
+        var start = Stopwatch.GetTimestamp();
+        // The frame this update is: the agent's own update, at the end of the frame, counts it
+        var results = editApplier.Apply(frameEdits, frame + 1, FindLiveEntity, Tracker.GetHandle);
+        var (applied, failed) = EditCounts;
+        foreach (var (sender, result) in results)
+        {
+            sender.Connection.Send(result);
+            if (result.Status is PlayEditStatus.Applied or PlayEditStatus.Coalesced)
+                applied++;
+            else
+                failed++;
+        }
+        EditCounts = (applied, failed);
+        foreach (var subscriber in subscribers)
+            subscriber.LastSnapshot = 0;
+        frameEdits.Clear();
+        agentTicks += Stopwatch.GetTimestamp() - start;
+    }
+
+    /// <summary>
+    /// The edits received and not applied yet (tests).
+    /// </summary>
+    internal int PendingEdits => subscribers.Sum(x => x.Edits.Count);
+
+    private Entity? FindLiveEntity(int handle)
+        => Tracker.Entities.TryGetValue(handle, out var entity) && entity.EntityManager is not null ? entity : null;
 
     /// <summary>
     /// Says that no editor will connect (the agent's connection failed): nobody can resume the game, so it plays, and a script's
@@ -259,6 +317,7 @@ public sealed class PlayAgentSystem : GameSystemBase
         if (hotkey is not null)
             game.Input?.RemoveListener(hotkey);
         exceptionWatcher?.Dispose();
+        EditSystem.Dispose();
         GlobalLogger.GlobalMessageLogged -= OnMessageLogged;
         AppDomain.CurrentDomain.AssemblyLoad -= OnAssemblyLoad;
         game.Exiting -= OnGameExiting;
@@ -336,7 +395,7 @@ public sealed class PlayAgentSystem : GameSystemBase
         while (newStreams.TryDequeue(out var stream))
         {
             var subscriber = new PlaySubscriber(new PlayConnection(stream));
-            subscriber.Connection.Start(subscriber.Incoming.Enqueue);
+            subscriber.Connection.Start(subscriber.Receive);
             subscriber.Connection.Send(CreateHello());
             subscriber.Connection.Send(CreateState());
             subscribers.Add(subscriber);
