@@ -40,6 +40,12 @@ public sealed class PanelDockable : Tool, IDisposable, IDockableView
     public IPanelViewModel ViewModel { get; }
 
     /// <summary>
+    /// The tab of its group that this panel covered when it was shown and brought forward (<see cref="DockPanelService.Show"/>);
+    /// it comes forward again when this panel is hidden while it is the group's selected tab.
+    /// </summary>
+    internal PanelDockable? Covered { get; set; }
+
+    /// <summary>
     /// The panel in the saved layouts.
     /// </summary>
     public PanelRef Ref { get; }

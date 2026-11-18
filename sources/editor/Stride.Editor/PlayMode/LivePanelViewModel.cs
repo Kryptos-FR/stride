@@ -31,9 +31,13 @@ public enum LiveTabState
     /// <summary>The game runs and its tree follows it.</summary>
     Playing,
 
-    /// <summary>The game runs without the live connection (the agent did not connect, the connection broke, or the versions
-    /// differ): the tab keeps what it had, and says why.</summary>
+    /// <summary>The game runs without the live connection (the agent did not connect, the connection broke, the versions
+    /// differ, or the game was started without it): the tab keeps what it had, and says why.</summary>
     NotConnected,
+
+    /// <summary>The game is connected but has sent nothing for a few seconds: it may be busy, stuck, or stopped at a breakpoint
+    /// of a debugger.</summary>
+    NotResponding,
 
     /// <summary>The game exited: the tab keeps its last tree, greyed.</summary>
     Stopped,
@@ -45,7 +49,8 @@ public enum LiveTabState
 /// </summary>
 /// <remarks>
 /// It follows the session of <see cref="PlayModeService"/>: each start replaces the tree. The agent's tree and batches are
-/// applied on the UI thread at most 10 times a second. The selected entities are subscribed to at 5 snapshots a second.
+/// applied on the UI thread at most 10 times a second. The selection goes to an <see cref="ILiveSelectionView"/> (the property
+/// grid), which asks the game for the entities' snapshots while it shows them.
 /// </remarks>
 [Experimental("STREXP012")]
 public sealed class LivePanelViewModel : PanelViewModel
@@ -57,6 +62,7 @@ public sealed class LivePanelViewModel : PanelViewModel
 
     private readonly PlayModeService playMode;
     private readonly ILiveSceneAssets? sceneAssets;
+    private readonly ILiveSelectionView? selectionView;
     private readonly IDispatcherService dispatcher;
     private readonly ConcurrentQueue<(PlaySession Session, PlayMessage Message)> pending = new();
     private readonly Lock @lock = new();
@@ -67,6 +73,8 @@ public sealed class LivePanelViewModel : PanelViewModel
     private bool applyScheduled;
     private long lastApply;
     private bool updatingSelection;
+    // The silence of the game the user chose to wait through
+    private bool waiting;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LivePanelViewModel"/> class.
@@ -75,12 +83,18 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// <param name="playMode">The play sessions the tab follows.</param>
     /// <param name="sceneAssets">The scene assets of the session, to mark the spawned entities and to show an entity in its
     /// scene editor; <c>null</c> for neither.</param>
-    public LivePanelViewModel(PanelContext context, PlayModeService playMode, ILiveSceneAssets? sceneAssets)
+    /// <param name="selectionView">Shows the values of the selected entities (the property grid); the tab disposes it.
+    /// <c>null</c> for none: the selection is then only exposed.</param>
+    /// <param name="reloadCodeCommand">Reloads the game's code in the editor, offered when the game runs another build of it;
+    /// <c>null</c> for none.</param>
+    public LivePanelViewModel(PanelContext context, PlayModeService playMode, ILiveSceneAssets? sceneAssets, ILiveSelectionView? selectionView = null, ICommandBase? reloadCodeCommand = null)
         : base(context)
     {
         ArgumentNullException.ThrowIfNull(playMode);
         this.playMode = playMode;
         this.sceneAssets = sceneAssets;
+        this.selectionView = selectionView;
+        ReloadCodeCommand = reloadCodeCommand;
         dispatcher = ServiceProvider.Get<IDispatcherService>();
         Tree = new LiveTree(sceneAssets is not null ? sceneAssets.GetEntityIds : null);
         SelectedItems.CollectionChanged += SelectedItemsChanged;
@@ -89,6 +103,9 @@ public sealed class LivePanelViewModel : PanelViewModel
         CopyIdCommand = new AnonymousTaskCommand<object?>(ServiceProvider, x => CopyAsync(x, item => item.Id.ToString()));
         ExpandAllCommand = new AnonymousCommand(ServiceProvider, () => Tree.SetAllExpanded(true));
         CollapseAllCommand = new AnonymousCommand(ServiceProvider, () => Tree.SetAllExpanded(false));
+        WaitCommand = new AnonymousCommand(ServiceProvider, Wait);
+        EndGameCommand = new AnonymousCommand(ServiceProvider, EndGame);
+        ShowSelectionCommand = new AnonymousCommand(ServiceProvider, () => selectionView?.Show(Selection));
 
         playMode.SessionStarted += SessionStarted;
         if (playMode.Session is { } current)
@@ -113,7 +130,7 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// <summary>
     /// The live entities selected, with the session that plays them; <c>null</c> when no entity is selected or no game plays.
     /// </summary>
-    public LiveSelection? Selection { get; private set => SetValue(ref field, value); }
+    public LiveSelection? Selection { get; private set => SetValue(ref field, value, () => selectionView?.Show(value)); }
 
     /// <summary>
     /// Where the tab's game is.
@@ -121,13 +138,23 @@ public sealed class LivePanelViewModel : PanelViewModel
     public LiveTabState State
     {
         get;
-        private set => SetValue(ref field, value, nameof(State), nameof(IsLive), nameof(StateText));
+        private set => SetValue(ref field, value, nameof(State), nameof(IsLive), nameof(IsPlaying), nameof(IsNotResponding), nameof(StateText));
     } = LiveTabState.NotPlaying;
+
+    /// <summary>
+    /// Whether the game plays and answers.
+    /// </summary>
+    public bool IsPlaying => State == LiveTabState.Playing;
+
+    /// <summary>
+    /// Whether the connected game has sent nothing for a few seconds.
+    /// </summary>
+    public bool IsNotResponding => State == LiveTabState.NotResponding;
 
     /// <summary>
     /// Whether the tree follows a game that runs; otherwise it shows the last tree, greyed.
     /// </summary>
-    public bool IsLive => State == LiveTabState.Playing;
+    public bool IsLive => State is LiveTabState.Playing or LiveTabState.NotResponding;
 
     /// <summary>
     /// The state as the tab's header shows it.
@@ -137,6 +164,7 @@ public sealed class LivePanelViewModel : PanelViewModel
         LiveTabState.Connecting => Tr._p("Play", "Connecting"),
         LiveTabState.Playing => Tr._p("Play", "Playing"),
         LiveTabState.NotConnected => Tr._p("Play", "Not connected"),
+        LiveTabState.NotResponding => Tr._p("Play", "Not responding"),
         LiveTabState.Stopped => ExitCode is { } code ? string.Format(Tr._p("Play", "Stopped (exit code {0})"), code) : Tr._p("Play", "Stopped"),
         _ => Tr._p("Play", "Not playing"),
     };
@@ -150,6 +178,43 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// The exit code of the game, once it exited.
     /// </summary>
     public int? ExitCode { get; private set => SetValue(ref field, value, nameof(ExitCode), nameof(StateText)); }
+
+    /// <summary>
+    /// Whether the notice "the game is not responding" is shown, with <see cref="WaitCommand"/> and <see cref="EndGameCommand"/>.
+    /// </summary>
+    public bool ShowsNotResponding { get; private set => SetValue(ref field, value); }
+
+    /// <summary>
+    /// The game's assemblies the editor has another build of, when there are some: the notice that some values show as
+    /// placeholders, with <see cref="ReloadCodeCommand"/>. <c>null</c> otherwise.
+    /// </summary>
+    public string? StaleNotice { get; private set => SetValue(ref field, value); }
+
+    /// <summary>
+    /// What the tab says over the last tree of a game that stopped: its rows no longer follow the game, and their entities have
+    /// no values any more. <c>null</c> while the game plays, or when no tree was received.
+    /// </summary>
+    public string? StoppedNotice { get; private set => SetValue(ref field, value); }
+
+    /// <summary>
+    /// Reloads the game's code in the editor (the editor's own action); <c>null</c> when the editor offers none.
+    /// </summary>
+    public ICommandBase? ReloadCodeCommand { get; }
+
+    /// <summary>
+    /// Hides the notice that the game is not responding, until the game answers and stops answering again.
+    /// </summary>
+    public ICommandBase WaitCommand { get; }
+
+    /// <summary>
+    /// Ends the game's process at once (the game is not responding, so it cannot be asked to quit).
+    /// </summary>
+    public ICommandBase EndGameCommand { get; }
+
+    /// <summary>
+    /// Shows the selected entities again in the property grid, after something else took it (the user came back to the tab).
+    /// </summary>
+    public ICommandBase ShowSelectionCommand { get; }
 
     /// <summary>
     /// The number of live entities.
@@ -208,6 +273,7 @@ public sealed class LivePanelViewModel : PanelViewModel
         Detach();
         SelectedItems.CollectionChanged -= SelectedItemsChanged;
         lifetime.Cancel();
+        selectionView?.Dispose();
         base.Destroy();
     }
 
@@ -246,17 +312,21 @@ public sealed class LivePanelViewModel : PanelViewModel
         Tree.Clear();
         EntityCount = 0;
         ExitCode = null;
+        StaleNotice = null;
+        StoppedNotice = null;
+        ShowsNotResponding = false;
+        waiting = false;
         newSession.StateChanged += SessionStateChanged;
         newSession.TreeReceived += SessionTreeReceived;
         newSession.TreeChanged += SessionTreeChanged;
+        newSession.RespondingChanged += SessionRespondingChanged;
+        newSession.HeartbeatReceived += SessionHeartbeatReceived;
         State = LiveTabState.Connecting;
         Message = null;
-        if (replay)
-        {
-            if (newSession.Tree is { } tree)
-                Enqueue(newSession, tree);
-            UpdateState(newSession);
-        }
+        if (replay && newSession.Tree is { } tree)
+            Enqueue(newSession, tree);
+        // The state may have changed before this ran on the UI thread (a game started without the agent is not connected at once)
+        UpdateState(newSession);
     }
 
     private void Detach()
@@ -266,10 +336,10 @@ public sealed class LivePanelViewModel : PanelViewModel
         old.StateChanged -= SessionStateChanged;
         old.TreeReceived -= SessionTreeReceived;
         old.TreeChanged -= SessionTreeChanged;
-        // The selected entities are not sent any more
-        if (Selection is not null)
-            old.Subscribe([]);
+        old.RespondingChanged -= SessionRespondingChanged;
+        old.HeartbeatReceived -= SessionHeartbeatReceived;
         session = null;
+        // The view of the selection gives its place back, and stops the snapshots
         Selection = null;
     }
 
@@ -277,6 +347,19 @@ public sealed class LivePanelViewModel : PanelViewModel
     {
         if (sender is PlaySession changed)
             Track(dispatcher.InvokeAsync(() => UpdateState(changed), lifetime.Token));
+    }
+
+    private void SessionRespondingChanged(object? sender, bool responding)
+    {
+        if (sender is PlaySession changed)
+            Track(dispatcher.InvokeAsync(() => UpdateState(changed), lifetime.Token));
+    }
+
+    private void SessionHeartbeatReceived(object? sender, PlayHeartbeat heartbeat)
+    {
+        // The game reports the assemblies it loads after the hello: a script assembly loaded late can be stale too
+        if (sender is PlaySession changed && StaleNotice is null && changed.Assemblies.StaleAssemblies.Count > 0)
+            Track(dispatcher.InvokeAsync(() => UpdateStaleNotice(changed), lifetime.Token));
     }
 
     private void SessionTreeReceived(object? sender, PlayTree tree)
@@ -302,13 +385,20 @@ public sealed class LivePanelViewModel : PanelViewModel
                 Message = null;
                 break;
             case PlaySessionState.Connected:
-                State = LiveTabState.Playing;
+                if (changed.IsResponding)
+                    waiting = false;
+                State = changed.IsResponding ? LiveTabState.Playing : LiveTabState.NotResponding;
+                ShowsNotResponding = !changed.IsResponding && !waiting;
                 Message = null;
+                UpdateStaleNotice(changed);
                 break;
             case PlaySessionState.Failed:
             case PlaySessionState.VersionMismatch:
+            case PlaySessionState.WithoutAgent:
                 State = LiveTabState.NotConnected;
                 Message = changed.StateMessage;
+                ShowsNotResponding = false;
+                ClearSelectedItems();
                 Selection = null;
                 break;
             case PlaySessionState.GameExited:
@@ -316,9 +406,35 @@ public sealed class LivePanelViewModel : PanelViewModel
                 ApplyPending();
                 ExitCode = changed.ExitCode;
                 State = LiveTabState.Stopped;
+                ShowsNotResponding = false;
+                // The grid gives its place back, and the rows are no longer selected: a row selected now says that the game
+                // stopped (UpdateSelection)
+                ClearSelectedItems();
                 Selection = null;
+                StoppedNotice = Tree.EntityCount > 0 || Tree.Rows.Count > 0 ? Tr._p("Play", "The game has stopped. This is its last tree: the entities have no values any more, and the property grid says so. Start the project again to see them live.") : null;
                 break;
         }
+    }
+
+    private void UpdateStaleNotice(PlaySession changed)
+    {
+        if (changed != session)
+            return;
+        var stale = changed.Assemblies.StaleAssemblies;
+        StaleNotice = stale.Count == 0 ? null
+            : string.Format(Tr._p("Play", "Script types changed since the editor loaded them ({0}): some values show as placeholders. Reload the project to see them."), string.Join(", ", stale));
+    }
+
+    private void Wait()
+    {
+        waiting = true;
+        ShowsNotResponding = false;
+    }
+
+    private void EndGame()
+    {
+        ShowsNotResponding = false;
+        (session?.Game as IPlayGameProcess)?.Kill();
     }
 
     private void Enqueue(PlaySession from, PlayMessage message)
@@ -415,22 +531,41 @@ public sealed class LivePanelViewModel : PanelViewModel
     }
 
     /// <summary>
-    /// Subscribes the session to the selected entities, and exposes them.
+    /// Exposes the selected entities, and hands them to the view of the selection.
     /// </summary>
+    /// <remarks>
+    /// Once the game stopped, the rows of its last tree can still be selected: the selection then has the names of the
+    /// entities, and the property grid says that the game stopped instead of showing values (<see cref="LiveSelection.IsStopped"/>).
+    /// </remarks>
     private void UpdateSelection()
     {
-        var handles = SelectedItems.OfType<LiveEntityItem>().Select(x => x.Handle).Distinct().ToList();
-        if (session is not { State: PlaySessionState.Connected } playing)
+        var entities = SelectedItems.OfType<LiveEntityItem>().DistinctBy(x => x.Handle).ToList();
+        if (session is not { State: not PlaySessionState.Starting } followed)
         {
             Selection = null;
             return;
         }
-        if (handles.Count == 0 && Selection is null)
+        if (entities.Count == 0 && Selection is null)
             return;
-        if (Selection is { } current && current.Session == playing && current.Handles.SequenceEqual(handles))
+        var handles = entities.Select(x => x.Handle).ToList();
+        if (Selection is { } current && current.Session == followed && current.Handles.SequenceEqual(handles))
             return;
-        playing.Subscribe(handles, SnapshotRateHz);
-        Selection = handles.Count > 0 ? new LiveSelection(playing, handles) : null;
+        Selection = handles.Count > 0 ? new LiveSelection(followed, handles) { Names = entities.Select(x => x.Name).ToList() } : null;
+    }
+
+    private void ClearSelectedItems()
+    {
+        if (SelectedItems.Count == 0)
+            return;
+        updatingSelection = true;
+        try
+        {
+            SelectedItems.Clear();
+        }
+        finally
+        {
+            updatingSelection = false;
+        }
     }
 
     private LiveEntityItem? Target(object? parameter) => parameter as LiveEntityItem ?? SelectedItems.OfType<LiveEntityItem>().FirstOrDefault();

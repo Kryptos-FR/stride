@@ -411,7 +411,11 @@ public partial class App : Application
         // The commands of the main menu and of the main window's shortcuts join each session through the shell's own plugin
         Commands.GameStudioCommandsPlugin.EnsureRegistered();
         var dispatcherService = DispatcherService.Create();
-        var playMode = new PlayModeService(new PlaySessionOptions { Log = GlobalLogger.GetLogger("PlayMode") });
+        var playMode = new PlayModeService(new PlaySessionOptions { Log = GlobalLogger.GetLogger("PlayMode") })
+        {
+            // Read at each start, so that a change of the setting applies to the next F5
+            ConnectToGame = () => GameStudioEditorSettings.PlayModeConnect.GetValue(),
+        };
         // A game that plays ends with the editor, even when the system ends it; then the sessions end, with their pipes (a
         // pipe's file stays on Linux and macOS otherwise)
         if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

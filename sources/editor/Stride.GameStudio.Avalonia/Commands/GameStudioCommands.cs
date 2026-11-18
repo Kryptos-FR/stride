@@ -48,6 +48,7 @@ internal static class GameStudioCommands
     public const string StartProjectId = "Stride.Project.Start";
     public const string CancelBuildId = "Stride.Project.CancelBuild";
     public const string StopGameId = "Stride.Project.StopGame";
+    public const string StartWithoutLiveViewId = "Stride.Project.StartWithoutLiveView";
     public const string ReloadGameAssembliesId = "Stride.Project.ReloadGameAssemblies";
     public const string DocumentationId = "Stride.Help.Documentation";
     public const string QuestionsId = "Stride.Help.Questions";
@@ -86,6 +87,7 @@ internal static class GameStudioCommands
         // Project
         Wrap(BuildProjectId, CommandCategories.Project, () => Tr._p("Menu", "Build project"), new KeyGesture(Key.F6), x => x.Build.BuildProjectCommand, keywords: ["compile"]),
         Wrap(StartProjectId, CommandCategories.Project, () => Tr._p("Menu", "Start project"), new KeyGesture(Key.F5), x => x.StartProjectCommand, keywords: ["run", "play", "launch", "game"]),
+        Wrap(StartWithoutLiveViewId, CommandCategories.Project, () => Tr._p("Menu", "Start without the live view"), Primary(Key.F5), x => x.StartWithoutLiveViewCommand, keywords: ["run", "play", "launch", "game", "connection"]),
         Wrap(StopGameId, CommandCategories.Project, () => Tr._p("Menu", "Stop game"), new KeyGesture(Key.F5, KeyModifiers.Shift), x => x.StopGameCommand, keywords: ["play", "end", "quit", "exit"]),
         Wrap(CancelBuildId, CommandCategories.Project, () => Tr._p("Menu", "Cancel build"), Primary(Key.F6), x => x.Build.CancelBuildCommand, keywords: ["stop"]),
         Wrap(ReloadGameAssembliesId, CommandCategories.Project, () => Tr._p("Menu", "Reload game assemblies"), null, x => x.CodeReload.ReloadCommand, keywords: ["code", "scripts"]),
@@ -142,6 +144,7 @@ internal static class GameStudioCommands
         ResetLayoutId => main.ViewMenu.ResetLayoutCommand,
         BuildProjectId => main.Build.BuildProjectCommand,
         StartProjectId => main.StartProjectCommand,
+        StartWithoutLiveViewId => main.StartWithoutLiveViewCommand,
         StopGameId => main.StopGameCommand,
         CancelBuildId => main.Build.CancelBuildCommand,
         ReloadGameAssembliesId => main.CodeReload.ReloadCommand,

@@ -29,6 +29,23 @@
       <Setter Property="Foreground" Value="White"/>
     </Style>
     <!-- Once the game stopped, the last tree stays, greyed -->
+    <!-- The notices over the tree -->
+    <Style Selector="Border.notice">
+      <Setter Property="Background" Value="#30E0A030"/>
+      <Setter Property="BorderBrush" Value="#80E0A030"/>
+      <Setter Property="BorderThickness" Value="0,1"/>
+      <Setter Property="Padding" Value="6,4"/>
+    </Style>
+    <Style Selector="Border.notice.warning">
+      <Setter Property="Background" Value="#40CA5100"/>
+      <Setter Property="BorderBrush" Value="#A0CA5100"/>
+    </Style>
+    <Style Selector="Border.state.notResponding">
+      <Setter Property="Background" Value="#FFCA5100"/>
+    </Style>
+    <Style Selector="Border.state.notResponding TextBlock">
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
     <Style Selector="ListBox.stopped">
       <Setter Property="Opacity" Value="0.5"/>
     </Style>
@@ -63,15 +80,42 @@
     <!-- The header: this tab shows the running game, not the scene assets -->
     <Border DockPanel.Dock="Top" Padding="6,4" Background="#20388934">
       <DockPanel>
-        <Border DockPanel.Dock="Right" Classes="state" Classes.playing="{Binding IsLive}">
+        <Border DockPanel.Dock="Right" Classes="state" Classes.playing="{Binding IsPlaying}" Classes.notResponding="{Binding IsNotResponding}">
           <TextBlock Name="StateText" Text="{Binding StateText}" FontSize="11"/>
         </Border>
-        <TextBlock Text="{sd:LocalizeString Running game, Context=Play}" FontWeight="Bold" VerticalAlignment="Center"/>
+        <TextBlock Name="HeaderText" Text="{sd:LocalizeString Running game, Context=Play}" FontWeight="Bold" VerticalAlignment="Center"
+                   IsVisible="{Binding StoppedNotice, Converter={x:Static ObjectConverters.IsNull}}"/>
+        <TextBlock Name="StoppedHeaderText" Text="{sd:LocalizeString Stopped game, Context=Play}" FontWeight="Bold" VerticalAlignment="Center" Opacity="0.7"
+                   IsVisible="{Binding StoppedNotice, Converter={x:Static ObjectConverters.IsNotNull}}"/>
       </DockPanel>
     </Border>
     <!-- Why there is no live view, or how to start one -->
     <TextBlock DockPanel.Dock="Top" Name="Message" Text="{Binding Message}" TextWrapping="Wrap" Margin="6,4" Opacity="0.8"
                IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+    <!-- The game sent nothing for a few seconds: it may be busy, or stopped at a breakpoint -->
+    <Border DockPanel.Dock="Top" Name="NotRespondingNotice" Classes="notice warning" IsVisible="{Binding ShowsNotResponding}">
+      <StackPanel Spacing="4">
+        <TextBlock TextWrapping="Wrap"
+                   Text="{sd:LocalizeString 'The game has not answered for a few seconds. It may be busy loading, or stopped at a breakpoint of a debugger.', Context=Play}"/>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Button Name="WaitButton" Content="{sd:LocalizeString Wait, Context=Play}" Command="{Binding WaitCommand}"/>
+          <Button Name="EndGameButton" Content="{sd:LocalizeString End game, Context=Play}" Command="{Binding EndGameCommand}"
+                  ToolTip.Tip="{sd:LocalizeString Ends the process of the game at once, Context=ToolTip}"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+    <!-- The game runs another build of its code than the editor loaded -->
+    <Border DockPanel.Dock="Top" Name="StaleNotice" Classes="notice" IsVisible="{Binding StaleNotice, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <StackPanel Spacing="4">
+        <TextBlock TextWrapping="Wrap" Text="{Binding StaleNotice}"/>
+        <Button Name="ReloadCodeButton" Content="{sd:LocalizeString Reload game assemblies, Context=Play}" Command="{Binding ReloadCodeCommand}"
+                IsVisible="{Binding ReloadCodeCommand, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+      </StackPanel>
+    </Border>
+    <!-- The game stopped: the tree below is its last one, greyed, and its entities have no values any more -->
+    <Border DockPanel.Dock="Top" Name="StoppedNotice" Classes="notice" IsVisible="{Binding StoppedNotice, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <TextBlock Name="StoppedNoticeText" TextWrapping="Wrap" Text="{Binding StoppedNotice}"/>
+    </Border>
     <!-- The search, expand and collapse, and the number of entities -->
     <DockPanel DockPanel.Dock="Top" Margin="2">
       <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0" Opacity="0.8"
@@ -95,6 +139,7 @@
              SelectedItems="{Binding SelectedItems}"
              SelectionMode="Multiple"
              Classes.stopped="{Binding !IsLive}"
+             GotFocus="OnTreeGotFocus"
              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
       <ListBox.ContextMenu>
         <!-- On the selected rows: a right click selects the row under the pointer first -->

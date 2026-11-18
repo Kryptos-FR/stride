@@ -37,6 +37,18 @@ internal static class GameStudioEditorSettings
         {
             DisplayName = $"{EditorSettings.Interface}/{Tr._p("Settings", "Floating panels inside the main window")}",
         };
+        // Start project runs the game of the editor's platform in play mode, with the Live tab, unless this is off
+        PlayModeConnect = new SettingsKey<bool>("PlayMode/ConnectWhenStarting", EditorSettings.SettingsContainer, true)
+        {
+            DisplayName = $"{PlayMode}/{Tr._p("Settings", "Connect to the game when starting the project")}",
+            Description = Tr._p("Settings", "Start project (F5) starts the game with the live connection: the Live tab shows its scenes and entities, and the property grid the selected ones. Off, the game starts as it would without play mode."),
+        };
+        // On by default: the last tree of a game that exited stays readable
+        PlayModeKeepLiveTabAfterExit = new SettingsKey<bool>("PlayMode/KeepLiveTabAfterExit", EditorSettings.SettingsContainer, true)
+        {
+            DisplayName = $"{PlayMode}/{Tr._p("Settings", "Keep the Live tab open when the game exits")}",
+            Description = Tr._p("Settings", "The Live tab stays open with the last tree of the game once it exits, greyed. Off, it closes when the game exits normally, and the tab it covered comes back; it stays open when the game crashes (a non-zero exit code) or its connection is lost, so that the reason stays visible."),
+        };
         // The user's shortcuts, by command identifier. Edited in the settings file for now: a display name without a category
         // keeps it out of the dialog
         ShortcutOverrides = new SettingsKey<Dictionary<string, string>>("Shortcuts/Overrides", EditorSettings.SettingsContainer, () => new Dictionary<string, string>())
@@ -44,6 +56,21 @@ internal static class GameStudioEditorSettings
             DisplayName = "ShortcutOverrides",
         };
     }
+
+    /// <summary>
+    /// The category of the play mode settings.
+    /// </summary>
+    public static string PlayMode => Tr._p("Settings", "Play mode");
+
+    /// <summary>
+    /// Whether Start project starts the game of the editor's platform with the live connection (play mode).
+    /// </summary>
+    public static SettingsKey<bool> PlayModeConnect { get; }
+
+    /// <summary>
+    /// Whether the Live tab stays open when its game exits normally. It stays open after a crash or a lost connection anyway.
+    /// </summary>
+    public static SettingsKey<bool> PlayModeKeepLiveTabAfterExit { get; }
 
     /// <summary>
     /// The session to open at startup when no path is given on the command line.

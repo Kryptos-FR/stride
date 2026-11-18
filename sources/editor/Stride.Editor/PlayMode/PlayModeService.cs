@@ -69,6 +69,18 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
     public event EventHandler? PlayingChanged;
 
     /// <summary>
+    /// Whether a game starts with the live connection: the editor's setting "Connect to the game when starting the project".
+    /// Read at each start; <c>true</c> by default.
+    /// </summary>
+    public Func<bool> ConnectToGame { get; set; } = static () => true;
+
+    /// <summary>
+    /// Whether the next game starts without the live connection, whatever <see cref="ConnectToGame"/> says (Start without the
+    /// live view). The next start clears it; clear it too when the start does not happen (a failed build).
+    /// </summary>
+    public bool NextStartWithoutConnection { get; set; }
+
+    /// <summary>
     /// The current session, or the last one once its game exited; <c>null</c> before the first start.
     /// </summary>
     public PlaySession? Session { get; private set; }
@@ -81,14 +93,19 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
     /// <inheritdoc/>
     /// <remarks>
     /// Ends the game that plays, if any, then starts this one with the agent. The game starts before this method returns; its
-    /// agent connects later (<see cref="PlaySession.StateChanged"/>).
+    /// agent connects later (<see cref="PlaySession.StateChanged"/>). Without the live connection (<see cref="ConnectToGame"/>,
+    /// <see cref="NextStartWithoutConnection"/>), the game starts as it would without play mode, in a session that only
+    /// follows its process (<see cref="PlaySessionState.WithoutAgent"/>).
     /// </remarks>
     public IGameProcess Start(string assemblyPath, ILogger output)
     {
         ArgumentNullException.ThrowIfNull(assemblyPath);
         ArgumentNullException.ThrowIfNull(output);
 
-        var session = new PlaySession(createTransport(), agentFiles, options);
+        var once = NextStartWithoutConnection;
+        NextStartWithoutConnection = false;
+        var connect = !once && ConnectToGame();
+        var session = new PlaySession(connect ? createTransport() : new NoPlayTransport(), agentFiles, options);
         PlaySession? previous;
         lock (@lock)
         {
@@ -100,6 +117,9 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
             Retire(previous);
 
         SessionStarted?.Invoke(this, session);
+        if (!connect)
+            return StartWithoutAgent(session, assemblyPath, output, once);
+
         // The game starts within this call: the session awaits only once it waits for the agent
         var start = session.StartAsync(environment => startGame(assemblyPath, output, environment), PlayAgentFiles.GetGameStrideVersion(assemblyPath));
         if (start.IsFaulted || session.Game is null)
@@ -114,6 +134,25 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
         PlayingChanged?.Invoke(this, EventArgs.Empty);
         session.Exited.ContinueWith(_ => PlayingChanged?.Invoke(this, EventArgs.Empty), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         return session.Game;
+    }
+
+    private IGameProcess StartWithoutAgent(PlaySession session, string assemblyPath, ILogger output, bool once)
+    {
+        var reason = once
+            ? "The game was started without the live view (Start without the live view)."
+            : "The game was started without the live view: the setting \"Connect to the game when starting the project\" is off.";
+        try
+        {
+            session.StartWithoutAgent(environment => startGame(assemblyPath, output, environment), reason);
+        }
+        catch
+        {
+            Retire(session);
+            throw;
+        }
+        PlayingChanged?.Invoke(this, EventArgs.Empty);
+        session.Exited.ContinueWith(_ => PlayingChanged?.Invoke(this, EventArgs.Empty), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        return session.Game!;
     }
 
     /// <summary>
@@ -168,5 +207,17 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
     {
         start.ContinueWith(x => options.Log?.Error("The play session failed to connect to the game.", x.Exception!.GetBaseException()),
             CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    }
+
+    /// <summary>
+    /// The transport of a session started without the agent: nothing connects to it.
+    /// </summary>
+    private sealed class NoPlayTransport : IPlayTransport
+    {
+        public IReadOnlyDictionary<string, string> GameEnvironment { get; } = new Dictionary<string, string>();
+
+        public Task<Stream> AcceptAsync(CancellationToken cancellationToken) => throw new NotSupportedException("A session started without the agent accepts no connection.");
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

@@ -53,6 +53,7 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
     private readonly List<Entry> entries = [];
     private PlaySession? playSession;
     private IReadOnlyList<int> handles = [];
+    private double rate = 5;
     private LiveSnapshot? pending;
     private int applyScheduled;
 
@@ -94,6 +95,12 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
     public bool IsLive => true;
 
     /// <summary>
+    /// Whether the grid shows entities of a game that stopped (<see cref="ShowStopped"/>): it has no values, and the header says
+    /// "Stopped" instead of "Live".
+    /// </summary>
+    public bool IsStopped { get; private set => SetValue(ref field, value); }
+
+    /// <summary>
     /// What the header says under "Live": the game's frame, and which entities are refreshed less often.
     /// </summary>
     public string LiveStatus { get; private set => SetValue(ref field, value); } = string.Empty;
@@ -113,6 +120,12 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
     /// with the keyboard focus. Called on the UI thread before each apply.
     /// </summary>
     public Func<IReadOnlyCollection<(IGraphNode Node, NodeIndex Index)>>? ProtectedValues { get; set; }
+
+    /// <summary>
+    /// Whether the game sends the snapshots of the entities shown: <c>false</c> before <see cref="Show"/>, after
+    /// <see cref="Detach"/>, and while <see cref="Suspend"/> holds them back.
+    /// </summary>
+    public bool IsReceiving { get; private set; }
 
     /// <summary>
     /// The handles of the entities shown, in order.
@@ -156,13 +169,63 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
         ArgumentNullException.ThrowIfNull(entityHandles);
         Dispatcher.EnsureAccess();
         Detach();
+        IsStopped = false;
         playSession = session;
         handles = entityHandles.ToList();
+        rate = rateHz;
         Throttle.Reset();
         entries.Clear();
         session.SnapshotReceived += OnSnapshotReceived;
         session.Subscribe(handles, rateHz);
+        IsReceiving = true;
         ShowWaitingAsync(session).Forget();
+    }
+
+    /// <summary>
+    /// Shows entities of a game that stopped (it exited, or its connection was lost), selected in the last tree of the Live
+    /// tab: there are no values to show, so the grid says that the game stopped, under the names of the entities.
+    /// </summary>
+    /// <param name="session">The play session of the game.</param>
+    /// <param name="entityHandles">The handles of the entities.</param>
+    /// <param name="names">The names of the entities, in the order of the handles; <c>null</c> to read them in the session's
+    /// last tree.</param>
+    public void ShowStopped(PlaySession session, IReadOnlyList<int> entityHandles, IReadOnlyList<string>? names = null)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(entityHandles);
+        Dispatcher.EnsureAccess();
+        Detach();
+        handles = entityHandles.ToList();
+        Throttle.Reset();
+        entries.Clear();
+        IsThrottled = false;
+        IsStopped = true;
+        LiveStatus = session.State == PlaySessionState.GameExited ? "The game has stopped." : "The game is no longer connected.";
+        ShowStoppedAsync(session, names).Forget();
+    }
+
+    /// <summary>
+    /// Asks the game to stop sending the snapshots while nothing shows them (the grid is hidden, or shows something else); the
+    /// grid keeps the last values. <see cref="Resume"/> asks for them again.
+    /// </summary>
+    public void Suspend()
+    {
+        if (playSession is not { } session || !IsReceiving)
+            return;
+        IsReceiving = false;
+        session.Subscribe([], rate);
+        Interlocked.Exchange(ref pending, null);
+    }
+
+    /// <summary>
+    /// Asks the game for the snapshots again after <see cref="Suspend"/>: the next one is applied in place.
+    /// </summary>
+    public void Resume()
+    {
+        if (playSession is not { } session || IsReceiving)
+            return;
+        IsReceiving = true;
+        session.Subscribe(handles, rate);
     }
 
     private async Task ShowWaitingAsync(PlaySession session)
@@ -176,6 +239,26 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
         }
     }
 
+    private async Task ShowStoppedAsync(PlaySession session, IReadOnlyList<string>? names)
+    {
+        var shownHandles = handles;
+        await GenerateSelectionPropertiesAsync([]);
+        // Shown live again meanwhile, or other entities
+        if (!IsStopped || playSession is not null || handles != shownHandles)
+            return;
+        var count = shownHandles.Count;
+        TypeDescription = count > 1 ? "Live entities" : "Live entity";
+        Name = count switch
+        {
+            0 => string.Empty,
+            1 => names is [var name] ? name : session.Tree?.Entities.FirstOrDefault(x => x.Handle == shownHandles[0])?.Name ?? string.Empty,
+            _ => $"{count} entities selected",
+        };
+        FallbackMessage = session.State == PlaySessionState.GameExited
+            ? (count > 1 ? "The game has stopped: the values of these entities are gone. Start the project again to see them live." : "The game has stopped: the values of this entity are gone. Start the project again to see them live.")
+            : (count > 1 ? "The game is no longer connected: the values of these entities are not sent any more." : "The game is no longer connected: the values of this entity are not sent any more.");
+    }
+
     /// <summary>
     /// Stops following the play session: the game stops sending snapshots, the grid keeps the last values.
     /// </summary>
@@ -184,7 +267,9 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
         if (playSession is { } session)
         {
             session.SnapshotReceived -= OnSnapshotReceived;
-            session.Subscribe([], 5);
+            if (IsReceiving)
+                session.Subscribe([], rate);
+            IsReceiving = false;
             playSession = null;
         }
         Interlocked.Exchange(ref pending, null);
@@ -317,7 +402,7 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
     private void OnSnapshotReceived(object? sender, LiveSnapshot snapshot)
     {
         // On the session's reading task: keep the latest, and apply it on the UI thread when the last apply is done
-        if (sender != playSession)
+        if (sender != playSession || !IsReceiving)
             return;
         Interlocked.Exchange(ref pending, snapshot);
         if (Interlocked.CompareExchange(ref applyScheduled, 1, 0) == 0)

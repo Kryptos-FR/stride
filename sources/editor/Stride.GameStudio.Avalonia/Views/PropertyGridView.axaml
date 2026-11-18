@@ -18,6 +18,7 @@
   <UserControl.Resources>
     <ResourceDictionary>
       <SolidColorBrush x:Key="LivePropertiesBadgeBackground" Color="#B03A2E"/>
+      <SolidColorBrush x:Key="StoppedLivePropertiesBadgeBackground" Color="#808080"/>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://Stride.Core.Assets.Editor.Avalonia/Themes/PropertyViewTheme.axaml"/>
         <ResourceInclude Source="avares://Stride.Core.Assets.Editor.Avalonia/Views/ImageResources.axaml"/>
@@ -91,18 +92,33 @@
           <Image Source="{StaticResource ImageNext}" Width="16" Height="16"/>
         </Button>
       </StackPanel>
-      <!-- A live entity of a running game: a "Live" badge with a lock, since the values are the game's and read-only.
-           The code-behind gives it the live grid as its data context. -->
+      <!-- A live entity of a running game: a "Live" badge with a lock, since the values are the game's and read-only. A grey
+           "Stopped" badge with no lock once the game stopped: the grid then has no values. The code-behind gives it the live
+           grid as its data context. -->
       <Border x:Name="LiveBadge" x:DataType="aepm:LivePropertiesViewModel"
               DockPanel.Dock="Left" Margin="0,0,6,0" Padding="5,1" CornerRadius="3" VerticalAlignment="Center"
-              Background="{DynamicResource LivePropertiesBadgeBackground}"
-              IsVisible="{Binding IsLive, FallbackValue={sd:False}}"
-              ToolTip.Tip="{sd:LocalizeString The values of the running game. They are read-only and are refreshed while the game runs., Context=ToolTip}">
+              Classes.stopped="{Binding IsStopped, FallbackValue={sd:False}}"
+              IsVisible="{Binding IsLive, FallbackValue={sd:False}}">
+        <Border.Styles>
+          <!-- Styles, not local values, so that the stopped style can replace them -->
+          <Style Selector="Border#LiveBadge">
+            <Setter Property="Background" Value="{DynamicResource LivePropertiesBadgeBackground}"/>
+            <Setter Property="ToolTip.Tip" Value="{sd:LocalizeString The values of the running game. They are read-only and are refreshed while the game runs., Context=ToolTip}"/>
+          </Style>
+          <Style Selector="Border#LiveBadge.stopped">
+            <Setter Property="Background" Value="{DynamicResource StoppedLivePropertiesBadgeBackground}"/>
+            <Setter Property="ToolTip.Tip" Value="{sd:LocalizeString The game has stopped: there are no values to show., Context=ToolTip}"/>
+          </Style>
+        </Border.Styles>
         <StackPanel Orientation="Horizontal" Spacing="4">
           <!-- A padlock -->
-          <Path Width="9" Height="11" Stretch="Uniform" VerticalAlignment="Center" Fill="White"
+          <Path x:Name="LiveBadgeLock" Width="9" Height="11" Stretch="Uniform" VerticalAlignment="Center" Fill="White"
+                IsVisible="{Binding !IsStopped, FallbackValue={sd:True}}"
                 Data="M 2 5 V 3.5 A 3 3 0 0 1 8 3.5 V 5 H 9 V 11 H 1 V 5 Z M 3.5 5 H 6.5 V 3.5 A 1.5 1.5 0 0 0 3.5 3.5 Z"/>
-          <TextBlock Text="{sd:LocalizeString Live}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+          <TextBlock x:Name="LiveBadgeText" Text="{sd:LocalizeString Live}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"
+                     IsVisible="{Binding !IsStopped, FallbackValue={sd:True}}"/>
+          <TextBlock x:Name="StoppedBadgeText" Text="{sd:LocalizeString Stopped}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"
+                     IsVisible="{Binding IsStopped, FallbackValue={sd:False}}"/>
         </StackPanel>
       </Border>
       <!-- Description -->

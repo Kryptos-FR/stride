@@ -264,6 +264,10 @@ public sealed class DockPanelService : ViewModelBase, IPanelService, IDisposable
         if (layout is null || !dockables.TryGetValue(new PanelRef(panelId), out var dockable))
             return;
 
+        // The tab it covers comes back when it is hidden (the Live tab when its game exits): the selected tab of its group
+        // before it is restored, which may select it
+        var group = IsHidden(dockable) ? dockable.OriginalOwner as IDock : dockable.Owner as IDock;
+        var covered = group?.ActiveDockable as PanelDockable;
         if (IsHidden(dockable))
         {
             if (dockable.OriginalOwner is IDock owner && IsInLayout(owner))
@@ -283,7 +287,11 @@ public sealed class DockPanelService : ViewModelBase, IPanelService, IDisposable
         }
 
         if (activate)
+        {
+            if (covered is not null && covered != dockable && covered.Owner == dockable.Owner)
+                dockable.Covered = covered;
             Factory.SetActiveDockable(dockable);
+        }
         RaisePanelChanged(panelId);
     }
 
@@ -293,7 +301,12 @@ public sealed class DockPanelService : ViewModelBase, IPanelService, IDisposable
         if (layout is null || !dockables.TryGetValue(new PanelRef(panelId), out var dockable) || IsHidden(dockable) || !IsInLayout(dockable))
             return;
 
+        // Hidden while it is its group's selected tab: the tab it covered when it was shown comes forward, if it is still there
+        var covered = dockable.Owner is IDock owner && owner.ActiveDockable == dockable && dockable.Covered is { } previous && previous.Owner == owner && !IsHidden(previous) ? previous : null;
+        dockable.Covered = null;
         Factory.HideDockable(dockable);
+        if (covered is not null)
+            Factory.SetActiveDockable(covered);
         RaisePanelChanged(panelId);
     }
 

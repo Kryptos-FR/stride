@@ -105,13 +105,20 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
         Build.PropertyChanged += BuildPropertyChanged;
         // Start project plays the games of the editor's platform: Stop ends them, and the Live tab opens when one connects
         PlayMode = serviceProvider.TryGet<PlayModeService>();
-        StartProjectCommand = new AnonymousTaskCommand(serviceProvider, StartProjectAsync) { IsEnabled = Build.StartProjectCommand.IsEnabled };
-        Build.StartProjectCommand.CanExecuteChanged += (_, _) => StartProjectCommand.IsEnabled = Build.StartProjectCommand.IsEnabled;
+        StartProjectCommand = new AnonymousTaskCommand(serviceProvider, () => StartProjectAsync(withoutLiveView: false)) { IsEnabled = Build.StartProjectCommand.IsEnabled };
+        // Once, whatever the setting: the game starts as it would without play mode
+        StartWithoutLiveViewCommand = new AnonymousTaskCommand(serviceProvider, () => StartProjectAsync(withoutLiveView: true)) { IsEnabled = PlayMode is not null && Build.StartProjectCommand.IsEnabled };
+        Build.StartProjectCommand.CanExecuteChanged += (_, _) =>
+        {
+            StartProjectCommand.IsEnabled = Build.StartProjectCommand.IsEnabled;
+            StartWithoutLiveViewCommand.IsEnabled = PlayMode is not null && Build.StartProjectCommand.IsEnabled;
+        };
         StopGameCommand = new AnonymousTaskCommand(serviceProvider, () => PlayMode?.StopAsync() ?? Task.CompletedTask) { IsEnabled = false };
         if (PlayMode is not null)
         {
             PlayMode.PlayingChanged += PlayingChanged;
             PlayMode.SessionStarted += PlaySessionStarted;
+            PlayStatus = new PlayStatusViewModel(serviceProvider, PlayMode);
         }
 
         // The panels of the main window: the editor's and the plugins' (the plugin host owns the registry, and removes the
@@ -182,9 +189,20 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     public ICommandBase StartProjectCommand { get; }
 
     /// <summary>
+    /// Builds the current project and starts its game without the live connection, whatever the setting says (Ctrl+F5).
+    /// </summary>
+    public ICommandBase StartWithoutLiveViewCommand { get; }
+
+    /// <summary>
     /// Ends the game that plays (Stop, Shift+F5).
     /// </summary>
     public ICommandBase StopGameCommand { get; }
+
+    /// <summary>
+    /// The state of the game started with Start project, in the status bar; <c>null</c> when the host starts games without
+    /// play sessions.
+    /// </summary>
+    public PlayStatusViewModel? PlayStatus { get; }
 
     /// <summary>
     /// The router of the Edit commands of the main view (Undo, Copy, Paste...), which act on the control that last had the
@@ -594,8 +612,13 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
             registry.Register(descriptor, BuiltInPanelsOwner);
         registry.Register(BuiltInPanels.CreateOutputPanel(Build), BuiltInPanelsOwner);
         // The running game's scenes and entities, while a game plays
+        // Its selection shows in the property grid, while the grid is on screen
         if (PlayMode is { } playMode)
-            registry.Register(LivePanel.Create(context => new LivePanelViewModel(context, playMode, new LiveSceneAssets(context.Session))), BuiltInPanelsOwner);
+        {
+            registry.Register(LivePanel.Create(context => new LivePanelViewModel(context, playMode, new LiveSceneAssets(context.Session),
+                context.Session is SessionViewModel session ? new LivePropertyGrid(session, () => Panels.GetPanel(BuiltInPanels.PropertyGrid)) : null,
+                CodeReload.ReloadCommand)), BuiltInPanelsOwner);
+        }
         // The preview service exists once the plugins have initialized the session, before the panels are created
         registry.Register(BuiltInPanels.CreatePreviewPanel(context => new AssetPreviewPanelViewModel(context, Preview ?? throw new InvalidOperationException("The session has no preview."))), BuiltInPanelsOwner);
         // The plugins of the session, switched under the file it was opened from; "Restart to apply" opens it again
@@ -617,7 +640,8 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     /// <summary>
     /// Asks to stop the game that plays before Start project starts another one of the editor's platform.
     /// </summary>
-    private async Task StartProjectAsync()
+    /// <param name="withoutLiveView">Whether this game starts without the live connection, whatever the setting says.</param>
+    private async Task StartProjectAsync(bool withoutLiveView)
     {
         if (PlayMode is { IsPlaying: true } playMode && session?.CurrentProject?.Platform == Stride.Core.Platform.Type)
         {
@@ -626,7 +650,21 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
                 return;
             await playMode.StopAsync();
         }
-        await Build.BuildAsync(true);
+        if (PlayMode is null)
+        {
+            await Build.BuildAsync(true);
+            return;
+        }
+        PlayMode.NextStartWithoutConnection = withoutLiveView;
+        try
+        {
+            await Build.BuildAsync(true);
+        }
+        finally
+        {
+            // A build that fails or is cancelled starts nothing
+            PlayMode.NextStartWithoutConnection = false;
+        }
     }
 
     private void PlayingChanged(object? sender, EventArgs e)
@@ -635,7 +673,8 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     }
 
     /// <summary>
-    /// The Live tab comes forward when the game's agent connects.
+    /// The Live tab comes forward when the game's agent connects. Unless the setting keeps it (on by default), it closes when the
+    /// game exits normally, and the tab it covered comes back; it stays open after a crash or a lost connection, for the reason.
     /// </summary>
     private void PlaySessionStarted(object? sender, PlaySession playSession)
     {
@@ -643,7 +682,23 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
         {
             if (change.NewState == PlaySessionState.Connected)
                 ServiceProvider.Get<IDispatcherService>().InvokeAsync(() => { if (session is not null) Panels.Show(LivePanel.Id); }).Forget();
+            else if (IsNormalExit(change, playSession) && !GameStudioEditorSettings.PlayModeKeepLiveTabAfterExit.GetValue())
+                ServiceProvider.Get<IDispatcherService>().InvokeAsync(() => HideLiveTabAfterExit(playSession)).Forget();
         };
+    }
+
+    /// <summary>
+    /// A game that was connected until it exited, with the exit code 0: neither a crash nor a lost connection.
+    /// </summary>
+    private static bool IsNormalExit(PlaySessionStateChange change, PlaySession playSession)
+        => change is { OldState: PlaySessionState.Connected, NewState: PlaySessionState.GameExited } && playSession.ExitCode == 0;
+
+    private void HideLiveTabAfterExit(PlaySession exited)
+    {
+        // A game started again meanwhile keeps its tab
+        if (session is null || PlayMode?.Session != exited)
+            return;
+        Panels.Hide(LivePanel.Id);
     }
 
     private void UpdateUndoRedo(object? sender, EventArgs e)
@@ -886,6 +941,12 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     {
         panelCommands?.Dispose();
         SafeModeBanner?.Dispose();
+        if (PlayMode is not null)
+        {
+            PlayMode.PlayingChanged -= PlayingChanged;
+            PlayMode.SessionStarted -= PlaySessionStarted;
+        }
+        PlayStatus?.Destroy();
         base.Destroy();
     }
 

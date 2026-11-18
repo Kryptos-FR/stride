@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Stride.Core.Assets.Editor.Components.Build;
 using Stride.Core.Diagnostics;
@@ -29,6 +30,10 @@ public enum PlaySessionState
 
     /// <summary>The game runs another Stride version than the editor's agent: it was started without the agent.</summary>
     VersionMismatch,
+
+    /// <summary>The game was started without the agent on purpose (<see cref="PlaySession.StartWithoutAgent"/>): it runs as a
+    /// game started without play mode, and the session only follows its process.</summary>
+    WithoutAgent,
 }
 
 /// <summary>
@@ -51,6 +56,12 @@ public sealed record PlaySessionOptions
     /// How long the session waits for the game to exit after the connection ends, before it says the connection failed.
     /// </summary>
     public TimeSpan ExitAfterDisconnectDelay { get; init; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// How long a connected game can send nothing (the agent sends a heartbeat every second) before the session says it does
+    /// not respond (<see cref="PlaySession.IsResponding"/>).
+    /// </summary>
+    public TimeSpan NotRespondingAfter { get; init; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Receives the errors of the session's event handlers, which never stop the session.
@@ -76,7 +87,9 @@ public sealed record PlaySessionStateChange(PlaySessionState OldState, PlaySessi
 /// reading task, one at a time, never on a UI thread: a view dispatches them itself. The state only goes forward:
 /// <see cref="PlaySessionState.Starting"/>, then <see cref="PlaySessionState.Connected"/>,
 /// <see cref="PlaySessionState.Failed"/> or <see cref="PlaySessionState.VersionMismatch"/>, then
-/// <see cref="PlaySessionState.GameExited"/> once the game's process ends (a connected session can also fail first).
+/// <see cref="PlaySessionState.GameExited"/> once the game's process ends (a connected session can also fail first). A session
+/// started with <see cref="StartWithoutAgent"/> goes from <see cref="PlaySessionState.WithoutAgent"/> to
+/// <see cref="PlaySessionState.GameExited"/>.
 /// </remarks>
 [Experimental("STREXP012")]
 public sealed class PlaySession : IAsyncDisposable
@@ -91,6 +104,9 @@ public sealed class PlaySession : IAsyncDisposable
     private PlayConnection? connection;
     private Task? exitWatch;
     private Task? connectionWatch;
+    private Task? respondingWatch;
+    // When the agent last sent something (Stopwatch ticks)
+    private long lastReceived;
     private bool started;
     private bool goodbye;
     private int disposed;
@@ -146,6 +162,11 @@ public sealed class PlaySession : IAsyncDisposable
     public event EventHandler<PlayHeartbeat>? HeartbeatReceived;
 
     /// <summary>
+    /// Raised when <see cref="IsResponding"/> changes.
+    /// </summary>
+    public event EventHandler<bool>? RespondingChanged;
+
+    /// <summary>
     /// The state.
     /// </summary>
     public PlaySessionState State { get; private set; }
@@ -184,6 +205,13 @@ public sealed class PlaySession : IAsyncDisposable
     /// The comparison of the game's assemblies with the editor's.
     /// </summary>
     public PlayAssemblyCheck Assemblies { get; }
+
+    /// <summary>
+    /// Whether the connected game sent something within <see cref="PlaySessionOptions.NotRespondingAfter"/>. A game that is
+    /// busy, stuck, or stopped at a breakpoint of a debugger stops sending; it answers again when it goes on. <c>true</c>
+    /// while the session is not connected.
+    /// </summary>
+    public bool IsResponding { get; private set; } = true;
 
     /// <summary>
     /// Completes when the game exited.
@@ -243,7 +271,7 @@ public sealed class PlaySession : IAsyncDisposable
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && !lifetime.IsCancellationRequested)
             {
-                SetState(PlaySessionState.Failed, $"The game's agent did not connect within {options.ConnectTimeout.TotalSeconds:0} s.");
+                SetState(PlaySessionState.Failed, $"The game runs without the live view: its play agent did not connect within {options.ConnectTimeout.TotalSeconds:0} s. A trimmed or ahead-of-time compiled game, or one that sets its own startup hooks, cannot load the agent.");
                 return;
             }
         }
@@ -253,6 +281,26 @@ public sealed class PlaySession : IAsyncDisposable
             connection = newConnection;
         newConnection.Start(OnMessage);
         connectionWatch = WatchConnectionAsync(newConnection);
+    }
+
+    /// <summary>
+    /// Starts the game without the agent, as a game started without play mode: the session only follows its process (its exit,
+    /// and <see cref="StopAsync"/>, which ends it since it cannot be asked to quit).
+    /// </summary>
+    /// <param name="startGame">Starts the game; it is given no variable to add.</param>
+    /// <param name="reason">Why the game runs without the live connection, as <see cref="StateMessage"/>.</param>
+    public void StartWithoutAgent(Func<IReadOnlyDictionary<string, string>, IGameProcess> startGame, string reason)
+    {
+        ArgumentNullException.ThrowIfNull(startGame);
+        ArgumentNullException.ThrowIfNull(reason);
+        ObjectDisposedException.ThrowIf(disposed != 0, this);
+        lock (@lock)
+        {
+            if (started)
+                throw new InvalidOperationException("The session was already started.");
+            started = true;
+        }
+        StartWithoutAgent(startGame, PlaySessionState.WithoutAgent, reason);
     }
 
     /// <summary>
@@ -310,7 +358,7 @@ public sealed class PlaySession : IAsyncDisposable
         if (toClose is not null)
             await toClose.DisposeAsync().ConfigureAwait(false);
         await transport.DisposeAsync().ConfigureAwait(false);
-        foreach (var task in new[] { exitWatch, connectionWatch })
+        foreach (var task in new[] { exitWatch, connectionWatch, respondingWatch })
         {
             if (task is null)
                 continue;
@@ -388,6 +436,9 @@ public sealed class PlaySession : IAsyncDisposable
 
     private void OnMessage(PlayMessage message)
     {
+        Volatile.Write(ref lastReceived, Stopwatch.GetTimestamp());
+        if (!IsResponding && State == PlaySessionState.Connected)
+            SetResponding(true);
         switch (message)
         {
             case PlayHello hello:
@@ -395,8 +446,8 @@ public sealed class PlaySession : IAsyncDisposable
                 Assemblies.Add(hello.Assemblies);
                 if (!PlayAgentFiles.AreSameVersion(hello.StrideVersion, agentFiles.StrideVersion))
                     SetState(PlaySessionState.VersionMismatch, $"The game runs Stride {hello.StrideVersion} and the editor {agentFiles.StrideVersion}: play mode needs the same version.");
-                else
-                    SetState(PlaySessionState.Connected, null);
+                else if (SetState(PlaySessionState.Connected, null))
+                    respondingWatch = WatchRespondingAsync();
                 return;
             case PlayGoodbye:
                 goodbye = true;
@@ -431,20 +482,57 @@ public sealed class PlaySession : IAsyncDisposable
         }
     }
 
-    private void SetState(PlaySessionState state, string? message)
+    private bool SetState(PlaySessionState state, string? message)
     {
         PlaySessionState old;
         lock (@lock)
         {
             old = State;
-            // Forward only: an exited game ends the session; a failed or mismatched one does not connect again
-            if (old == state || old == PlaySessionState.GameExited || (old is PlaySessionState.Failed or PlaySessionState.VersionMismatch && state != PlaySessionState.GameExited))
-                return;
+            // Forward only: an exited game ends the session; a failed, mismatched or agentless one does not connect again
+            if (old == state || old == PlaySessionState.GameExited || (old is PlaySessionState.Failed or PlaySessionState.VersionMismatch or PlaySessionState.WithoutAgent && state != PlaySessionState.GameExited))
+                return false;
             State = state;
             if (message is not null)
                 StateMessage = message;
         }
         Raise(StateChanged, new PlaySessionStateChange(old, state, message));
+        return true;
+    }
+
+    /// <summary>
+    /// While the session is connected, checks that the game keeps sending (the agent's heartbeat comes every second).
+    /// </summary>
+    private async Task WatchRespondingAsync()
+    {
+        var limit = options.NotRespondingAfter;
+        var period = TimeSpan.FromTicks(Math.Max(limit.Ticks / 5, TimeSpan.FromMilliseconds(20).Ticks));
+        using var timer = new PeriodicTimer(period);
+        try
+        {
+            while (State == PlaySessionState.Connected && await timer.WaitForNextTickAsync(lifetime.Token).ConfigureAwait(false))
+            {
+                if (IsResponding && State == PlaySessionState.Connected && Stopwatch.GetElapsedTime(Volatile.Read(ref lastReceived)) > limit)
+                    SetResponding(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The session ended
+        }
+        // A game that exits or loses its connection is not waited for any more
+        if (!IsResponding)
+            SetResponding(true);
+    }
+
+    private void SetResponding(bool responding)
+    {
+        lock (@lock)
+        {
+            if (IsResponding == responding)
+                return;
+            IsResponding = responding;
+        }
+        Raise(RespondingChanged, responding);
     }
 
     private void Raise<T>(EventHandler<T>? handler, T args)

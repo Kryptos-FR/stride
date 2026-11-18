@@ -1,0 +1,24 @@
+// Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
+// Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
+
+using System.Diagnostics.CodeAnalysis;
+
+namespace Stride.Editor.PlayMode;
+
+/// <summary>
+/// What shows the values of the live entities selected in the Live tab: the property grid, in the editor.
+/// </summary>
+/// <remarks>
+/// The Live tab hands it each change of its selection, on the UI thread, and disposes it when the tab closes. It asks the game
+/// for the entities' snapshots (<see cref="PlaySession.Subscribe"/>) while it shows them, and only then.
+/// </remarks>
+[Experimental("STREXP012")]
+public interface ILiveSelectionView : IDisposable
+{
+    /// <summary>
+    /// Shows the selected live entities, or gives the place back to what was shown before them when there are none (nothing
+    /// selected, or the game stopped). Called again with the same selection when the user comes back to the Live tab.
+    /// </summary>
+    /// <param name="selection">The selection, or <c>null</c>.</param>
+    void Show(LiveSelection? selection);
+}

@@ -154,6 +154,9 @@
             <Image Source="{StaticResource ImageStartProject}"/>
           </MenuItem.Icon>
         </MenuItem>
+        <!-- Once, whatever the setting: the game starts without the live connection, as without play mode -->
+        <MenuItem Name="StartWithoutLiveViewMenuItem"
+                  Command="{cmd:Command Stride.Project.StartWithoutLiveView}"/>
         <!-- Ends the game that plays (and the Live tab's connection) -->
         <MenuItem Name="StopGameMenuItem"
                   Command="{cmd:Command Stride.Project.StopGame}">
@@ -361,10 +364,37 @@
     <Grid Grid.Row="5"
           IsVisible="{Binding Session, Converter={sd:ObjectToBool}}"
           ColumnDefinitions="2*, Auto, *, Auto, *, 100">
-      <TextBlock Grid.Column="0"
-                 Margin="8,0"
-                 VerticalAlignment="Center"
-                 Text="{Binding Status.CurrentStatus}"/>
+      <DockPanel Grid.Column="0">
+        <!-- The game started with Start project: green while it plays live, orange while it does not respond -->
+        <Border Name="PlayStatus"
+                DockPanel.Dock="Right"
+                Margin="4,1"
+                Padding="6,0"
+                CornerRadius="3"
+                Classes.playing="{Binding PlayStatus.IsPlaying, FallbackValue=False}"
+                Classes.notResponding="{Binding PlayStatus.IsNotResponding, FallbackValue=False}"
+                IsVisible="{Binding PlayStatus.IsVisible, FallbackValue=False}"
+                ToolTip.Tip="{Binding PlayStatus.Message}">
+          <Border.Styles>
+            <!-- Set by a style, not on the border, so that the states' styles can replace it -->
+            <Style Selector="Border#PlayStatus">
+              <Setter Property="Background" Value="#40808080"/>
+            </Style>
+            <Style Selector="Border.playing">
+              <Setter Property="Background" Value="#FF388934"/>
+              <Setter Property="TextElement.Foreground" Value="White"/>
+            </Style>
+            <Style Selector="Border.notResponding">
+              <Setter Property="Background" Value="#FFCA5100"/>
+              <Setter Property="TextElement.Foreground" Value="White"/>
+            </Style>
+          </Border.Styles>
+          <TextBlock Name="PlayStatusText" VerticalAlignment="Center" Text="{Binding PlayStatus.Text}"/>
+        </Border>
+        <TextBlock Margin="8,0"
+                   VerticalAlignment="Center"
+                   Text="{Binding Status.CurrentStatus}"/>
+      </DockPanel>
       <Border Grid.Column="1"
               Margin="2"
               BorderThickness="1"
