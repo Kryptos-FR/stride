@@ -19,8 +19,8 @@ namespace Stride.PlayMode.Snapshots;
 /// <para>
 /// The component is written in full. Every entity, and every component other than this one, is written as a
 /// <see cref="PlayMirrorReference"/> (the "PlayMirror" serializer profile): a reference to another entity's camera does not pull
-/// that entity in, and the reader decides what a reference becomes. Content is written by URL (the "Content" profile), as a
-/// game's content manager knows it; the reader gets proxies with the URL.
+/// that entity in, and the reader decides what a reference becomes. Content is written by URL, as a game's content manager
+/// knows it, and content made at run time without one (<see cref="PlayMirrorContentSerializer{T}"/>); the reader gets proxies.
 /// </para>
 /// <para>
 /// Payload: the length of the serialized data (4 bytes), the data, then the references (count, then each one).
@@ -97,10 +97,19 @@ public static class PlayMirrorSerializer
             foreach (var type in missing)
             {
                 RegisteredTypes.TryAdd(type, true);
-                // The same type id as the default serializer: a component written with its type reads back with this one
-                var existing = DataSerializerFactory.GetSerializer("Default", type);
-                if (existing.SerializerType is not null)
-                    profile.Add(new AssemblySerializerEntry(existing.Id, type, typeof(PlayMirrorComponentSerializer<>).MakeGenericType(type)));
+                if (typeof(EntityComponent).IsAssignableFrom(type))
+                {
+                    // The same type id as the default serializer: a component written with its type reads back with this one
+                    var existing = DataSerializerFactory.GetSerializer("Default", type);
+                    if (existing.SerializerType is not null)
+                        profile.Add(new AssemblySerializerEntry(existing.Id, type, typeof(PlayMirrorComponentSerializer<>).MakeGenericType(type)));
+                }
+                else
+                {
+                    // Content: the same type id as its reference serializer
+                    var existing = DataSerializerFactory.GetSerializer("Content", type);
+                    profile.Add(new AssemblySerializerEntry(existing.Id, type, typeof(PlayMirrorContentSerializer<>).MakeGenericType(type)));
+                }
             }
             if (profile.Count == 0)
                 return;
@@ -134,8 +143,8 @@ public static class PlayMirrorSerializer
     /// <param name="component">The component, on the game thread.</param>
     /// <param name="handleOf">Gives the agent's handle of an entity, or 0 for an entity it does not track.</param>
     /// <returns>The payload.</returns>
-    /// <exception cref="Exception">The component holds something the binary serializers cannot write (content made at run
-    /// time, which has no URL, for instance). Nothing of it is written.</exception>
+    /// <exception cref="Exception">The component holds something the binary serializers cannot write (a type with no
+    /// serializer, for instance). Nothing of it is written.</exception>
     public static byte[] Write(EntityComponent component, Func<Entity, int> handleOf)
     {
         ArgumentNullException.ThrowIfNull(component);
@@ -212,9 +221,14 @@ public static class PlayMirrorSerializer
 
     private static void AddIfMissing(Type type, List<Type> missing)
     {
-        if (typeof(EntityComponent).IsAssignableFrom(type) && !type.IsAbstract && !type.ContainsGenericParameters && !RegisteredTypes.ContainsKey(type) && !missing.Contains(type))
+        if ((typeof(EntityComponent).IsAssignableFrom(type) || IsContentType(type)) && !type.IsAbstract && !type.ContainsGenericParameters && !RegisteredTypes.ContainsKey(type) && !missing.Contains(type))
             missing.Add(type);
     }
+
+    // A type that the "Content" profile writes as a reference (models, materials, textures...)
+    private static bool IsContentType(Type type)
+        => type.IsClass && !type.ContainsGenericParameters && DataSerializerFactory.GetSerializer("Content", type).SerializerType is { IsGenericType: true } serializer
+            && serializer.GetGenericTypeDefinition() == typeof(ReferenceSerializer<>);
 
     private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
     {

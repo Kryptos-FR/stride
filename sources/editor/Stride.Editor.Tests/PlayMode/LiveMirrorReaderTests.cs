@@ -1,12 +1,15 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using Stride.Core.Assets;
+using Stride.Core.Serialization;
 using Stride.Core.Yaml;
 using Stride.Editor.PlayMode;
 using Stride.Engine;
 using Stride.PlayMode.Agent;
 using Stride.PlayMode.Protocol;
 using Stride.PlayMode.Snapshots;
+using Stride.Rendering;
 
 namespace Stride.Editor.Tests.PlayMode;
 
@@ -176,6 +179,23 @@ public sealed class LiveMirrorReaderTests
         Assert.Equal((3, 1.5), (live.Frame, live.GameTime));
         Assert.Equal(["Player", "Enemy"], live.Entities.Select(x => x.Name));
         Assert.Equal(3, live.Entities[1].Entity.Get<PlayTestComponent>().Health);
+    }
+
+    [Fact]
+    public void ContentIsReadByUrlAndContentMadeAtRunTimeWithout()
+    {
+        var model = new ModelComponent { Model = AttachedReferenceManager.CreateProxyObject<Model>(AssetId.Empty, "Models/Box") };
+        model.Materials[0] = new Material();
+        player.Add(model);
+
+        var mirror = new LiveMirrorReader(new PlayAssemblyCheck()).Read(Write(player));
+
+        Assert.Equal(LiveComponentStatus.Read, mirror.Components.Single(x => x.Component is ModelComponent).Status);
+        var read = mirror.Entity.Get<ModelComponent>();
+        Assert.Equal("Models/Box", AttachedReferenceManager.GetUrl(read.Model));
+        // The game made the material: a proxy with no URL and no id
+        var material = Assert.IsType<Material>(read.Materials[0]);
+        Assert.Equal((null, AssetId.Empty), (AttachedReferenceManager.GetUrl(material), AttachedReferenceManager.GetAttachedReference(material)!.Id));
     }
 
     private PlayEntitySnapshot Write(Entity entity) => PlaySnapshotWriter.Write(entity, x => handles.GetValueOrDefault(x));

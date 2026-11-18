@@ -1,7 +1,10 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using Stride.Core.Assets;
+using Stride.Core.Reflection;
 using Stride.Core.Serialization;
+using Stride.Core.Serialization.Contents;
 using Stride.Engine;
 
 namespace Stride.PlayMode.Snapshots;
@@ -79,5 +82,46 @@ public sealed class PlayMirrorComponentSerializer<T> : DataSerializer<T> where T
         }
         // The root, or a base class's part of it when its serializer serializes its parent type
         context.Inner.GetSerializer<T>()!.Serialize(ref obj, mode, stream);
+    }
+}
+
+/// <summary>
+/// The serializer of a content type (a model, a material, a texture...) in the "PlayMirror" profile: content is written by its
+/// URL, as the game's content manager knows it, and content the game made at run time, which has no URL, is written too, so
+/// that it does not fail its component's snapshot.
+/// </summary>
+/// <typeparam name="T">The content type.</typeparam>
+/// <remarks>
+/// The reader gets a proxy with the URL and the id the game knows; content made at run time is a proxy with neither (or
+/// <c>null</c> when its type cannot be made empty).
+/// </remarks>
+public sealed class PlayMirrorContentSerializer<T> : DataSerializer<T> where T : class
+{
+    /// <inheritdoc/>
+    public override void Serialize(ref T obj, ArchiveMode mode, SerializationStream stream)
+    {
+        if (mode == ArchiveMode.Serialize)
+        {
+            var reference = AttachedReferenceManager.GetAttachedReference(obj);
+            stream.Write(PlayMirrorSerializer.TypeNameOf(obj.GetType()));
+            stream.Write(reference?.Id ?? AssetId.Empty);
+            stream.Write(reference?.Url ?? string.Empty);
+        }
+        else
+        {
+            var typeName = stream.ReadString();
+            var id = stream.Read<AssetId>();
+            var url = stream.ReadString();
+            var type = AssemblyRegistry.GetType(typeName, throwOnError: false) ?? typeof(T);
+            try
+            {
+                obj = (T)AttachedReferenceManager.CreateProxyObject(type, id, url.Length > 0 ? url : null!);
+            }
+            catch (InvalidOperationException)
+            {
+                // A type with no empty constructor: the reader shows no content
+                obj = null!;
+            }
+        }
     }
 }
