@@ -225,10 +225,6 @@
                 IsVisible="{sd:IsDebug}">
         <MenuItem Header="Simulate a crash"
                   Command="{Binding CrashCommand}"/>
-        <MenuItem Header="Play and show the selection live"
-                  Command="{Binding ShowLiveSelectionCommand}"/>
-        <MenuItem Header="Stop the live game"
-                  Command="{Binding StopLiveCommand}"/>
       </MenuItem>
     </Menu>
 
