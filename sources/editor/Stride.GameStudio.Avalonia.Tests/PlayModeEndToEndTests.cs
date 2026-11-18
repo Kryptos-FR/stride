@@ -14,7 +14,7 @@ namespace Stride.GameStudio.Avalonia.Tests;
 
 /// <summary>
 /// Plays a real game built from a Stride template with the play agent: its tree reaches the editor, and a snapshot of one of
-/// its entities reaches the live property grid; it pauses, steps, slows down and resumes; then the game ends, with every
+/// its entities reaches the live property grid; it pauses, steps, slows down and resumes; it starts paused; then the game ends, with every
 /// process and pipe the test started.
 /// </summary>
 /// <remarks>
@@ -180,11 +180,77 @@ public sealed class PlayModeEndToEndTests
         Assert.True(session.Exited.IsCompleted, "The game still runs.");
         if (processId is { } id)
             Assert.True(HasExited(id), $"The game's process {id} still runs.");
-
-        // A heartbeat with a pause, a step or the JIT of a first call costs more: the median leaves it out
-        static string Median(List<PlayAgentStats> stats)
-            => stats.Count == 0 ? "-" : stats.Select(x => x.AgentMeanMicroseconds).Order().ElementAt(stats.Count / 2).ToString("0");
     }
+
+    [AvaloniaFact]
+    public async Task ATemplateGameStartedPausedPlaysNoFrameUntilAStep()
+    {
+        var gamePath = Environment.GetEnvironmentVariable(GameVariable);
+        Assert.SkipWhen(string.IsNullOrEmpty(gamePath) || !File.Exists(gamePath), $"No built game: set {GameVariable} to the assembly of a game built from a Stride template (for example the Linux head of 'dotnet new stride-fps').");
+        Assert.SkipWhen(OperatingSystem.IsLinux() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")), "No X display: run the test under Xvfb, with a Vulkan driver (lavapipe), so that the game can open its window.");
+        Assert.SkipUnless(PlayAgentFiles.NextToEditor.Exist, $"The play agent's files are not in {PlayAgentFiles.NextToEditor.Directory}.");
+
+        var output = new LoggerResult();
+        var tree = new TaskCompletionSource<PlayTree>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var heartbeats = new ConcurrentQueue<(bool Paused, PlayHeartbeat Heartbeat)>();
+        int? processId = null;
+        // Every option on, as the settings would send them: the key and the watcher of the scripts' exceptions cost their share
+        var session = new PlaySession(new PipePlayTransport(), PlayAgentFiles.NextToEditor, new PlaySessionOptions
+        {
+            ConnectTimeout = TimeSpan.FromMilliseconds(StartTimeout),
+            StopGracePeriod = TimeSpan.FromSeconds(10),
+            Log = output,
+        })
+        {
+            LaunchOptions = new PlayLaunchOptions(StartPaused: true, PauseOnScriptException: true, Hotkey: new PlayHotkey("F7")),
+        };
+        session.TreeReceived += (_, x) => tree.TrySetResult(x);
+        session.HeartbeatReceived += (_, x) => heartbeats.Enqueue((session.IsPaused, x));
+        try
+        {
+            var start = session.StartAsync(environment => PlayGameLauncher.Start(gamePath!, output, environment), PlayAgentFiles.GetGameStrideVersion(gamePath!));
+            processId = session.Game?.Id;
+            await WaitAsync(start, "the agent's connection", output);
+            await WaitAsync(Task.WhenAny(tree.Task, session.Exited).Unwrap(), "the game's tree", output);
+            Assert.True(tree.Task.IsCompleted, $"The game exited with {session.ExitCode} before it sent its tree.{Log(output)}");
+
+            // Paused before its first update: it draws, and plays no frame
+            var paused = await WaitForAsync(session, x => x.Paused, "the start paused", output);
+            Assert.Equal(PlayPauseReason.StartPaused, paused.PauseReason);
+            await WaitForHeartbeatsAsync(heartbeats, paused: true, 3, output);
+            Assert.Equal(0, session.GameState!.PlayedFrames);
+            Assert.True(session.GameState.Frame > paused.Frame, "The game stopped drawing while paused.");
+
+            // A step plays the first frame, and the reason stays: the game has not been resumed
+            session.Step();
+            await WaitForAsync(session, x => x.Paused && x.StepsPending == 0 && x.PlayedFrames == 1, "the step", output);
+            Assert.Equal(PlayPauseReason.StartPaused, session.GameState!.PauseReason);
+
+            session.Resume();
+            var resumed = await WaitForAsync(session, x => !x.Paused, "the resume", output);
+            Assert.Equal(PlayPauseReason.None, resumed.PauseReason);
+            await WaitForAsync(session, x => x.PlayedFrames > resumed.PlayedFrames, "frames after the resume", output);
+            var beforePlaying = heartbeats.Count;
+            await WaitForHeartbeatsAsync(heartbeats, paused: false, 4, output);
+            Assert.DoesNotContain(output.Messages, x => x.Type >= LogMessageType.Warning && x.Text.Contains("Play mode", StringComparison.Ordinal));
+            Assert.Null(session.LastScriptException);
+
+            var playing = heartbeats.Skip(beforePlaying + 1).Where(x => !x.Paused).Select(x => x.Heartbeat.Stats).Where(x => x.Frames > 0).ToList();
+            TestContext.Current.TestOutputHelper?.WriteLine($"Agent per frame with every option on (median of the heartbeats): playing {Median(playing)} µs over {playing.Sum(x => x.Frames)} frames.");
+        }
+        finally
+        {
+            await session.DisposeAsync();
+        }
+
+        Assert.True(session.Exited.IsCompleted, "The game still runs.");
+        if (processId is { } id)
+            Assert.True(HasExited(id), $"The game's process {id} still runs.");
+    }
+
+    // A heartbeat with a pause, a step or the JIT of a first call costs more: the median leaves it out
+    private static string Median(List<PlayAgentStats> stats)
+        => stats.Count == 0 ? "-" : stats.Select(x => x.AgentMeanMicroseconds).Order().ElementAt(stats.Count / 2).ToString("0");
 
     private static async Task<PlayGameState> WaitForAsync(PlaySession session, Func<PlayGameState, bool> condition, string what, LoggerResult output)
     {
