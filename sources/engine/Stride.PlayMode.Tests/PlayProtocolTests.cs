@@ -311,6 +311,19 @@ public sealed class PlayProtocolTests
         Assert.Equal("Boom.", read.Error);
     }
 
+    [Fact]
+    public async Task TheContentIndexKeepsItsUrlsAndTheirOrder()
+    {
+        var index = new PlayContentIndex(["Materials/Ground", "Models/Box", "Prefabs/Crate", "Scenes/Level 2"]);
+
+        var read = Assert.IsType<PlayContentIndex>(await RoundTripAsync(index.Encode()));
+
+        Assert.Equal(index.Urls, read.Urls);
+        Assert.Equal(index, read);
+        Assert.IsType<PlayContentRequest>(await RoundTripAsync(new PlayContentRequest().Encode()));
+        Assert.Empty(Assert.IsType<PlayContentIndex>(await RoundTripAsync(new PlayContentIndex([]).Encode())).Urls);
+    }
+
     private static async Task<PlayMessage> RoundTripAsync(byte[] frame)
     {
         using var stream = new MemoryStream(frame);
@@ -357,6 +370,8 @@ public sealed class PlayProtocolTests
             ["EditResultFailed"] = new PlayEditResult(18, 121, PlayEditStatus.Failed, PlayEditValue.Null, "The setter threw."),
             ["WindowOnTop"] = new PlayWindowOnTop(true),
             ["EditorActive"] = new PlayEditorActive(true),
+            ["ContentRequest"] = new PlayContentRequest(),
+            ["ContentIndex"] = new PlayContentIndex(["MainScene", "Models/Box", "Materials/Ground"]),
         };
     }
 }

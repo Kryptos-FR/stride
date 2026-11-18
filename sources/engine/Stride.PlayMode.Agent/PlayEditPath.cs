@@ -129,6 +129,11 @@ internal static class PlayEditPath
     }
 
     /// <summary>
+    /// The dictionary a value is, also through the generic interface only (Stride's own collections), or <c>null</c>.
+    /// </summary>
+    public static IDictionary? TryAsDictionary(object value) => value as IDictionary ?? GenericDictionary.TryWrap(value);
+
+    /// <summary>
     /// The element type of a list, or the value type of a dictionary.
     /// </summary>
     public static Type ItemType(object collection)
@@ -332,9 +337,9 @@ internal static class PlayEditPath
 
         public bool IsReadOnly => false;
 
-        public ICollection Keys => throw new NotSupportedException();
+        public ICollection Keys => Items("Keys");
 
-        public ICollection Values => throw new NotSupportedException();
+        public ICollection Values => Items("Values");
 
         public int Count => (int)typeof(ICollection<>).MakeGenericType(typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType)).GetProperty("Count")!.GetValue(dictionary)!;
 
@@ -356,6 +361,9 @@ internal static class PlayEditPath
 
         IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)dictionary).GetEnumerator();
 
+        // A copy of the keys or the values (a model's materials are an IndexingDictionary, which is not an IDictionary)
+        private List<object?> Items(string property) => [.. ((IEnumerable)type.GetProperty(property)!.GetValue(dictionary)!).Cast<object?>()];
+
         private void Invoke(MethodInfo method, params object?[] arguments)
         {
             try
@@ -373,4 +381,10 @@ internal static class PlayEditPath
 /// <summary>
 /// An edit the game cannot apply: the message says why, to the user.
 /// </summary>
-internal sealed class PlayEditException(string message) : Exception(message);
+internal class PlayEditException(string message) : Exception(message);
+
+/// <summary>
+/// An edit names, or sets a reference to, an entity or a component that is no longer in the game: it is answered
+/// <see cref="PlayEditStatus.Gone"/>.
+/// </summary>
+internal sealed class PlayEditGoneException(string message) : PlayEditException(message);

@@ -55,6 +55,8 @@ public abstract record PlayMessage
             PlayMessageType.EditResult => PlayEditResult.Read(reader),
             PlayMessageType.WindowOnTop => PlayWindowOnTop.Read(reader),
             PlayMessageType.EditorActive => PlayEditorActive.Read(reader),
+            PlayMessageType.ContentRequest => new PlayContentRequest(),
+            PlayMessageType.ContentIndex => PlayContentIndex.Read(reader),
             _ => new PlayUnknownMessage(frame.Type, frame.Payload),
         };
     }

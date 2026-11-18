@@ -24,8 +24,14 @@ namespace Stride.PlayMode.Agent;
 /// After each set, the value is read back at its path and sent: a setter that clamps shows its clamped value. A setter that
 /// throws is answered with its exception, and the game goes on.
 /// </para>
+/// <para>
+/// References: an entity is named by the agent's handle and a component by its id, and the edit sets the live object; one that
+/// left the game is answered <see cref="PlayEditStatus.Gone"/>. Content is named by its URL: the game's content manager loads
+/// it, and <see cref="PlayContentLoads"/> keeps the load until the reference changes again or the game exits.
+/// </para>
 /// </remarks>
-internal sealed class PlayEditApplier
+/// <param name="contentLoads">Loads the content the edits set; <c>null</c> refuses edits of content.</param>
+internal sealed class PlayEditApplier(PlayContentLoads? contentLoads = null)
 {
     /// <summary>
     /// Applies edits.
@@ -93,7 +99,7 @@ internal sealed class PlayEditApplier
     private static string PathKey(IReadOnlyList<PlayPathSegment> path)
         => string.Join("/", path.Select(x => x.Kind == PlayPathSegmentKind.Key ? $"#{System.Convert.ToBase64String(x.Key.Span)}" : x.ToString()));
 
-    private static PlayEditResult Apply(PlayEdit edit, long frame, Func<int, Entity?> findEntity, Func<Entity, int> handleOf)
+    private PlayEditResult Apply(PlayEdit edit, long frame, Func<int, Entity?> findEntity, Func<Entity, int> handleOf)
     {
         var entity = findEntity(edit.EntityHandle);
         if (entity is null)
@@ -107,6 +113,7 @@ internal sealed class PlayEditApplier
         object? ReadKey(ReadOnlyMemory<byte> key) => PlayMirrorSerializer.ReadValue(key, Resolve);
         try
         {
+            PlayEditResult result;
             switch (edit.Operation)
             {
                 case PlayEditOperation.Set:
@@ -116,7 +123,8 @@ internal sealed class PlayEditApplier
                     var value = CreateValue(edit.Value, Resolve);
                     var last = edit.Path[^1];
                     PlayEditPath.Change(component, edit.Path.Take(edit.Path.Count - 1).ToList(), x => PlayEditPath.SetStep(x, last, value, ReadKey), ReadKey);
-                    return new PlayEditResult(edit.Id, frame, PlayEditStatus.Applied, ReadBack(component, edit.Path, ReadKey, handleOf), null);
+                    result = new PlayEditResult(edit.Id, frame, PlayEditStatus.Applied, ReadBack(component, edit.Path, ReadKey, handleOf), null);
+                    break;
                 }
                 case PlayEditOperation.Add:
                 {
@@ -126,7 +134,8 @@ internal sealed class PlayEditApplier
                         list.Add(CreateItem(edit.Value, collection, Resolve));
                         return collection;
                     }, ReadKey);
-                    return Applied(edit, frame);
+                    result = Applied(edit, frame);
+                    break;
                 }
                 case PlayEditOperation.Insert:
                 case PlayEditOperation.Remove:
@@ -136,14 +145,21 @@ internal sealed class PlayEditApplier
                         throw new PlayEditException("An item operation needs the item's index or key.");
                     var last = edit.Path[^1];
                     PlayEditPath.Change(component, edit.Path.Take(edit.Path.Count - 1).ToList(), collection => ChangeItems(edit, last, collection, Resolve, ReadKey), ReadKey);
-                    return Applied(edit, frame);
+                    result = Applied(edit, frame);
+                    break;
                 }
                 default:
                     throw new PlayEditException($"The game does not know edits of kind {(byte)edit.Operation}.");
             }
+            CommitLoads(edit, component, ReadKey);
+            return result;
         }
         catch (Exception e)
         {
+            // What this edit loaded is given back: the reference kept its old value
+            contentLoads?.Abort();
+            if (e is PlayEditGoneException gone)
+                return Gone(edit, frame, gone.Message);
             var error = Describe(e);
             // The value as it stayed, so that the editor shows it again
             PlayEditValue readBack;
@@ -159,7 +175,7 @@ internal sealed class PlayEditApplier
         }
     }
 
-    private static object ChangeItems(PlayEdit edit, PlayPathSegment last, object collection, Func<PlayMirrorReference, object?> resolve, Func<ReadOnlyMemory<byte>, object?> readKey)
+    private object ChangeItems(PlayEdit edit, PlayPathSegment last, object collection, Func<PlayMirrorReference, object?> resolve, Func<ReadOnlyMemory<byte>, object?> readKey)
     {
         if (last.Kind == PlayPathSegmentKind.Index)
         {
@@ -228,7 +244,7 @@ internal sealed class PlayEditApplier
         return value is null ? PlayEditValue.Null : PlayEditValue.Of(PlayMirrorSerializer.WriteValue(value, handleOf));
     }
 
-    private static object? CreateValue(PlayEditValue value, Func<PlayMirrorReference, object?> resolve)
+    private object? CreateValue(PlayEditValue value, Func<PlayMirrorReference, object?> resolve)
     {
         switch (value.Kind)
         {
@@ -237,7 +253,15 @@ internal sealed class PlayEditApplier
             case PlayEditValueKind.Value:
                 try
                 {
-                    return PlayMirrorSerializer.ReadValue(value.Payload, resolve);
+                    return PlayMirrorSerializer.ReadValue(value.Payload, resolve, LoadContent);
+                }
+                catch (PlayEditException)
+                {
+                    throw;
+                }
+                catch (InvalidOperationException e) when (e.Message.Contains("made at run time", StringComparison.Ordinal))
+                {
+                    throw new PlayEditException(e.Message);
                 }
                 catch (Exception e)
                 {
@@ -250,7 +274,7 @@ internal sealed class PlayEditApplier
         }
     }
 
-    private static object? CreateItem(PlayEditValue value, object collection, Func<PlayMirrorReference, object?> resolve)
+    private object? CreateItem(PlayEditValue value, object collection, Func<PlayMirrorReference, object?> resolve)
     {
         var item = CreateValue(value, resolve);
         var itemType = PlayEditPath.ItemType(collection);
@@ -286,12 +310,57 @@ internal sealed class PlayEditApplier
         }
     }
 
+    private object LoadContent(Type type, string url)
+        => (contentLoads ?? throw new PlayEditException("This game does not load content for edits.")).Load(type, url);
+
+    // The member, or the collection, whose content loads this edit's loads belong to
+    private void CommitLoads(PlayEdit edit, object component, Func<ReadOnlyMemory<byte>, object?> readKey)
+    {
+        if (contentLoads is null)
+            return;
+        var path = SlotPath(edit);
+        var slot = new PlayContentLoads.Slot(edit.EntityHandle, edit.ComponentId, PathKey(path));
+        object? value;
+        try
+        {
+            value = PlayEditPath.Get(component, path, readKey);
+        }
+        catch (Exception)
+        {
+            // The edit applied, but its slot cannot be read back: keep every load of the slot, none is given back too soon
+            contentLoads.Commit(slot, path, null, release: false);
+            return;
+        }
+        contentLoads.Commit(slot, path, value);
+    }
+
+    /// <summary>
+    /// The path of the member or collection an edit changes: a set of a member is that member, a set of an item and the other
+    /// item operations are the collection, an add is the list.
+    /// </summary>
+    internal static IReadOnlyList<PlayPathSegment> SlotPath(PlayEdit edit)
+    {
+        var path = edit.Path;
+        var itemSet = edit.Operation == PlayEditOperation.Set && path.Count > 0 && path[^1].Kind != PlayPathSegmentKind.Member;
+        return edit.Operation is PlayEditOperation.Insert or PlayEditOperation.Remove or PlayEditOperation.Move || itemSet ? path.Take(path.Count - 1).ToList() : path;
+    }
+
+    /// <summary>
+    /// The text of a slot's path, which tells the slots apart (<see cref="PlayContentLoads.Slot"/>).
+    /// </summary>
+    internal static string SlotKey(IReadOnlyList<PlayPathSegment> path) => PathKey(path);
+
     private static object? ResolveReference(PlayMirrorReference reference, Func<int, Entity?> findEntity)
     {
-        var entity = reference.EntityHandle != 0 ? findEntity(reference.EntityHandle) : null;
-        if (entity is null)
-            return null;
-        return reference.Kind == PlayMirrorReferenceKind.Entity ? entity : entity.Components.FirstOrDefault(x => x.Id == reference.ComponentId);
+        // An entity the agent does not track (not in a running scene): the editor cannot name it
+        if (reference.EntityHandle == 0)
+            throw new PlayEditException($"{reference.EntityName ?? "The entity"} is not in a running scene of the game: it cannot be referenced.");
+        var entity = findEntity(reference.EntityHandle)
+            ?? throw new PlayEditGoneException($"{reference.EntityName ?? "The referenced entity"} is no longer in the game.");
+        if (reference.Kind == PlayMirrorReferenceKind.Entity)
+            return entity;
+        return entity.Components.FirstOrDefault(x => x.Id == reference.ComponentId)
+            ?? throw new PlayEditGoneException($"{entity.Name} no longer has the referenced component.");
     }
 
     private static string Describe(Exception exception)
@@ -300,6 +369,8 @@ internal sealed class PlayEditApplier
         {
             case PlayEditException edit:
                 return edit.Message;
+            case TargetInvocationException { InnerException: PlayEditException inner }:
+                return inner.Message;
             case TargetInvocationException { InnerException: { } inner }:
                 return $"The setter threw {inner.GetType().Name}: {inner.Message}";
             default:

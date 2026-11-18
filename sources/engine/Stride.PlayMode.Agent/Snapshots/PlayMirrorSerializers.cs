@@ -93,7 +93,8 @@ public sealed class PlayMirrorComponentSerializer<T> : DataSerializer<T> where T
 /// <typeparam name="T">The content type.</typeparam>
 /// <remarks>
 /// The reader gets a proxy with the URL and the id the game knows; content made at run time is a proxy with neither (or
-/// <c>null</c> when its type cannot be made empty).
+/// <c>null</c> when its type cannot be made empty). A reader that loads content (the agent reading the value of an edit) gets the
+/// content of the URL instead.
 /// </remarks>
 public sealed class PlayMirrorContentSerializer<T> : DataSerializer<T> where T : class
 {
@@ -113,6 +114,14 @@ public sealed class PlayMirrorContentSerializer<T> : DataSerializer<T> where T :
             var id = stream.Read<AssetId>();
             var url = stream.ReadString();
             var type = AssemblyRegistry.GetType(typeName, throwOnError: false) ?? typeof(T);
+            if (stream.Context.Get(PlayMirrorContext.Key)?.LoadContent is { } load)
+            {
+                // The value of an edit: the content itself, as the game loads it
+                if (url.Length == 0)
+                    throw new InvalidOperationException($"The {type.Name} has no URL: content the game made at run time cannot be sent to it.");
+                obj = (T)load(type, url)!;
+                return;
+            }
             try
             {
                 obj = (T)AttachedReferenceManager.CreateProxyObject(type, id, url.Length > 0 ? url : null!);

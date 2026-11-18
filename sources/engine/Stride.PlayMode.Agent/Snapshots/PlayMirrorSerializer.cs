@@ -243,7 +243,18 @@ public static class PlayMirrorSerializer
     /// <param name="resolve">Gives what a reference stands for, or <c>null</c>.</param>
     /// <returns>The value; <c>null</c> when <c>null</c> was written.</returns>
     /// <exception cref="Exception">The reader does not have the value's type.</exception>
-    public static object? ReadValue(ReadOnlyMemory<byte> payload, Func<PlayMirrorReference, object?> resolve)
+    public static object? ReadValue(ReadOnlyMemory<byte> payload, Func<PlayMirrorReference, object?> resolve) => ReadValue(payload, resolve, null);
+
+    /// <summary>
+    /// Reads a value written by <see cref="WriteValue"/>, with the content it refers to.
+    /// </summary>
+    /// <param name="payload">The payload.</param>
+    /// <param name="resolve">Gives what a reference stands for, or <c>null</c>.</param>
+    /// <param name="loadContent">Gives the content of a type and a URL (the game's content manager loads it); <c>null</c> reads
+    /// a proxy of the content instead.</param>
+    /// <returns>The value; <c>null</c> when <c>null</c> was written.</returns>
+    /// <exception cref="Exception">The reader does not have the value's type, or the content cannot be loaded.</exception>
+    public static object? ReadValue(ReadOnlyMemory<byte> payload, Func<PlayMirrorReference, object?> resolve, Func<Type, string, object?>? loadContent)
     {
         ArgumentNullException.ThrowIfNull(resolve);
         var reader = new PlayReader(payload);
@@ -252,7 +263,7 @@ public static class PlayMirrorSerializer
         RegisterComponentTypes();
 
         var (mirror, inner) = GetSelectors();
-        var context = PlayMirrorContext.ForRead(inner, null, references, resolve);
+        var context = PlayMirrorContext.ForRead(inner, null, references, resolve, loadContent);
         var stream = new BinarySerializationReader(new MemoryStream(data.ToArray(), writable: false));
         stream.Context.SerializerSelector = mirror;
         stream.Context.Set(PlayMirrorContext.Key, context);
@@ -282,8 +293,10 @@ public static class PlayMirrorSerializer
             missing.Add(type);
     }
 
-    // A type that the "Content" profile writes as a reference (models, materials, textures...)
-    private static bool IsContentType(Type type)
+    /// <summary>
+    /// Whether the "Content" profile writes a type as a reference (models, materials, textures...): content travels by URL.
+    /// </summary>
+    internal static bool IsContentType(Type type)
         => type.IsClass && !type.ContainsGenericParameters && DataSerializerFactory.GetSerializer("Content", type).SerializerType is { IsGenericType: true } serializer
             && serializer.GetGenericTypeDefinition() == typeof(ReferenceSerializer<>);
 

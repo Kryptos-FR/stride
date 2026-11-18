@@ -65,8 +65,14 @@ internal sealed class PlayMirrorContext
     public static PlayMirrorContext ForWriteValue(SerializerSelector inner, Func<Entity, int> handleOf)
         => new(inner, null, handleOf, null, []) { RootStarted = true };
 
-    public static PlayMirrorContext ForRead(SerializerSelector inner, EntityComponent? root, IReadOnlyList<PlayMirrorReference> references, Func<PlayMirrorReference, object?> resolve)
-        => new(inner, root, null, resolve, [.. references]) { resolved = new object?[references.Count] };
+    public static PlayMirrorContext ForRead(SerializerSelector inner, EntityComponent? root, IReadOnlyList<PlayMirrorReference> references, Func<PlayMirrorReference, object?> resolve, Func<Type, string, object?>? loadContent = null)
+        => new(inner, root, null, resolve, [.. references]) { resolved = new object?[references.Count], LoadContent = loadContent };
+
+    /// <summary>
+    /// On read, gives the content of a URL in place of a proxy (the agent loads the content an edit sets); <c>null</c> reads
+    /// proxies.
+    /// </summary>
+    public Func<Type, string, object?>? LoadContent { get; private init; }
 
     /// <summary>
     /// Gives the index of the descriptor of an object outside the root, adding it the first time.

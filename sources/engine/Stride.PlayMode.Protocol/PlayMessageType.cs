@@ -41,6 +41,9 @@ public enum PlayMessageType : byte
     /// <summary>The game's answer to an edit (<see cref="PlayEditResult"/>).</summary>
     EditResult = 11,
 
+    /// <summary>The URLs of the game's built content, which a live reference can be set to (<see cref="PlayContentIndex"/>).</summary>
+    ContentIndex = 12,
+
     /// <summary>A subscriber's choice of entities to receive snapshots of (<see cref="PlaySubscribe"/>).</summary>
     Subscribe = 32,
 
@@ -67,4 +70,7 @@ public enum PlayMessageType : byte
 
     /// <summary>A subscriber says whether the editor is the active app (<see cref="PlayEditorActive"/>).</summary>
     EditorActive = 40,
+
+    /// <summary>A subscriber asks for the URLs of the game's built content (<see cref="PlayContentRequest"/>).</summary>
+    ContentRequest = 41,
 }

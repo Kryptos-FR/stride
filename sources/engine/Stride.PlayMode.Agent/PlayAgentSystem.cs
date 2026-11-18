@@ -74,7 +74,7 @@ public sealed class PlayAgentSystem : GameSystemBase
     private readonly ConcurrentQueue<Assembly> loadedAssemblies = new();
     private readonly HashSet<string> sentAssemblies = [];
     private readonly Dictionary<int, byte[]> frameSnapshots = [];
-    private readonly PlayEditApplier editApplier = new();
+    private readonly PlayEditApplier editApplier;
     private readonly List<(PlaySubscriber Sender, PlayEdit Edit)> frameEdits = [];
     private readonly Stopwatch heartbeatClock = new();
     private long frame;
@@ -107,10 +107,14 @@ public sealed class PlayAgentSystem : GameSystemBase
     /// <param name="sceneExists">Whether the game's content has a URL; the game's content manager otherwise (the tests give
     /// their own, for a game that is not run).</param>
     /// <param name="window">The game's window, kept on top; the game's own otherwise (the tests give a fake one).</param>
-    internal PlayAgentSystem(Game game, PlayLaunchOptions? options, Func<string, bool>? sceneExists, IPlayWindow? window = null)
+    /// <param name="content">The game's content, which edits of references load; the game's content manager otherwise (the tests
+    /// give their own, for a game that is not run).</param>
+    internal PlayAgentSystem(Game game, PlayLaunchOptions? options, Func<string, bool>? sceneExists, IPlayWindow? window = null, IPlayContent? content = null)
         : base(game?.Services ?? throw new ArgumentNullException(nameof(game)))
     {
         this.game = game;
+        ContentLoads = new PlayContentLoads(content ?? new PlayGameContent(() => game.Content));
+        editApplier = new PlayEditApplier(ContentLoads);
         Enabled = true;
         // After the scripts and the scene system: a snapshot sees the state at the end of the frame's update
         UpdateOrder = int.MaxValue;
@@ -189,6 +193,11 @@ public sealed class PlayAgentSystem : GameSystemBase
     /// game's systems with the agent.
     /// </summary>
     public GameSystemBase EditSystem { get; }
+
+    /// <summary>
+    /// The content the edits loaded, kept until their references change again or the game exits, on the game thread.
+    /// </summary>
+    internal PlayContentLoads ContentLoads { get; }
 
     /// <summary>
     /// The edits applied since the agent was made (coalesced ones included), and those the game refused.
@@ -342,6 +351,7 @@ public sealed class PlayAgentSystem : GameSystemBase
         if (hotkey is not null)
             game.Input?.RemoveListener(hotkey);
         exceptionWatcher?.Dispose();
+        ReleaseContent();
         EditSystem.Dispose();
         WindowController.Dispose();
         gameWindow?.Dispose();
@@ -371,7 +381,45 @@ public sealed class PlayAgentSystem : GameSystemBase
         }
         // Nobody can resume the game any more: it goes on as without play mode
         if (subscribers.Count == 0)
+        {
             ReleaseGame();
+            ReleaseUnusedContent();
+        }
+    }
+
+    /// <summary>
+    /// The last subscriber left: the content the edits loaded and that no reference holds any more is given back. What the game
+    /// still uses stays loaded until it exits.
+    /// </summary>
+    private void ReleaseUnusedContent()
+    {
+        if (ContentLoads.Count == 0)
+            return;
+        var (unloaded, kept) = ContentLoads.ReleaseUnused(ValueOfSlot);
+        log.Info(kept > 0
+            ? $"Play mode unloaded {unloaded} content loads of live edits; {kept} stay loaded while the game uses them."
+            : $"Play mode unloaded {unloaded} content loads of live edits.");
+    }
+
+    /// <summary>
+    /// The game exits: every load of the edits is given back.
+    /// </summary>
+    private void ReleaseContent()
+    {
+        if (ContentLoads.Count == 0)
+            return;
+        var unloaded = ContentLoads.ReleaseAll();
+        log.Info($"Play mode unloaded {unloaded} content loads of live edits ({ContentLoads.Loaded} loaded since the game started, {ContentLoads.Unloaded} unloaded).");
+    }
+
+    private (bool InGame, object? Value) ValueOfSlot(PlayContentLoads.Slot slot, IReadOnlyList<PlayPathSegment> path)
+    {
+        if (FindLiveEntity(slot.EntityHandle) is not { } entity)
+            return (false, null);
+        object? component = slot.ComponentId == Guid.Empty ? entity : entity.Components.FirstOrDefault(x => x.Id == slot.ComponentId);
+        if (component is null)
+            return (false, null);
+        return (true, PlayEditPath.Get(component, path, key => PlayMirrorSerializer.ReadValue(key, static _ => null)));
     }
 
     /// <summary>
@@ -475,6 +523,9 @@ public sealed class PlayAgentSystem : GameSystemBase
                         break;
                     case PlayEditorActive editor:
                         WindowController.SetEditorActive(editor.Active);
+                        break;
+                    case PlayContentRequest:
+                        subscriber.Connection.Send(new PlayContentIndex(ContentLoads.Content.ListUrls()));
                         break;
                 }
             }
@@ -658,6 +709,9 @@ public sealed class PlayAgentSystem : GameSystemBase
 
     private void OnGameExiting(object? sender, EventArgs e)
     {
+        // The game's own content goes after this; the agent gives back its loads first, and the log says so
+        ReleaseContent();
+        SendLogs();
         // The last frame's messages, then the goodbye; the editor knows the exit was the game's own
         var goodbye = new PlayGoodbye("The game is exiting.").Encode();
         foreach (var subscriber in subscribers)

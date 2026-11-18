@@ -2,6 +2,7 @@
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
 using Stride.Core;
+using Stride.Core.Collections;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 
@@ -91,4 +92,48 @@ public sealed class EditBox : EditShape
 public sealed class EditSphere : EditShape
 {
     public float Radius { get; set; } = 0.5f;
+}
+
+/// <summary>
+/// Content the reference tests load by URL: written to a test database, read back by the game's content manager.
+/// </summary>
+[DataContract]
+[Stride.Core.Serialization.Contents.ContentSerializer(typeof(Stride.Core.Serialization.Contents.DataContentSerializer<TestContent>))]
+[Stride.Core.Serialization.Contents.ReferenceSerializer, Stride.Core.Serialization.DataSerializerGlobal(typeof(Stride.Core.Serialization.Contents.ReferenceSerializer<TestContent>), Profile = "Content")]
+public sealed class TestContent
+{
+    public string? Text { get; set; }
+}
+
+/// <summary>
+/// Other content, of another type than <see cref="TestContent"/>.
+/// </summary>
+[DataContract]
+[Stride.Core.Serialization.Contents.ContentSerializer(typeof(Stride.Core.Serialization.Contents.DataContentSerializer<OtherTestContent>))]
+[Stride.Core.Serialization.Contents.ReferenceSerializer, Stride.Core.Serialization.DataSerializerGlobal(typeof(Stride.Core.Serialization.Contents.ReferenceSerializer<OtherTestContent>), Profile = "Content")]
+public sealed class OtherTestContent
+{
+    public int Number { get; set; }
+}
+
+/// <summary>
+/// A component whose references the reference tests change: content, collections of content, an entity and a component.
+/// </summary>
+[DataContract]
+public sealed class ReferenceHolderComponent : EntityComponent
+{
+    public TestContent? Content { get; set; }
+
+    public TestContent? Second { get; set; }
+
+    public List<TestContent?> Items { get; } = [];
+
+    public Dictionary<string, TestContent?> Table { get; } = [];
+
+    // As the materials of a model component: an IDictionary<int, T> that is not an IDictionary
+    public IndexingDictionary<TestContent> Slots { get; } = new();
+
+    public Entity? Target { get; set; }
+
+    public EditableComponent? Pointer { get; set; }
 }
