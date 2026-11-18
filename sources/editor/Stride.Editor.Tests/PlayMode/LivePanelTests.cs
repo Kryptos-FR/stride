@@ -6,6 +6,7 @@ using Stride.Core.Assets.Editor.Components.Build;
 using Stride.Core.Assets.Editor.Panels;
 using Stride.Core.Assets.Editor.Tests.Helpers;
 using Stride.Core.Diagnostics;
+using Stride.Core.Presentation.Commands;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Presentation.ViewModels;
 using Stride.Editor.PlayMode;
@@ -16,8 +17,8 @@ namespace Stride.Editor.Tests.PlayMode;
 
 /// <summary>
 /// Tests the Live tab (<see cref="LivePanelViewModel"/>) and the play mode service it follows, with a fake transport, agent
-/// and game: the tree and its batches, the rate of the updates, the states, the selection and its subscriptions, and a second
-/// start while a game plays.
+/// and game: the tree and its batches, the rate of the updates, the states, the selection handed to its view, a second start
+/// while a game plays, the notices (not responding, stale code), and the status bar's state.
 /// </summary>
 public sealed class LivePanelTests : IAsyncLifetime
 {
@@ -31,6 +32,8 @@ public sealed class LivePanelTests : IAsyncLifetime
     private readonly ExclusiveDispatcherService dispatcher = new();
     private readonly FakeClipboardService clipboard = new();
     private readonly FakeSceneAssets sceneAssets = new();
+    private readonly FakeSelectionView selectionView = new();
+    private readonly ICommandBase reloadCode = new AnonymousCommand(ViewModelServiceProvider.NullServiceProvider, () => { });
     private PlayModeService playMode = null!;
     private LivePanelViewModel panel = null!;
 
@@ -39,14 +42,36 @@ public sealed class LivePanelTests : IAsyncLifetime
         Directory.CreateDirectory(directory);
         foreach (var file in PlayAgentFiles.FileNames)
             File.WriteAllBytes(Path.Combine(directory, file), []);
-        var options = new PlaySessionOptions
-        {
-            ConnectTimeout = Timeout,
-            StopGracePeriod = TimeSpan.FromMilliseconds(200),
-            ExitAfterDisconnectDelay = TimeSpan.FromMilliseconds(200),
-            Log = new LoggerResult(),
-        };
-        playMode = new PlayModeService(() =>
+        playMode = CreatePlayMode(DefaultOptions());
+        panel = CreatePanel();
+        return Task.CompletedTask;
+    }
+
+    private static PlaySessionOptions DefaultOptions() => new()
+    {
+        ConnectTimeout = Timeout,
+        StopGracePeriod = TimeSpan.FromMilliseconds(200),
+        ExitAfterDisconnectDelay = TimeSpan.FromMilliseconds(200),
+        // Longer than any test: a fake agent sends no heartbeat
+        NotRespondingAfter = TimeSpan.FromMinutes(5),
+        Log = new LoggerResult(),
+    };
+
+    /// <summary>
+    /// Replaces the service and the tab by ones whose sessions have other options.
+    /// </summary>
+    private async Task RecreateAsync(PlaySessionOptions options)
+    {
+        dispatcher.Invoke(panel.Destroy);
+        await panel.WhenIdleAsync();
+        await playMode.DisposeAsync();
+        playMode = CreatePlayMode(options);
+        panel = CreatePanel();
+    }
+
+    private PlayModeService CreatePlayMode(PlaySessionOptions options)
+    {
+        return new PlayModeService(() =>
         {
             var transport = new FakePlayTransport();
             transports.Enqueue(transport);
@@ -57,8 +82,6 @@ public sealed class LivePanelTests : IAsyncLifetime
             games.Enqueue(game);
             return game;
         });
-        panel = CreatePanel();
-        return Task.CompletedTask;
     }
 
     public async Task DisposeAsync()
@@ -159,7 +182,7 @@ public sealed class LivePanelTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SelectingEntitiesSubscribesToThem()
+    public async Task SelectingEntitiesHandsThemToTheView()
     {
         Start();
         var agent = await ConnectAsync();
@@ -172,22 +195,26 @@ public sealed class LivePanelTests : IAsyncLifetime
             panel.SelectedItems.Add(panel.Tree.FindEntity(4)!);
         });
 
-        var subscribe = await ReceiveSubscribeAsync(agent, 2);
-        Assert.Equal([2, 4], subscribe.Handles);
-        Assert.Equal(LivePanelViewModel.SnapshotRateHz, subscribe.RateHz);
         var selection = Read(() => panel.Selection);
         Assert.NotNull(selection);
         Assert.Same(playMode.Session, selection.Session);
         Assert.Equal([2, 4], selection.Handles);
+        // The view shows it (and asks the game for its snapshots)
+        Assert.Same(selection, Read(() => selectionView.Shown.Last()));
 
         // A scene row is not an entity: nothing changes
+        var shown = Read(() => selectionView.Shown.Count);
         dispatcher.Invoke(() => panel.SelectedItems.Add(panel.Tree.Roots[0]));
         Assert.Equal([2, 4], Read(() => panel.Selection!.Handles));
+        Assert.Equal(shown, Read(() => selectionView.Shown.Count));
+
+        // Coming back to the tab shows the same selection again
+        dispatcher.Invoke(() => panel.ShowSelectionCommand.Execute());
+        Assert.Same(selection, Read(() => selectionView.Shown.Last()));
 
         dispatcher.Invoke(panel.SelectedItems.Clear);
-        subscribe = await ReceiveSubscribeAsync(agent, 0);
-        Assert.Empty(subscribe.Handles);
         Assert.Null(Read(() => panel.Selection));
+        Assert.Null(Read(() => selectionView.Shown.Last()));
     }
 
     [Fact]
@@ -203,14 +230,13 @@ public sealed class LivePanelTests : IAsyncLifetime
             panel.SelectedItems.Add(panel.Tree.FindEntity(3)!);
             panel.SelectedItems.Add(panel.Tree.FindEntity(4)!);
         });
-        await ReceiveSubscribeAsync(agent, 2);
+        Assert.Equal([3, 4], Read(() => panel.Selection!.Handles));
 
         // The player goes with its camera
         agent.Send(new PlayTreeBatch(5, [new PlayEntityRemoved(2)]));
 
-        var subscribe = await ReceiveSubscribeAsync(agent, 1);
-        Assert.Equal([4], subscribe.Handles);
-        Assert.Equal([4], Read(() => panel.Selection!.Handles));
+        await WaitAsync(() => panel.Selection!.Handles.SequenceEqual([4]), "the selection without the camera");
+        Assert.Equal([4], Read(() => selectionView.Shown.Last()!.Handles));
         Assert.Equal(["Ground"], Read(() => panel.SelectedItems.OfType<LiveEntityItem>().Select(x => x.Name).ToList()));
     }
 
@@ -222,7 +248,7 @@ public sealed class LivePanelTests : IAsyncLifetime
         agent.Send(Tree());
         await WaitAsync(() => panel.EntityCount == 3, "the tree");
         dispatcher.Invoke(() => panel.SelectedItems.Add(panel.Tree.FindEntity(2)!));
-        await ReceiveSubscribeAsync(agent, 1);
+        Assert.NotNull(Read(() => panel.Selection));
 
         // Stop asks the game to quit; this one does not, so its process is ended
         await playMode.StopAsync();
@@ -231,8 +257,55 @@ public sealed class LivePanelTests : IAsyncLifetime
         Assert.True(games.Single().Killed);
         await WaitAsync(() => panel.State == LiveTabState.Stopped, "stopped");
         Assert.Null(Read(() => panel.Selection));
+        // The view gives its place back
+        Assert.Null(Read(() => selectionView.Shown.Last()));
         Assert.Equal(3, Read(() => panel.Tree.Rows.Count));
         Assert.Equal("Stopped (exit code -1)", Read(() => panel.StateText));
+        // The rows are no longer selected, and the tab says the tree is the last one
+        Assert.Empty(Read(() => panel.SelectedItems.ToList()));
+        Assert.Contains("The game has stopped", Read(() => panel.StoppedNotice));
+    }
+
+    [Fact]
+    public async Task ARowSelectedAfterTheStopIsAStoppedSelection()
+    {
+        Start();
+        var agent = await ConnectAsync();
+        agent.Send(Tree());
+        await WaitAsync(() => panel.EntityCount == 3, "the tree");
+        Assert.Null(Read(() => panel.StoppedNotice));
+
+        games.Single().Exit(0);
+        await WaitAsync(() => panel.State == LiveTabState.Stopped, "stopped");
+
+        // The last tree's rows can be selected: the view learns that the game stopped, with the names
+        dispatcher.Invoke(() => panel.SelectedItems.Add(panel.Tree.FindEntity(2)!));
+        var selection = Read(() => panel.Selection);
+        Assert.NotNull(selection);
+        Assert.True(selection.IsStopped);
+        Assert.Equal([2], selection.Handles);
+        Assert.Equal(["Player"], selection.Names);
+        Assert.Same(selection, Read(() => selectionView.Shown.Last()));
+
+        dispatcher.Invoke(panel.SelectedItems.Clear);
+        Assert.Null(Read(() => selectionView.Shown.Last()));
+
+        // A new game: the notice goes
+        Start();
+        await WaitAsync(() => panel.State == LiveTabState.Connecting, "the next game");
+        Assert.Null(Read(() => panel.StoppedNotice));
+    }
+
+    [Fact]
+    public async Task AGameThatExitsBeforeItsTreeHasNoStoppedNotice()
+    {
+        Start();
+        await ConnectAsync();
+
+        games.Single().Exit(0);
+        await WaitAsync(() => panel.State == LiveTabState.Stopped, "stopped");
+
+        Assert.Null(Read(() => panel.StoppedNotice));
     }
 
     [Fact]
@@ -316,11 +389,139 @@ public sealed class LivePanelTests : IAsyncLifetime
         Assert.Equal(["MainScene", "Ground"], Read(() => panel.Tree.Rows.Select(x => x.Name).ToList()));
     }
 
+    [Fact]
+    public async Task AGameThatStopsAnsweringIsNotRespondingUntilWaitOrEndGame()
+    {
+        await RecreateAsync(DefaultOptions() with { NotRespondingAfter = TimeSpan.FromMilliseconds(300) });
+        var game = Start();
+        var agent = await ConnectAsync();
+        agent.Send(Tree());
+        await WaitAsync(() => panel.EntityCount == 3, "the tree");
+
+        // Nothing comes for a while: a busy game, or a breakpoint
+        await WaitAsync(() => panel.State == LiveTabState.NotResponding, "not responding");
+        Assert.Equal("Not responding", Read(() => panel.StateText));
+        Assert.True(Read(() => panel.ShowsNotResponding));
+        Assert.True(Read(() => panel.IsLive));
+
+        // Wait hides the notice; the game answers again, then stops answering again: the notice comes back
+        dispatcher.Invoke(() => panel.WaitCommand.Execute());
+        Assert.False(Read(() => panel.ShowsNotResponding));
+        Assert.Equal(LiveTabState.NotResponding, Read(() => panel.State));
+        agent.Send(Heartbeat(10));
+        await WaitAsync(() => panel.State == LiveTabState.Playing, "playing again");
+        Assert.False(Read(() => panel.ShowsNotResponding));
+        await WaitAsync(() => panel.ShowsNotResponding, "not responding again");
+
+        // End game ends the process at once
+        dispatcher.Invoke(() => panel.EndGameCommand.Execute());
+        Assert.True(game.Killed);
+        await WaitAsync(() => panel.State == LiveTabState.Stopped, "stopped");
+        Assert.False(Read(() => panel.ShowsNotResponding));
+    }
+
+    [Fact]
+    public async Task AnAgentThatDoesNotConnectLeavesTheGameRunningAndSaysWhy()
+    {
+        await RecreateAsync(DefaultOptions() with { ConnectTimeout = TimeSpan.FromMilliseconds(200) });
+        var game = Start();
+
+        await WaitAsync(() => panel.State == LiveTabState.NotConnected, "not connected");
+
+        Assert.Contains("did not connect within", Read(() => panel.Message));
+        Assert.False(game.Exited.IsCompleted);
+        Assert.True(playMode.IsPlaying);
+    }
+
+    [Fact]
+    public async Task AGameThatRunsAnotherBuildOfItsCodeSaysSomeValuesArePlaceholders()
+    {
+        Start();
+        // An assembly the editor has, in another build
+        var assembly = typeof(FactAttribute).Assembly;
+        var stale = new PlayAssemblyInfo(assembly.GetName().Name!, assembly.GetName().Version?.ToString(), Guid.NewGuid());
+        await ConnectAsync(new PlayHello(1234, Version, Version, "MyGame.Game", [stale]));
+
+        await WaitAsync(() => panel.StaleNotice is not null, "the notice");
+        Assert.Contains(stale.Name, Read(() => panel.StaleNotice));
+        Assert.Contains("placeholders", Read(() => panel.StaleNotice));
+        Assert.Same(reloadCode, Read(() => panel.ReloadCodeCommand));
+    }
+
+    [Fact]
+    public async Task AGameStartedWithoutTheConnectionSaysWhy()
+    {
+        playMode.ConnectToGame = () => false;
+
+        var game = Start();
+
+        Assert.Empty(game.Environment);
+        await WaitAsync(() => panel.State == LiveTabState.NotConnected, "not connected");
+        Assert.Contains("Connect to the game when starting the project", Read(() => panel.Message));
+        Assert.Empty(transports);
+
+        // Stop ends it: it cannot be asked to quit
+        await playMode.StopAsync();
+        Assert.True(game.Killed);
+        await WaitAsync(() => panel.State == LiveTabState.Stopped, "stopped");
+    }
+
+    [Fact]
+    public async Task TheStatusBarFollowsTheGame()
+    {
+        await RecreateAsync(DefaultOptions() with { NotRespondingAfter = TimeSpan.FromMilliseconds(300) });
+        var status = dispatcher.Invoke(() => new PlayStatusViewModel(new ViewModelServiceProvider([dispatcher]), playMode));
+        try
+        {
+            Assert.False(Read(() => status.IsVisible));
+
+            var game = Start();
+            await WaitAsync(() => status.State == LiveTabState.Connecting, "connecting");
+            Assert.True(Read(() => status.IsVisible));
+            Assert.Equal("Game: Connecting", Read(() => status.Text));
+
+            var agent = await ConnectAsync();
+            agent.Send(Heartbeat(1));
+            await WaitAsync(() => status.State == LiveTabState.Playing, "playing");
+            Assert.Equal("Game: Playing", Read(() => status.Text));
+            Assert.True(Read(() => status.IsPlaying));
+
+            await WaitAsync(() => status.State == LiveTabState.NotResponding, "not responding");
+            Assert.Equal("Game: Not responding", Read(() => status.Text));
+            agent.Send(Heartbeat(2));
+            await WaitAsync(() => status.State == LiveTabState.Playing, "playing again");
+
+            game.Exit(3);
+            await WaitAsync(() => status.State == LiveTabState.Stopped, "stopped");
+            Assert.Equal("Game: Stopped (exit code 3)", Read(() => status.Text));
+
+            // A game started without the connection: not connected, and why
+            playMode.ConnectToGame = () => false;
+            Start();
+            await WaitAsync(() => status.State == LiveTabState.NotConnected, "not connected");
+            Assert.Contains("Connect to the game", Read(() => status.Message));
+        }
+        finally
+        {
+            dispatcher.Invoke(status.Destroy);
+        }
+    }
+
+    [Fact]
+    public void ClosingTheTabDisposesTheViewOfTheSelection()
+    {
+        dispatcher.Invoke(panel.Destroy);
+
+        Assert.True(selectionView.Disposed);
+    }
+
+    private static PlayHeartbeat Heartbeat(long frame) => new(frame, frame / 60.0, 60, new PlayAgentStats(60, 10, 20, 0, 0, 0, 0, 0));
+
     private LivePanelViewModel CreatePanel()
     {
         var services = new ViewModelServiceProvider([dispatcher, clipboard]);
         var descriptor = LivePanel.Create(_ => throw new NotSupportedException());
-        return dispatcher.Invoke(() => new LivePanelViewModel(new PanelContext { Descriptor = descriptor, Session = new FakeSession(), ServiceProvider = services }, playMode, sceneAssets));
+        return dispatcher.Invoke(() => new LivePanelViewModel(new PanelContext { Descriptor = descriptor, Session = new FakeSession(), ServiceProvider = services }, playMode, sceneAssets, selectionView, reloadCode));
     }
 
     private FakeGame Start()
@@ -341,17 +542,6 @@ public sealed class LivePanelTests : IAsyncLifetime
         return agent;
     }
 
-    private static async Task<PlaySubscribe> ReceiveSubscribeAsync(FakeAgent agent, int count)
-    {
-        // A selection made of several changes can send several requests: the last one counts
-        while (true)
-        {
-            var subscribe = await agent.ReceiveAsync<PlaySubscribe>();
-            if (subscribe.Handles.Count == count)
-                return subscribe;
-        }
-    }
-
     private T Read<T>(Func<T> read) => dispatcher.Invoke(read);
 
     private static Task WaitAsync(Func<bool> condition, string what) => ExclusiveDispatcherService.WaitUntilAsync(condition, what, Timeout);
@@ -365,6 +555,20 @@ public sealed class LivePanelTests : IAsyncLifetime
                 throw new TimeoutException($"Timed out waiting for {what}.");
             await Task.Delay(10);
         }
+    }
+
+    /// <summary>
+    /// The view of the selection: records what it is asked to show.
+    /// </summary>
+    private sealed class FakeSelectionView : ILiveSelectionView
+    {
+        public List<LiveSelection?> Shown { get; } = [];
+
+        public bool Disposed { get; private set; }
+
+        public void Show(LiveSelection? selection) => Shown.Add(selection);
+
+        public void Dispose() => Disposed = true;
     }
 
     /// <summary>

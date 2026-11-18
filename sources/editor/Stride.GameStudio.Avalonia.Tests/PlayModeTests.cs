@@ -1,31 +1,42 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using System.Collections.Concurrent;
 using System.IO.Pipes;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.LogicalTree;
+using Avalonia.Media;
 using Avalonia.VisualTree;
+using Stride.Assets.Editor.PlayMode;
+using Stride.Assets.Materials;
 using Stride.Core;
 using Stride.Core.Assets.Editor.Avalonia.Commands;
+using Stride.Core.Assets.Editor.Panels;
 using Stride.Editor.PlayMode;
+using Stride.Engine;
 using Stride.GameStudio.Avalonia.Commands;
+using Stride.GameStudio.Avalonia.Settings;
 using Stride.GameStudio.Avalonia.Tests.Helpers;
 using Stride.GameStudio.Avalonia.Views;
 using Stride.GameStudio.Avalonia.Views.Panels;
+using Stride.PlayMode.Agent;
 using Stride.PlayMode.Protocol;
 
 namespace Stride.GameStudio.Avalonia.Tests;
 
 /// <summary>
-/// Play mode from the shell: F5 starts the game of the editor's platform in a play session, Shift+F5 stops it, and the Live
-/// tab shows its scenes. The games are fakes that connect to the session's real pipe, as the agent does.
+/// Play mode from the shell: F5 starts the game of the editor's platform in a play session, Shift+F5 stops it, the Live tab
+/// shows its scenes, and its selection shows in the property grid; Ctrl+F5 starts a game without the connection. The games are
+/// fakes that connect to the session's real pipe, as the agent does.
 /// </summary>
 public sealed class PlayModeTests : IAsyncLifetime
 {
     private const string Version = "1.0.0-test";
+    private const string MaterialLocation = "Materials/Ground";
+    private const int PlayerHandle = 2;
 
     private readonly string agentDirectory = Path.Combine(Path.GetTempPath(), $"stride-play-shell-tests-{Guid.NewGuid():N}");
     private readonly List<TestGame> games = [];
@@ -166,13 +177,296 @@ public sealed class PlayModeTests : IAsyncLifetime
         }
     }
 
+    [AvaloniaFact]
+    public async Task TheLiveTabsSelectionShowsInThePropertyGridWhileItIsShownAndGoesBackOnStop()
+    {
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode, (MaterialLocation, new MaterialAsset()));
+        fixture.ReplaceProjectBuilder();
+        fixture.ReplaceDialogService();
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        try
+        {
+            // The asset's properties are shown when the game starts
+            var material = fixture.Asset(MaterialLocation);
+            fixture.Session.AssetCollection.SelectAssets([material]);
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Session.ActiveProperties.Name == material.Url, "the material's properties");
+            var assetProperties = fixture.Session.ActiveProperties;
+
+            var game = await PlayAsync(window, fixture);
+            var live = (LivePanelViewModel)fixture.Main.Panels.FindDockable(LivePanel.Id)!.ViewModel;
+            await WindowTestHelper.WaitUntilAsync(() => live.EntityCount == 3, "the tree");
+            // The status bar says it, in green
+            var status = window.GetVisualDescendants().OfType<Border>().Single(x => x.Name == "PlayStatus");
+            await WindowTestHelper.WaitUntilAsync(() => status.IsEffectivelyVisible && status.Classes.Contains("playing"), "the status bar");
+            Assert.Equal(Color.Parse("#FF388934"), Assert.IsAssignableFrom<ISolidColorBrush>(status.Background).Color);
+
+            // Selecting the player shows it in the grid, which asks the game for its snapshots
+            live.SelectedItems.Add(live.Tree.FindEntity(PlayerHandle)!);
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Session.ActiveProperties is LivePropertiesViewModel, "the live grid");
+            var properties = (LivePropertiesViewModel)fixture.Session.ActiveProperties;
+            Assert.Equal([PlayerHandle], (await game.NextSubscribeAsync()).Handles);
+            game.Send(Snapshot(1));
+            await WindowTestHelper.WaitUntilAsync(() => properties.ViewModel is not null && properties.Name == "Player", "the player's live properties");
+            Assert.Equal(1, properties.BuildCount);
+
+            // A selection in the asset view takes the grid back: the game stops sending
+            fixture.Session.AssetCollection.SelectAssets([]);
+            fixture.Session.AssetCollection.SelectAssets([material]);
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Session.ActiveProperties == assetProperties, "the material's properties again");
+            Assert.Empty((await game.NextSubscribeAsync()).Handles);
+            Assert.False(properties.IsReceiving);
+            // and settle: the generation of the empty selection can end after the material's
+            await Task.Delay(200);
+            await WindowTestHelper.PumpAsync();
+
+            // Back to the Live tab: the same selection, applied in place from the next snapshot
+            live.ShowSelectionCommand.Execute();
+            Assert.Same(properties, fixture.Session.ActiveProperties);
+            Assert.Equal([PlayerHandle], (await game.NextSubscribeAsync()).Handles);
+            game.Send(Snapshot(2));
+            await WindowTestHelper.WaitUntilAsync(() => properties.LiveStatus.StartsWith("Frame 2", StringComparison.Ordinal), "the next snapshot");
+            Assert.Equal(1, properties.BuildCount);
+
+            // The property grid hidden: nothing shows the values, the game stops sending; shown again, it sends again
+            fixture.Main.Panels.Hide(BuiltInPanels.PropertyGrid);
+            Assert.Empty((await game.NextSubscribeAsync()).Handles);
+            fixture.Main.Panels.Show(BuiltInPanels.PropertyGrid);
+            Assert.Equal([PlayerHandle], (await game.NextSubscribeAsync()).Handles);
+
+            // Stop: the grid goes back to the material, the live grid ends
+            game.ExitOnQuit = true;
+            Press(window, Key.F5, RawInputModifiers.Shift, PhysicalKey.F5);
+            await WindowTestHelper.WaitUntilAsync(() => live.State == LiveTabState.Stopped, "the stop of the game");
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Session.ActiveProperties == assetProperties, "the material's properties after the stop");
+            Assert.False(properties.IsReceiving);
+            Assert.Null(live.Selection);
+        }
+        finally
+        {
+            await window.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task OnceTheGameStoppedTheLiveTabSaysSoAndARowShowsAStoppedGrid()
+    {
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode, (MaterialLocation, new MaterialAsset()));
+        fixture.ReplaceProjectBuilder();
+        fixture.ReplaceDialogService();
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        try
+        {
+            var material = fixture.Asset(MaterialLocation);
+            fixture.Session.AssetCollection.SelectAssets([material]);
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Session.ActiveProperties.Name == material.Url, "the material's properties");
+            var assetProperties = fixture.Session.ActiveProperties;
+            var game = await PlayAsync(window, fixture);
+            var live = (LivePanelViewModel)fixture.Main.Panels.FindDockable(LivePanel.Id)!.ViewModel;
+            await WindowTestHelper.WaitUntilAsync(() => live.EntityCount == 3, "the tree");
+            live.SelectedItems.Add(live.Tree.FindEntity(PlayerHandle)!);
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Session.ActiveProperties is LivePropertiesViewModel, "the live grid");
+
+            // The game's window is closed: the game exits by itself
+            game.Exit(0);
+            await WindowTestHelper.WaitUntilAsync(() => live.State == LiveTabState.Stopped, "the exit of the game");
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Session.ActiveProperties == assetProperties, "the material's properties after the exit");
+            Assert.Empty(live.SelectedItems);
+
+            // The tab stays (the setting is on by default), greyed, and says that its tree is the last one
+            Assert.True(fixture.Main.Panels.FindDockable(LivePanel.Id)!.ViewModel.IsShown);
+            var view = window.GetVisualDescendants().OfType<LiveView>().Single();
+            var notice = view.GetVisualDescendants().OfType<Border>().Single(x => x.Name == "StoppedNotice");
+            await WindowTestHelper.WaitUntilAsync(() => notice.IsEffectivelyVisible, "the stopped notice");
+            Assert.Contains("The game has stopped", view.GetVisualDescendants().OfType<TextBlock>().Single(x => x.Name == "StoppedNoticeText").Text);
+            Assert.Contains("stopped", view.GetVisualDescendants().OfType<ListBox>().Single(x => x.Name == "LiveTree").Classes);
+            Assert.False(view.GetVisualDescendants().OfType<TextBlock>().Single(x => x.Name == "HeaderText").IsVisible);
+            Assert.True(view.GetVisualDescendants().OfType<TextBlock>().Single(x => x.Name == "StoppedHeaderText").IsVisible);
+
+            // A row selected now: the grid says that the game stopped, under the entity's name, with a grey "Stopped" badge
+            live.SelectedItems.Add(live.Tree.FindEntity(PlayerHandle)!);
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Session.ActiveProperties is LivePropertiesViewModel { IsStopped: true, FallbackMessage: not null }, "the stopped grid");
+            var stopped = (LivePropertiesViewModel)fixture.Session.ActiveProperties;
+            Assert.Contains("The game has stopped", stopped.FallbackMessage);
+            Assert.Equal("Player", stopped.Name);
+            Assert.Null(stopped.ViewModel);
+            var grid = window.GetVisualDescendants().OfType<PropertyGridView>().Single();
+            await WindowTestHelper.WaitUntilAsync(() => grid.GetVisualDescendants().OfType<TextBlock>().Single(x => x.Name == "StoppedBadgeText").IsEffectivelyVisible, "the Stopped badge");
+            Assert.False(grid.GetVisualDescendants().OfType<TextBlock>().Single(x => x.Name == "LiveBadgeText").IsEffectivelyVisible);
+            var badge = grid.GetVisualDescendants().OfType<Border>().Single(x => x.Name == "LiveBadge");
+            Assert.Contains("stopped", badge.Classes);
+            // No lock: there are no values any more
+            Assert.False(grid.GetVisualDescendants().OfType<Control>().Single(x => x.Name == "LiveBadgeLock").IsEffectivelyVisible);
+            Assert.Equal(global::Avalonia.Media.Color.Parse("#808080"), Assert.IsAssignableFrom<global::Avalonia.Media.ISolidColorBrush>(badge.Background).Color);
+
+            // Nothing selected: the grid goes back
+            live.SelectedItems.Clear();
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Session.ActiveProperties == assetProperties, "the material's properties again");
+        }
+        finally
+        {
+            await window.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task WithTheSettingOffTheLiveTabClosesWhenTheGameExitsButStaysAfterACrash()
+    {
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode);
+        fixture.ReplaceProjectBuilder();
+        fixture.ReplaceDialogService();
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        GameStudioEditorSettings.PlayModeKeepLiveTabAfterExit.SetValue(false);
+        try
+        {
+            var liveDockable = fixture.Main.Panels.FindDockable(LivePanel.Id)!;
+            var game = await PlayAsync(window, fixture);
+            await WindowTestHelper.WaitUntilAsync(() => liveDockable.ViewModel.IsShown, "the Live tab in front");
+
+            // The game exits normally: the Live tab closes (alone in its group by default, the group goes with it)
+            game.Exit(0);
+            await WindowTestHelper.WaitUntilAsync(() => !fixture.Main.Panels.IsVisible(LivePanel.Id), "the Live tab closed");
+
+            // Docked behind the solution explorer: the next game brings it forward, and its exit gives the solution explorer back
+            fixture.Main.Panels.Show(LivePanel.Id);
+            var solution = fixture.Main.Panels.FindDockable(BuiltInPanels.SolutionExplorer)!;
+            var group = Assert.IsAssignableFrom<Dock.Model.Core.IDock>(solution.Owner);
+            fixture.Main.Panels.Factory.MoveDockable(Assert.IsAssignableFrom<Dock.Model.Core.IDock>(liveDockable.Owner), group, liveDockable, solution);
+            fixture.Main.Panels.Factory.SetActiveDockable(solution);
+            await WindowTestHelper.PumpAsync();
+            Assert.Same(group, liveDockable.Owner);
+            Assert.Same(solution, group.ActiveDockable);
+            Press(window, Key.F5, RawInputModifiers.None, PhysicalKey.F5);
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 2 && !fixture.Main.Build.BuildInProgress, "the start of the second game", 10000);
+            var second = games[1];
+            await second.ConnectAsync();
+            second.Send(new PlayHello(second.Id, Version, Version, null, []));
+            await WindowTestHelper.WaitUntilAsync(() => group.ActiveDockable == liveDockable, "the Live tab in front of the solution explorer");
+            Assert.Same(solution, liveDockable.Covered);
+            second.Exit(0);
+            await WindowTestHelper.WaitUntilAsync(() => !fixture.Main.Panels.IsVisible(LivePanel.Id), "the Live tab closed again");
+            Assert.Same(solution, group.ActiveDockable);
+
+            // The next game crashes: the tab stays, with the exit code
+            Press(window, Key.F5, RawInputModifiers.None, PhysicalKey.F5);
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 3 && !fixture.Main.Build.BuildInProgress, "the start of the third game", 10000);
+            var third = games[2];
+            await third.ConnectAsync();
+            third.Send(new PlayHello(third.Id, Version, Version, null, []));
+            await WindowTestHelper.WaitUntilAsync(() => liveDockable.ViewModel.IsShown, "the Live tab in front again");
+            third.Exit(134);
+            var live = (LivePanelViewModel)liveDockable.ViewModel;
+            await WindowTestHelper.WaitUntilAsync(() => live.State == LiveTabState.Stopped, "the crash of the game");
+            await WindowTestHelper.PumpAsync();
+            Assert.True(fixture.Main.Panels.IsVisible(LivePanel.Id));
+            Assert.Equal("Stopped (exit code 134)", live.StateText);
+        }
+        finally
+        {
+            GameStudioEditorSettings.PlayModeKeepLiveTabAfterExit.SetValue(true);
+            await window.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task CtrlF5StartsTheGameWithoutTheLiveConnection()
+    {
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode);
+        fixture.ReplaceProjectBuilder();
+        fixture.ReplaceDialogService();
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        try
+        {
+            var item = MenuItem(window, "StartWithoutLiveViewMenuItem");
+            Assert.Equal(GameStudioCommands.StartWithoutLiveViewId, Assert.IsType<CommandReference>(item.Command).Id);
+            Assert.Contains(window.View.CommandSlots!.Shortcuts, x => x.Gesture == new KeyGesture(Key.F5, KeyModifiers.Control) && x.Descriptor.Id == GameStudioCommands.StartWithoutLiveViewId);
+
+            fixture.Main.StartWithoutLiveViewCommand.Execute();
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 1 && !fixture.Main.Build.BuildInProgress, "the start of the game");
+
+            // No pipe for the agent: the game runs as without play mode, and the status bar says so
+            Assert.False(games[0].Environment.ContainsKey(PlayProtocol.PipeVariable));
+            Assert.Equal(PlaySessionState.WithoutAgent, playMode.Session!.State);
+            var status = window.GetVisualDescendants().OfType<TextBlock>().Single(x => x.Name == "PlayStatusText");
+            await WindowTestHelper.WaitUntilAsync(() => status.Text == "Game: Not connected" && status.IsEffectivelyVisible, "the status bar");
+            Assert.False(fixture.Main.Panels.FindDockable(LivePanel.Id)!.ViewModel.IsShown);
+            // The Live tab, if the user opens it, says why there is no live view
+            var live = (LivePanelViewModel)fixture.Main.Panels.FindDockable(LivePanel.Id)!.ViewModel;
+            await WindowTestHelper.WaitUntilAsync(() => live.State == LiveTabState.NotConnected, "the Live tab not connected");
+            Assert.Contains("Start without the live view", live.Message);
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Main.StopGameCommand.IsEnabled, "Stop game enabled");
+
+            // The next F5 connects again: it asks to stop this game first (the recording dialogs answer OK)
+            Press(window, Key.F5, RawInputModifiers.None, PhysicalKey.F5);
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 2, "the start of the second game", 10000);
+            Assert.True(games[0].Killed);
+            Assert.True(games[1].Environment.ContainsKey(PlayProtocol.PipeVariable));
+            await WindowTestHelper.WaitUntilAsync(() => status.Text == "Game: Connecting", "the status bar");
+        }
+        finally
+        {
+            await window.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task TheSettingOffStartsTheGameWithoutTheLiveConnection()
+    {
+        playMode.ConnectToGame = () => false;
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode);
+        fixture.ReplaceProjectBuilder();
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        try
+        {
+            Press(window, Key.F5, RawInputModifiers.None, PhysicalKey.F5);
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 1 && !fixture.Main.Build.BuildInProgress, "the start of the game");
+
+            Assert.False(games[0].Environment.ContainsKey(PlayProtocol.PipeVariable));
+            Assert.Equal(PlaySessionState.WithoutAgent, playMode.Session!.State);
+            Assert.Contains("Connect to the game when starting the project", playMode.Session.StateMessage);
+        }
+        finally
+        {
+            await window.CloseAsync();
+        }
+    }
+
+    /// <summary>
+    /// F5, then the game connects as its agent does and sends its tree.
+    /// </summary>
+    private async Task<TestGame> PlayAsync(MainWindow window, ShellSessionFixture fixture)
+    {
+        Press(window, Key.F5, RawInputModifiers.None, PhysicalKey.F5);
+        await WindowTestHelper.WaitUntilAsync(() => Count(games) == 1 && !fixture.Main.Build.BuildInProgress, "the start of the game");
+        var game = games[0];
+        await game.ConnectAsync();
+        game.Send(new PlayHello(game.Id, Version, Version, null, []));
+        game.Send(Tree());
+        await WindowTestHelper.WaitUntilAsync(() => playMode.Session?.State == PlaySessionState.Connected, "the game connected");
+        return game;
+    }
+
+    /// <summary>
+    /// A snapshot of the player, as the agent writes it.
+    /// </summary>
+    private static PlaySnapshot Snapshot(long frame)
+    {
+        var player = new Entity("Player");
+        player.Transform.Position = new Stride.Core.Mathematics.Vector3(frame, 0, 0);
+        return new PlaySnapshot(frame, frame / 60.0, [PlaySnapshotWriter.Write(player, x => x == player ? PlayerHandle : 0)]);
+    }
+
     private static PlayTree Tree()
     {
         const string transform = "Stride.Engine.TransformComponent, Stride.Engine";
         return new PlayTree(1,
             [new PlaySceneInfo(1, Guid.NewGuid(), "MainScene", "MainScene", 0)],
             [
-                new PlayEntityInfo(2, Guid.NewGuid(), "Player", true, 0, 1, [new PlayComponentInfo(Guid.NewGuid(), transform)]),
+                new PlayEntityInfo(PlayerHandle, Guid.NewGuid(), "Player", true, 0, 1, [new PlayComponentInfo(Guid.NewGuid(), transform)]),
                 new PlayEntityInfo(3, Guid.NewGuid(), "Camera", true, 2, 1, [new PlayComponentInfo(Guid.NewGuid(), "Stride.Engine.CameraComponent, Stride.Engine")]),
                 new PlayEntityInfo(4, Guid.NewGuid(), "Ground", true, 0, 1, [new PlayComponentInfo(Guid.NewGuid(), transform), new PlayComponentInfo(Guid.NewGuid(), "Stride.Engine.ModelComponent, Stride.Engine")]),
             ]);
@@ -221,9 +515,12 @@ public sealed class PlayModeTests : IAsyncLifetime
     {
         private readonly TaskCompletionSource<int> exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource quit = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly ConcurrentQueue<PlaySubscribe> subscribes = new();
         private PlayConnection? connection;
 
         public int Id => 4321;
+
+        public IReadOnlyDictionary<string, string> Environment => environment;
 
         public Task<int> Exited => exited.Task;
 
@@ -243,6 +540,8 @@ public sealed class PlayModeTests : IAsyncLifetime
             connection = new PlayConnection(pipe);
             connection.Start(message =>
             {
+                if (message is PlaySubscribe subscribe)
+                    subscribes.Enqueue(subscribe);
                 if (message is not PlayQuit)
                     return;
                 quit.TrySetResult();
@@ -252,6 +551,16 @@ public sealed class PlayModeTests : IAsyncLifetime
         }
 
         public void Send(PlayMessage message) => Assert.True(connection?.Send(message));
+
+        /// <summary>
+        /// The next request for snapshots the editor sent.
+        /// </summary>
+        public async Task<PlaySubscribe> NextSubscribeAsync()
+        {
+            PlaySubscribe? next = null;
+            await WindowTestHelper.WaitUntilAsync(() => subscribes.TryDequeue(out next), "a request for snapshots");
+            return next!;
+        }
 
         public void Exit(int exitCode) => exited.TrySetResult(exitCode);
 

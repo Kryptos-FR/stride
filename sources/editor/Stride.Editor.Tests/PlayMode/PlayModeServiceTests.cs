@@ -122,6 +122,39 @@ public sealed class PlayModeServiceTests : IAsyncLifetime
         Assert.False(service.IsPlaying);
     }
 
+    [Fact]
+    public void TheSettingOffStartsTheGameWithoutTheAgent()
+    {
+        service.ConnectToGame = () => false;
+
+        var game = service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+
+        Assert.Same(games.Single(), game);
+        Assert.Empty(games.Single().Environment);
+        Assert.Empty(transports);
+        Assert.Equal(PlaySessionState.WithoutAgent, service.Session!.State);
+        Assert.Contains("setting", service.Session.StateMessage);
+        Assert.True(service.IsPlaying);
+    }
+
+    [Fact]
+    public void StartingOnceWithoutTheConnectionLeavesTheNextStartsAlone()
+    {
+        service.NextStartWithoutConnection = true;
+
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+
+        Assert.Equal(PlaySessionState.WithoutAgent, service.Session!.State);
+        Assert.Contains("Start without the live view", service.Session.StateMessage);
+        Assert.False(service.NextStartWithoutConnection);
+
+        // The next start connects again (and ends this game)
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+        Assert.Equal(PlaySessionState.Starting, service.Session!.State);
+        Assert.Equal("fake-pipe", games[1].Environment[PlayProtocol.PipeVariable]);
+        Assert.Single(transports);
+    }
+
     private static Task WaitForStateAsync(PlaySession session, PlaySessionState state)
     {
         var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

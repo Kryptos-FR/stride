@@ -299,6 +299,49 @@ public sealed class PlaySessionTests : IAsyncLifetime
         await Assert.ThrowsAsync<ObjectDisposedException>(() => session.StartAsync(StartGame));
     }
 
+    [Fact]
+    public async Task AGameThatSendsNothingDoesNotRespondUntilItSendsAgain()
+    {
+        await using var watched = CreateSession(agentFiles, new PlaySessionOptions { NotRespondingAfter = TimeSpan.FromMilliseconds(200), StopGracePeriod = TimeSpan.FromMilliseconds(100) });
+        var responding = new ConcurrentQueue<bool>();
+        watched.RespondingChanged += (_, x) => responding.Enqueue(x);
+        var start = watched.StartAsync(StartGame);
+        agent = transport.Connect();
+        await start.WaitAsync(Timeout);
+        Assert.True(watched.IsResponding);
+        agent.Send(Hello());
+        await WaitUntilAsync(() => watched.State == PlaySessionState.Connected);
+
+        await WaitUntilAsync(() => !watched.IsResponding);
+        Assert.Equal(PlaySessionState.Connected, watched.State);
+        agent.Send(new PlayHeartbeat(1, 1, 60, new PlayAgentStats(60, 10, 20, 0, 0, 0, 0, 0)));
+        await WaitUntilAsync(() => watched.IsResponding);
+        Assert.Equal([false, true], responding.ToArray());
+
+        // An exited game is not waited for
+        await WaitUntilAsync(() => !watched.IsResponding);
+        game!.Exit(0);
+        await WaitUntilAsync(() => watched.State == PlaySessionState.GameExited && watched.IsResponding);
+    }
+
+    [Fact]
+    public async Task AGameStartedWithoutTheAgentOnlyFollowsItsProcess()
+    {
+        session.StartWithoutAgent(StartGame, "Started without the live view.");
+
+        Assert.Equal(PlaySessionState.WithoutAgent, session.State);
+        Assert.Equal("Started without the live view.", session.StateMessage);
+        Assert.Empty(game!.Environment);
+        Assert.False(session.Subscribe([1]));
+        Assert.Throws<InvalidOperationException>(() => session.StartWithoutAgent(StartGame, "Again"));
+
+        // It cannot be asked to quit: Stop ends it
+        await session.StopAsync().WaitAsync(Timeout);
+        Assert.True(game.Killed);
+        await WaitUntilAsync(() => session.State == PlaySessionState.GameExited);
+        Assert.Equal(-1, session.ExitCode);
+    }
+
     private PlaySession CreateSession(PlayAgentFiles files, PlaySessionOptions? options = null)
     {
         var created = new PlaySession(transport, files, options ?? new PlaySessionOptions
