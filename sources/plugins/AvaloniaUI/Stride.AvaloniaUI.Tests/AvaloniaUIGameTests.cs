@@ -44,13 +44,11 @@ public sealed class AvaloniaUIGameTests : GameTestBase
         GraphicsDeviceManager.PreferredBackBufferHeight = Height;
     }
 
-    [SkippableTheory]
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void ViewIsDrawnOverTheSceneAndTakesItsClicks(bool renderOnGpu)
     {
-        if (renderOnGpu)
-            MacOS.SkipSkiaOnTheGpu();
         AvaloniaThread.Run(() =>
         {
             var run = RunGame(renderOnGpu);
@@ -235,11 +233,8 @@ public sealed class AvaloniaUIGameTests : GameTestBase
             : pixel;
     }
 
-    private static void SkipUnlessSkiaSharesTheDevice()
-    {
+    private static void SkipUnlessSkiaSharesTheDevice() =>
         Skip.IfNot(SkiaSharesTheDevice, $"Skia renders on the GPU with Vulkan only, and this game runs on {GraphicsDevice.Platform}.");
-        MacOS.SkipSkiaOnTheGpu();
-    }
 
     private static void AssertColor(Color expected, Image image, int x, int y)
     {

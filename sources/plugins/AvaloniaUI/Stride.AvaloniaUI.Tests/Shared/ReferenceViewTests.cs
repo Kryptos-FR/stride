@@ -36,11 +36,10 @@ public sealed class ReferenceViewTests : GameTestBase
     /// </summary>
     public static IEnumerable<object[]> PageNames => ReferenceViews.Pages.Select(page => new object[] { page });
 
-    [SkippableTheory]
+    [Theory]
     [MemberData(nameof(PageNames))]
     public void PageMatchesItsGold(string page) => TestAvalonia.Run(() =>
     {
-        MacOS.SkipGolds();
         var game = new ReferenceViewTests();
         var component = new AvaloniaUIComponent
         {
