@@ -185,6 +185,54 @@ public sealed class PlayModeServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PlayingASceneOnceStartsTheGameOnItAndSaysSo()
+    {
+        var output = new LoggerResult();
+        service.NextStartScene = new PlaySceneRequest("/MyGame/Scenes/Level2", "Level2", "/MyGame/MainScene", "MainScene");
+
+        service.Start(Path.Combine(directory, "MyGame.dll"), output);
+
+        Assert.Equal("/MyGame/Scenes/Level2", games[0].Environment[PlayProtocol.SceneVariable]);
+        Assert.Equal("/MyGame/Scenes/Level2", service.Session!.LaunchOptions.Scene);
+        Assert.Equal("Level2", service.Session.Scene?.Name);
+        Assert.Null(service.NextStartScene);
+        // The Output pane says which scene plays, once the agent connects (the pane follows the game's logger after Start)
+        Assert.DoesNotContain(output.Messages, x => x.Text.Contains("Playing", StringComparison.Ordinal));
+        agents.Add(transports[0].Connect());
+        agents[0].Send(new PlayHello(1234, Version, Version, null, []));
+        await WaitForStateAsync(service.Session, PlaySessionState.Connected);
+        Assert.Contains(output.Messages, x => x.Type == LogMessageType.Info && x.Text.Contains("Playing Level2 instead of MainScene", StringComparison.Ordinal));
+
+        // The next start plays the default scene again
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+        Assert.False(games[1].Environment.ContainsKey(PlayProtocol.SceneVariable));
+        Assert.Null(service.Session!.Scene);
+    }
+
+    [Fact]
+    public async Task PlayingASceneConnectsEvenWhenTheSettingIsOff()
+    {
+        var output = new LoggerResult();
+        service.ConnectToGame = () => false;
+        service.NextStartScene = new PlaySceneRequest("Scenes/Level2", "Level2");
+
+        service.Start(Path.Combine(directory, "MyGame.dll"), output);
+
+        // Only the agent can change the scene: this game connects, and the Output says why
+        Assert.Equal("fake-pipe", games[0].Environment[PlayProtocol.PipeVariable]);
+        Assert.Equal("Scenes/Level2", games[0].Environment[PlayProtocol.SceneVariable]);
+        Assert.Equal(PlaySessionState.Starting, service.Session!.State);
+        agents.Add(transports[0].Connect());
+        agents[0].Send(new PlayHello(1234, Version, Version, null, []));
+        await WaitForStateAsync(service.Session, PlaySessionState.Connected);
+        Assert.Contains(output.Messages, x => x.Text.Contains("Connect to the game when starting the project", StringComparison.Ordinal));
+
+        // The next start follows the setting again
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+        Assert.Equal(PlaySessionState.WithoutAgent, service.Session!.State);
+    }
+
+    [Fact]
     public void AGameStartedWithoutTheConnectionHasNoLaunchOptions()
     {
         service.ConnectToGame = () => false;

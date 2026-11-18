@@ -22,8 +22,10 @@ public sealed class CommandPaletteItem
     /// <param name="isEnabled">Whether it can run now.</param>
     /// <param name="isChecked">Whether it is on, for a toggle; null otherwise.</param>
     /// <param name="run">Runs it (through the editor's guard, in the palette's context).</param>
-    public CommandPaletteItem(CommandDescriptor descriptor, string title, string? gesture, bool isEnabled, bool? isChecked, Func<Task> run)
+    /// <param name="disabledReason">Why it cannot run now, or null.</param>
+    public CommandPaletteItem(CommandDescriptor descriptor, string title, string? gesture, bool isEnabled, bool? isChecked, Func<Task> run, string? disabledReason = null)
     {
+        DisabledReason = isEnabled ? null : disabledReason;
         Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
         Title = title ?? descriptor.Id;
         Gesture = gesture;
@@ -54,6 +56,11 @@ public sealed class CommandPaletteItem
     public string? Gesture { get; }
 
     public bool IsEnabled { get; }
+
+    /// <summary>
+    /// Why the command cannot run now, for its tooltip; null when it can, or has no reason to give.
+    /// </summary>
+    public string? DisabledReason { get; }
 
     /// <summary>
     /// Whether a toggle is on; null for a command that is not a toggle.

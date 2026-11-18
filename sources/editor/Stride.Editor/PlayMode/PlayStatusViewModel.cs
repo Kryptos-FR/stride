@@ -71,16 +71,25 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
     /// <summary>
     /// The state as the status bar shows it.
     /// </summary>
-    public string Text => State switch
+    public string Text => WithScene(State switch
     {
         LiveTabState.Connecting => Tr._p("Play", "Game: Connecting"),
-        LiveTabState.Playing => Tr._p("Play", "Game: Playing"),
+        LiveTabState.Playing => SceneName is { } scene ? string.Format(Tr._p("Play", "Game: Playing {0}"), scene) : Tr._p("Play", "Game: Playing"),
         LiveTabState.Paused => string.Format(Tr._p("Play", "Game: {0}"), PauseDescription),
         LiveTabState.NotConnected => Tr._p("Play", "Game: Not connected"),
         LiveTabState.NotResponding => Tr._p("Play", "Game: Not responding"),
         LiveTabState.Stopped => ExitCode is { } code ? string.Format(Tr._p("Play", "Game: Stopped (exit code {0})"), code) : Tr._p("Play", "Game: Stopped"),
         _ => string.Empty,
-    };
+    });
+
+    /// <summary>
+    /// The scene the game was started on, when it is not its default scene (Play this scene); <c>null</c> otherwise.
+    /// </summary>
+    public string? SceneName { get; private set => SetValue(ref field, value, nameof(SceneName), nameof(Text)); }
+
+    // The scene, after the state of a game that runs but does not say "Playing Level2"
+    private string WithScene(string text)
+        => SceneName is { } scene && State is LiveTabState.Connecting or LiveTabState.Paused or LiveTabState.NotResponding ? $"{text} ({scene})" : text;
 
     /// <summary>
     /// Why the game is paused (<see cref="PlayPauseText.Describe"/>): "Paused", or "Paused: script exception in PlayerController".
@@ -142,6 +151,7 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
         if (session is not { } current)
             return;
         ExitCode = current.ExitCode;
+        SceneName = current.Scene?.Name;
         PauseDescription = PlayPauseText.Describe(current.PauseReason, current.LastScriptException, current.LaunchOptions.Hotkey);
         Message = current.State is PlaySessionState.Failed or PlaySessionState.VersionMismatch or PlaySessionState.WithoutAgent ? current.StateMessage : null;
         State = current.State switch

@@ -166,6 +166,9 @@
         </ComboBox>
       </StackPanel>
     </DockPanel>
+    <!-- The scene the game was started on, when it is not its default scene (Play this scene) -->
+    <TextBlock DockPanel.Dock="Top" Name="PlayedScene" Text="{Binding SceneText}" TextWrapping="Wrap" Margin="6,0,6,2" Opacity="0.8"
+               IsVisible="{Binding SceneText, Converter={x:Static ObjectConverters.IsNotNull}}"/>
     <!-- The game stopped: the tree below is its last one, greyed, and its entities have no values any more -->
     <Border DockPanel.Dock="Top" Name="StoppedNotice" Classes="notice" IsVisible="{Binding StoppedNotice, Converter={x:Static ObjectConverters.IsNotNull}}">
       <TextBlock Name="StoppedNoticeText" TextWrapping="Wrap" Text="{Binding StoppedNotice}"/>

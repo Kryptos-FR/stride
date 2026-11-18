@@ -59,6 +59,8 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     private string? sessionName;
     private string title = baseTitle;
     private IReadOnlyList<IDEInfo>? availableIDEs;
+    // The session whose active document Play this scene follows
+    private SessionViewModel? playSceneSession;
 
 #if DEBUG
     // Note: only required for the Avalonia designer
@@ -110,12 +112,16 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
         StartWithoutLiveViewCommand = new AnonymousTaskCommand(serviceProvider, () => StartProjectAsync(withoutLiveView: true)) { IsEnabled = PlayMode is not null && Build.StartProjectCommand.IsEnabled };
         // Once, whatever the setting: the game pauses before its first update
         StartPausedCommand = new AnonymousTaskCommand(serviceProvider, () => StartProjectAsync(withoutLiveView: false, paused: true)) { IsEnabled = PlayMode is not null && Build.StartProjectCommand.IsEnabled };
+        // The game starts on the scene of the active scene editor instead of its default scene
+        PlaySceneCommand = new AnonymousTaskCommand(serviceProvider, PlaySceneAsync) { IsEnabled = false };
         Build.StartProjectCommand.CanExecuteChanged += (_, _) =>
         {
             StartProjectCommand.IsEnabled = Build.StartProjectCommand.IsEnabled;
             StartWithoutLiveViewCommand.IsEnabled = PlayMode is not null && Build.StartProjectCommand.IsEnabled;
             StartPausedCommand.IsEnabled = PlayMode is not null && Build.StartProjectCommand.IsEnabled;
+            UpdatePlayScene();
         };
+        UpdatePlayScene();
         StopGameCommand = new AnonymousTaskCommand(serviceProvider, () => PlayMode?.StopAsync() ?? Task.CompletedTask) { IsEnabled = false };
         if (PlayMode is not null)
         {
@@ -202,6 +208,18 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     /// Builds the current project and starts its game paused before its first update, whatever the setting says.
     /// </summary>
     public ICommandBase StartPausedCommand { get; }
+
+    /// <summary>
+    /// Builds the current project and starts its game on the scene of the active scene editor instead of its default scene
+    /// (Play this scene, F8). A scene that the build does not have is made a root asset first, once the user agrees. While a
+    /// game of the editor's platform plays, it asks to stop it first, as Start project does.
+    /// </summary>
+    public ICommandBase PlaySceneCommand { get; }
+
+    /// <summary>
+    /// Why <see cref="PlaySceneCommand"/> cannot run now, for its tooltips; <c>null</c> when it can.
+    /// </summary>
+    public string? PlaySceneDisabledReason { get; private set => SetValue(ref field, value); }
 
     /// <summary>
     /// Ends the game that plays (Stop, Shift+F5).
@@ -593,6 +611,19 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     /// </summary>
     private void OnSessionChanged()
     {
+        if (playSceneSession is not null)
+        {
+            playSceneSession.PropertyChanged -= PlaySceneSourceChanged;
+            playSceneSession.EditorCollection.PropertyChanged -= PlaySceneSourceChanged;
+        }
+        playSceneSession = session;
+        if (playSceneSession is not null)
+        {
+            // The active document and the current project
+            playSceneSession.PropertyChanged += PlaySceneSourceChanged;
+            playSceneSession.EditorCollection.PropertyChanged += PlaySceneSourceChanged;
+        }
+        UpdatePlayScene();
         SaveCommand.IsEnabled = session is not null;
         Build.Session = session;
         CodeReload.Session = session;
@@ -653,12 +684,74 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
             Panels.Show(BuiltInPanels.BuildLog);
     }
 
+    private void PlaySceneSourceChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(EditorCollectionViewModel.ActiveEditor) or nameof(SessionViewModel.CurrentProject))
+            UpdatePlayScene();
+    }
+
+    /// <summary>
+    /// Whether Play this scene can run, and why not: the active document must be a scene of the current project's packages,
+    /// and the project must be able to start.
+    /// </summary>
+    internal void UpdatePlayScene()
+    {
+        var target = PlaySceneTarget.Find(session);
+        string? reason;
+        if (PlayMode is null)
+            reason = Tr._p("Play", "This editor does not start games with play mode.");
+        else if (!target.CanPlay)
+            reason = target.DisabledReason;
+        else if (!Build.StartProjectCommand.IsEnabled)
+            reason = Build.BuildInProgress ? Tr._p("Play", "A build is running: wait for it to end.") : Tr._p("Play", "The project cannot start now.");
+        else
+            reason = null;
+        PlaySceneDisabledReason = reason;
+        PlaySceneCommand.IsEnabled = reason is null;
+    }
+
+    /// <summary>
+    /// Starts the game on the scene of the active scene editor (Play this scene). A scene that the build does not have is made
+    /// a root asset of its package first, if the user agrees; the default scene starts as with Start project.
+    /// </summary>
+    private async Task PlaySceneAsync()
+    {
+        var target = PlaySceneTarget.Find(session);
+        if (PlayMode is null || session is null || !target.CanPlay || target.Scene is not { } scene)
+            return;
+        if (!target.IsInBuild && !await IncludeInBuildAsync(session, scene))
+            return;
+        // The default scene plays as with Start project
+        await StartProjectAsync(withoutLiveView: false, scene: target.ToRequest());
+    }
+
+    /// <summary>
+    /// Asks to make a scene that the build does not have a root asset of its package, so that the game's data has it, and does
+    /// it (an action that can be undone, saved with the session before the build).
+    /// </summary>
+    /// <returns>Whether the scene is now in the build.</returns>
+    private async Task<bool> IncludeInBuildAsync(SessionViewModel current, Core.Assets.Presentation.ViewModels.AssetViewModel scene)
+    {
+        if (current.GetDefaultRootAssetTarget([scene]) is not { } package)
+        {
+            await ServiceProvider.Get<IDialogService>().MessageBoxAsync(string.Format(Tr._p("Message", "{0} is not in the build, and no package can include it as a root asset: the game could not load it."), scene.Name), MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+        var message = string.Format(Tr._p("Message", "{0} is not in the build: no root asset of the project reaches it, so the game could not load it.\n\nInclude it in the build as a root asset of {1}, and play it? Every build of the game then has it, until you exclude it again (Undo, or the asset's build badge)."), scene.Name, package.Name);
+        var result = await ServiceProvider.Get<IDialogService>().MessageBoxAsync(message, MessageBoxButton.OKCancel, MessageBoxImage.Question);
+        if (result != MessageBoxResult.OK)
+            return false;
+        current.ToggleRootAsset([scene], package);
+        return scene.Dependencies.IsRoot;
+    }
+
     /// <summary>
     /// Asks to stop the game that plays before Start project starts another one of the editor's platform.
     /// </summary>
     /// <param name="withoutLiveView">Whether this game starts without the live connection, whatever the setting says.</param>
     /// <param name="paused">Whether this game starts paused, whatever the setting says.</param>
-    private async Task StartProjectAsync(bool withoutLiveView, bool paused = false)
+    /// <param name="scene">The scene this game starts on instead of its default scene (Play this scene), or <c>null</c>.</param>
+    private async Task StartProjectAsync(bool withoutLiveView, bool paused = false, PlaySceneRequest? scene = null)
     {
         if (PlayMode is { IsPlaying: true } playMode && session?.CurrentProject?.Platform == Stride.Core.Platform.Type)
         {
@@ -674,6 +767,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
         }
         PlayMode.NextStartWithoutConnection = withoutLiveView;
         PlayMode.NextStartPaused = paused;
+        PlayMode.NextStartScene = scene;
         try
         {
             await Build.BuildAsync(true);
@@ -683,6 +777,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
             // A build that fails or is cancelled starts nothing
             PlayMode.NextStartWithoutConnection = false;
             PlayMode.NextStartPaused = false;
+            PlayMode.NextStartScene = null;
         }
     }
 

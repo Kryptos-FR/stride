@@ -185,6 +185,12 @@ public sealed class PlaySession : IAsyncDisposable
     public PlayLaunchOptions LaunchOptions { get; init; } = PlayLaunchOptions.None;
 
     /// <summary>
+    /// The scene the game was asked to start on instead of its default scene (Play this scene); <c>null</c> for the default
+    /// scene. Its URL is in <see cref="LaunchOptions"/>.
+    /// </summary>
+    public PlaySceneRequest? Scene { get; init; }
+
+    /// <summary>
     /// The last script exception the game sent; <c>null</c> before the first.
     /// </summary>
     public PlayScriptException? LastScriptException { get; private set; }

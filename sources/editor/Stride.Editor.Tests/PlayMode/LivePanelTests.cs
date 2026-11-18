@@ -620,6 +620,56 @@ public sealed class LivePanelTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TheTabAndTheStatusBarSayWhichScenePlays()
+    {
+        var status = dispatcher.Invoke(() => new PlayStatusViewModel(new ViewModelServiceProvider([dispatcher]), playMode));
+        try
+        {
+            playMode.NextStartScene = new PlaySceneRequest("/MyGame/Scenes/Level2", "Level2", "/MyGame/MainScene", "MainScene");
+            Start();
+            var agent = await ConnectAsync();
+            await WaitAsync(() => panel.SceneText == "Playing Level2 instead of MainScene", "the scene in the tab");
+
+            // The game loaded it without the package's namespace: it is the scene asked for
+            agent.Send(new PlayTree(1, [new PlaySceneInfo(1, Guid.NewGuid(), "Level2", "Scenes/Level2", 0)], []));
+            agent.Send(Heartbeat(1));
+            await WaitAsync(() => panel.ApplyCount > 0 && status.State == LiveTabState.Playing, "the tree");
+            Assert.Equal("Playing Level2 instead of MainScene", Read(() => panel.SceneText));
+            Assert.Equal("Game: Playing Level2", Read(() => status.Text));
+            agent.Send(new PlayGameState(2, 1, true, 1, 1, 60, 0, 0, PlayPauseReason.Editor));
+            await WaitAsync(() => status.State == LiveTabState.Paused, "paused");
+            Assert.Equal("Game: Paused (Level2)", Read(() => status.Text));
+
+            // The next start plays the default scene: no words about the scene
+            Start();
+            await WaitAsync(() => panel.State == LiveTabState.Connecting && panel.SceneText is null, "the default scene");
+            await WaitAsync(() => status.State == LiveTabState.Connecting, "the status bar");
+            Assert.Equal("Game: Connecting", Read(() => status.Text));
+        }
+        finally
+        {
+            dispatcher.Invoke(status.Destroy);
+        }
+    }
+
+    [Fact]
+    public async Task ASceneThatIsNotInTheBuiltDataSaysTheGameStartedOnTheDefaultScene()
+    {
+        playMode.NextStartScene = new PlaySceneRequest("/MyGame/Scenes/Level3", "Level3", "/MyGame/MainScene", "MainScene");
+        Start();
+        var agent = await ConnectAsync();
+
+        // The agent found no such scene in the game's data: the game started on its default scene
+        agent.Send(new PlayTree(1, [new PlaySceneInfo(1, SceneId, "MainScene", "/MyGame/MainScene", 0)], []));
+        await WaitAsync(() => panel.SceneText == "Level3 is not in the game's built data: the game started on MainScene.", "the scene that did not play");
+
+        // A scene the game loads itself later does not change it
+        agent.Send(new PlayTree(2, [new PlaySceneInfo(2, Guid.NewGuid(), "Level3", "/MyGame/Scenes/Level3", 0)], []));
+        await WaitAsync(() => panel.ApplyCount > 1, "the second tree");
+        Assert.Equal("Level3 is not in the game's built data: the game started on MainScene.", Read(() => panel.SceneText));
+    }
+
+    [Fact]
     public async Task TheTabSaysWhyTheGameIsPaused()
     {
         playMode.LaunchOptions = () => new PlayLaunchOptions(StartPaused: true, Hotkey: new PlayHotkey("F7"));

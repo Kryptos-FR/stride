@@ -10,11 +10,16 @@ using Avalonia.Input;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using Stride.Assets;
 using Stride.Assets.Editor.PlayMode;
+using Stride.Assets.Entities;
 using Stride.Assets.Materials;
+using Stride.Assets.Sprite;
 using Stride.Core;
+using Stride.Core.Assets.Editor.Commands;
 using Stride.Core.Assets.Editor.Avalonia.Commands;
 using Stride.Core.Assets.Editor.Panels;
+using Stride.Core.Serialization;
 using Stride.Editor.PlayMode;
 using Stride.Engine;
 using Stride.GameStudio.Avalonia.Commands;
@@ -444,6 +449,103 @@ public sealed class PlayModeTests : IAsyncLifetime
     }
 
     [AvaloniaFact]
+    public async Task PlayThisSceneStartsTheGameOnTheActiveSceneOnce()
+    {
+        var main = new SceneAsset();
+        var gameSettings = new GameSettingsAsset { DefaultScene = AttachedReferenceManager.CreateProxyObject<Scene>(main.Id, "MainScene") };
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode, ("MainScene", main), ("Scenes/Level2", new SceneAsset()),
+            (GameSettingsAsset.GameSettingsLocation, gameSettings), ("Sheet", new SpriteSheetAsset()));
+        fixture.ReplaceProjectBuilder();
+        var dialogs = fixture.ReplaceDialogService();
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        try
+        {
+            var item = MenuItem(window, "PlaySceneMenuItem");
+            Assert.Equal(GameStudioCommands.PlaySceneId, Assert.IsType<CommandReference>(item.Command).Id);
+            Assert.Equal(new KeyGesture(Key.F8), item.InputGesture);
+            Assert.Contains(window.View.CommandSlots!.Shortcuts, x => x.Gesture == new KeyGesture(Key.F8) && x.Descriptor.Id == GameStudioCommands.PlaySceneId);
+
+            // The session opens on the default scene: it plays as with Start project
+            await WindowTestHelper.WaitUntilAsync(() => fixture.Session.EditorCollection.ActiveEditor?.Asset == fixture.Asset("MainScene"), "the default scene's editor");
+            await WindowTestHelper.PumpAsync();
+            Assert.Null(fixture.Main.PlaySceneDisabledReason);
+            Assert.True(fixture.Main.PlaySceneCommand.IsEnabled);
+            var button = Button(window, "PlaySceneButton");
+            Assert.True(button.IsVisible);
+            Assert.Equal(GameStudioCommands.PlaySceneId, Assert.IsType<CommandReference>(button.Command).Id);
+            fixture.Main.PlaySceneCommand.Execute();
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 1 && !fixture.Main.Build.BuildInProgress, "the start of the game");
+            Assert.False(games[0].Environment.ContainsKey(PlayProtocol.SceneVariable));
+            Assert.Empty(dialogs.Messages);
+
+            // Another document than a scene: the reason says it
+            await OpenEditorAsync(fixture, fixture.Asset("Sheet"));
+            Assert.False(fixture.Main.PlaySceneCommand.IsEnabled);
+            Assert.Contains("is not a scene", fixture.Main.PlaySceneDisabledReason, StringComparison.Ordinal);
+
+            // A scene that the build does not have: it asks to make it a root asset, then the game starts on it (the
+            // recording dialogs answer OK, also to stop the game that plays)
+            var level2 = fixture.Asset("Scenes/Level2");
+            await OpenEditorAsync(fixture, level2);
+            Assert.True(fixture.Main.PlaySceneCommand.IsEnabled);
+            Assert.False(level2.Dependencies.IsRoot);
+            fixture.Main.PlaySceneCommand.Execute();
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 2 && !fixture.Main.Build.BuildInProgress, "the start of the game on Level2", 10000);
+            Assert.True(level2.Dependencies.IsRoot);
+            Assert.Contains(dialogs.Messages, x => x.Contains("Level2 is not in the build", StringComparison.Ordinal));
+            Assert.Equal(level2.Url, games[1].Environment[PlayProtocol.SceneVariable]);
+            Assert.Null(playMode.NextStartScene);
+            Assert.Equal("Level2", playMode.Session?.Scene?.Name);
+
+            // In the build now: it plays without a question
+            var questions = dialogs.Messages.Count(x => x.Contains("is not in the build", StringComparison.Ordinal));
+            fixture.Main.PlaySceneCommand.Execute();
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 3 && !fixture.Main.Build.BuildInProgress, "the second start on Level2", 10000);
+            Assert.Equal(questions, dialogs.Messages.Count(x => x.Contains("is not in the build", StringComparison.Ordinal)));
+            Assert.Equal(level2.Url, games[2].Environment[PlayProtocol.SceneVariable]);
+
+            // The next F5 starts the default scene
+            Press(window, Key.F5, RawInputModifiers.None, PhysicalKey.F5);
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 4, "the start of the game with F5", 10000);
+            Assert.False(games[3].Environment.ContainsKey(PlayProtocol.SceneVariable));
+        }
+        finally
+        {
+            await window.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task PlayThisSceneIsDisabledWithAReasonWithoutAScene()
+    {
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode, ("Sheet", new SpriteSheetAsset()));
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        try
+        {
+            Assert.False(fixture.Main.PlaySceneCommand.IsEnabled);
+            Assert.Equal("No scene is open: open a scene to play it.", fixture.Main.PlaySceneDisabledReason);
+            Assert.False(await IsEnabledInOpenMenuAsync(MenuItem(window, "PlaySceneMenuItem")));
+
+            // The palette shows it greyed, with its reason
+            window.View.ShowCommandPalette(null);
+            await WindowTestHelper.PumpAsync();
+            var palette = Assert.IsType<CommandPaletteViewModel>(window.View.CommandPalette.DataContext);
+            palette.SearchText = "play this scene";
+            var entry = palette.Results.First();
+            Assert.Equal(GameStudioCommands.PlaySceneId, entry.Id);
+            Assert.False(entry.IsEnabled);
+            Assert.Equal(fixture.Main.PlaySceneDisabledReason, entry.DisabledReason);
+            Assert.Equal("F8", entry.Gesture);
+        }
+        finally
+        {
+            await window.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
     public void TheSettingsGiveTheLaunchOptions()
     {
         Assert.Equal(PlayLaunchOptions.None with { Hotkey = new PlayHotkey("F7") }, GameStudioEditorSettings.GetPlayLaunchOptions());
@@ -625,6 +727,15 @@ public sealed class PlayModeTests : IAsyncLifetime
     {
         window.KeyPress(key, modifiers, physicalKey, null);
         window.KeyRelease(key, modifiers, physicalKey, null);
+    }
+
+    private static async Task OpenEditorAsync(ShellSessionFixture fixture, Stride.Core.Assets.Presentation.ViewModels.AssetViewModel asset)
+    {
+        fixture.Session.AssetCollection.SelectAssets([asset]);
+        await WindowTestHelper.PumpAsync();
+        fixture.Session.EditSelectedContentCommand.Execute();
+        await WindowTestHelper.WaitUntilAsync(() => fixture.Session.EditorCollection.ActiveEditor?.Asset == asset, "the editor of " + asset.Name);
+        await WindowTestHelper.PumpAsync();
     }
 
     private static MenuItem MenuItem(Window window, string name) => window.GetLogicalDescendants().OfType<MenuItem>().Single(x => x.Name == name);

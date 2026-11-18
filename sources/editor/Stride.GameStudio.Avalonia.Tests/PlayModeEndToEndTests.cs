@@ -21,12 +21,14 @@ namespace Stride.GameStudio.Avalonia.Tests;
 /// The game is not built by the test: <c>STRIDE_PLAY_TEST_GAME</c> names the assembly of its executable project (for example
 /// the Linux head of <c>dotnet new stride-fps -p linux</c>, built against this checkout's packages). It needs a graphics device
 /// and, on Linux, an X display (Xvfb with a Vulkan driver such as lavapipe). <c>STRIDE_PLAY_TEST_ENTITY</c> names the entity
-/// to show; otherwise the one with the most components. Without the game or the display, the test is skipped.
+/// to show; otherwise the one with the most components. <c>STRIDE_PLAY_TEST_SCENE</c> names the URL of a scene of the game's
+/// built data other than its default one, to start on (Play this scene). Without the game or the display, the test is skipped.
 /// </remarks>
 public sealed class PlayModeEndToEndTests
 {
     public const string GameVariable = "STRIDE_PLAY_TEST_GAME";
     public const string EntityVariable = "STRIDE_PLAY_TEST_ENTITY";
+    public const string SceneVariable = "STRIDE_PLAY_TEST_SCENE";
     private const int StartTimeout = 120_000;
 
     [AvaloniaFact]
@@ -237,6 +239,54 @@ public sealed class PlayModeEndToEndTests
 
             var playing = heartbeats.Skip(beforePlaying + 1).Where(x => !x.Paused).Select(x => x.Heartbeat.Stats).Where(x => x.Frames > 0).ToList();
             TestContext.Current.TestOutputHelper?.WriteLine($"Agent per frame with every option on (median of the heartbeats): playing {Median(playing)} µs over {playing.Sum(x => x.Frames)} frames.");
+        }
+        finally
+        {
+            await session.DisposeAsync();
+        }
+
+        Assert.True(session.Exited.IsCompleted, "The game still runs.");
+        if (processId is { } id)
+            Assert.True(HasExited(id), $"The game's process {id} still runs.");
+    }
+
+    [AvaloniaFact]
+    public async Task ATemplateGameStartsOnTheSceneOfTheLaunchOptions()
+    {
+        var gamePath = Environment.GetEnvironmentVariable(GameVariable);
+        var scene = Environment.GetEnvironmentVariable(SceneVariable);
+        Assert.SkipWhen(string.IsNullOrEmpty(gamePath) || !File.Exists(gamePath), $"No built game: set {GameVariable} to the assembly of a game built from a Stride template (for example the Linux head of 'dotnet new stride-fps').");
+        Assert.SkipWhen(string.IsNullOrEmpty(scene), $"No scene: set {SceneVariable} to the URL of a scene of the game's built data other than its default scene.");
+        Assert.SkipWhen(OperatingSystem.IsLinux() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")), "No X display: run the test under Xvfb, with a Vulkan driver (lavapipe), so that the game can open its window.");
+        Assert.SkipUnless(PlayAgentFiles.NextToEditor.Exist, $"The play agent's files are not in {PlayAgentFiles.NextToEditor.Directory}.");
+
+        var output = new LoggerResult();
+        var tree = new TaskCompletionSource<PlayTree>(TaskCreationOptions.RunContinuationsAsynchronously);
+        int? processId = null;
+        var session = new PlaySession(new PipePlayTransport(), PlayAgentFiles.NextToEditor, new PlaySessionOptions
+        {
+            ConnectTimeout = TimeSpan.FromMilliseconds(StartTimeout),
+            StopGracePeriod = TimeSpan.FromSeconds(10),
+            Log = output,
+        })
+        {
+            LaunchOptions = new PlayLaunchOptions(Scene: scene),
+        };
+        session.TreeReceived += (_, x) => tree.TrySetResult(x);
+        var watch = Stopwatch.StartNew();
+        try
+        {
+            var start = session.StartAsync(environment => PlayGameLauncher.Start(gamePath!, output, environment), PlayAgentFiles.GetGameStrideVersion(gamePath!));
+            processId = session.Game?.Id;
+            await WaitAsync(start, "the agent's connection", output);
+            await WaitAsync(Task.WhenAny(tree.Task, session.Exited).Unwrap(), "the game's tree", output);
+            Assert.True(tree.Task.IsCompleted, $"The game exited with {session.ExitCode} before it sent its tree.{Log(output)}");
+            TestContext.Current.TestOutputHelper?.WriteLine($"From the start to the first tree: {watch.ElapsedMilliseconds} ms.");
+
+            // Its root scene is the one asked for, and the agent says nothing about it
+            var root = Assert.Single(tree.Task.Result.Scenes, x => x.ParentHandle == 0);
+            Assert.True(new PlaySceneRequest(scene!, "Scene").IsScene(root.Url), $"The game started on {root.Url}, not {scene}.");
+            Assert.DoesNotContain(output.Messages, x => x.Type >= LogMessageType.Warning && x.Text.Contains("built data", StringComparison.Ordinal));
         }
         finally
         {

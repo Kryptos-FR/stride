@@ -89,6 +89,12 @@ public sealed class CommandDescriptor
     public Func<CommandContext, bool>? CanExecute { get; init; }
 
     /// <summary>
+    /// Why the command cannot run in a context, or null: the tooltip of its button, its menu item and its line in the command
+    /// palette while it is disabled. Read when it is shown, through the editor's contribution guard.
+    /// </summary>
+    public Func<CommandContext, string?>? DisabledReason { get; init; }
+
+    /// <summary>
     /// Where the command is shown: a location, a group in it and an order. A command with no placement is reached by its
     /// shortcut and the command palette only.
     /// </summary>

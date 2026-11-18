@@ -42,7 +42,7 @@ public sealed class BuiltInCommandsTests
         {
             var host = fixture.Plugins;
             var builtIns = IdsOf(typeof(GameStudioCommands)).Concat(IdsOf(typeof(SessionCommands))).ToList();
-            Assert.Equal(33 + 21, builtIns.Count);
+            Assert.Equal(34 + 21, builtIns.Count);
             Assert.Equal(builtIns.Count, builtIns.Distinct().Count());
             foreach (var id in builtIns)
             {

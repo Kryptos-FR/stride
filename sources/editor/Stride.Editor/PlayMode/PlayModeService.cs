@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Stride.Core.Assets.Editor.Components.Build;
 using Stride.Core.Diagnostics;
+using Stride.Core.Translation;
 using Stride.PlayMode.Protocol;
 
 namespace Stride.Editor.PlayMode;
@@ -94,6 +95,13 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
     public bool NextStartPaused { get; set; }
 
     /// <summary>
+    /// The scene the next game starts on instead of its default scene (Play this scene); <c>null</c> for the default scene. The
+    /// next start clears it; clear it too when the start does not happen (a failed build). The agent changes the scene, so the
+    /// game starts with the live connection, whatever <see cref="ConnectToGame"/> says.
+    /// </summary>
+    public PlaySceneRequest? NextStartScene { get; set; }
+
+    /// <summary>
     /// The current session, or the last one once its game exited; <c>null</c> before the first start.
     /// </summary>
     public PlaySession? Session { get; private set; }
@@ -117,12 +125,31 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
 
         var once = NextStartWithoutConnection;
         var paused = NextStartPaused;
+        var scene = NextStartScene;
         NextStartWithoutConnection = NextStartPaused = false;
-        var connect = !once && ConnectToGame();
+        NextStartScene = null;
+        // Only the agent can start the game on another scene
+        var settingConnects = ConnectToGame();
+        var connect = scene is not null || (!once && settingConnects);
         var launch = connect ? LaunchOptions() : PlayLaunchOptions.None;
         if (paused && connect)
             launch = launch with { StartPaused = true };
-        var session = new PlaySession(connect ? createTransport() : new NoPlayTransport(), agentFiles, options) { LaunchOptions = launch };
+        if (scene is not null)
+            launch = launch with { Scene = scene.Url };
+        var session = new PlaySession(connect ? createTransport() : new NoPlayTransport(), agentFiles, options) { LaunchOptions = launch, Scene = scene };
+        if (scene is not null)
+        {
+            // Once the agent connects: the Output pane follows the game's output only after this call returns
+            var text = settingConnects
+                ? scene.Description + "."
+                : string.Format(Tr._p("Play", "{0}. The game connects to the editor this time, though the setting \"Connect to the game when starting the project\" is off: the play agent starts it on that scene."), scene.Description);
+            var logged = 0;
+            session.StateChanged += (_, change) =>
+            {
+                if (change.NewState == PlaySessionState.Connected && Interlocked.Exchange(ref logged, 1) == 0)
+                    output.Info(text);
+            };
+        }
         // The exception that paused the game, with its stack, next to the game's own output
         session.ScriptExceptionReceived += (_, exception) => output.Error(PlayPauseText.DescribeForOutput(exception));
         PlaySession? previous;

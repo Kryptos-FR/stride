@@ -29,7 +29,8 @@
                Tapped="OnResultTapped">
         <ListBox.ItemTemplate>
           <DataTemplate DataType="cmds:CommandPaletteItem">
-            <Grid ColumnDefinitions="18, *, Auto, Auto" Opacity="{Binding IsEnabled, Converter={sd:BoolToOpacity}}">
+            <Grid ColumnDefinitions="18, *, Auto, Auto" Opacity="{Binding IsEnabled, Converter={sd:BoolToOpacity}}"
+                  Background="Transparent" ToolTip.Tip="{Binding DisabledReason}">
               <!-- A check for a toggle that is on -->
               <TextBlock Grid.Column="0" Text="&#x2713;" VerticalAlignment="Center"
                          IsVisible="{Binding IsChecked, FallbackValue=False, TargetNullValue=False}"/>

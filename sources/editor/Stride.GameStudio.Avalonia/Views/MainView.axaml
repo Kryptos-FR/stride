@@ -160,6 +160,13 @@
         <!-- Once, whatever the setting: the game pauses before its first update -->
         <MenuItem Name="StartPausedMenuItem"
                   Command="{cmd:Command Stride.Project.StartPaused}"/>
+        <!-- The game starts on the scene of the active scene editor instead of its default scene -->
+        <MenuItem Name="PlaySceneMenuItem"
+                  Command="{cmd:Command Stride.Project.PlayScene}">
+          <MenuItem.Icon>
+            <Image Source="{StaticResource ImageStartProject}"/>
+          </MenuItem.Icon>
+        </MenuItem>
         <!-- Ends the game that plays (and the Live tab's connection) -->
         <MenuItem Name="StopGameMenuItem"
                   Command="{cmd:Command Stride.Project.StopGame}">

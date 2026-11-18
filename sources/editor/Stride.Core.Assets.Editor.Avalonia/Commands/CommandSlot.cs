@@ -39,6 +39,19 @@ public static class CommandSlot
     public static readonly AttachedProperty<object?> SelectionProperty =
         AvaloniaProperty.RegisterAttached<ContextMenu, object?>("Selection", typeof(CommandSlot));
 
+    /// <summary>
+    /// Set to true on a button of an asset editor's own view that binds a command of the registry by its identifier
+    /// (<c>Command="{cmd:Command Stride.Project.PlayScene}"</c>): while the button is shown, it gets that command in the context
+    /// of its editor (<see cref="CommandLocations.EditorToolbar"/>), and its tooltip says what the command does, with the
+    /// user's shortcut, or why it cannot run (<see cref="CommandDescriptor.DisabledReason"/>). It asks again whether the command
+    /// can run when the pointer enters it and when <see cref="RefreshButtons"/> is called.
+    /// </summary>
+    public static readonly AttachedProperty<bool> IsEditorButtonProperty =
+        AvaloniaProperty.RegisterAttached<Button, bool>("IsEditorButton", typeof(CommandSlot));
+
+    // The editor buttons shown now, which RefreshButtons asks again
+    private static readonly HashSet<Button> EditorButtons = [];
+
     // The items that a slot added to a menu, so that the next fill removes them
     private static readonly AttachedProperty<bool> IsSlotItemProperty =
         AvaloniaProperty.RegisterAttached<Control, bool>("IsSlotItem", typeof(CommandSlot));
@@ -49,12 +62,43 @@ public static class CommandSlot
 
     static CommandSlot()
     {
+        IsEditorButtonProperty.Changed.AddClassHandler<Button>((button, e) =>
+        {
+            button.AttachedToVisualTree -= OnEditorButtonAttached;
+            button.DetachedFromVisualTree -= OnEditorButtonDetached;
+            button.PointerEntered -= OnEditorButtonPointerEntered;
+            EditorButtons.Remove(button);
+            if (e.NewValue is not true)
+                return;
+            button.AttachedToVisualTree += OnEditorButtonAttached;
+            button.DetachedFromVisualTree += OnEditorButtonDetached;
+            button.PointerEntered += OnEditorButtonPointerEntered;
+            if (button.IsAttachedToVisualTree())
+            {
+                EditorButtons.Add(button);
+                BindEditorButton(button);
+            }
+        });
         LocationProperty.Changed.AddClassHandler<ContextMenu>((menu, e) =>
         {
             menu.Opened -= OnOpened;
             if (e.NewValue is string)
                 menu.Opened += OnOpened;
         });
+    }
+
+    public static bool GetIsEditorButton(Button button) => button.GetValue(IsEditorButtonProperty);
+
+    public static void SetIsEditorButton(Button button, bool value) => button.SetValue(IsEditorButtonProperty, value);
+
+    /// <summary>
+    /// Asks the buttons of the editors (<see cref="IsEditorButtonProperty"/>) whether their command can run now, and why not: the
+    /// shell calls it when the state that its commands follow changes.
+    /// </summary>
+    public static void RefreshButtons()
+    {
+        foreach (var button in EditorButtons.ToList())
+            BindEditorButton(button);
     }
 
     public static string? GetLocation(ContextMenu menu) => menu.GetValue(LocationProperty);
@@ -199,6 +243,63 @@ public static class CommandSlot
                 return editor;
         }
         return null;
+    }
+
+    private static void OnEditorButtonAttached(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (sender is not Button button)
+            return;
+        EditorButtons.Add(button);
+        BindEditorButton(button);
+    }
+
+    private static void OnEditorButtonDetached(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (sender is Button button && EditorButtons.Remove(button) && button.Command is CommandReference reference)
+            reference.Target = null;
+    }
+
+    private static void OnEditorButtonPointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (sender is Button button)
+            BindEditorButton(button);
+    }
+
+    /// <summary>
+    /// Gives an editor's button the command of the host that its reference names, in the context of its editor, and its tooltip.
+    /// </summary>
+    private static void BindEditorButton(Button button)
+    {
+        if (button.Command is not CommandReference reference)
+            return;
+        var session = SessionViewModel.CurrentInstance;
+        var host = FindHost(session);
+        var editor = FindEditor(button);
+        CommandContext? CreateContext() => session is null ? null : new CommandContext
+        {
+            Session = session,
+            Location = CommandLocations.EditorToolbar,
+            Source = button,
+            Editor = editor,
+        };
+        var context = CreateContext();
+        var descriptor = host is null || context is null ? null : host.Commands.Items.FirstOrDefault(x => x.Id == reference.Id && host.IsCommandAvailable(x));
+        if (descriptor is null)
+        {
+            reference.Target = null;
+            reference.RaiseCanExecuteChanged();
+            ToolTip.SetTip(button, reference.ToolTip);
+            return;
+        }
+        if (reference.Target is not DescriptorCommand { } current || current.Descriptor != descriptor)
+            reference.Target = new DescriptorCommand(host!, descriptor, CreateContext);
+        reference.RaiseCanExecuteChanged();
+        var tip = reference.ToolTip ?? host!.GetCommandTitle(descriptor, context!);
+        if (ShortcutOf?.Invoke(descriptor) is { } gesture)
+            tip = $"{tip} ({gesture.ToString("p", null)})";
+        var reason = host!.CanExecuteCommand(descriptor, context!) ? null : host.GetCommandDisabledReason(descriptor, context!);
+        ToolTip.SetTip(button, reason ?? tip);
+        ToolTip.SetShowOnDisabled(button, true);
     }
 
     // The items of a menu bound to a command by its identifier, with those of their submenus

@@ -524,6 +524,14 @@
             </Flyout>
           </Button.Flyout>
         </Button>
+        <!-- Play this scene (scenes only): the game starts on this scene instead of its default scene. The command of the
+             registry, in the context of this editor: its tooltip has the shortcut, or why it cannot run -->
+        <Separator x:Name="PlaySceneSeparator" Width="1" Height="20" Margin="2,0" IsVisible="False" />
+        <Button x:Name="PlaySceneButton" Focusable="False" Background="Transparent" Padding="6" IsVisible="False"
+                cmd:CommandSlot.IsEditorButton="True"
+                Command="{cmd:Command Stride.Project.PlayScene, ToolTip={sd:LocalizeString Play this scene: start the game on this scene instead of its default scene, Context=ToolTip}}">
+          <Image Source="{StaticResource ImageStartProject}" Width="16" Height="16"/>
+        </Button>
         <!-- Camera: projection, planes, speed and orientation -->
         <Button x:Name="CameraButton" x:DataType="vm:EditorViewToolbarViewModel" Focusable="False" Background="Transparent" Padding="6"
                 IsVisible="{Binding Camera, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{sd:LocalizeString Editor camera options..., Context=ToolTip}">

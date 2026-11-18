@@ -80,6 +80,8 @@ public sealed class LivePanelViewModel : PanelViewModel
     private bool waiting;
     // The reason of the pause the tab shows, and the exception it showed last (dismissed or not)
     private PlayPauseReason shownReason;
+    // Whether the first tree said which scene the game started on
+    private bool sceneChecked;
     private PlayScriptException? shownException;
     private readonly bool ownsControls;
 
@@ -209,6 +211,12 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// "Paused: script exception in PlayerController"; <c>null</c> otherwise.
     /// </summary>
     public string? PauseText { get; private set => SetValue(ref field, value); }
+
+    /// <summary>
+    /// Which scene the game was started on when it is not its default scene (Play this scene): "Playing Level2 instead of
+    /// MainScene", or why the game started on its default scene instead; <c>null</c> otherwise.
+    /// </summary>
+    public string? SceneText { get; private set => SetValue(ref field, value); }
 
     /// <summary>
     /// The script exception that paused the game, while it is paused for it: the notice, with
@@ -384,6 +392,8 @@ public sealed class LivePanelViewModel : PanelViewModel
         ShowsNotResponding = false;
         PauseText = null;
         ScriptException = null;
+        SceneText = newSession.Scene?.Description;
+        sceneChecked = newSession.Scene is null;
         waiting = false;
         newSession.StateChanged += SessionStateChanged;
         newSession.TreeReceived += SessionTreeReceived;
@@ -603,6 +613,20 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// <summary>
     /// Applies the trees and batches received since the last time, on the UI thread.
     /// </summary>
+    /// <summary>
+    /// Says whether the game started on the scene it was asked to start on, from its first tree: a scene that is not in the
+    /// game's built data leaves it on its default scene.
+    /// </summary>
+    private void CheckScene(PlaySession from, PlayTree tree)
+    {
+        if (sceneChecked || from.Scene is not { } scene)
+            return;
+        sceneChecked = true;
+        var root = tree.Scenes.FirstOrDefault(x => x.ParentHandle == 0);
+        if (root?.Url is { } url && !scene.IsScene(url))
+            SceneText = scene.NotInBuildDescription;
+    }
+
     private void ApplyPending()
     {
         if (IsDestroyed)
@@ -619,6 +643,7 @@ public sealed class LivePanelViewModel : PanelViewModel
                     // A new tree replaces the batches before it
                     batches.Clear();
                     removed.UnionWith(Tree.Reset(tree));
+                    CheckScene(item.Session, tree);
                     break;
                 case PlayTreeBatch batch:
                     batches.Add(batch);

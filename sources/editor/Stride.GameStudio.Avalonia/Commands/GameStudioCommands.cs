@@ -50,6 +50,7 @@ internal static class GameStudioCommands
     public const string StopGameId = "Stride.Project.StopGame";
     public const string StartWithoutLiveViewId = "Stride.Project.StartWithoutLiveView";
     public const string StartPausedId = "Stride.Project.StartPaused";
+    public const string PlaySceneId = "Stride.Project.PlayScene";
     public const string PauseGameId = "Stride.Project.PauseGame";
     public const string StepGameId = "Stride.Project.StepGame";
     public const string ReloadGameAssembliesId = "Stride.Project.ReloadGameAssemblies";
@@ -93,6 +94,8 @@ internal static class GameStudioCommands
         Wrap(StartWithoutLiveViewId, CommandCategories.Project, () => Tr._p("Menu", "Start without the live view"), Primary(Key.F5), x => x.StartWithoutLiveViewCommand, keywords: ["run", "play", "launch", "game", "connection"]),
         // No default shortcut: the setting "Start the game paused" covers the usual case
         Wrap(StartPausedId, CommandCategories.Project, () => Tr._p("Menu", "Start project paused"), null, x => x.StartPausedCommand, keywords: ["run", "play", "launch", "game", "pause", "break", "first frame"]),
+        // F8, after F5 (start), F6 (build) and F7 (pause): free in both editors and in the templates
+        PlayScene(),
         Wrap(StopGameId, CommandCategories.Project, () => Tr._p("Menu", "Stop game"), new KeyGesture(Key.F5, KeyModifiers.Shift), x => x.StopGameCommand, keywords: ["play", "end", "quit", "exit"]),
         // F7 and F10 are free in both editors (F5 and F6 are start and build, F2 rename); F10 steps over in Visual Studio
         Wrap(PauseGameId, CommandCategories.Project, () => Tr._p("Menu", "Pause or resume game"), new KeyGesture(Key.F7), x => x.PlayControls?.PauseCommand, keywords: ["play", "pause", "resume", "continue", "freeze", "break"]),
@@ -154,6 +157,7 @@ internal static class GameStudioCommands
         StartProjectId => main.StartProjectCommand,
         StartWithoutLiveViewId => main.StartWithoutLiveViewCommand,
         StartPausedId => main.StartPausedCommand,
+        PlaySceneId => main.PlaySceneCommand,
         StopGameId => main.StopGameCommand,
         PauseGameId => main.PlayControls?.PauseCommand,
         StepGameId => main.PlayControls?.StepCommand,
@@ -163,6 +167,23 @@ internal static class GameStudioCommands
         SessionCommands.OpenInIdeId => main.Session?.OpenInIDECommand,
         _ => null,
     };
+
+    // Play this scene: disabled with its reason when the active document is not a scene that can be played
+    private static CommandDescriptor PlayScene()
+    {
+        var command = Wrap(PlaySceneId, CommandCategories.Project, () => Tr._p("Menu", "Play this scene"), new KeyGesture(Key.F8), x => x.PlaySceneCommand, keywords: ["run", "play", "launch", "game", "start", "scene", "current", "open", "level"]);
+        return new CommandDescriptor
+        {
+            Id = command.Id,
+            Category = command.Category,
+            Title = command.Title,
+            DefaultGesture = command.DefaultGesture,
+            Keywords = command.Keywords,
+            CanExecute = command.CanExecute,
+            ExecuteAsync = command.ExecuteAsync,
+            DisabledReason = context => MainOf(context)?.PlaySceneDisabledReason,
+        };
+    }
 
     // The command palette opens over the main window; the commands it runs act where it was opened from (the Edit commands, on
     // the control the key was pressed on)

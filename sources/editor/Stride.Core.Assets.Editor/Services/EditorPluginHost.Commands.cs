@@ -93,6 +93,20 @@ public abstract partial class EditorPluginHost
     }
 
     /// <summary>
+    /// Why a command cannot run in a context (<see cref="CommandDescriptor.DisabledReason"/>), or null when it has no reason to
+    /// give, or when that throws (which turns it off).
+    /// </summary>
+    [Experimental("STREXP003")]
+    public string? GetCommandDisabledReason(CommandDescriptor command, CommandContext context)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(context);
+        if (command.DisabledReason is not { } disabledReason)
+            return null;
+        return TryRun(Commands.GetOwner(command), PluginContributions.Command(command.Id), () => disabledReason(context), out var reason) ? reason : null;
+    }
+
+    /// <summary>
     /// Runs a command in a context, unless it is turned off or cannot run there.
     /// </summary>
     /// <returns>True if the command ran without error; false if it failed (it is then turned off), is turned off, or cannot run.</returns>

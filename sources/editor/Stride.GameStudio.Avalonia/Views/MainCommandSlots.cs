@@ -396,7 +396,8 @@ internal sealed class MainCommandSlots : IDisposable
             // A command turned off by its title or its state in this context is not listed
             if (!host.IsCommandAvailable(descriptor))
                 continue;
-            items.Add(new CommandPaletteItem(descriptor, title, ShortcutOf(descriptor.Id)?.ToString("p", null), isEnabled, isChecked, () => host.ExecuteCommandAsync(descriptor, context)));
+            var disabledReason = isEnabled ? null : host.GetCommandDisabledReason(descriptor, context);
+            items.Add(new CommandPaletteItem(descriptor, title, ShortcutOf(descriptor.Id)?.ToString("p", null), isEnabled, isChecked, () => host.ExecuteCommandAsync(descriptor, context), disabledReason));
         }
         return items;
     }
@@ -488,9 +489,14 @@ internal sealed class MainCommandSlots : IDisposable
                         menuItem.ToggleType = MenuItemToggleType.CheckBox;
                         menuItem.IsChecked = isChecked;
                     }
+                    // A disabled item says why, when its command gives a reason
+                    var menuReason = descriptor is not null && context is not null && !host.CanExecuteCommand(descriptor, context) ? host.GetCommandDisabledReason(descriptor, context) : null;
+                    ToolTip.SetTip(menuItem, menuReason);
+                    ToolTip.SetShowOnDisabled(menuItem, menuReason is not null);
                     break;
                 case Button button:
-                    var tip = reference.ToolTip ?? title;
+                    var reason = descriptor is not null && context is not null && !host.CanExecuteCommand(descriptor, context) ? host.GetCommandDisabledReason(descriptor, context) : null;
+                    var tip = reason ?? reference.ToolTip ?? title;
                     if (tip is not null)
                         // The shortcut as the menus show it
                         ToolTip.SetTip(button, gesture is null ? tip : $"{tip} ({gesture.ToString("p", null)})");
@@ -524,6 +530,7 @@ internal sealed class MainCommandSlots : IDisposable
             (button.Command as DescriptorCommand)?.RaiseCanExecuteChanged();
         foreach (var button in view.MainToolBar.Items.OfType<Button>())
             (button.Command as CommandReference)?.RaiseCanExecuteChanged();
+        CommandSlot.RefreshButtons();
     }
 
     private void OnInput(object? sender, RoutedEventArgs e) => RefreshToolbar();
@@ -559,6 +566,9 @@ internal sealed class MainCommandSlots : IDisposable
     {
         if (e.PropertyName == nameof(MainViewModel.Session))
             ScheduleUpdate();
+        // The buttons of the editors (the scene editor's Play this scene) say why they cannot run
+        else if (e.PropertyName == nameof(MainViewModel.PlaySceneDisabledReason))
+            CommandSlot.RefreshButtons();
     }
 
     // The plugins register many commands at once, possibly from another thread: one update after them

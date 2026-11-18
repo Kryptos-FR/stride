@@ -68,6 +68,12 @@ public static class CommandLocations
     public const string PropertyGridContext = "PropertyGrid/Context";
 
     /// <summary>
+    /// Not a place: the location a command gets when a button of an asset editor's own toolbar runs it (the scene editor's Play
+    /// this scene); the context's editor is that editor.
+    /// </summary>
+    public const string EditorToolbar = "Editor/Toolbar";
+
+    /// <summary>
     /// Not a place: the location a command gets when its shortcut runs it.
     /// </summary>
     public const string Shortcut = "Shortcut";

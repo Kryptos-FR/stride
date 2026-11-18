@@ -66,6 +66,8 @@ public partial class EntityHierarchyEditorView : UserControl, IAssetEditorView
         editor = DataContext as EntityHierarchyEditorViewModel;
         if (editor is not null)
             editor.PropertyChanged += OnEditorPropertyChanged;
+        // A scene can be played, a prefab cannot
+        PlaySceneButton.IsVisible = PlaySceneSeparator.IsVisible = editor is SceneEditorViewModel;
         FollowToolbar();
         // One set of widgets per editor, which this view shows
         FollowWidgets(editor?.GetOrCreateSceneViewWidgets());
