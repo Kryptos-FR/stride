@@ -39,5 +39,17 @@ public sealed class ContentReferenceDisplayUrlTests
         Assert.Equal(("", DifferentValues), Split(fixture, NodeViewModel.DifferentValues));
     }
 
+    [Fact]
+    public async Task TheContentOfARunningGameShowsItsUrlOrThatTheGameMadeIt()
+    {
+        await using var fixture = await EditorSessionFixture.OpenAsync(("Wood", "wood"));
+
+        // The game knows the URL of its content, not the id of its asset
+        Assert.Equal(("Models", "Box"), Split(fixture, new AssetReference(AssetId.Empty, "Models/Box")));
+        // Content the game made at run time has neither
+        Assert.Equal(("", ContentReferenceHelper.CreatedAtRunTime), Split(fixture, new AssetReference(AssetId.Empty, null!)));
+        Assert.Equal(("", ContentReferenceHelper.CreatedAtRunTime), Split(fixture, new object()));
+    }
+
     private static (string, string) Split(EditorSessionFixture fixture, object? value) => ContentReferenceDisplayUrl.Split(value, fixture.Session, DifferentValues);
 }
