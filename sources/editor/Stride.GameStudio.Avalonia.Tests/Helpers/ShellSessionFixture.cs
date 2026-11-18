@@ -13,6 +13,7 @@ using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.IO;
 using Stride.Core.Presentation.ViewModels;
 using Stride.Editor.Build;
+using Stride.Editor.PlayMode;
 using Stride.GameStudio.Avalonia.Services;
 using Stride.GameStudio.Avalonia.ViewModels;
 using Stride.Core.Assets.Presentation.ViewModels;
@@ -33,10 +34,16 @@ internal sealed class ShellSessionFixture : IDisposable
     private GameStudioBuilderService? builder;
     private GameSettingsProviderService? settingsProvider;
 
-    private ShellSessionFixture(string directory, ViewModelServiceProvider serviceProvider)
+    private ShellSessionFixture(string directory, ViewModelServiceProvider serviceProvider, PlayModeService? playMode)
     {
         Directory = directory;
         ServiceProvider = serviceProvider;
+        // The main view model takes the play mode service when it is created
+        if (playMode is not null)
+        {
+            serviceProvider.UnregisterService(serviceProvider.Get<PlayModeService>());
+            serviceProvider.RegisterService(playMode);
+        }
         Main = new MainViewModel(serviceProvider);
     }
 
@@ -92,19 +99,25 @@ internal sealed class ShellSessionFixture : IDisposable
     /// </summary>
     public static Task<ShellSessionFixture> OpenExecutableAsync(PlatformType platform, params (string Location, Asset Asset)[] assets) => OpenAsync(platform, false, assets);
 
-    private static ShellSessionFixture Create(PlatformType? executablePlatform, bool withMSBuild, (string Location, Asset Asset)[] assets)
+    /// <summary>
+    /// Writes a package whose project is the executable of a platform and opens it, as the other <c>OpenExecutableAsync</c>,
+    /// with the given play mode service in place of the shell's: the games it starts are the test's.
+    /// </summary>
+    public static Task<ShellSessionFixture> OpenExecutableAsync(PlatformType platform, PlayModeService playMode, params (string Location, Asset Asset)[] assets) => OpenAsync(platform, false, assets, playMode);
+
+    private static ShellSessionFixture Create(PlatformType? executablePlatform, bool withMSBuild, (string Location, Asset Asset)[] assets, PlayModeService? playMode = null)
     {
         var directory = Path.Combine(Path.GetTempPath(), "Stride.GameStudio.Avalonia.Tests", Guid.NewGuid().ToString("N"));
-        var fixture = new ShellSessionFixture(directory, App.InitializeServiceProvider());
+        var fixture = new ShellSessionFixture(directory, App.InitializeServiceProvider(), playMode);
         if (!withMSBuild)
             fixture.Main.LoadSessionFile = (path, result, loadParameters) => TestPackageLoad.WithoutMSBuild(path, executablePlatform, result, loadParameters);
         fixture.WritePackage(assets, executablePlatform);
         return fixture;
     }
 
-    private static async Task<ShellSessionFixture> OpenAsync(PlatformType? executablePlatform, bool withMSBuild, (string Location, Asset Asset)[] assets)
+    private static async Task<ShellSessionFixture> OpenAsync(PlatformType? executablePlatform, bool withMSBuild, (string Location, Asset Asset)[] assets, PlayModeService? playMode = null)
     {
-        var fixture = Create(executablePlatform, withMSBuild, assets);
+        var fixture = Create(executablePlatform, withMSBuild, assets, playMode);
         try
         {
             await fixture.OpenAsync();
@@ -159,6 +172,18 @@ internal sealed class ShellSessionFixture : IDisposable
         ServiceProvider.RegisterService(builder);
         ServiceProvider.RegisterService(launcher);
         return (builder, launcher);
+    }
+
+    /// <summary>
+    /// Replaces the builder of the shell by a fake that records the builds; the games start with the shell's launcher, its
+    /// play mode service.
+    /// </summary>
+    public FakeGameProjectBuilder ReplaceProjectBuilder()
+    {
+        ServiceProvider.UnregisterService(ServiceProvider.Get<IGameProjectBuilder>());
+        var builder = new FakeGameProjectBuilder();
+        ServiceProvider.RegisterService(builder);
+        return builder;
     }
 
     public void Dispose()
