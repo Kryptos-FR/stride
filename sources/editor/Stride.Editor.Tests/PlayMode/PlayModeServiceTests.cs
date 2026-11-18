@@ -1,0 +1,137 @@
+// Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
+// Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
+
+using Stride.Core.Diagnostics;
+using Stride.Editor.PlayMode;
+using Stride.PlayMode.Protocol;
+
+namespace Stride.Editor.Tests.PlayMode;
+
+/// <summary>
+/// Tests <see cref="PlayModeService"/>, the editor's game launcher in play mode, with a fake transport and game.
+/// </summary>
+public sealed class PlayModeServiceTests : IAsyncLifetime
+{
+    private const string Version = "4.5.4-dev";
+
+    private readonly string directory = Path.Combine(Path.GetTempPath(), $"stride-play-service-tests-{Guid.NewGuid():N}");
+    private readonly List<FakePlayTransport> transports = [];
+    private readonly List<FakeGame> games = [];
+    private readonly List<FakeAgent> agents = [];
+    private PlayModeService service = null!;
+    private Func<IReadOnlyDictionary<string, string>, FakeGame> startGame = environment => new FakeGame(environment);
+
+    public Task InitializeAsync()
+    {
+        Directory.CreateDirectory(directory);
+        foreach (var file in PlayAgentFiles.FileNames)
+            File.WriteAllBytes(Path.Combine(directory, file), []);
+        service = new PlayModeService(() =>
+        {
+            var transport = new FakePlayTransport();
+            transports.Add(transport);
+            return transport;
+        }, new PlayAgentFiles(directory, Version), new PlaySessionOptions { StopGracePeriod = TimeSpan.FromMilliseconds(200) }, (_, _, environment) =>
+        {
+            var game = startGame(environment);
+            games.Add(game);
+            return game;
+        });
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await service.DisposeAsync();
+        foreach (var agent in agents)
+            await agent.DisposeAsync();
+        Directory.Delete(directory, recursive: true);
+    }
+
+    [Fact]
+    public void AStartedGameRunsWithTheAgent()
+    {
+        var started = new List<PlaySession>();
+        service.SessionStarted += (_, x) => started.Add(x);
+        var playing = 0;
+        service.PlayingChanged += (_, _) => ++playing;
+
+        var game = service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+
+        var session = Assert.Single(started);
+        Assert.Same(session, service.Session);
+        Assert.Same(games.Single(), game);
+        Assert.Same(game, session.Game);
+        Assert.Equal("fake-pipe", games.Single().Environment[PlayProtocol.PipeVariable]);
+        Assert.True(service.IsPlaying);
+        Assert.Equal(1, playing);
+        Assert.Equal(PlaySessionState.Starting, session.State);
+    }
+
+    [Fact]
+    public async Task TheGamesExitEndsPlaying()
+    {
+        var exited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+        service.PlayingChanged += (_, _) => exited.TrySetResult();
+
+        games.Single().Exit(0);
+        await exited.Task.WaitAsync(PlaySessionTests.Timeout);
+
+        Assert.False(service.IsPlaying);
+        // The last session stays, for its last tree
+        Assert.NotNull(service.Session);
+    }
+
+    [Fact]
+    public async Task ASecondStartEndsTheFirstGame()
+    {
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+        var first = service.Session!;
+        agents.Add(transports[0].Connect());
+        agents[0].Send(new PlayHello(1234, Version, Version, null, []));
+        await WaitForStateAsync(first, PlaySessionState.Connected);
+
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+
+        Assert.NotSame(first, service.Session);
+        Assert.IsType<PlayQuit>(await agents[0].ReceiveAsync<PlayQuit>());
+        // The first game did not quit: its process is ended
+        Assert.Equal(-1, await games[0].Exited.WaitAsync(PlaySessionTests.Timeout));
+        Assert.True(games[0].Killed);
+        Assert.False(games[1].Exited.IsCompleted);
+    }
+
+    [Fact]
+    public void EndNowEndsTheGame()
+    {
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+
+        // The agent never connected: nobody can ask the game to quit
+        service.EndNow(TimeSpan.FromSeconds(1));
+
+        Assert.True(games.Single().Killed);
+    }
+
+    [Fact]
+    public void AGameThatCannotStartThrows()
+    {
+        startGame = _ => throw new FileNotFoundException("No game");
+
+        Assert.Throws<FileNotFoundException>(() => service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult()));
+        Assert.False(service.IsPlaying);
+    }
+
+    private static Task WaitForStateAsync(PlaySession session, PlaySessionState state)
+    {
+        var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.StateChanged += (_, e) =>
+        {
+            if (e.NewState == state)
+                reached.TrySetResult();
+        };
+        if (session.State == state)
+            reached.TrySetResult();
+        return reached.Task.WaitAsync(PlaySessionTests.Timeout);
+    }
+}
