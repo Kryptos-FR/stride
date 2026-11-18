@@ -33,6 +33,7 @@ using Stride.Editor.PlayMode;
 using Stride.GameStudio.Avalonia.Commands;
 using Stride.GameStudio.Avalonia.Docking;
 using Stride.GameStudio.Avalonia.Helpers;
+using Stride.GameStudio.Avalonia.PlayMode;
 using Stride.GameStudio.Avalonia.Services;
 using Stride.GameStudio.Avalonia.Settings;
 
@@ -74,8 +75,12 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
         CloseCommand = new AnonymousTaskCommand(serviceProvider, OnClose);
 #if DEBUG
         CrashCommand = new AnonymousCommand(serviceProvider, () => throw new Exception("Boom!"));
+        ShowLiveSelectionCommand = new AnonymousTaskCommand(serviceProvider, () => LiveEntityDebugController.ShowSelectionAsync(session, DialogService));
+        StopLiveCommand = new AnonymousTaskCommand(serviceProvider, LiveEntityDebugController.StopAsync);
 #else
         CrashCommand = DisabledCommand.Instance;
+        ShowLiveSelectionCommand = DisabledCommand.Instance;
+        StopLiveCommand = DisabledCommand.Instance;
 #endif
         ExitCommand = new AnonymousCommand(serviceProvider, OnExit, () => DialogService.HasMainWindow);
         OpenCommand = new AnonymousTaskCommand<UFile?>(serviceProvider, OnOpen);
@@ -262,6 +267,16 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     public ICommandBase CloseCommand { get; }
 
     public ICommandBase CrashCommand { get; }
+
+    /// <summary>
+    /// Debug: plays the game and shows the live entities of the scene editor's selection in the property grid.
+    /// </summary>
+    public ICommandBase ShowLiveSelectionCommand { get; }
+
+    /// <summary>
+    /// Debug: stops the game that <see cref="ShowLiveSelectionCommand"/> plays.
+    /// </summary>
+    public ICommandBase StopLiveCommand { get; }
 
     public ICommandBase ExitCommand { get; }
 
@@ -559,6 +574,9 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     /// </summary>
     private void OnSessionChanged()
     {
+#if DEBUG
+        LiveEntityDebugController.StopAsync().Forget();
+#endif
         SaveCommand.IsEnabled = session is not null;
         Build.Session = session;
         CodeReload.Session = session;
