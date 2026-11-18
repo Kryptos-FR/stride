@@ -157,6 +157,9 @@
         <!-- Once, whatever the setting: the game starts without the live connection, as without play mode -->
         <MenuItem Name="StartWithoutLiveViewMenuItem"
                   Command="{cmd:Command Stride.Project.StartWithoutLiveView}"/>
+        <!-- Once, whatever the setting: the game pauses before its first update -->
+        <MenuItem Name="StartPausedMenuItem"
+                  Command="{cmd:Command Stride.Project.StartPaused}"/>
         <!-- Ends the game that plays (and the Live tab's connection) -->
         <MenuItem Name="StopGameMenuItem"
                   Command="{cmd:Command Stride.Project.StopGame}">

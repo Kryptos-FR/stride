@@ -568,6 +568,81 @@ public sealed class LivePanelTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AScriptExceptionPausesWithANoticeThatSelectsItsEntity()
+    {
+        var status = dispatcher.Invoke(() => new PlayStatusViewModel(new ViewModelServiceProvider([dispatcher]), playMode));
+        try
+        {
+            playMode.LaunchOptions = () => new PlayLaunchOptions(PauseOnScriptException: true);
+            var game = Start();
+            var agent = await ConnectAsync();
+            agent.Send(Tree());
+            await WaitAsync(() => panel.EntityCount == 3, "the tree");
+
+            // As the agent sends it: the exception, then the paused state with its reason
+            agent.Send(new PlayScriptException(20, PlayScriptExceptionKind.Update, "MyGame.PlayerController", 2, PlayerId, "Player",
+                "System.InvalidOperationException", "No weapon.", "   at MyGame.PlayerController.Update()", Paused: true));
+            agent.Send(new PlayGameState(21, 20, true, 1, 1, 60, 3, 0, PlayPauseReason.ScriptException));
+
+            await WaitAsync(() => panel.State == LiveTabState.Paused && panel.ExceptionNotice is not null, "the notice");
+            Assert.Equal("PlayerController (entity Player) threw InvalidOperationException in Update: No weapon.", Read(() => panel.ExceptionNotice));
+            Assert.Equal("Paused: script exception in PlayerController", Read(() => panel.PauseText));
+            await WaitAsync(() => status.State == LiveTabState.Paused, "the status bar");
+            Assert.Equal("Game: Paused: script exception in PlayerController", Read(() => status.Text));
+
+            // The entity of the script, even behind a search that hides it
+            dispatcher.Invoke(() => panel.SearchText = "Ground");
+            Assert.True(Read(() => panel.SelectExceptionEntityCommand.IsEnabled));
+            dispatcher.Invoke(() => panel.SelectExceptionEntityCommand.Execute());
+            Assert.Equal([2], Read(() => panel.Selection!.Handles));
+            Assert.Equal(string.Empty, Read(() => panel.SearchText));
+
+            // Dismissed, the reason stays; the same exception does not come back with the next state
+            dispatcher.Invoke(() => panel.DismissExceptionCommand.Execute());
+            agent.Send(new PlayGameState(22, 20, true, 1, 1, 60, 3, 0, PlayPauseReason.ScriptException));
+            await Task.Delay(100);
+            Assert.Null(Read(() => panel.ExceptionNotice));
+            Assert.Equal("Paused: script exception in PlayerController", Read(() => panel.PauseText));
+
+            dispatcher.Invoke(() => panel.Controls.PauseCommand.Execute());
+            await agent.ReceiveAsync<PlayResume>();
+            agent.Send(new PlayGameState(23, 21, false, 1, 1, 60, 3, 0));
+            await WaitAsync(() => panel.State == LiveTabState.Playing && panel.PauseText is null, "playing again");
+            await WaitAsync(() => status.Text == "Game: Playing", "the status bar again");
+
+            game.Exit(0);
+            await WaitAsync(() => panel.State == LiveTabState.Stopped, "stopped");
+        }
+        finally
+        {
+            dispatcher.Invoke(status.Destroy);
+        }
+    }
+
+    [Fact]
+    public async Task TheTabSaysWhyTheGameIsPaused()
+    {
+        playMode.LaunchOptions = () => new PlayLaunchOptions(StartPaused: true, Hotkey: new PlayHotkey("F7"));
+        Start();
+        var agent = await ConnectAsync();
+
+        agent.Send(new PlayGameState(1, 0, true, 1, 1, 60, 3, 0, PlayPauseReason.StartPaused));
+        await WaitAsync(() => panel.PauseText == "Paused: started paused", "started paused");
+
+        agent.Send(new PlayGameState(2, 1, false, 1, 1, 60, 3, 0));
+        await WaitAsync(() => panel.PauseText is null && panel.State == LiveTabState.Playing, "playing");
+
+        agent.Send(new PlayGameState(3, 2, true, 1, 1, 60, 3, 0, PlayPauseReason.Hotkey));
+        await WaitAsync(() => panel.PauseText == "Paused: F7 in the game window", "the key");
+
+        // A pause of the editor's needs no words: the badge says paused
+        agent.Send(new PlayGameState(4, 2, false, 1, 1, 60, 3, 0));
+        agent.Send(new PlayGameState(5, 2, true, 1, 1, 60, 3, 0, PlayPauseReason.Editor));
+        await WaitAsync(() => panel.State == LiveTabState.Paused && panel.PauseText is null, "the editor's pause");
+        Assert.Null(Read(() => panel.ExceptionNotice));
+    }
+
+    [Fact]
     public void ClosingTheTabDisposesTheViewOfTheSelection()
     {
         dispatcher.Invoke(panel.Destroy);

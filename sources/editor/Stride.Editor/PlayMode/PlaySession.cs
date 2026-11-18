@@ -173,6 +173,28 @@ public sealed class PlaySession : IAsyncDisposable
     public event EventHandler<PlayGameState>? GameStateChanged;
 
     /// <summary>
+    /// Raised when a script of the game threw an exception that the engine caught (the game was started with
+    /// <see cref="PlayLaunchOptions.PauseOnScriptException"/>): the game is paused for it (<see cref="LastScriptException"/>).
+    /// </summary>
+    public event EventHandler<PlayScriptException>? ScriptExceptionReceived;
+
+    /// <summary>
+    /// What the session asks of the game's agent when it starts it: start paused, pause on a script's exception, the key of the
+    /// game's window. Given to the game as variables of its environment. None by default.
+    /// </summary>
+    public PlayLaunchOptions LaunchOptions { get; init; } = PlayLaunchOptions.None;
+
+    /// <summary>
+    /// The last script exception the game sent; <c>null</c> before the first.
+    /// </summary>
+    public PlayScriptException? LastScriptException { get; private set; }
+
+    /// <summary>
+    /// Why the connected game is paused, as its agent last said; <see cref="PlayPauseReason.None"/> while it plays.
+    /// </summary>
+    public PlayPauseReason PauseReason => IsPaused ? GameState!.PauseReason : PlayPauseReason.None;
+
+    /// <summary>
     /// The state.
     /// </summary>
     public PlaySessionState State { get; private set; }
@@ -266,7 +288,9 @@ public sealed class PlaySession : IAsyncDisposable
             return;
         }
 
-        var environment = agentFiles.CreateGameEnvironment(transport.GameEnvironment, Environment.GetEnvironmentVariable(PlayProtocol.StartupHooksVariable));
+        var environment = new Dictionary<string, string>(agentFiles.CreateGameEnvironment(transport.GameEnvironment, Environment.GetEnvironmentVariable(PlayProtocol.StartupHooksVariable)));
+        foreach (var (name, value) in LaunchOptions.ToVariables())
+            environment[name] = value;
         var game = startGame(environment);
         WatchExit(game);
 
@@ -536,6 +560,10 @@ public sealed class PlaySession : IAsyncDisposable
             case PlayGameState state:
                 GameState = state;
                 Raise(GameStateChanged, state);
+                break;
+            case PlayScriptException exception:
+                LastScriptException = exception;
+                Raise(ScriptExceptionReceived, exception);
                 break;
         }
     }

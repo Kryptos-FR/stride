@@ -413,6 +413,65 @@ public sealed class PlayModeTests : IAsyncLifetime
     }
 
     [AvaloniaFact]
+    public async Task StartProjectPausedStartsTheGamePausedOnce()
+    {
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode);
+        fixture.ReplaceProjectBuilder();
+        fixture.ReplaceDialogService();
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        try
+        {
+            var item = MenuItem(window, "StartPausedMenuItem");
+            Assert.Equal(GameStudioCommands.StartPausedId, Assert.IsType<CommandReference>(item.Command).Id);
+            Assert.DoesNotContain(window.View.CommandSlots!.Shortcuts, x => x.Descriptor.Id == GameStudioCommands.StartPausedId);
+
+            fixture.Main.StartPausedCommand.Execute();
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 1 && !fixture.Main.Build.BuildInProgress, "the start of the game");
+            Assert.Equal("1", games[0].Environment[PlayProtocol.StartPausedVariable]);
+            Assert.True(games[0].Environment.ContainsKey(PlayProtocol.PipeVariable));
+            Assert.False(playMode.NextStartPaused);
+
+            // The next F5 starts as the settings say (the recording dialogs answer OK to stop this game)
+            Press(window, Key.F5, RawInputModifiers.None, PhysicalKey.F5);
+            await WindowTestHelper.WaitUntilAsync(() => Count(games) == 2, "the start of the second game", 10000);
+            Assert.False(games[1].Environment.ContainsKey(PlayProtocol.StartPausedVariable));
+        }
+        finally
+        {
+            await window.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
+    public void TheSettingsGiveTheLaunchOptions()
+    {
+        Assert.Equal(PlayLaunchOptions.None with { Hotkey = new PlayHotkey("F7") }, GameStudioEditorSettings.GetPlayLaunchOptions());
+        Assert.All([GameStudioEditorSettings.PlayModeStartPaused, GameStudioEditorSettings.PlayModePauseOnScriptException],
+            x => Assert.StartsWith(GameStudioEditorSettings.PlayMode + "/", x.DisplayName.ToString()));
+        Assert.StartsWith(GameStudioEditorSettings.PlayMode + "/", GameStudioEditorSettings.PlayModeGameHotkey.DisplayName.ToString());
+        try
+        {
+            GameStudioEditorSettings.PlayModeStartPaused.SetValue(true);
+            GameStudioEditorSettings.PlayModePauseOnScriptException.SetValue(true);
+            GameStudioEditorSettings.PlayModeGameHotkey.SetValue("ctrl+shift+F8");
+            Assert.Equal(new PlayLaunchOptions(true, true, new PlayHotkey("F8", PlayHotkeyModifiers.Ctrl | PlayHotkeyModifiers.Shift)), GameStudioEditorSettings.GetPlayLaunchOptions());
+
+            // "None" (or nothing) turns the key off
+            GameStudioEditorSettings.PlayModeGameHotkey.SetValue("None");
+            Assert.Null(GameStudioEditorSettings.GetPlayLaunchOptions().Hotkey);
+            GameStudioEditorSettings.PlayModeGameHotkey.SetValue("");
+            Assert.Null(GameStudioEditorSettings.GetPlayLaunchOptions().Hotkey);
+        }
+        finally
+        {
+            GameStudioEditorSettings.PlayModeStartPaused.SetValue(false);
+            GameStudioEditorSettings.PlayModePauseOnScriptException.SetValue(false);
+            GameStudioEditorSettings.PlayModeGameHotkey.SetValue("F7");
+        }
+    }
+
+    [AvaloniaFact]
     public async Task TheSettingOffStartsTheGameWithoutTheLiveConnection()
     {
         playMode.ConnectToGame = () => false;

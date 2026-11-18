@@ -49,6 +49,7 @@ internal static class GameStudioCommands
     public const string CancelBuildId = "Stride.Project.CancelBuild";
     public const string StopGameId = "Stride.Project.StopGame";
     public const string StartWithoutLiveViewId = "Stride.Project.StartWithoutLiveView";
+    public const string StartPausedId = "Stride.Project.StartPaused";
     public const string PauseGameId = "Stride.Project.PauseGame";
     public const string StepGameId = "Stride.Project.StepGame";
     public const string ReloadGameAssembliesId = "Stride.Project.ReloadGameAssemblies";
@@ -90,6 +91,8 @@ internal static class GameStudioCommands
         Wrap(BuildProjectId, CommandCategories.Project, () => Tr._p("Menu", "Build project"), new KeyGesture(Key.F6), x => x.Build.BuildProjectCommand, keywords: ["compile"]),
         Wrap(StartProjectId, CommandCategories.Project, () => Tr._p("Menu", "Start project"), new KeyGesture(Key.F5), x => x.StartProjectCommand, keywords: ["run", "play", "launch", "game"]),
         Wrap(StartWithoutLiveViewId, CommandCategories.Project, () => Tr._p("Menu", "Start without the live view"), Primary(Key.F5), x => x.StartWithoutLiveViewCommand, keywords: ["run", "play", "launch", "game", "connection"]),
+        // No default shortcut: the setting "Start the game paused" covers the usual case
+        Wrap(StartPausedId, CommandCategories.Project, () => Tr._p("Menu", "Start project paused"), null, x => x.StartPausedCommand, keywords: ["run", "play", "launch", "game", "pause", "break", "first frame"]),
         Wrap(StopGameId, CommandCategories.Project, () => Tr._p("Menu", "Stop game"), new KeyGesture(Key.F5, KeyModifiers.Shift), x => x.StopGameCommand, keywords: ["play", "end", "quit", "exit"]),
         // F7 and F10 are free in both editors (F5 and F6 are start and build, F2 rename); F10 steps over in Visual Studio
         Wrap(PauseGameId, CommandCategories.Project, () => Tr._p("Menu", "Pause or resume game"), new KeyGesture(Key.F7), x => x.PlayControls?.PauseCommand, keywords: ["play", "pause", "resume", "continue", "freeze", "break"]),
@@ -150,6 +153,7 @@ internal static class GameStudioCommands
         BuildProjectId => main.Build.BuildProjectCommand,
         StartProjectId => main.StartProjectCommand,
         StartWithoutLiveViewId => main.StartWithoutLiveViewCommand,
+        StartPausedId => main.StartPausedCommand,
         StopGameId => main.StopGameCommand,
         PauseGameId => main.PlayControls?.PauseCommand,
         StepGameId => main.PlayControls?.StepCommand,

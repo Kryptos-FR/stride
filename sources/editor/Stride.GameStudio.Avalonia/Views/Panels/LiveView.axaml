@@ -120,6 +120,22 @@
                 IsVisible="{Binding ReloadCodeCommand, Converter={x:Static ObjectConverters.IsNotNull}}"/>
       </StackPanel>
     </Border>
+    <!-- A script's exception paused the game: which script, its entity, and the ways on -->
+    <Border DockPanel.Dock="Top" Name="ScriptExceptionNotice" Classes="notice warning" IsVisible="{Binding ExceptionNotice, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <StackPanel Spacing="4">
+        <TextBlock Name="ScriptExceptionText" TextWrapping="Wrap" Text="{Binding ExceptionNotice}"/>
+        <TextBlock TextWrapping="Wrap" Opacity="0.8"
+                   Text="{sd:LocalizeString 'The engine stopped this script; the rest of the game goes on when you resume. The Output has the stack.', Context=Play}"/>
+        <WrapPanel Orientation="Horizontal">
+          <Button Name="SelectExceptionEntityButton" Margin="0,0,6,4" Content="{sd:LocalizeString Select entity, Context=Play}" Command="{Binding SelectExceptionEntityCommand}"
+                  ToolTip.Tip="{sd:LocalizeString Selects the entity of the script in this tab and shows it in the property grid, Context=ToolTip}"/>
+          <Button Name="ResumeAfterExceptionButton" Margin="0,0,6,4" Content="{sd:LocalizeString Resume, Context=Play}" Command="{Binding Controls.PauseCommand}"/>
+          <Button Name="StepAfterExceptionButton" Margin="0,0,6,4" Content="{sd:LocalizeString Step, Context=Play}" Command="{Binding Controls.StepCommand}"/>
+          <Button Name="StopAfterExceptionButton" Margin="0,0,6,4" Content="{sd:LocalizeString Stop game, Context=Play}" Command="{Binding StopGameCommand}"/>
+          <Button Name="DismissExceptionButton" Margin="0,0,6,4" Content="{sd:LocalizeString Dismiss, Context=Play}" Command="{Binding DismissExceptionCommand}"/>
+        </WrapPanel>
+      </StackPanel>
+    </Border>
     <!-- Pause (Resume while paused), Step one frame, the time scale, and the game's frame rate: the game draws while paused -->
     <DockPanel DockPanel.Dock="Top" Name="PlayControls" Margin="2,2,2,0" DataContext="{Binding Controls}" x:DataType="pm:PlayControlsViewModel">
       <TextBlock DockPanel.Dock="Right" Name="FramesPerSecond" VerticalAlignment="Center" Margin="4,0" Opacity="0.8"
@@ -154,6 +170,9 @@
     <Border DockPanel.Dock="Top" Name="StoppedNotice" Classes="notice" IsVisible="{Binding StoppedNotice, Converter={x:Static ObjectConverters.IsNotNull}}">
       <TextBlock Name="StoppedNoticeText" TextWrapping="Wrap" Text="{Binding StoppedNotice}"/>
     </Border>
+    <!-- Why the game is paused, when the editor did not pause it -->
+    <TextBlock DockPanel.Dock="Top" Name="PauseReason" Text="{Binding PauseText}" TextWrapping="Wrap" Margin="6,0,6,2" Opacity="0.8"
+               IsVisible="{Binding PauseText, Converter={x:Static ObjectConverters.IsNotNull}}"/>
     <!-- The search, expand and collapse, and the number of entities -->
     <DockPanel DockPanel.Dock="Top" Margin="2">
       <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0" Opacity="0.8"

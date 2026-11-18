@@ -108,10 +108,13 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
         StartProjectCommand = new AnonymousTaskCommand(serviceProvider, () => StartProjectAsync(withoutLiveView: false)) { IsEnabled = Build.StartProjectCommand.IsEnabled };
         // Once, whatever the setting: the game starts as it would without play mode
         StartWithoutLiveViewCommand = new AnonymousTaskCommand(serviceProvider, () => StartProjectAsync(withoutLiveView: true)) { IsEnabled = PlayMode is not null && Build.StartProjectCommand.IsEnabled };
+        // Once, whatever the setting: the game pauses before its first update
+        StartPausedCommand = new AnonymousTaskCommand(serviceProvider, () => StartProjectAsync(withoutLiveView: false, paused: true)) { IsEnabled = PlayMode is not null && Build.StartProjectCommand.IsEnabled };
         Build.StartProjectCommand.CanExecuteChanged += (_, _) =>
         {
             StartProjectCommand.IsEnabled = Build.StartProjectCommand.IsEnabled;
             StartWithoutLiveViewCommand.IsEnabled = PlayMode is not null && Build.StartProjectCommand.IsEnabled;
+            StartPausedCommand.IsEnabled = PlayMode is not null && Build.StartProjectCommand.IsEnabled;
         };
         StopGameCommand = new AnonymousTaskCommand(serviceProvider, () => PlayMode?.StopAsync() ?? Task.CompletedTask) { IsEnabled = false };
         if (PlayMode is not null)
@@ -194,6 +197,11 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     /// Builds the current project and starts its game without the live connection, whatever the setting says (Ctrl+F5).
     /// </summary>
     public ICommandBase StartWithoutLiveViewCommand { get; }
+
+    /// <summary>
+    /// Builds the current project and starts its game paused before its first update, whatever the setting says.
+    /// </summary>
+    public ICommandBase StartPausedCommand { get; }
 
     /// <summary>
     /// Ends the game that plays (Stop, Shift+F5).
@@ -649,7 +657,8 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
     /// Asks to stop the game that plays before Start project starts another one of the editor's platform.
     /// </summary>
     /// <param name="withoutLiveView">Whether this game starts without the live connection, whatever the setting says.</param>
-    private async Task StartProjectAsync(bool withoutLiveView)
+    /// <param name="paused">Whether this game starts paused, whatever the setting says.</param>
+    private async Task StartProjectAsync(bool withoutLiveView, bool paused = false)
     {
         if (PlayMode is { IsPlaying: true } playMode && session?.CurrentProject?.Platform == Stride.Core.Platform.Type)
         {
@@ -664,6 +673,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
             return;
         }
         PlayMode.NextStartWithoutConnection = withoutLiveView;
+        PlayMode.NextStartPaused = paused;
         try
         {
             await Build.BuildAsync(true);
@@ -672,6 +682,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
         {
             // A build that fails or is cancelled starts nothing
             PlayMode.NextStartWithoutConnection = false;
+            PlayMode.NextStartPaused = false;
         }
     }
 

@@ -6,6 +6,7 @@ using Stride.Core.Extensions;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Presentation.ViewModels;
 using Stride.Core.Translation;
+using Stride.PlayMode.Protocol;
 
 namespace Stride.Editor.PlayMode;
 
@@ -74,12 +75,17 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
     {
         LiveTabState.Connecting => Tr._p("Play", "Game: Connecting"),
         LiveTabState.Playing => Tr._p("Play", "Game: Playing"),
-        LiveTabState.Paused => Tr._p("Play", "Game: Paused"),
+        LiveTabState.Paused => string.Format(Tr._p("Play", "Game: {0}"), PauseDescription),
         LiveTabState.NotConnected => Tr._p("Play", "Game: Not connected"),
         LiveTabState.NotResponding => Tr._p("Play", "Game: Not responding"),
         LiveTabState.Stopped => ExitCode is { } code ? string.Format(Tr._p("Play", "Game: Stopped (exit code {0})"), code) : Tr._p("Play", "Game: Stopped"),
         _ => string.Empty,
     };
+
+    /// <summary>
+    /// Why the game is paused (<see cref="PlayPauseText.Describe"/>): "Paused", or "Paused: script exception in PlayerController".
+    /// </summary>
+    public string PauseDescription { get; private set => SetValue(ref field, value, nameof(PauseDescription), nameof(Text)); } = PlayPauseText.Describe(PlayPauseReason.Editor);
 
     /// <summary>
     /// Why the game runs without the live connection, for the tooltip; <c>null</c> otherwise.
@@ -110,6 +116,7 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
         followed.StateChanged += SessionChanged;
         followed.RespondingChanged += SessionChanged;
         followed.GameStateChanged += SessionChanged;
+        followed.ScriptExceptionReceived += SessionChanged;
         Update();
     }
 
@@ -120,6 +127,7 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
         session.StateChanged -= SessionChanged;
         session.RespondingChanged -= SessionChanged;
         session.GameStateChanged -= SessionChanged;
+        session.ScriptExceptionReceived -= SessionChanged;
         session = null;
     }
 
@@ -134,6 +142,7 @@ public sealed class PlayStatusViewModel : DispatcherViewModel
         if (session is not { } current)
             return;
         ExitCode = current.ExitCode;
+        PauseDescription = PlayPauseText.Describe(current.PauseReason, current.LastScriptException, current.LaunchOptions.Hotkey);
         Message = current.State is PlaySessionState.Failed or PlaySessionState.VersionMismatch or PlaySessionState.WithoutAgent ? current.StateMessage : null;
         State = current.State switch
         {

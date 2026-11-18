@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Stride.Core.Assets.Editor.Components.Build;
 using Stride.Core.Diagnostics;
+using Stride.PlayMode.Protocol;
 
 namespace Stride.Editor.PlayMode;
 
@@ -81,6 +82,18 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
     public bool NextStartWithoutConnection { get; set; }
 
     /// <summary>
+    /// What the games start with: start paused, pause on a script's exception, the key of the game's window. The editor's play
+    /// mode settings; read at each start, none by default.
+    /// </summary>
+    public Func<PlayLaunchOptions> LaunchOptions { get; set; } = static () => PlayLaunchOptions.None;
+
+    /// <summary>
+    /// Whether the next game starts paused, whatever <see cref="LaunchOptions"/> says (Start project paused). The next start
+    /// clears it; clear it too when the start does not happen (a failed build).
+    /// </summary>
+    public bool NextStartPaused { get; set; }
+
+    /// <summary>
     /// The current session, or the last one once its game exited; <c>null</c> before the first start.
     /// </summary>
     public PlaySession? Session { get; private set; }
@@ -103,9 +116,15 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
         ArgumentNullException.ThrowIfNull(output);
 
         var once = NextStartWithoutConnection;
-        NextStartWithoutConnection = false;
+        var paused = NextStartPaused;
+        NextStartWithoutConnection = NextStartPaused = false;
         var connect = !once && ConnectToGame();
-        var session = new PlaySession(connect ? createTransport() : new NoPlayTransport(), agentFiles, options);
+        var launch = connect ? LaunchOptions() : PlayLaunchOptions.None;
+        if (paused && connect)
+            launch = launch with { StartPaused = true };
+        var session = new PlaySession(connect ? createTransport() : new NoPlayTransport(), agentFiles, options) { LaunchOptions = launch };
+        // The exception that paused the game, with its stack, next to the game's own output
+        session.ScriptExceptionReceived += (_, exception) => output.Error(PlayPauseText.DescribeForOutput(exception));
         PlaySession? previous;
         lock (@lock)
         {

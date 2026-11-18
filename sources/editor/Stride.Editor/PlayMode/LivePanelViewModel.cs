@@ -78,6 +78,9 @@ public sealed class LivePanelViewModel : PanelViewModel
     private bool updatingSelection;
     // The silence of the game the user chose to wait through
     private bool waiting;
+    // The reason of the pause the tab shows, and the exception it showed last (dismissed or not)
+    private PlayPauseReason shownReason;
+    private PlayScriptException? shownException;
     private readonly bool ownsControls;
 
     /// <summary>
@@ -113,6 +116,9 @@ public sealed class LivePanelViewModel : PanelViewModel
         CollapseAllCommand = new AnonymousCommand(ServiceProvider, () => Tree.SetAllExpanded(false));
         WaitCommand = new AnonymousCommand(ServiceProvider, Wait);
         EndGameCommand = new AnonymousCommand(ServiceProvider, EndGame);
+        SelectExceptionEntityCommand = new AnonymousCommand(ServiceProvider, SelectExceptionEntity) { IsEnabled = false };
+        DismissExceptionCommand = new AnonymousCommand(ServiceProvider, () => ScriptException = null);
+        StopGameCommand = new AnonymousTaskCommand(ServiceProvider, () => session?.StopAsync() ?? Task.CompletedTask);
         ShowSelectionCommand = new AnonymousCommand(ServiceProvider, () => selectionView?.Show(Selection));
 
         playMode.SessionStarted += SessionStarted;
@@ -197,6 +203,46 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// The exit code of the game, once it exited.
     /// </summary>
     public int? ExitCode { get; private set => SetValue(ref field, value, nameof(ExitCode), nameof(StateText)); }
+
+    /// <summary>
+    /// Why the game is paused, when the editor did not pause it: "Paused: F7 in the game window", "Paused: started paused",
+    /// "Paused: script exception in PlayerController"; <c>null</c> otherwise.
+    /// </summary>
+    public string? PauseText { get; private set => SetValue(ref field, value); }
+
+    /// <summary>
+    /// The script exception that paused the game, while it is paused for it: the notice, with
+    /// <see cref="SelectExceptionEntityCommand"/>. <c>null</c> otherwise.
+    /// </summary>
+    public PlayScriptException? ScriptException
+    {
+        get;
+        private set => SetValue(ref field, value, () =>
+        {
+            ExceptionNotice = value is null ? null : PlayPauseText.DescribeException(value);
+            SelectExceptionEntityCommand.IsEnabled = value is { EntityHandle: > 0 };
+        });
+    }
+
+    /// <summary>
+    /// The notice of <see cref="ScriptException"/>: which script threw what; <c>null</c> when there is none.
+    /// </summary>
+    public string? ExceptionNotice { get; private set => SetValue(ref field, value); }
+
+    /// <summary>
+    /// Selects the entity of the script that threw (<see cref="ScriptException"/>), so that the property grid shows it.
+    /// </summary>
+    public ICommandBase SelectExceptionEntityCommand { get; }
+
+    /// <summary>
+    /// Hides the notice of the script exception.
+    /// </summary>
+    public ICommandBase DismissExceptionCommand { get; }
+
+    /// <summary>
+    /// Ends the game: asks it to quit, then ends its process (Stop game).
+    /// </summary>
+    public ICommandBase StopGameCommand { get; }
 
     /// <summary>
     /// Whether the notice "the game is not responding" is shown, with <see cref="WaitCommand"/> and <see cref="EndGameCommand"/>.
@@ -336,6 +382,8 @@ public sealed class LivePanelViewModel : PanelViewModel
         StaleNotice = null;
         StoppedNotice = null;
         ShowsNotResponding = false;
+        PauseText = null;
+        ScriptException = null;
         waiting = false;
         newSession.StateChanged += SessionStateChanged;
         newSession.TreeReceived += SessionTreeReceived;
@@ -343,6 +391,7 @@ public sealed class LivePanelViewModel : PanelViewModel
         newSession.RespondingChanged += SessionRespondingChanged;
         newSession.HeartbeatReceived += SessionHeartbeatReceived;
         newSession.GameStateChanged += SessionGameStateChanged;
+        newSession.ScriptExceptionReceived += SessionScriptExceptionReceived;
         State = LiveTabState.Connecting;
         Message = null;
         if (replay && newSession.Tree is { } tree)
@@ -361,6 +410,7 @@ public sealed class LivePanelViewModel : PanelViewModel
         old.RespondingChanged -= SessionRespondingChanged;
         old.HeartbeatReceived -= SessionHeartbeatReceived;
         old.GameStateChanged -= SessionGameStateChanged;
+        old.ScriptExceptionReceived -= SessionScriptExceptionReceived;
         session = null;
         // The view of the selection gives its place back, and stops the snapshots
         Selection = null;
@@ -380,8 +430,14 @@ public sealed class LivePanelViewModel : PanelViewModel
 
     private void SessionGameStateChanged(object? sender, PlayGameState state)
     {
-        // Paused or playing: the header's badge
-        if (sender is PlaySession changed && (state.Paused != (State == LiveTabState.Paused)))
+        // Paused or playing: the header's badge, and why
+        if (sender is PlaySession changed && (state.Paused != (State == LiveTabState.Paused) || state.PauseReason != shownReason))
+            Track(dispatcher.InvokeAsync(() => UpdateState(changed), lifetime.Token));
+    }
+
+    private void SessionScriptExceptionReceived(object? sender, PlayScriptException exception)
+    {
+        if (sender is PlaySession changed)
             Track(dispatcher.InvokeAsync(() => UpdateState(changed), lifetime.Token));
     }
 
@@ -421,6 +477,7 @@ public sealed class LivePanelViewModel : PanelViewModel
                 ShowsNotResponding = !changed.IsResponding && !waiting;
                 Message = null;
                 UpdateStaleNotice(changed);
+                UpdatePause(changed);
                 break;
             case PlaySessionState.Failed:
             case PlaySessionState.VersionMismatch:
@@ -437,6 +494,8 @@ public sealed class LivePanelViewModel : PanelViewModel
                 ExitCode = changed.ExitCode;
                 State = LiveTabState.Stopped;
                 ShowsNotResponding = false;
+                PauseText = null;
+                shownReason = PlayPauseReason.None;
                 // The grid gives its place back, and the rows are no longer selected: a row selected now says that the game
                 // stopped (UpdateSelection)
                 ClearSelectedItems();
@@ -444,6 +503,44 @@ public sealed class LivePanelViewModel : PanelViewModel
                 StoppedNotice = Tree.EntityCount > 0 || Tree.Rows.Count > 0 ? Tr._p("Play", "The game has stopped. This is its last tree: the entities have no values any more, and the property grid says so. Start the project again to see them live.") : null;
                 break;
         }
+    }
+
+    /// <summary>
+    /// Says why the game is paused, and shows the exception that paused it until the game is resumed.
+    /// </summary>
+    private void UpdatePause(PlaySession changed)
+    {
+        var reason = changed.PauseReason;
+        shownReason = reason;
+        PauseText = reason is PlayPauseReason.None or PlayPauseReason.Editor ? null : PlayPauseText.Describe(reason, changed.LastScriptException, changed.LaunchOptions.Hotkey);
+        if (reason == PlayPauseReason.ScriptException)
+        {
+            if (changed.LastScriptException is { } exception && exception != shownException)
+            {
+                shownException = exception;
+                ScriptException = exception;
+            }
+        }
+        else if (!changed.IsPaused)
+        {
+            // Resumed: the Output pane keeps the exception
+            ScriptException = null;
+        }
+    }
+
+    private void SelectExceptionEntity()
+    {
+        if (ScriptException is not { EntityHandle: > 0 } exception)
+            return;
+        // Applied first: the entity may have come in the last batch
+        ApplyPending();
+        if (Tree.FindEntity(exception.EntityHandle) is not { } entity)
+            return;
+        for (var parent = entity.Parent; parent is not null; parent = parent.Parent)
+            parent.IsExpanded = true;
+        SearchText = string.Empty;
+        SelectedItems.Clear();
+        SelectedItems.Add(entity);
     }
 
     private void UpdateStaleNotice(PlaySession changed)

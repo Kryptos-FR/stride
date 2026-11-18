@@ -155,6 +155,71 @@ public sealed class PlayModeServiceTests : IAsyncLifetime
         Assert.Single(transports);
     }
 
+    [Fact]
+    public void TheLaunchOptionsGoToTheGame()
+    {
+        service.LaunchOptions = () => new PlayLaunchOptions(PauseOnScriptException: true, Hotkey: new PlayHotkey("F8", PlayHotkeyModifiers.Shift));
+
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+
+        var environment = games.Single().Environment;
+        Assert.Equal("1", environment[PlayProtocol.PauseOnScriptExceptionVariable]);
+        Assert.Equal("Shift+F8", environment[PlayProtocol.HotkeyVariable]);
+        Assert.False(environment.ContainsKey(PlayProtocol.StartPausedVariable));
+        Assert.True(service.Session!.LaunchOptions.PauseOnScriptException);
+    }
+
+    [Fact]
+    public void StartingPausedOnceLeavesTheNextStartsAlone()
+    {
+        service.NextStartPaused = true;
+
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+
+        Assert.Equal("1", games[0].Environment[PlayProtocol.StartPausedVariable]);
+        Assert.True(service.Session!.LaunchOptions.StartPaused);
+        Assert.False(service.NextStartPaused);
+
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+        Assert.False(games[1].Environment.ContainsKey(PlayProtocol.StartPausedVariable));
+    }
+
+    [Fact]
+    public void AGameStartedWithoutTheConnectionHasNoLaunchOptions()
+    {
+        service.ConnectToGame = () => false;
+        service.NextStartPaused = true;
+        service.LaunchOptions = () => new PlayLaunchOptions(StartPaused: true, PauseOnScriptException: true, Hotkey: new PlayHotkey("F7"));
+
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+
+        // Nothing would resume it, and nothing would catch its exceptions
+        Assert.Empty(games.Single().Environment);
+        Assert.Equal(PlayLaunchOptions.None, service.Session!.LaunchOptions);
+    }
+
+    [Fact]
+    public async Task AScriptExceptionGoesToTheOutput()
+    {
+        var output = new LoggerResult();
+        service.Start(Path.Combine(directory, "MyGame.dll"), output);
+        var agent = transports.Single().Connect();
+        agents.Add(agent);
+        agent.Send(new PlayHello(1234, Version, Version, "MyGame.Game", []));
+        var received = new TaskCompletionSource<PlayScriptException>(TaskCreationOptions.RunContinuationsAsynchronously);
+        service.Session!.ScriptExceptionReceived += (_, x) => received.TrySetResult(x);
+
+        agent.Send(new PlayScriptException(42, PlayScriptExceptionKind.Update, "MyGame.PlayerController", 2, Guid.NewGuid(), "Player",
+            "System.InvalidOperationException", "No weapon", "   at MyGame.PlayerController.Update()", Paused: true));
+
+        var exception = await received.Task.WaitAsync(PlaySessionTests.Timeout);
+        Assert.Same(exception, service.Session.LastScriptException);
+        var message = Assert.Single(output.Messages, x => x.Type == LogMessageType.Error);
+        Assert.Contains("PlayerController (entity Player) threw InvalidOperationException in Update: No weapon", message.Text);
+        Assert.Contains("No weapon. Play mode paused the game", message.Text);
+        Assert.Contains("at MyGame.PlayerController.Update()", message.Text);
+    }
+
     private static Task WaitForStateAsync(PlaySession session, PlaySessionState state)
     {
         var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

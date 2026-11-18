@@ -7,6 +7,7 @@ using Stride.Core.Mathematics;
 using Stride.Core.Settings;
 using Stride.Core.Translation;
 using Stride.GameStudio.Avalonia.Helpers;
+using Stride.PlayMode.Protocol;
 
 namespace Stride.GameStudio.Avalonia.Settings;
 
@@ -43,6 +44,21 @@ internal static class GameStudioEditorSettings
             DisplayName = $"{PlayMode}/{Tr._p("Settings", "Connect to the game when starting the project")}",
             Description = Tr._p("Settings", "Start project (F5) starts the game with the live connection: the Live tab shows its scenes and entities, and the property grid the selected ones. Off, the game starts as it would without play mode."),
         };
+        PlayModeStartPaused = new SettingsKey<bool>("PlayMode/StartPaused", EditorSettings.SettingsContainer, false)
+        {
+            DisplayName = $"{PlayMode}/{Tr._p("Settings", "Start the game paused")}",
+            Description = Tr._p("Settings", "The game pauses before its first update: no script starts until you resume (F7) or step (F10). Start project paused does it once, without this setting."),
+        };
+        PlayModePauseOnScriptException = new SettingsKey<bool>("PlayMode/PauseOnScriptException", EditorSettings.SettingsContainer, false)
+        {
+            DisplayName = $"{PlayMode}/{Tr._p("Settings", "Pause on a script exception")}",
+            Description = Tr._p("Settings", "A script's exception pauses the game instead of ending it: the Output and the Live tab show it, with the script's entity. The engine stops that script; the rest of the game goes on when you resume."),
+        };
+        PlayModeGameHotkey = new SettingsKey<string>("PlayMode/GameHotkey", EditorSettings.SettingsContainer, "F7")
+        {
+            DisplayName = $"{PlayMode}/{Tr._p("Settings", "Pause key in the game window")}",
+            Description = Tr._p("Settings", "The key that pauses and resumes the game from its own window, and frees a mouse the game locked (\"F7\", \"Shift+F7\"). \"None\" for no key."),
+        };
         // On by default: the last tree of a game that exited stays readable
         PlayModeKeepLiveTabAfterExit = new SettingsKey<bool>("PlayMode/KeepLiveTabAfterExit", EditorSettings.SettingsContainer, true)
         {
@@ -68,9 +84,32 @@ internal static class GameStudioEditorSettings
     public static SettingsKey<bool> PlayModeConnect { get; }
 
     /// <summary>
+    /// Whether the game pauses before its first update.
+    /// </summary>
+    public static SettingsKey<bool> PlayModeStartPaused { get; }
+
+    /// <summary>
+    /// Whether a script's exception pauses the game instead of ending it.
+    /// </summary>
+    public static SettingsKey<bool> PlayModePauseOnScriptException { get; }
+
+    /// <summary>
+    /// The key that pauses and resumes the game from its window ("F7", "Shift+F7"); "None" for none.
+    /// </summary>
+    public static SettingsKey<string> PlayModeGameHotkey { get; }
+
+    /// <summary>
     /// Whether the Live tab stays open when its game exits normally. It stays open after a crash or a lost connection anyway.
     /// </summary>
     public static SettingsKey<bool> PlayModeKeepLiveTabAfterExit { get; }
+
+    /// <summary>
+    /// The options of a game started in play mode, from the settings: read at each start, so that a change applies to the next one.
+    /// </summary>
+    public static PlayLaunchOptions GetPlayLaunchOptions() => new(
+        StartPaused: PlayModeStartPaused.GetValue(),
+        PauseOnScriptException: PlayModePauseOnScriptException.GetValue(),
+        Hotkey: PlayHotkey.TryParse(PlayModeGameHotkey.GetValue(), out var hotkey) ? hotkey : null);
 
     /// <summary>
     /// The session to open at startup when no path is given on the command line.
