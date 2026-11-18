@@ -1,0 +1,140 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:pm="using:Stride.Editor.PlayMode"
+             xmlns:local="using:Stride.GameStudio.Avalonia.Views.Panels"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="500"
+             x:Class="Stride.GameStudio.Avalonia.Views.Panels.LiveView"
+             x:DataType="pm:LivePanelViewModel">
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://Stride.Assets.Editor.Avalonia/Views/SceneEditorImages.axaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <!-- The state of the game, in the header: green while it plays -->
+    <Style Selector="Border.state">
+      <Setter Property="Background" Value="#40808080"/>
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="Padding" Value="6,1"/>
+    </Style>
+    <Style Selector="Border.state.playing">
+      <Setter Property="Background" Value="#FF388934"/>
+    </Style>
+    <Style Selector="Border.state.playing TextBlock">
+      <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <!-- Once the game stopped, the last tree stays, greyed -->
+    <Style Selector="ListBox.stopped">
+      <Setter Property="Opacity" Value="0.5"/>
+    </Style>
+    <Style Selector="ListBoxItem">
+      <Setter Property="Padding" Value="2,1"/>
+      <Setter Property="MinHeight" Value="20"/>
+    </Style>
+    <!-- A disabled entity is greyed -->
+    <Style Selector="TextBlock.disabled">
+      <Setter Property="Opacity" Value="0.5"/>
+    </Style>
+    <Style Selector="TextBlock.match">
+      <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+    <Style Selector="ToggleButton.expander">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Width" Value="16"/>
+      <Setter Property="Height" Value="16"/>
+      <Setter Property="Focusable" Value="False"/>
+    </Style>
+  </UserControl.Styles>
+  <DockPanel>
+    <!-- The header: this tab shows the running game, not the scene assets -->
+    <Border DockPanel.Dock="Top" Padding="6,4" Background="#20388934">
+      <DockPanel>
+        <Border DockPanel.Dock="Right" Classes="state" Classes.playing="{Binding IsLive}">
+          <TextBlock Name="StateText" Text="{Binding StateText}" FontSize="11"/>
+        </Border>
+        <TextBlock Text="{sd:LocalizeString Running game, Context=Play}" FontWeight="Bold" VerticalAlignment="Center"/>
+      </DockPanel>
+    </Border>
+    <!-- Why there is no live view, or how to start one -->
+    <TextBlock DockPanel.Dock="Top" Name="Message" Text="{Binding Message}" TextWrapping="Wrap" Margin="6,4" Opacity="0.8"
+               IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+    <!-- The search, expand and collapse, and the number of entities -->
+    <DockPanel DockPanel.Dock="Top" Margin="2">
+      <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0" Opacity="0.8"
+                 Text="{Binding EntityCount, StringFormat={}{0} entities}"/>
+      <Button DockPanel.Dock="Right" Focusable="False" Background="Transparent" Padding="4" Command="{Binding CollapseAllCommand}"
+              ToolTip.Tip="{sd:LocalizeString Collapse all entities, Context=ToolTip}">
+        <Image Source="{StaticResource ImageCollapseAllFolders}" Width="16" Height="16"/>
+      </Button>
+      <Button DockPanel.Dock="Right" Focusable="False" Background="Transparent" Padding="4" Command="{Binding ExpandAllCommand}"
+              ToolTip.Tip="{sd:LocalizeString Expand all entities, Context=ToolTip}">
+        <Image Source="{StaticResource ImageExpandAllFolders}" Width="16" Height="16"/>
+      </Button>
+      <TextBox Name="SearchBox" PlaceholderText="{sd:LocalizeString Search}" VerticalAlignment="Center"
+               Text="{Binding SearchText, Delay=200}"
+               ToolTip.Tip="{sd:LocalizeString Show the entities whose name contains this text, Context=ToolTip}"/>
+    </DockPanel>
+    <!-- The running scenes and entities: a flat list of the shown rows, so that it is virtualized; several rows can be
+         selected, and the selected entities are sent about 5 times a second -->
+    <ListBox Name="LiveTree"
+             ItemsSource="{Binding Tree.Rows}"
+             SelectedItems="{Binding SelectedItems}"
+             SelectionMode="Multiple"
+             Classes.stopped="{Binding !IsLive}"
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+      <ListBox.ContextMenu>
+        <!-- On the selected rows: a right click selects the row under the pointer first -->
+        <ContextMenu>
+          <MenuItem Name="ShowInSceneEditorMenuItem" Header="{sd:LocalizeString Show in scene editor, Context=Menu}" Command="{Binding ShowInSceneEditorCommand}"/>
+          <Separator/>
+          <MenuItem Name="CopyNameMenuItem" Header="{sd:LocalizeString Copy name, Context=Menu}" Command="{Binding CopyNameCommand}"/>
+          <MenuItem Name="CopyIdMenuItem" Header="{sd:LocalizeString Copy id, Context=Menu}" Command="{Binding CopyIdCommand}"/>
+        </ContextMenu>
+      </ListBox.ContextMenu>
+      <ListBox.DataTemplates>
+        <DataTemplate DataType="pm:LiveSceneItem">
+          <StackPanel Orientation="Horizontal" Margin="{Binding Depth, Converter={sd:NumericToThickness}, ConverterParameter={sd:Thickness 16,0,0,0}}">
+            <ToggleButton Classes="expander" IsChecked="{Binding IsExpanded}" IsVisible="{Binding HasChildren}">
+              <Panel>
+                <Path Data="M 4,2 L 10,7 L 4,12 Z" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" IsVisible="{Binding !IsExpanded}"/>
+                <Path Data="M 2,4 L 12,4 L 7,10 Z" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" IsVisible="{Binding IsExpanded}"/>
+              </Panel>
+            </ToggleButton>
+            <Border Width="16" IsVisible="{Binding !HasChildren}"/>
+            <Image Source="{StaticResource SceneIcon}" Width="16" Height="16" Margin="2,0"/>
+            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0"/>
+          </StackPanel>
+        </DataTemplate>
+        <DataTemplate DataType="pm:LiveEntityItem">
+          <StackPanel Orientation="Horizontal" Margin="{Binding Depth, Converter={sd:NumericToThickness}, ConverterParameter={sd:Thickness 16,0,0,0}}">
+            <ToggleButton Classes="expander" IsChecked="{Binding IsExpanded}" IsVisible="{Binding HasChildren}">
+              <Panel>
+                <Path Data="M 4,2 L 10,7 L 4,12 Z" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" IsVisible="{Binding !IsExpanded}"/>
+                <Path Data="M 2,4 L 12,4 L 7,10 Z" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" IsVisible="{Binding IsExpanded}"/>
+              </Panel>
+            </ToggleButton>
+            <Border Width="16" IsVisible="{Binding !HasChildren}"/>
+            <Image Source="{Binding ComponentTypeNames, Converter={local:LiveEntityIcon}}" Width="16" Height="16" Margin="2,0"/>
+            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="4,0"
+                       Classes.disabled="{Binding !IsEnabled}" Classes.match="{Binding IsMatch}"/>
+            <!-- Made by the game at run time: no entity of a scene asset is its counterpart -->
+            <TextBlock Text="{sd:LocalizeString spawned, Context=Play}" VerticalAlignment="Center" FontStyle="Italic" FontSize="11"
+                       Foreground="{DynamicResource SystemControlForegroundAccentBrush}" IsVisible="{Binding IsSpawned}">
+              <ToolTip.Tip>
+                <TextBlock MaxWidth="360" TextWrapping="Wrap"
+                           Text="{sd:LocalizeString 'The game created this entity at run time: no entity of the scene assets of the running scenes is its counterpart. Instances of a prefab keep the ids of the prefab, so several live entities can share an id; only the first that has the id of an entity of a scene is its counterpart, and the others are marked spawned.', Context=ToolTip}"/>
+              </ToolTip.Tip>
+            </TextBlock>
+          </StackPanel>
+        </DataTemplate>
+      </ListBox.DataTemplates>
+    </ListBox>
+  </DockPanel>
+</UserControl>

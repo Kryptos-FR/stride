@@ -28,6 +28,7 @@ using Stride.Core.Presentation.ViewModels;
 using Stride.Core.Settings;
 using Stride.Core.Translation;
 using Stride.Editor.Avalonia.Engine;
+using Stride.Editor.PlayMode;
 using Stride.Editor.Avalonia.Preview;
 using Stride.Editor.Settings;
 using Stride.Editor.Thumbnails;
@@ -410,6 +411,17 @@ public partial class App : Application
         // The commands of the main menu and of the main window's shortcuts join each session through the shell's own plugin
         Commands.GameStudioCommandsPlugin.EnsureRegistered();
         var dispatcherService = DispatcherService.Create();
+        var playMode = new PlayModeService(new PlaySessionOptions { Log = GlobalLogger.GetLogger("PlayMode") });
+        // A game that plays ends with the editor, even when the system ends it; then the sessions end, with their pipes (a
+        // pipe's file stays on Linux and macOS otherwise)
+        if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.Exit += (_, _) =>
+            {
+                playMode.EndNow(TimeSpan.FromSeconds(2));
+                playMode.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(2));
+            };
+        }
         var services = new List<object>
         {
             dispatcherService,
@@ -418,9 +430,9 @@ public partial class App : Application
             new PluginService(dispatcherService) { DisabledCompanions = DisabledEditorCompanionStore.CreateDefault(), SafeMode = Options.SafeMode, LoadingMarker = LoadingMarker, Extensions = Extensions },
             // The thumbnails are Avalonia bitmaps; the folder icon is a PNG embedded in this assembly (Resources/*.png)
             new Core.Assets.Editor.Avalonia.Services.ThumbnailDataFactory(typeof(App).Assembly),
-            // Build project and Start project
+            // Build project and Start project: the games of the editor's platform start as play sessions, for the Live tab
             new MSBuildGameProjectBuilder(new BuildCrashRouting()),
-            new GameProcessLauncher(),
+            playMode,
             // Explore: show in the file manager, open with another program
             new FileExplorerService(),
         };

@@ -13,6 +13,7 @@ using Stride.GameStudio.Avalonia.ViewModels;
 using Stride.GameStudio.Avalonia.Views;
 using Stride.GameStudio.Avalonia.Views.Panels;
 using Stride.Core.Presentation.ViewModels;
+using Stride.Editor.PlayMode;
 
 namespace Stride.GameStudio.Avalonia.Docking;
 
@@ -56,6 +57,7 @@ public sealed class DockViewLocator : IDataTemplate
             OutputPanelViewModel x => new OutputView { DataContext = x },
             AssetPreviewPanelViewModel x => new AssetPreviewView { DataContext = x },
             PluginsPanelViewModel x => new PluginsView { DataContext = x },
+            LivePanelViewModel x => new LiveView { DataContext = x },
             // A panel of a plugin: the view its plugin registered for this editor (see DockPanelService.CreatePluginView)
             _ => panel.CreatePluginView() ?? new ContentControl { Content = viewModel, DataContext = viewModel },
         };

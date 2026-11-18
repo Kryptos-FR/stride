@@ -154,6 +154,13 @@
             <Image Source="{StaticResource ImageStartProject}"/>
           </MenuItem.Icon>
         </MenuItem>
+        <!-- Ends the game that plays (and the Live tab's connection) -->
+        <MenuItem Name="StopGameMenuItem"
+                  Command="{cmd:Command Stride.Project.StopGame}">
+          <MenuItem.Icon>
+            <Image Source="{StaticResource ImageStopBuild}"/>
+          </MenuItem.Icon>
+        </MenuItem>
         <MenuItem Name="CancelBuildMenuItem"
                   Command="{cmd:Command Stride.Project.CancelBuild}">
           <MenuItem.Icon>
@@ -255,6 +262,11 @@
               Command="{cmd:Command Stride.Project.Start, ToolTip={sd:LocalizeString Build the project and start the game, Context=ToolTip}}"
               ToolTip.ShowOnDisabled="True">
         <Image Source="{StaticResource ImageStartProject}" Width="16" Height="16"/>
+      </Button>
+      <Button Name="StopGameButton"
+              Command="{cmd:Command Stride.Project.StopGame, ToolTip={sd:LocalizeString Stop the game, Context=ToolTip}}"
+              ToolTip.ShowOnDisabled="True">
+        <Image Source="{StaticResource ImageStopBuild}" Width="16" Height="16"/>
       </Button>
       <Button Name="CancelBuildButton"
               Command="{cmd:Command Stride.Project.CancelBuild, ToolTip={sd:LocalizeString Cancel the current build, Context=ToolTip}}"
