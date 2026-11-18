@@ -199,6 +199,8 @@ public sealed class LivePanelTests : IAsyncLifetime
         Assert.NotNull(selection);
         Assert.Same(playMode.Session, selection.Session);
         Assert.Equal([2, 4], selection.Handles);
+        // With the tab's tree, which the pickers of live references list
+        Assert.Same(panel.Tree, selection.Tree);
         // The view shows it (and asks the game for its snapshots)
         Assert.Same(selection, Read(() => selectionView.Shown.Last()));
 

@@ -7,6 +7,7 @@ using Stride.Editor.PlayMode;
 using Stride.Engine;
 using Stride.PlayMode.Agent;
 using Stride.PlayMode.Protocol;
+using Stride.PlayMode.Snapshots;
 
 namespace Stride.Editor.Tests.PlayMode;
 
@@ -102,6 +103,43 @@ public sealed class PlaySessionTests : IAsyncLifetime
 
         Assert.Equal(PlayAssemblyStatus.Missing, session.Assemblies.GetStatus("MyGame"));
         Assert.Equal(PlayAssemblyStatus.Missing, session.Assemblies.GetStatus("MyPlugin"));
+    }
+
+    [Fact]
+    public async Task TheBuildsContentIsAskedOnceConnectedAndKept()
+    {
+        var received = Wait<IReadOnlySet<string>>(x => session.BuildContentReceived += x);
+        Assert.Null(session.BuildContent);
+        await ConnectAsync();
+
+        await agent!.ReceiveAsync<PlayContentRequest>();
+        agent.Send(new PlayContentIndex(["Models/Box", "Scenes/Main"]));
+
+        Assert.Equal(["Models/Box", "Scenes/Main"], (await received).Order());
+        Assert.True(session.BuildContent!.Contains("Models/Box"));
+        Assert.False(session.BuildContent.Contains("models/box"));
+        Assert.True(session.StartTime <= DateTime.Now);
+    }
+
+    [Fact]
+    public void AReferencePickedInTheEditorGetsAStandInLikeThoseOfTheSnapshots()
+    {
+        var entityId = Guid.NewGuid();
+        var componentId = Guid.NewGuid();
+
+        var entity = session.CreateStandIn(new PlayMirrorReference(PlayMirrorReferenceKind.Entity, 7, entityId, "Camera", Guid.Empty, null))!.Value;
+        var component = session.CreateStandIn(new PlayMirrorReference(PlayMirrorReferenceKind.Component, 7, entityId, "Camera", componentId, PlayMirrorSerializer.TypeNameOf(typeof(PlayTestComponent))))!.Value;
+        var unknown = session.CreateStandIn(new PlayMirrorReference(PlayMirrorReferenceKind.Component, 7, entityId, "Camera", componentId, "Some.Game.Component, Some.Game"));
+
+        var standIn = Assert.IsType<Entity>(entity.StandIn);
+        Assert.Equal(("Camera", entityId), (standIn.Name, standIn.Id));
+        Assert.Equal(7, entity.Map[standIn].EntityHandle);
+        var componentStandIn = Assert.IsType<PlayTestComponent>(component.StandIn);
+        Assert.Equal(componentId, componentStandIn.Id);
+        // The component sits on a stand-in of its entity, which the map knows too
+        Assert.Equal(PlayMirrorReferenceKind.Entity, component.Map[componentStandIn.Entity!].Kind);
+        Assert.Equal(componentId, component.Map[componentStandIn].ComponentId);
+        Assert.Null(unknown);
     }
 
     [Fact]

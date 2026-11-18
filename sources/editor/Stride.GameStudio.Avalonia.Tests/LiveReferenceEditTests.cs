@@ -1,7 +1,11 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Interactivity;
+using Avalonia.VisualTree;
+using Stride.Assets.Editor.Avalonia.Views;
 using Stride.Assets.Editor.PlayMode;
 using Stride.Assets.Editor.Quantum.NodePresenters.Commands;
 using Stride.Assets.Editor.Quantum.NodePresenters.Keys;
@@ -152,6 +156,24 @@ public sealed partial class LiveEditTests
     }
 
     [AvaloniaFact]
+    public async Task AnItemAddedToAListOfEntitiesIsEmptyUntilItIsPicked()
+    {
+        using var fixture = await OpenReferencesAsync();
+        var properties = await ShowReferencesAsync(fixture, PlayerHandle);
+        try
+        {
+            // The add command makes a new entity, which no running scene holds: the item goes empty
+            ReferenceNode(properties, nameof(LiveReferenceTestScript.Watched)).NodePresenters.Single().AddItem(new Entity("New"));
+            var add = await Game.NextEditAsync();
+            Assert.Equal((PlayEditOperation.Add, "Watched", PlayEditValueKind.Null), (add.Operation, add.PathText, add.Value.Kind));
+        }
+        finally
+        {
+            properties.ViewModel?.Destroy();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task ContentTheGameMadeAtRunTimeCannotBeSentAndSaysWhy()
     {
         using var fixture = await OpenReferencesAsync();
@@ -253,6 +275,41 @@ public sealed partial class LiveEditTests
         }
         finally
         {
+            properties.ViewModel?.Destroy();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task ThePickerWindowDisablesTheScenesAndClosesOnAPick()
+    {
+        using var fixture = await OpenReferencesAsync();
+        var properties = await ShowReferencesAsync(fixture, PlayerHandle);
+        var owner = new Window();
+        owner.Show();
+        try
+        {
+            var picker = new LiveEntityPickerViewModel(fixture.Session.ServiceProvider, properties.Tree!, typeof(TransformComponent), initialHandle: OtherHandle);
+            var window = new LiveEntityPickerWindow { DataContext = picker };
+            var closed = window.ShowDialog<bool>(owner);
+            await WindowTestHelper.PumpAsync();
+
+            var items = window.GetVisualDescendants().OfType<ListBoxItem>().Where(x => x.DataContext is LivePickerRow).ToList();
+            Assert.Equal(["Main", "Player", "Target", "Other"], items.Select(x => ((LivePickerRow)x.DataContext!).Name));
+            Assert.False(items[0].IsEnabled);
+            Assert.True(items[3].IsEnabled);
+            // The current target is selected, with its only transform
+            Assert.Equal(OtherHandle, picker.SelectedRow?.Entity?.Handle);
+            Assert.True(picker.CanPick);
+
+            window.GetVisualDescendants().OfType<Button>().Single(x => x.Name == "OkButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.True(await closed);
+            Assert.True(window.Picked);
+            Assert.Equal(other.Transform.Id, picker.Pick!.Component!.Id);
+            picker.Destroy();
+        }
+        finally
+        {
+            owner.Close();
             properties.ViewModel?.Destroy();
         }
     }
@@ -439,6 +496,8 @@ public sealed class LiveReferenceTestScript : SyncScript
     public List<Model> Models { get; } = [];
 
     public Entity? Target { get; set; }
+
+    public List<Entity?> Watched { get; } = [];
 
     public TransformComponent? Pointer { get; set; }
 

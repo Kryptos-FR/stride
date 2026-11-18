@@ -12,6 +12,7 @@ namespace Stride.Editor.Tests.PlayMode;
 /// </summary>
 public sealed class LiveTreeTests
 {
+    private static readonly Guid TransformId = Guid.NewGuid();
     internal const string Transform = "Stride.Engine.TransformComponent, Stride.Engine";
     internal const string Model = "Stride.Engine.ModelComponent, Stride.Engine";
 
@@ -81,7 +82,7 @@ public sealed class LiveTreeTests
             new PlayEntityAdded(Entity(6, Guid.NewGuid(), "Trail", 5)),
             new PlayEntityMoved(3, 0, 1),
             new PlayEntityStateChanged(4, "Floor", false),
-            new PlayEntityComponentsChanged(2, [new PlayComponentInfo(Guid.NewGuid(), Transform)]),
+            new PlayEntityComponentsChanged(2, [new PlayComponentInfo(TransformId, Transform)]),
         ]));
 
         Assert.Empty(removed);
@@ -93,6 +94,7 @@ public sealed class LiveTreeTests
         Assert.Contains(nameof(LiveEntityItem.Name), changes);
         Assert.Contains(nameof(LiveEntityItem.IsEnabled), changes);
         Assert.Equal([Transform], player.ComponentTypeNames);
+        Assert.Equal(TransformId, Assert.Single(player.Components).Id);
         Assert.Equal(5, tree.EntityCount);
 
         // Removed: the bullet goes with its trail

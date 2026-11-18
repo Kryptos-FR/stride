@@ -9,6 +9,7 @@ using Avalonia.VisualTree;
 using Stride.Assets.Models;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Avalonia.Views;
+using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Serialization;
 using Stride.GameStudio.Avalonia.Tests.Helpers;
@@ -55,6 +56,44 @@ public sealed class AssetPickerTests
             ok.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.True(await result);
             Assert.Same(other, picker.SelectedAsset);
+        }
+        finally
+        {
+            await owner.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task AnAssetThatCannotBePickedIsListedDisabledWithTheReason()
+    {
+        using var fixture = await OpenModelWithSkeletonsAsync();
+        var owner = new MainWindow { DataContext = fixture.Main };
+        owner.Show();
+        try
+        {
+            var other = fixture.Asset(OtherSkeletonLocation);
+            var options = new AssetPickerOptions([typeof(SkeletonAsset)])
+            {
+                DisabledReason = x => x == other ? "Not in the game's build." : null,
+                Note = _ => "Changed since the game was built.",
+            };
+            var picker = new AssetPickerViewModel(fixture.Session, options);
+            var window = new AssetPickerWindow { DataContext = picker };
+            var result = window.ShowDialog<bool>(owner);
+            await WindowTestHelper.PumpAsync();
+
+            // The pickable assets first; the other is disabled, with the reason
+            Assert.Equal(["Skeleton", "OtherSkeleton"], picker.FilteredAssets.Select(x => x.Name));
+            var items = window.GetVisualDescendants().OfType<ListBoxItem>().ToList();
+            Assert.False(items[1].IsEnabled);
+            Assert.Equal($"{other.Url}: Not in the game's build.", ToolTip.GetTip(items[1]));
+            Assert.True(items[0].IsEnabled);
+            Assert.Contains("noted", items[0].Classes);
+            picker.SelectedAsset = other;
+            Assert.False(picker.CanPick);
+            Assert.False(window.GetVisualDescendants().OfType<Button>().Single(x => x.Name == "OkButton").IsEnabled);
+            window.GetVisualDescendants().OfType<Button>().Single(x => x.Name == "CancelButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.False(await result);
         }
         finally
         {

@@ -48,7 +48,7 @@ public sealed partial class AssetPickerWindow : Window
     // An asset that cannot be picked is listed disabled, with the reason in its tooltip; one with a note is marked
     private void OnAssetContainerPrepared(object? sender, ContainerPreparedEventArgs e)
     {
-        if (Picker is not { } picker || Assets.ItemFromContainer(e.Container) is not AssetViewModel asset)
+        if (Picker is not { } picker || (e.Index >= 0 && e.Index < Assets.ItemsView.Count ? Assets.ItemsView[e.Index] : null) is not AssetViewModel asset)
             return;
         var reason = picker.GetDisabledReason(asset);
         var note = picker.GetNote(asset);

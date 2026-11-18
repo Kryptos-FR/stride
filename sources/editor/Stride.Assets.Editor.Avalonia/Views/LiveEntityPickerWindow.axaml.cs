@@ -42,7 +42,7 @@ public sealed partial class LiveEntityPickerWindow : Window
     // The rows are indented by their depth; scenes, and entities that cannot be picked, are disabled, with the reason
     private void OnRowPrepared(object? sender, ContainerPreparedEventArgs e)
     {
-        if (EntityList.ItemFromContainer(e.Container) is not LivePickerRow row || e.Container is not ListBoxItem item)
+        if ((e.Index >= 0 && e.Index < EntityList.ItemsView.Count ? EntityList.ItemsView[e.Index] : null) is not LivePickerRow row || e.Container is not ListBoxItem item)
             return;
         item.Padding = new Thickness(6 + 14 * row.Depth, 2, 6, 2);
         item.IsEnabled = row.IsPickable;
