@@ -233,6 +233,33 @@ public sealed class NumericTextBoxTests
         Assert.False(box.IsAlive);
     }
 
+    [AvaloniaFact]
+    public void AValueTheSourceChangesWhenItIsWrittenShowsAsTheSourceKeptIt()
+    {
+        var source = new ClampedSource();
+        var box = new NumericTextBox { DataContext = source };
+        box.Bind(NumericTextBox.ValueProperty, new Binding(nameof(ClampedSource.Value)) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.Explicit });
+        var (window, _) = Show(box);
+        var textBox = box.GetVisualDescendants().OfType<TextBox>().Single();
+
+        textBox.Focus();
+        textBox.SelectAll();
+        window.KeyTextInput("5");
+        window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+
+        // The setter clamps the value it is given: the box shows the value kept, not the text typed
+        Assert.Equal(1.0, source.Value);
+        Assert.Equal(1.0, box.Value);
+        Assert.Equal("1", box.Text);
+        Assert.Equal(1, source.Writes);
+
+        // Leaving the box writes nothing more
+        window.Content = new TextBox();
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(1, source.Writes);
+    }
+
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     private static WeakReference ShowAndClose()
     {
@@ -292,5 +319,23 @@ public sealed class NumericTextBoxTests
             Value = value;
             Writes--;
         }
+    }
+
+    private sealed class ClampedSource : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public int Writes { get; private set; }
+
+        public double Value
+        {
+            get;
+            set
+            {
+                ++Writes;
+                field = Math.Clamp(value, 0, 1);
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+            }
+        } = 1;
     }
 }

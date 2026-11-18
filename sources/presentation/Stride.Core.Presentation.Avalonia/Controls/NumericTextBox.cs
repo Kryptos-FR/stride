@@ -195,7 +195,7 @@ public sealed class NumericTextBox : TemplatedControl
         // Increasing an empty value starts from the minimum, decreasing it from the maximum
         var value = (Value ?? (change > 0 ? Minimum : Maximum)) + change;
         SetCurrentValue(ValueProperty, MathUtil.Clamp(value, Minimum, Maximum));
-        BindingOperations.GetBindingExpressionBase(this, ValueProperty)?.UpdateSource();
+        WriteToSource();
         TextBox?.SelectAll();
         e.Handled = true;
     }
@@ -209,12 +209,20 @@ public sealed class NumericTextBox : TemplatedControl
             if (hasPendingEdit)
             {
                 hasPendingEdit = false;
-                BindingOperations.GetBindingExpressionBase(this, ValueProperty)?.UpdateSource();
+                WriteToSource();
             }
             return true;
         }
 
         return false;
+    }
+
+    private void WriteToSource()
+    {
+        var expression = BindingOperations.GetBindingExpressionBase(this, ValueProperty);
+        expression?.UpdateSource();
+        // The source can keep another value than the one written (a setter that clamps it): show the value it kept
+        expression?.UpdateTarget();
     }
 
     private double? ConvertTextToValue(string? text)
