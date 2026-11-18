@@ -65,4 +65,6 @@
   </ItemGroup>
 
   <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk.Tests/Sdk/Sdk.targets" />
+  <!-- The play agent's files in a PlayMode folder, as next to the editor (the end-to-end play mode test loads them into a game) -->
+  <Import Project="..\..\engine\Stride.PlayMode.Hook\Stride.PlayMode.Files.targets" />
 </Project>
