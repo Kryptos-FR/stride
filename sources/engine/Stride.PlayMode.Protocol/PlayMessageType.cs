@@ -32,9 +32,24 @@ public enum PlayMessageType : byte
     /// <summary>The game is ending (<see cref="PlayGoodbye"/>).</summary>
     Goodbye = 8,
 
+    /// <summary>Whether the game is paused, its time scale, frame rate and entities (<see cref="PlayGameState"/>).</summary>
+    State = 9,
+
     /// <summary>A subscriber's choice of entities to receive snapshots of (<see cref="PlaySubscribe"/>).</summary>
     Subscribe = 32,
 
     /// <summary>A subscriber asks the game to exit (<see cref="PlayQuit"/>).</summary>
     Quit = 33,
+
+    /// <summary>A subscriber asks the game to pause (<see cref="PlayPause"/>).</summary>
+    Pause = 34,
+
+    /// <summary>A subscriber asks the paused game to go on (<see cref="PlayResume"/>).</summary>
+    Resume = 35,
+
+    /// <summary>A subscriber asks the game to run some updates then stay paused (<see cref="PlayStep"/>).</summary>
+    Step = 36,
+
+    /// <summary>A subscriber sets the speed of the game time (<see cref="PlayTimeScale"/>).</summary>
+    TimeScale = 37,
 }

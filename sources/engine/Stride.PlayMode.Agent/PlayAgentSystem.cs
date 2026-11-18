@@ -26,6 +26,10 @@ namespace Stride.PlayMode.Agent;
 /// <para>
 /// With no subscriber, the agent follows nothing and costs a check per frame.
 /// </para>
+/// <para>
+/// The subscribers can pause, step and resume the game and set the speed of its time (<see cref="PlayPauseController"/>): the
+/// agent's draw, the last of each frame, ends the steps. When the last subscriber leaves, the game goes on as without play mode.
+/// </para>
 /// </remarks>
 public sealed class PlayAgentSystem : GameSystemBase
 {
@@ -56,6 +60,7 @@ public sealed class PlayAgentSystem : GameSystemBase
     private double snapshotMaxTicks;
     private long lostSubscriberFrames;
     private bool prepared;
+    private double lastFramesPerSecond;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlayAgentSystem"/> class. Add it to the game's systems.
@@ -68,6 +73,10 @@ public sealed class PlayAgentSystem : GameSystemBase
         Enabled = true;
         // After the scripts and the scene system: a snapshot sees the state at the end of the frame's update
         UpdateOrder = int.MaxValue;
+        // After the scene's draw: a step ends once its frame is drawn (animations and particles move in the draw)
+        Visible = true;
+        DrawOrder = int.MaxValue;
+        PauseController = new PlayPauseController(new PlayGamePauseHost(game, GlobalLogger.GetLogger("PlayMode")));
         GlobalLogger.GlobalMessageLogged += OnMessageLogged;
         AppDomain.CurrentDomain.AssemblyLoad += OnAssemblyLoad;
         game.Exiting += OnGameExiting;
@@ -84,6 +93,11 @@ public sealed class PlayAgentSystem : GameSystemBase
     public PlayTreeTracker Tracker { get; } = new();
 
     /// <summary>
+    /// Pauses, steps and resumes the game, on the game thread.
+    /// </summary>
+    internal PlayPauseController PauseController { get; }
+
+    /// <summary>
     /// Adds a subscriber connected on this stream (a pipe, a socket); it gets its hello and the tree on the next frame. Can
     /// be called from any thread.
     /// </summary>
@@ -98,6 +112,8 @@ public sealed class PlayAgentSystem : GameSystemBase
     public override void Update(GameTime gameTime)
     {
         frame++;
+        // The update that just ran, as it ran (paused or not), before the commands change it
+        PauseController.OnUpdate();
         if (subscribers.Count == 0 && newStreams.IsEmpty)
         {
             // Nobody listens: follow nothing, so that nothing piles up
@@ -134,13 +150,31 @@ public sealed class PlayAgentSystem : GameSystemBase
 
         SendAssemblies();
         SendLogs();
+        if (PauseController.StepRanThisUpdate)
+        {
+            // The step's values, at once
+            foreach (var subscriber in subscribers)
+                subscriber.LastSnapshot = 0;
+        }
         TakeSnapshots(gameTime);
+        SendStateIfChanged();
 
         var elapsed = Stopwatch.GetTimestamp() - start;
         agentTicks += elapsed;
         agentMaxTicks = Math.Max(agentMaxTicks, elapsed);
         periodFrames++;
         SendHeartbeat(gameTime);
+    }
+
+    /// <inheritdoc/>
+    public override void Draw(GameTime gameTime)
+    {
+        // The end of the frame: a step pauses again, the next one is armed
+        var start = Stopwatch.GetTimestamp();
+        PauseController.OnEndOfTick();
+        SendStateIfChanged();
+        if (subscribers.Count > 0)
+            agentTicks += Stopwatch.GetTimestamp() - start;
     }
 
     /// <inheritdoc/>
@@ -167,6 +201,9 @@ public sealed class PlayAgentSystem : GameSystemBase
             lostSubscriberFrames += subscriber.Connection.DroppedFrames;
             _ = subscriber.Connection.DisposeAsync().AsTask();
         }
+        // Nobody can resume the game any more: it goes on as without play mode
+        if (subscribers.Count == 0)
+            PauseController.Release();
     }
 
     private bool AddNewSubscribers()
@@ -177,6 +214,7 @@ public sealed class PlayAgentSystem : GameSystemBase
             var subscriber = new PlaySubscriber(new PlayConnection(stream));
             subscriber.Connection.Start(subscriber.Incoming.Enqueue);
             subscriber.Connection.Send(CreateHello());
+            subscriber.Connection.Send(CreateState());
             subscribers.Add(subscriber);
             joined = true;
         }
@@ -198,6 +236,18 @@ public sealed class PlayAgentSystem : GameSystemBase
                         break;
                     case PlayQuit:
                         game.Exit();
+                        break;
+                    case PlayPause:
+                        PauseController.Pause();
+                        break;
+                    case PlayResume:
+                        PauseController.Resume();
+                        break;
+                    case PlayStep step:
+                        PauseController.Step(step.Frames);
+                        break;
+                    case PlayTimeScale timeScale:
+                        PauseController.SetTimeScale(timeScale.Scale);
                         break;
                 }
             }
@@ -287,12 +337,24 @@ public sealed class PlayAgentSystem : GameSystemBase
             snapshotMaxTicks * toMicroseconds,
             subscribers.Sum(x => x.Connection.BytesQueued),
             lostSubscriberFrames + subscribers.Sum(x => x.Connection.DroppedFrames));
-        Broadcast(new PlayHeartbeat(frame, gameTime.Total.TotalSeconds, (frame - heartbeatFrame) / seconds, stats));
+        lastFramesPerSecond = (frame - heartbeatFrame) / seconds;
+        Broadcast(new PlayHeartbeat(frame, gameTime.Total.TotalSeconds, lastFramesPerSecond, stats));
+        // The state goes with each heartbeat: the frame rate and the entities change without a pause
+        PauseController.TakeChanged();
+        Broadcast(CreateState());
 
         heartbeatClock.Restart();
         heartbeatFrame = frame;
         agentTicks = agentMaxTicks = snapshotTicks = snapshotMaxTicks = 0;
         periodFrames = periodSnapshots = 0;
+    }
+
+    private PlayGameState CreateState() => PauseController.CreateState(frame, lastFramesPerSecond, Tracker.Entities.Count);
+
+    private void SendStateIfChanged()
+    {
+        if (PauseController.TakeChanged() && subscribers.Count > 0)
+            Broadcast(CreateState());
     }
 
     private void Broadcast(PlayMessage message, Func<PlaySubscriber, bool>? filter = null)

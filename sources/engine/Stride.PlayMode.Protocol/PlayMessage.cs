@@ -45,6 +45,11 @@ public abstract record PlayMessage
             PlayMessageType.Goodbye => PlayGoodbye.Read(reader),
             PlayMessageType.Subscribe => PlaySubscribe.Read(reader),
             PlayMessageType.Quit => new PlayQuit(),
+            PlayMessageType.State => PlayGameState.Read(reader),
+            PlayMessageType.Pause => new PlayPause(),
+            PlayMessageType.Resume => new PlayResume(),
+            PlayMessageType.Step => PlayStep.Read(reader),
+            PlayMessageType.TimeScale => PlayTimeScale.Read(reader),
             _ => new PlayUnknownMessage(frame.Type, frame.Payload),
         };
     }

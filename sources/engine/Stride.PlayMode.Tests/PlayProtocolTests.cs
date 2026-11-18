@@ -47,6 +47,19 @@ public sealed class PlayProtocolTests
     }
 
     [Fact]
+    public async Task TheGameStateAndTheControlsKeepTheirFields()
+    {
+        var state = Assert.IsType<PlayGameState>(await RoundTripAsync(new PlayGameState(120, 80, true, 0.25, 0.5, 29.5, 304, 1).Encode()));
+        Assert.Equal(new PlayGameState(120, 80, true, 0.25, 0.5, 29.5, 304, 1), state);
+
+        Assert.Equal(4, Assert.IsType<PlayStep>(await RoundTripAsync(new PlayStep(4).Encode())).Frames);
+        Assert.Equal(1, new PlayStep().Frames);
+        Assert.Equal(0.1, Assert.IsType<PlayTimeScale>(await RoundTripAsync(new PlayTimeScale(0.1).Encode())).Scale);
+        Assert.IsType<PlayPause>(await RoundTripAsync(new PlayPause().Encode()));
+        Assert.IsType<PlayResume>(await RoundTripAsync(new PlayResume().Encode()));
+    }
+
+    [Fact]
     public async Task SnapshotKeepsItsPayloadsAndErrors()
     {
         var id = Guid.NewGuid();
@@ -196,6 +209,11 @@ public sealed class PlayProtocolTests
             ["Goodbye"] = new PlayGoodbye(null),
             ["Subscribe"] = new PlaySubscribe([1, 2, 3], 5),
             ["Quit"] = new PlayQuit(),
+            ["State"] = new PlayGameState(15, 9, true, 0.25, 0.5, 58.5, 304, 2),
+            ["Pause"] = new PlayPause(),
+            ["Resume"] = new PlayResume(),
+            ["Step"] = new PlayStep(3),
+            ["TimeScale"] = new PlayTimeScale(0.25),
         };
     }
 }
