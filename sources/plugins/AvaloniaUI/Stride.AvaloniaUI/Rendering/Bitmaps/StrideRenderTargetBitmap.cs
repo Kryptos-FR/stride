@@ -12,12 +12,13 @@ namespace Stride.AvaloniaUI.Rendering.Bitmaps;
 /// A bitmap of the core that can be drawn into: a render target bitmap, a layer, or an offscreen render target.
 /// </summary>
 /// <remarks>
-/// Premultiplied Bgra8888; it keeps its pixels from a drawing to the next.
+/// Premultiplied, in the order of the bytes Skia uses on this system (<see cref="StrideRenderInterface.PlatformPixelFormat"/>);
+/// it keeps its pixels from a drawing to the next.
 /// </remarks>
 /// <param name="scaleDrawingToDpi">Whether drawings are in device-independent pixels, scaled to the DPI, as in a render target bitmap.</param>
 /// <param name="grayscaleText">Whether text is drawn without subpixel antialiasing, as in a bitmap cache.</param>
 internal sealed class StrideRenderTargetBitmap(FallbackChannel channel, PixelSize size, Vector dpi, bool scaleDrawingToDpi = false, bool grayscaleText = false)
-    : StrideBitmap(size, dpi, PixelFormat.Bgra8888, AlphaFormat.Premul), IRenderTargetBitmapImpl, IDrawingContextLayerImpl
+    : StrideBitmap(size, dpi, StrideRenderInterface.PlatformPixelFormat, AlphaFormat.Premul), IRenderTargetBitmapImpl, IDrawingContextLayerImpl
 {
     public bool CanBlit => true;
 

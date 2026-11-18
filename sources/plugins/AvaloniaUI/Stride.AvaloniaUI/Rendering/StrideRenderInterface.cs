@@ -33,7 +33,16 @@ internal sealed class StrideRenderInterface(FallbackChannel channel, Func<Native
 
     public AlphaFormat DefaultAlphaFormat => AlphaFormat.Premul;
 
-    public PixelFormat DefaultPixelFormat => PixelFormat.Bgra8888;
+    public PixelFormat DefaultPixelFormat => PlatformPixelFormat;
+
+    /// <summary>
+    /// Gets the order of the bytes of a pixel that Skia uses on this system (its N32 color type): BGRA on Windows and
+    /// Linux, RGBA anywhere else, such as macOS. The bitmaps the core makes are in it, as Skia's are.
+    /// </summary>
+    /// <remarks>
+    /// Skia defaults to RGBA except on Windows (<c>SkTypes.h</c>), and its build sets BGRA on Linux (<c>SK_R32_SHIFT=16</c>).
+    /// </remarks>
+    public static PixelFormat PlatformPixelFormat { get; } = OperatingSystem.IsWindows() || OperatingSystem.IsLinux() ? PixelFormat.Bgra8888 : PixelFormat.Rgba8888;
 
     public bool SupportsRegions => false;
 
