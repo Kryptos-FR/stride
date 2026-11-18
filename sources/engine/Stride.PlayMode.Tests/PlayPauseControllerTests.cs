@@ -317,13 +317,13 @@ public sealed class PlayPauseControllerTests
 
         var state = game.Controller.CreateState(10, 59.5, 304);
 
-        Assert.Equal(new PlayGameState(10, 2, true, 0.5, 1, 59.5, 304, 2), state);
+        Assert.Equal(new PlayGameState(10, 2, true, 0.5, 1, 59.5, 304, 2, PlayPauseReason.Editor), state);
     }
 
     /// <summary>
     /// A part of the fake game the controller stops.
     /// </summary>
-    private sealed class FakePausable(string key, bool runsOnStep) : IPlayPausable
+    internal sealed class FakePausable(string key, bool runsOnStep) : IPlayPausable
     {
         public string Key => key;
 
@@ -348,18 +348,56 @@ public sealed class PlayPauseControllerTests
     }
 
     /// <summary>
+    /// The mouse of the fake game.
+    /// </summary>
+    internal sealed class FakeMouse : IPlayMouse
+    {
+        public event EventHandler<EventArgs>? Activated;
+
+        public bool IsLocked { get; set; }
+
+        public bool IsVisible { get; set; } = true;
+
+        public bool IsWindowActive { get; set; } = true;
+
+        public int Locks { get; private set; }
+
+        public void Lock()
+        {
+            IsLocked = true;
+            Locks++;
+        }
+
+        public void Unlock() => IsLocked = false;
+
+        /// <summary>The user brings the game's window to the front.</summary>
+        public void Activate()
+        {
+            IsWindowActive = true;
+            Activated?.Invoke(this, EventArgs.Empty);
+        }
+
+        public int ActivatedHandlers => Activated?.GetInvocationList().Length ?? 0;
+    }
+
+    /// <summary>
     /// A game loop with no graphics, as <c>GameBase</c> runs it with a variable step: one update per frame with the frame's
     /// elapsed time, or one update of the fixed step when a single step is asked for.
     /// </summary>
-    private sealed class FakeGame : IPlayPauseHost
+    internal sealed class FakeGame : IPlayPauseHost
     {
         private bool resetElapsed;
 
         public FakeGame()
         {
             Pausables = [Scripts, SpriteAnimation, Audio];
+            MouseKeeper = new PlayMouseKeeper(Mouse);
             Controller = new PlayPauseController(this);
         }
+
+        public FakeMouse Mouse { get; } = new();
+
+        public PlayMouseKeeper MouseKeeper { get; }
 
         public PlayPauseController Controller { get; }
 
@@ -415,6 +453,10 @@ public sealed class PlayPauseControllerTests
         public void ResetElapsedTime() => resetElapsed = true;
 
         public void ReleaseInput() => InputReleases++;
+
+        public void FreeMouse() => MouseKeeper.Free();
+
+        public void RestoreMouse() => MouseKeeper.Restore();
 
         public IEnumerable<IPlayPausable> FindPausables() => Pausables;
 

@@ -77,7 +77,9 @@ public sealed record PlayTimeScale(double Scale) : PlayMessage
 /// <param name="FramesPerSecond">The frame rate over the last heartbeat period: the game draws while paused.</param>
 /// <param name="EntityCount">The entities of the running scenes.</param>
 /// <param name="StepsPending">The steps asked for that have not run yet.</param>
-public sealed record PlayGameState(long Frame, long PlayedFrames, bool Paused, double TimeScale, double GameTimeFactor, double FramesPerSecond, int EntityCount, int StepsPending) : PlayMessage
+/// <param name="PauseReason">Why the game is paused; <see cref="PlayPauseReason.None"/> while it plays. Read only when the
+/// payload has it, so that a state without it reads as before.</param>
+public sealed record PlayGameState(long Frame, long PlayedFrames, bool Paused, double TimeScale, double GameTimeFactor, double FramesPerSecond, int EntityCount, int StepsPending, PlayPauseReason PauseReason = PlayPauseReason.None) : PlayMessage
 {
     /// <summary>The slowest time scale the agent accepts.</summary>
     public const double MinTimeScale = 0.01;
@@ -89,7 +91,8 @@ public sealed record PlayGameState(long Frame, long PlayedFrames, bool Paused, d
     public override PlayMessageType Type => PlayMessageType.State;
 
     internal static PlayGameState Read(PlayReader reader)
-        => new(reader.ReadInt64(), reader.ReadInt64(), reader.ReadBoolean(), reader.ReadDouble(), reader.ReadDouble(), reader.ReadDouble(), reader.ReadInt32(), reader.ReadInt32());
+        => new(reader.ReadInt64(), reader.ReadInt64(), reader.ReadBoolean(), reader.ReadDouble(), reader.ReadDouble(), reader.ReadDouble(), reader.ReadInt32(), reader.ReadInt32(),
+            reader.Remaining > 0 ? (PlayPauseReason)reader.ReadByte() : PlayPauseReason.None);
 
     /// <inheritdoc/>
     protected override void WritePayload(PlayWriter writer)
@@ -102,5 +105,89 @@ public sealed record PlayGameState(long Frame, long PlayedFrames, bool Paused, d
         writer.Write(FramesPerSecond);
         writer.Write(EntityCount);
         writer.Write(StepsPending);
+        writer.Write((byte)PauseReason);
+    }
+}
+
+/// <summary>
+/// Why a played game is paused (<see cref="PlayGameState.PauseReason"/>).
+/// </summary>
+public enum PlayPauseReason : byte
+{
+    /// <summary>The game plays.</summary>
+    None = 0,
+
+    /// <summary>A subscriber paused it (the editor's Pause, or a step).</summary>
+    Editor = 1,
+
+    /// <summary>The user pressed the play mode's key in the game's window (<see cref="PlayLaunchOptions.Hotkey"/>).</summary>
+    Hotkey = 2,
+
+    /// <summary>The game was started paused (<see cref="PlayLaunchOptions.StartPaused"/>): no script started yet.</summary>
+    StartPaused = 3,
+
+    /// <summary>A script threw an exception (<see cref="PlayLaunchOptions.PauseOnScriptException"/>, <see cref="PlayScriptException"/>).</summary>
+    ScriptException = 4,
+}
+
+/// <summary>
+/// Where a script's exception was thrown (<see cref="PlayScriptException.Kind"/>).
+/// </summary>
+public enum PlayScriptExceptionKind : byte
+{
+    /// <summary>Not known: a script method the agent could not tell (a <c>Cancel</c>, a task a script added).</summary>
+    Other = 0,
+
+    /// <summary>The <c>Update</c> of a sync script. The engine stops the script: it does not update again.</summary>
+    Update = 1,
+
+    /// <summary>The <c>Start</c> of a script. The engine stops the script: a sync script does not update.</summary>
+    Start = 2,
+
+    /// <summary>The <c>Execute</c> of an async script (its micro-thread), or a micro-thread it awaits. The micro-thread ends.</summary>
+    Async = 3,
+}
+
+/// <summary>
+/// A script of the game threw an exception, which the engine caught: sent when the game was started with
+/// <see cref="PlayLaunchOptions.PauseOnScriptException"/>. The game pauses (<see cref="Paused"/>) instead of ending, and a
+/// subscriber that joins later gets the last one.
+/// </summary>
+/// <param name="Frame">The agent's frame of the exception.</param>
+/// <param name="Kind">Where it was thrown.</param>
+/// <param name="ScriptType">The full name of the script's type; <c>null</c> when not known.</param>
+/// <param name="EntityHandle">The agent's handle of the script's entity (<see cref="PlayEntityInfo.Handle"/>); 0 when not known
+/// or not in a running scene.</param>
+/// <param name="EntityId">The id of the script's entity; <see cref="Guid.Empty"/> when not known.</param>
+/// <param name="EntityName">The name of the script's entity; <c>null</c> when not known.</param>
+/// <param name="ExceptionType">The full name of the exception's type.</param>
+/// <param name="Message">The exception's message.</param>
+/// <param name="Details">The exception as text: its type, message, stack and inner exceptions.</param>
+/// <param name="Paused">Whether the game paused for it.</param>
+public sealed record PlayScriptException(long Frame, PlayScriptExceptionKind Kind, string? ScriptType, int EntityHandle, Guid EntityId, string? EntityName, string ExceptionType, string Message, string? Details, bool Paused) : PlayMessage
+{
+    /// <inheritdoc/>
+    public override PlayMessageType Type => PlayMessageType.ScriptException;
+
+    /// <summary>The short name of the script's type (without its namespace); <c>null</c> when not known.</summary>
+    public string? ScriptName => ScriptType is { } type ? type[(type.LastIndexOf('.') + 1)..] : null;
+
+    internal static PlayScriptException Read(PlayReader reader)
+        => new(reader.ReadInt64(), (PlayScriptExceptionKind)reader.ReadByte(), reader.ReadString(), reader.ReadInt32(), reader.ReadGuid(), reader.ReadString(),
+            reader.ReadString() ?? string.Empty, reader.ReadString() ?? string.Empty, reader.ReadString(), reader.ReadBoolean());
+
+    /// <inheritdoc/>
+    protected override void WritePayload(PlayWriter writer)
+    {
+        writer.Write(Frame);
+        writer.Write((byte)Kind);
+        writer.Write(ScriptType);
+        writer.Write(EntityHandle);
+        writer.Write(EntityId);
+        writer.Write(EntityName);
+        writer.Write(ExceptionType);
+        writer.Write(Message);
+        writer.Write(Details);
+        writer.Write(Paused);
     }
 }

@@ -40,8 +40,30 @@ public static class PlayProtocol
     public const string EngineVersionVariable = "STRIDE_PLAY_ENGINE_VERSION";
 
     /// <summary>
-    /// The variables that a played game removes from its own environment once its agent is loaded, so that the processes it
-    /// starts do not load an agent too.
+    /// The variable that gives the agent the key that pauses and resumes the game from its window (<see cref="PlayHotkey"/>);
+    /// absent or empty for none.
     /// </summary>
-    public static IReadOnlyList<string> GameVariables { get; } = [StartupHooksVariable, PipeVariable, EngineVersionVariable];
+    public const string HotkeyVariable = "STRIDE_PLAY_HOTKEY";
+
+    /// <summary>
+    /// The variable that starts the game paused, before its first update ("1").
+    /// </summary>
+    public const string StartPausedVariable = "STRIDE_PLAY_START_PAUSED";
+
+    /// <summary>
+    /// The variable that pauses the game when a script throws an exception, instead of ending it ("1").
+    /// </summary>
+    public const string PauseOnScriptExceptionVariable = "STRIDE_PLAY_PAUSE_ON_SCRIPT_EXCEPTION";
+
+    /// <summary>
+    /// The prefix of the play mode's variables: the startup hook removes every variable that starts with it from the game's
+    /// environment, and hands them to the agent.
+    /// </summary>
+    public const string VariablePrefix = "STRIDE_PLAY_";
+
+    /// <summary>
+    /// The variables that a played game removes from its own environment once its agent is loaded, so that the processes it
+    /// starts do not load an agent too. The hook also removes the other variables that start with <see cref="VariablePrefix"/>.
+    /// </summary>
+    public static IReadOnlyList<string> GameVariables { get; } = [StartupHooksVariable, PipeVariable, EngineVersionVariable, HotkeyVariable, StartPausedVariable, PauseOnScriptExceptionVariable];
 }

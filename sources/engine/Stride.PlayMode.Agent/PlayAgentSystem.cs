@@ -30,6 +30,12 @@ namespace Stride.PlayMode.Agent;
 /// The subscribers can pause, step and resume the game and set the speed of its time (<see cref="PlayPauseController"/>): the
 /// agent's draw, the last of each frame, ends the steps. When the last subscriber leaves, the game goes on as without play mode.
 /// </para>
+/// <para>
+/// The options of the launch (<see cref="PlayLaunchOptions"/>) apply from the agent's creation, before the game's first update
+/// and without waiting for a subscriber: a game started paused runs no script until it is resumed or stepped, the key of the
+/// game's window pauses it and frees the mouse (and resumes it), and a script's exception pauses it instead of ending it. A
+/// game that no editor connects to (<see cref="NoEditor"/>) plays, and its exceptions end it again.
+/// </para>
 /// </remarks>
 public sealed class PlayAgentSystem : GameSystemBase
 {
@@ -39,8 +45,16 @@ public sealed class PlayAgentSystem : GameSystemBase
     private const int PollPeriodFrames = 30;
     private const int MaxLogsPerFrame = 64;
     private const int MaxQueuedLogs = 1024;
+    private const int MaxExceptionsPerFrame = 16;
 
     private readonly Game game;
+    private readonly ILogger log = GlobalLogger.GetLogger("PlayMode");
+    private readonly PlayHotkeyListener? hotkey;
+    private readonly PlayScriptExceptionWatcher? exceptionWatcher;
+    // The last script exception caught, for the subscribers that join later
+    private (PlayCaughtScriptException Caught, long Frame)? lastException;
+    private bool hotkeyResume;
+    private int noEditor;
     private readonly ConcurrentQueue<Stream> newStreams = new();
     private readonly List<PlaySubscriber> subscribers = [];
     private readonly ConcurrentQueue<PlayLog> logs = new();
@@ -63,10 +77,12 @@ public sealed class PlayAgentSystem : GameSystemBase
     private double lastFramesPerSecond;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PlayAgentSystem"/> class. Add it to the game's systems.
+    /// Initializes a new instance of the <see cref="PlayAgentSystem"/> class. Add it to the game's systems, before its first
+    /// update.
     /// </summary>
     /// <param name="game">The game it serves.</param>
-    public PlayAgentSystem(Game game)
+    /// <param name="options">What the editor asked for when it started the game; none otherwise.</param>
+    public PlayAgentSystem(Game game, PlayLaunchOptions? options = null)
         : base(game?.Services ?? throw new ArgumentNullException(nameof(game)))
     {
         this.game = game;
@@ -76,11 +92,36 @@ public sealed class PlayAgentSystem : GameSystemBase
         // After the scene's draw: a step ends once its frame is drawn (animations and particles move in the draw)
         Visible = true;
         DrawOrder = int.MaxValue;
-        PauseController = new PlayPauseController(new PlayGamePauseHost(game, GlobalLogger.GetLogger("PlayMode")));
+        PauseController = new PlayPauseController(new PlayGamePauseHost(game, log));
         GlobalLogger.GlobalMessageLogged += OnMessageLogged;
         AppDomain.CurrentDomain.AssemblyLoad += OnAssemblyLoad;
         game.Exiting += OnGameExiting;
+
+        Options = options ?? PlayLaunchOptions.None;
+        hotkey = PlayHotkeyListener.TryCreate(Options.Hotkey, OnHotkey, x => log.Warning(x));
+        if (hotkey is not null)
+            game.Input?.AddListener(hotkey);
+        if (Options.PauseOnScriptException)
+        {
+            exceptionWatcher = new PlayScriptExceptionWatcher(game.Script);
+            if (!exceptionWatcher.Start())
+                log.Warning("Play mode cannot catch the scripts' exceptions in this game (its engine differs): a script's exception ends the game.");
+        }
+        // Before the first update of the scene: no script starts
+        if (Options.StartPaused)
+            PauseController.Pause(PlayPauseReason.StartPaused);
     }
+
+    /// <summary>
+    /// What the editor asked for when it started the game.
+    /// </summary>
+    public PlayLaunchOptions Options { get; }
+
+    /// <summary>
+    /// Whether a script's exception pauses the game now (<see cref="PlayLaunchOptions.PauseOnScriptException"/>, while an editor
+    /// can resume it).
+    /// </summary>
+    public bool PausesOnScriptException => exceptionWatcher?.IsWatching == true;
 
     /// <summary>
     /// The number of connected subscribers, as of the last frame.
@@ -96,6 +137,12 @@ public sealed class PlayAgentSystem : GameSystemBase
     /// Pauses, steps and resumes the game, on the game thread.
     /// </summary>
     internal PlayPauseController PauseController { get; }
+
+    /// <summary>
+    /// Says that no editor will connect (the agent's connection failed): nobody can resume the game, so it plays, and a script's
+    /// exception ends it again. Can be called from any thread; applies at the next update.
+    /// </summary>
+    public void NoEditor() => Volatile.Write(ref noEditor, 1);
 
     /// <summary>
     /// Adds a subscriber connected on this stream (a pipe, a socket); it gets its hello and the tree on the next frame. Can
@@ -114,6 +161,16 @@ public sealed class PlayAgentSystem : GameSystemBase
         frame++;
         // The update that just ran, as it ran (paused or not), before the commands change it
         PauseController.OnUpdate();
+        if (Interlocked.Exchange(ref noEditor, 0) != 0)
+            ReleaseGame();
+        if (hotkeyResume)
+        {
+            // The key pressed again in the game's window: the next frame plays
+            hotkeyResume = false;
+            PauseController.Resume();
+        }
+        // Before any subscriber too: the game pauses at once, and the editor learns why when it connects
+        HandleScriptExceptions();
         if (subscribers.Count == 0 && newStreams.IsEmpty)
         {
             // Nobody listens: follow nothing, so that nothing piles up
@@ -180,6 +237,9 @@ public sealed class PlayAgentSystem : GameSystemBase
     /// <inheritdoc/>
     protected override void Destroy()
     {
+        if (hotkey is not null)
+            game.Input?.RemoveListener(hotkey);
+        exceptionWatcher?.Dispose();
         GlobalLogger.GlobalMessageLogged -= OnMessageLogged;
         AppDomain.CurrentDomain.AssemblyLoad -= OnAssemblyLoad;
         game.Exiting -= OnGameExiting;
@@ -192,6 +252,8 @@ public sealed class PlayAgentSystem : GameSystemBase
 
     private void RemoveClosedSubscribers()
     {
+        if (subscribers.Count == 0)
+            return;
         for (var i = subscribers.Count - 1; i >= 0; i--)
         {
             var subscriber = subscribers[i];
@@ -203,7 +265,50 @@ public sealed class PlayAgentSystem : GameSystemBase
         }
         // Nobody can resume the game any more: it goes on as without play mode
         if (subscribers.Count == 0)
-            PauseController.Release();
+            ReleaseGame();
+    }
+
+    /// <summary>
+    /// Nobody can resume the game: it plays at its own speed, and a script's exception ends it as without play mode.
+    /// </summary>
+    private void ReleaseGame()
+    {
+        exceptionWatcher?.Stop();
+        PauseController.Release();
+    }
+
+    private void OnHotkey()
+    {
+        // In the input's update, before the scripts: they do not run in this frame, so they do not see the key
+        if (!PauseController.IsPaused)
+            PauseController.Pause(PlayPauseReason.Hotkey);
+        else
+            hotkeyResume = true;
+    }
+
+    private void HandleScriptExceptions()
+    {
+        if (exceptionWatcher is not { IsWatching: true })
+            return;
+        var caught = exceptionWatcher.TakeCaught(Tracker.Entities.Values);
+        if (caught.Count == 0)
+            return;
+        PauseController.Pause(PlayPauseReason.ScriptException);
+        for (var i = 0; i < caught.Count && i < MaxExceptionsPerFrame; i++)
+        {
+            lastException = (caught[i], frame);
+            Broadcast(CreateExceptionMessage(caught[i], frame));
+        }
+        if (caught.Count > MaxExceptionsPerFrame)
+            log.Warning($"Play mode caught {caught.Count} script exceptions in one frame; the first {MaxExceptionsPerFrame} were sent to the editor.");
+    }
+
+    private PlayScriptException CreateExceptionMessage(PlayCaughtScriptException caught, long exceptionFrame)
+    {
+        var entity = caught.Entity;
+        var exception = caught.Exception;
+        return new PlayScriptException(exceptionFrame, caught.Kind, caught.ScriptType?.FullName, entity is null ? 0 : Tracker.GetHandle(entity), entity?.Id ?? Guid.Empty, entity?.Name,
+            exception.GetType().FullName ?? exception.GetType().Name, exception.Message, exception.ToString(), PauseController.IsPaused);
     }
 
     private bool AddNewSubscribers()
@@ -264,6 +369,9 @@ public sealed class PlayAgentSystem : GameSystemBase
             tree ??= Tracker.BuildTree(frame).Encode();
             subscriber.Connection.SendFrame(tree);
             subscriber.NeedsTree = false;
+            // A subscriber that joins a game paused by an exception learns which, after the tree that has its entity
+            if (lastException is { } last && PauseController.PauseReason == PlayPauseReason.ScriptException)
+                subscriber.Connection.Send(CreateExceptionMessage(last.Caught, last.Frame));
         }
     }
 

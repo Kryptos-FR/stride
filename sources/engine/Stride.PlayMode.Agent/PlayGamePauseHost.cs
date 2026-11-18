@@ -48,6 +48,7 @@ internal sealed class PlayGamePauseHost(Game game, ILogger log) : IPlayPauseHost
     private static readonly FieldInfo? AccumulatedElapsedTime = typeof(GameBase).GetField("accumulatedElapsedGameTime", BindingFlags.Instance | BindingFlags.NonPublic);
 
     private (bool IsFixedTimeStep, bool ForceOneUpdatePerDraw, TimeSpan Accumulated)? savedStep;
+    private readonly PlayMouseKeeper mouse = new(new GameMouse(game));
 
     /// <inheritdoc/>
     public double TimeFactor
@@ -102,6 +103,12 @@ internal sealed class PlayGamePauseHost(Game game, ILogger log) : IPlayPauseHost
     }
 
     /// <inheritdoc/>
+    public void FreeMouse() => mouse.Free();
+
+    /// <inheritdoc/>
+    public void RestoreMouse() => mouse.Restore();
+
+    /// <inheritdoc/>
     public IEnumerable<IPlayPausable> FindPausables()
     {
         yield return new UpdatePausable(game.Script, runsOnStep: true);
@@ -134,6 +141,30 @@ internal sealed class PlayGamePauseHost(Game game, ILogger log) : IPlayPauseHost
     public void Warn(string message) => log.Warning(message);
 
     private static string KeyOf(object target) => $"{target.GetType().FullName}#{RuntimeHelpers.GetHashCode(target)}";
+
+    /// <summary>The game's mouse: its lock (the input manager's) and its cursor (the game's).</summary>
+    private sealed class GameMouse(Game game) : IPlayMouse
+    {
+        public event EventHandler<EventArgs>? Activated
+        {
+            add => game.Activated += value;
+            remove => game.Activated -= value;
+        }
+
+        public bool IsLocked => game.Input?.IsMousePositionLocked == true;
+
+        public bool IsVisible
+        {
+            get => game.IsMouseVisible;
+            set => game.IsMouseVisible = value;
+        }
+
+        public bool IsWindowActive => game.IsActive;
+
+        public void Lock() => game.Input?.LockMousePosition(forceCenter: true);
+
+        public void Unlock() => game.Input?.UnlockMousePosition();
+    }
 
     /// <summary>A game system whose update stops.</summary>
     private sealed class UpdatePausable(GameSystemBase system, bool runsOnStep) : IPlayPausable

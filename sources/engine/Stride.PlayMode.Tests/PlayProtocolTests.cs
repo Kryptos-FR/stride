@@ -99,6 +99,93 @@ public sealed class PlayProtocolTests
     }
 
     [Fact]
+    public async Task TheStateSaysWhyTheGameIsPausedAndAStateWithoutItReadsAsPlaying()
+    {
+        var state = new PlayGameState(15, 9, true, 1, 1, 60, 304, 0, PlayPauseReason.ScriptException);
+
+        Assert.Equal(state, await RoundTripAsync(state.Encode()));
+
+        // A state written before the reason: its payload ends after the steps
+        var writer = new PlayWriter();
+        writer.Write(15L);
+        writer.Write(9L);
+        writer.Write(true);
+        writer.Write(1.0);
+        writer.Write(1.0);
+        writer.Write(60.0);
+        writer.Write(304);
+        writer.Write(0);
+        var old = Assert.IsType<PlayGameState>(await RoundTripAsync(PlayFraming.Encode(PlayMessageType.State, writer.WrittenSpan)));
+        Assert.True(old.Paused);
+        Assert.Equal(PlayPauseReason.None, old.PauseReason);
+    }
+
+    [Fact]
+    public async Task AScriptExceptionKeepsItsFields()
+    {
+        var id = Guid.NewGuid();
+        var exception = new PlayScriptException(16, PlayScriptExceptionKind.Update, "MyGame.Player.PlayerController", 7, id, "Player", "System.InvalidOperationException", "Boom.", "details", true);
+
+        var read = Assert.IsType<PlayScriptException>(await RoundTripAsync(exception.Encode()));
+
+        Assert.Equal(exception, read);
+        Assert.Equal("PlayerController", read.ScriptName);
+        Assert.Null((exception with { ScriptType = null }).ScriptName);
+        Assert.Equal("Script", (exception with { ScriptType = "Script" }).ScriptName);
+    }
+
+    [Theory]
+    [InlineData("F7", "F7", PlayHotkeyModifiers.None)]
+    [InlineData("shift+f7", "f7", PlayHotkeyModifiers.Shift)]
+    [InlineData(" Ctrl + Alt + Pause ", "Pause", PlayHotkeyModifiers.Ctrl | PlayHotkeyModifiers.Alt)]
+    [InlineData("Control+Shift+P", "P", PlayHotkeyModifiers.Ctrl | PlayHotkeyModifiers.Shift)]
+    public void AHotkeyReadsItsKeyAndModifiers(string text, string key, PlayHotkeyModifiers modifiers)
+    {
+        Assert.True(PlayHotkey.TryParse(text, out var hotkey));
+
+        Assert.Equal(new PlayHotkey(key, modifiers), hotkey);
+        Assert.True(PlayHotkey.TryParse(hotkey.ToString(), out var again));
+        Assert.Equal(hotkey, again);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("None")]
+    [InlineData("none")]
+    [InlineData("Shift+")]
+    [InlineData("Win+F7")]
+    public void NoKeyOrAnUnknownModifierIsNoHotkey(string? text) => Assert.False(PlayHotkey.TryParse(text, out _));
+
+    [Fact]
+    public void TheLaunchOptionsGoThroughTheGameVariables()
+    {
+        var options = new PlayLaunchOptions(StartPaused: true, PauseOnScriptException: true, Hotkey: new PlayHotkey("F7", PlayHotkeyModifiers.Shift));
+
+        var variables = options.ToVariables();
+
+        Assert.Equal("1", variables[PlayProtocol.StartPausedVariable]);
+        Assert.Equal("1", variables[PlayProtocol.PauseOnScriptExceptionVariable]);
+        Assert.Equal("Shift+F7", variables[PlayProtocol.HotkeyVariable]);
+        Assert.All(variables.Keys, x => Assert.StartsWith(PlayProtocol.VariablePrefix, x));
+        Assert.All(variables.Keys, x => Assert.Contains(x, PlayProtocol.GameVariables));
+        Assert.Equal(options, PlayLaunchOptions.FromVariables(variables));
+    }
+
+    [Fact]
+    public void NoVariableIsNoOption()
+    {
+        Assert.Empty(PlayLaunchOptions.None.ToVariables());
+        Assert.Equal(PlayLaunchOptions.None, PlayLaunchOptions.FromVariables(new Dictionary<string, string>()));
+        Assert.Equal(PlayLaunchOptions.None, PlayLaunchOptions.FromVariables(new Dictionary<string, string>
+        {
+            [PlayProtocol.StartPausedVariable] = "0",
+            [PlayProtocol.HotkeyVariable] = "None",
+        }));
+    }
+
+    [Fact]
     public async Task SeveralFramesReadInOrderThenTheEnd()
     {
         using var stream = new MemoryStream();
@@ -209,7 +296,8 @@ public sealed class PlayProtocolTests
             ["Goodbye"] = new PlayGoodbye(null),
             ["Subscribe"] = new PlaySubscribe([1, 2, 3], 5),
             ["Quit"] = new PlayQuit(),
-            ["State"] = new PlayGameState(15, 9, true, 0.25, 0.5, 58.5, 304, 2),
+            ["State"] = new PlayGameState(15, 9, true, 0.25, 0.5, 58.5, 304, 2, PlayPauseReason.Hotkey),
+            ["ScriptException"] = new PlayScriptException(16, PlayScriptExceptionKind.Async, "MyGame.Player.PlayerController", 7, Guid.NewGuid(), "Player", "System.InvalidOperationException", "Boom.", "System.InvalidOperationException: Boom.\n   at ...", true),
             ["Pause"] = new PlayPause(),
             ["Resume"] = new PlayResume(),
             ["Step"] = new PlayStep(3),

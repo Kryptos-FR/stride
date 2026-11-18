@@ -30,6 +30,18 @@ internal interface IPlayPauseHost
     /// <summary>Releases the keys the game's input still holds down (the window lost the key up while the editor had the focus).</summary>
     void ReleaseInput();
 
+    /// <summary>
+    /// Frees a locked mouse and shows the cursor, and remembers how they were. Called at each pause, and again after each step
+    /// (a script that ran in the step may have locked the mouse again: then it is locked at resume).
+    /// </summary>
+    void FreeMouse();
+
+    /// <summary>
+    /// Gives the game back the mouse lock and the cursor as they were before <see cref="FreeMouse"/>. A game whose window is not
+    /// active (the user resumed it from the editor) gets its lock back when its window is activated.
+    /// </summary>
+    void RestoreMouse();
+
     /// <summary>The parts of the game to stop while paused, as of now (systems and processors come and go).</summary>
     IEnumerable<IPlayPausable> FindPausables();
 
@@ -110,6 +122,9 @@ internal sealed class PlayPauseController(IPlayPauseHost host)
     /// <summary>Whether the game is paused (a step in progress included).</summary>
     public bool IsPaused { get; private set; }
 
+    /// <summary>Why the game is paused; <see cref="PlayPauseReason.None"/> while it plays.</summary>
+    public PlayPauseReason PauseReason { get; private set; }
+
     /// <summary>The time scale; 1 by default.</summary>
     public double TimeScale { get; private set; } = 1;
 
@@ -139,19 +154,34 @@ internal sealed class PlayPauseController(IPlayPauseHost host)
     }
 
     /// <summary>
-    /// Pauses the game from its next update; does nothing when it is paused.
+    /// Pauses the game from its next update, and frees a locked mouse. A game that is paused stays so; a script's exception
+    /// then becomes the reason, and the steps not run yet are dropped.
     /// </summary>
-    public void Pause()
+    /// <param name="reason">Why (the editor's Pause by default).</param>
+    public void Pause(PlayPauseReason reason = PlayPauseReason.Editor)
     {
+        if (reason == PlayPauseReason.None)
+            throw new ArgumentOutOfRangeException(nameof(reason), reason, "A pause has a reason.");
         if (IsPaused)
+        {
+            // An exception in a step stops the stepping: the user sees it before anything else runs
+            if (reason == PlayPauseReason.ScriptException && (PauseReason != reason || StepsPending > 1))
+            {
+                PauseReason = reason;
+                StepsPending = Math.Min(StepsPending, step == StepPhase.None ? 0 : 1);
+                Changed = true;
+            }
             return;
+        }
         ObserveFactor();
         IsPaused = true;
+        PauseReason = reason;
         warnedWhilePaused = false;
         Scan();
         foreach (var pausable in pausables)
             pausable.Pause();
         WriteFactor(0);
+        host.FreeMouse();
         Changed = true;
     }
 
@@ -165,6 +195,7 @@ internal sealed class PlayPauseController(IPlayPauseHost host)
             return;
         ObserveFactor();
         IsPaused = false;
+        PauseReason = PlayPauseReason.None;
         StepsPending = 0;
         if (step == StepPhase.Armed)
             EndSingleStep();
@@ -175,6 +206,7 @@ internal sealed class PlayPauseController(IPlayPauseHost host)
         pausables.Clear();
         host.ResetElapsedTime();
         host.ReleaseInput();
+        host.RestoreMouse();
         ApplyPlayingFactor();
         Changed = true;
     }
@@ -276,6 +308,8 @@ internal sealed class PlayPauseController(IPlayPauseHost host)
                     pausable.Pause();
             }
             WriteFactor(0);
+            // A script of the step may have locked the mouse again
+            host.FreeMouse();
             Changed = true;
         }
         if (IsPaused && step == StepPhase.None && StepsPending > 0)
@@ -303,7 +337,7 @@ internal sealed class PlayPauseController(IPlayPauseHost host)
     /// The state, for a <see cref="PlayGameState"/> message.
     /// </summary>
     public PlayGameState CreateState(long frame, double framesPerSecond, int entityCount)
-        => new(frame, PlayedFrames, IsPaused, TimeScale, GameTimeFactor, framesPerSecond, entityCount, StepsPending);
+        => new(frame, PlayedFrames, IsPaused, TimeScale, GameTimeFactor, framesPerSecond, entityCount, StepsPending, PauseReason);
 
     private void EndSingleStep()
     {

@@ -16,8 +16,8 @@ using System.Runtime.Loader;
 /// the agent's folder, and only then loads the agent, whose module initializer needs the engine.
 /// </para>
 /// <para>
-/// The variables of the play mode are removed from the game's environment first, so that a process the game starts does
-/// not load an agent. Nothing here may end the game: every failure is written to the standard error, and the game runs
+/// The variables of the play mode (those that start with <c>STRIDE_PLAY_</c>) are removed from the game's environment first,
+/// so that a process the game starts does not load an agent, and handed to the agent. Nothing here may end the game: every failure is written to the standard error, and the game runs
 /// without an agent.
 /// </para>
 /// </remarks>
@@ -26,6 +26,7 @@ internal static class StartupHook
     private const string StartupHooksVariable = "DOTNET_STARTUP_HOOKS";
     private const string PipeVariable = "STRIDE_PLAY_PIPE";
     private const string EngineVersionVariable = "STRIDE_PLAY_ENGINE_VERSION";
+    private const string VariablePrefix = "STRIDE_PLAY_";
     private const string AgentAssemblyName = "Stride.PlayMode.Agent";
     private const string AgentBootstrapType = "Stride.PlayMode.Agent.PlayAgentBootstrap";
 
@@ -39,7 +40,8 @@ internal static class StartupHook
             var pipeName = Environment.GetEnvironmentVariable(PipeVariable);
             var expectedVersion = Environment.GetEnvironmentVariable(EngineVersionVariable);
             var hookPath = typeof(StartupHook).Assembly.Location;
-            ClearVariables(hookPath);
+            // The play mode's options (start paused, the key of the game window...), for the agent
+            var variables = ClearVariables(hookPath);
             if (string.IsNullOrEmpty(pipeName))
                 return;
 
@@ -65,8 +67,8 @@ internal static class StartupHook
             };
             var agent = AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(AgentAssemblyName));
             agent.GetType(AgentBootstrapType, throwOnError: true)!
-                .GetMethod("Start", BindingFlags.Public | BindingFlags.Static)!
-                .Invoke(null, [pipeName]);
+                .GetMethod("Start", BindingFlags.Public | BindingFlags.Static, [typeof(string), typeof(IReadOnlyDictionary<string, string>)])!
+                .Invoke(null, [pipeName, variables]);
         }
         catch (Exception e)
         {
@@ -74,7 +76,11 @@ internal static class StartupHook
         }
     }
 
-    private static void ClearVariables(string hookPath)
+    /// <summary>
+    /// Removes the play mode's variables from the game's environment, and returns those that start with
+    /// <see cref="VariablePrefix"/>.
+    /// </summary>
+    private static Dictionary<string, string> ClearVariables(string hookPath)
     {
         // Keep the other startup hooks of the variable, if the user set some
         var hooks = Environment.GetEnvironmentVariable(StartupHooksVariable);
@@ -85,8 +91,16 @@ internal static class StartupHook
                 .ToArray();
             Environment.SetEnvironmentVariable(StartupHooksVariable, others.Length > 0 ? string.Join(Path.PathSeparator, others) : null);
         }
-        Environment.SetEnvironmentVariable(PipeVariable, null);
-        Environment.SetEnvironmentVariable(EngineVersionVariable, null);
+        var variables = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var entry in Environment.GetEnvironmentVariables().Cast<System.Collections.DictionaryEntry>())
+        {
+            if (entry.Key is string name && name.StartsWith(VariablePrefix, StringComparison.Ordinal))
+            {
+                variables[name] = entry.Value as string ?? string.Empty;
+                Environment.SetEnvironmentVariable(name, null);
+            }
+        }
+        return variables;
     }
 
     private static string? FindEngineVersion()

@@ -46,6 +46,7 @@ public abstract record PlayMessage
             PlayMessageType.Subscribe => PlaySubscribe.Read(reader),
             PlayMessageType.Quit => new PlayQuit(),
             PlayMessageType.State => PlayGameState.Read(reader),
+            PlayMessageType.ScriptException => PlayScriptException.Read(reader),
             PlayMessageType.Pause => new PlayPause(),
             PlayMessageType.Resume => new PlayResume(),
             PlayMessageType.Step => PlayStep.Read(reader),

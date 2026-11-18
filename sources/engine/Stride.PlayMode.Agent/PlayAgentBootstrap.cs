@@ -3,6 +3,7 @@
 
 using System.IO.Pipes;
 using Stride.Engine;
+using Stride.PlayMode.Protocol;
 
 namespace Stride.PlayMode.Agent;
 
@@ -20,14 +21,26 @@ public static class PlayAgentBootstrap
     private static readonly object Lock = new();
     private static PlayAgentSystem? agent;
     private static Stream? connectedStream;
+    private static bool connectionFailed;
+    private static PlayLaunchOptions options = PlayLaunchOptions.None;
+
+    /// <summary>
+    /// Connects to the editor and waits for the game to start, with no option. Called once.
+    /// </summary>
+    /// <param name="pipeName">The pipe the editor listens on.</param>
+    public static void Start(string pipeName) => Start(pipeName, new Dictionary<string, string>());
 
     /// <summary>
     /// Connects to the editor and waits for the game to start. Called once, by the startup hook.
     /// </summary>
     /// <param name="pipeName">The pipe the editor listens on.</param>
-    public static void Start(string pipeName)
+    /// <param name="variables">The play mode's variables of the game's environment, which the hook removed from it: the options
+    /// of the play session (<see cref="PlayLaunchOptions.FromVariables"/>).</param>
+    public static void Start(string pipeName, IReadOnlyDictionary<string, string> variables)
     {
         ArgumentException.ThrowIfNullOrEmpty(pipeName);
+        ArgumentNullException.ThrowIfNull(variables);
+        options = PlayLaunchOptions.FromVariables(variables);
         Game.GameStarted += OnGameStarted;
         // Connect while the game initializes: the pipe is ready when the first frame runs
         _ = Task.Run(() => ConnectAsync(pipeName));
@@ -40,10 +53,13 @@ public static class PlayAgentBootstrap
             // Only the first game: a game could create others (an editor-like tool), which are not played
             if (agent is not null || sender is not Game game)
                 return;
-            agent = new PlayAgentSystem(game);
+            // Before the game's first update: a game started paused runs no script until the editor resumes it
+            agent = new PlayAgentSystem(game, options);
             game.GameSystems.Add(agent);
             if (connectedStream is not null)
                 agent.AddSubscriber(connectedStream);
+            else if (connectionFailed)
+                agent.NoEditor();
         }
         Game.GameStarted -= OnGameStarted;
     }
@@ -60,6 +76,14 @@ public static class PlayAgentBootstrap
         {
             await pipe.DisposeAsync().ConfigureAwait(false);
             Console.Error.WriteLine($"Play mode: the agent could not connect to the editor; the live connection is off. {e.Message}");
+            lock (Lock)
+            {
+                // Nobody can resume a game started paused: it plays
+                if (agent is not null)
+                    agent.NoEditor();
+                else
+                    connectionFailed = true;
+            }
             return;
         }
         lock (Lock)

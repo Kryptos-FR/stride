@@ -35,6 +35,9 @@ public enum PlayMessageType : byte
     /// <summary>Whether the game is paused, its time scale, frame rate and entities (<see cref="PlayGameState"/>).</summary>
     State = 9,
 
+    /// <summary>A script threw an exception, which the engine caught (<see cref="PlayScriptException"/>).</summary>
+    ScriptException = 10,
+
     /// <summary>A subscriber's choice of entities to receive snapshots of (<see cref="PlaySubscribe"/>).</summary>
     Subscribe = 32,
 
