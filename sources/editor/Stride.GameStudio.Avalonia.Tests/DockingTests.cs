@@ -46,7 +46,7 @@ public sealed class DockingTests
             var headers = menu.Items.Select(x => x is MenuItem item ? item.Header as string : "-").ToList();
             Assert.Equal(
             [
-                "Solution explorer", "Asset view", "References", "-",
+                "Solution explorer", "Asset view", "References", "Live", "-",
                 "Asset preview", "-",
                 // The curve editor of the Stride plugin, hidden by default
                 "Property grid", "Edit history", "Curve editor", "-",
@@ -57,10 +57,10 @@ public sealed class DockingTests
                 "Reset layout", "-",
                 "Command palette...",
             ], headers);
-            // Every panel visible by default is visible in the default layout, and its entry is checked; the Plugins panel and the
-            // curve editor are hidden by default
+            // Every panel visible by default is visible in the default layout, and its entry is checked; the Plugins panel, the
+            // curve editor and the Live tab (shown when a game plays) are hidden by default
             Assert.All(menu.Items.OfType<MenuItem>().Where(x => x.ToggleType == MenuItemToggleType.CheckBox),
-                x => Assert.Equal(x.Header as string is not ("Plugins" or "Curve editor"), x.IsChecked));
+                x => Assert.Equal(x.Header as string is not ("Plugins" or "Curve editor" or "Live"), x.IsChecked));
         }
         finally
         {
