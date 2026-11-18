@@ -61,4 +61,10 @@ public enum PlayMessageType : byte
 
     /// <summary>A subscriber changes a value of a live entity (<see cref="PlayEdit"/>).</summary>
     Edit = 38,
+
+    /// <summary>A subscriber turns the game window's "on top" on or off (<see cref="PlayWindowOnTop"/>).</summary>
+    WindowOnTop = 39,
+
+    /// <summary>A subscriber says whether the editor is the active app (<see cref="PlayEditorActive"/>).</summary>
+    EditorActive = 40,
 }

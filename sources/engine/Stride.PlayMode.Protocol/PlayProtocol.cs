@@ -62,6 +62,11 @@ public static class PlayProtocol
     public const string SceneVariable = "STRIDE_PLAY_SCENE";
 
     /// <summary>
+    /// The variable that keeps the game's window on top while the editor or the game is the active app ("1").
+    /// </summary>
+    public const string WindowOnTopVariable = "STRIDE_PLAY_WINDOW_ON_TOP";
+
+    /// <summary>
     /// The prefix of the play mode's variables: the startup hook removes every variable that starts with it from the game's
     /// environment, and hands them to the agent.
     /// </summary>
@@ -71,5 +76,5 @@ public static class PlayProtocol
     /// The variables that a played game removes from its own environment once its agent is loaded, so that the processes it
     /// starts do not load an agent too. The hook also removes the other variables that start with <see cref="VariablePrefix"/>.
     /// </summary>
-    public static IReadOnlyList<string> GameVariables { get; } = [StartupHooksVariable, PipeVariable, EngineVersionVariable, HotkeyVariable, StartPausedVariable, PauseOnScriptExceptionVariable, SceneVariable];
+    public static IReadOnlyList<string> GameVariables { get; } = [StartupHooksVariable, PipeVariable, EngineVersionVariable, HotkeyVariable, StartPausedVariable, PauseOnScriptExceptionVariable, SceneVariable, WindowOnTopVariable];
 }

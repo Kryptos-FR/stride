@@ -68,6 +68,23 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// The game that plays learns that the editor is active: its window stays on top while the editor or the game is active.
+    /// </summary>
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        Activated += (_, _) => SetEditorActive(true);
+        Deactivated += (_, _) => SetEditorActive(false);
+        SetEditorActive(IsActive);
+    }
+
+    private void SetEditorActive(bool active)
+    {
+        if (DataContext is MainViewModel { PlayMode: { } playMode })
+            playMode.IsEditorActive = active;
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);

@@ -54,6 +54,12 @@
     <Style Selector="Border.state.notResponding TextBlock">
       <Setter Property="Foreground" Value="White"/>
     </Style>
+    <Style Selector="ToggleButton.pin:unchecked">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ToggleButton.pin:unchecked Path">
+      <Setter Property="Opacity" Value="0.5"/>
+    </Style>
     <Style Selector="ListBox.stopped">
       <Setter Property="Opacity" Value="0.5"/>
     </Style>
@@ -164,6 +170,14 @@
             </DataTemplate>
           </ComboBox.ItemTemplate>
         </ComboBox>
+        <!-- Keeps the game window on top while the editor or the game is the active app; also for the next games -->
+        <ToggleButton Name="WindowOnTopButton" Focusable="False" Padding="4" Margin="4,0,0,0" Classes="pin"
+                      IsChecked="{Binding IsWindowOnTop}"
+                      ToolTip.Tip="{Binding WindowOnTopText}">
+          <!-- A pin -->
+          <Path Width="12" Height="16" Stretch="Uniform" Fill="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                Data="M 3 0 H 9 V 1.5 H 8 V 7 L 10.5 9.5 V 11 H 6.75 V 16 L 6 17 L 5.25 16 V 11 H 1.5 V 9.5 L 4 7 V 1.5 H 3 Z"/>
+        </ToggleButton>
       </StackPanel>
     </DockPanel>
     <!-- The scene the game was started on, when it is not its default scene (Play this scene) -->

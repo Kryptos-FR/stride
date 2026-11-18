@@ -413,6 +413,19 @@ public sealed class PlaySession : IAsyncDisposable
     }
 
     /// <summary>
+    /// Turns on or off keeping the game's window on top while the editor or the game is the active app (the play toolbar's
+    /// pin); the launch gives the first value (<see cref="PlayLaunchOptions.WindowOnTop"/>).
+    /// </summary>
+    /// <returns><c>false</c> when the session is not connected or the request could not be queued.</returns>
+    public bool SetWindowOnTop(bool onTop) => SendIfConnected(new PlayWindowOnTop(onTop));
+
+    /// <summary>
+    /// Tells the game whether the editor is the active app: its window stays on top while the editor or the game is active.
+    /// </summary>
+    /// <returns><c>false</c> when the session is not connected or the request could not be queued.</returns>
+    public bool SetEditorActive(bool active) => SendIfConnected(new PlayEditorActive(active));
+
+    /// <summary>
     /// Asks the game to quit as its window's close button does.
     /// </summary>
     /// <returns><c>false</c> when the session is not connected or the request could not be queued.</returns>

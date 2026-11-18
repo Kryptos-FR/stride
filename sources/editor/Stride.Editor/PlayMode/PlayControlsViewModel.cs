@@ -39,6 +39,7 @@ public sealed class PlayControlsViewModel : DispatcherViewModel
         PauseCommand = new AnonymousCommand(serviceProvider, TogglePause) { IsEnabled = false };
         StepCommand = new AnonymousCommand(serviceProvider, Step) { IsEnabled = false };
         playMode.SessionStarted += SessionStarted;
+        playMode.WindowOnTopChanged += WindowOnTopChanged;
         if (playMode.Session is { } current)
             Follow(current);
     }
@@ -86,6 +87,23 @@ public sealed class PlayControlsViewModel : DispatcherViewModel
     } = 1;
 
     /// <summary>
+    /// Whether the game's window stays on top while the editor or the game is the active app (the toolbar's pin): it applies to
+    /// the game that plays at once, and to the next ones (<see cref="PlayModeService.WindowOnTop"/>).
+    /// </summary>
+    public bool IsWindowOnTop
+    {
+        get => playMode.WindowOnTop;
+        set => playMode.WindowOnTop = value;
+    }
+
+    /// <summary>
+    /// The tooltip of the pin.
+    /// </summary>
+    public string WindowOnTopText => IsWindowOnTop
+        ? Tr._p("Play", "The game window stays on top while the editor or the game is the active app. Click to let it go behind the editor.")
+        : Tr._p("Play", "Keep the game window on top while the editor or the game is the active app.");
+
+    /// <summary>
     /// The game's frame rate as of its last state (it goes on drawing while paused); 0 before the first.
     /// </summary>
     public double FramesPerSecond { get; private set => SetValue(ref field, value); }
@@ -119,9 +137,12 @@ public sealed class PlayControlsViewModel : DispatcherViewModel
     public override void Destroy()
     {
         playMode.SessionStarted -= SessionStarted;
+        playMode.WindowOnTopChanged -= WindowOnTopChanged;
         Unfollow();
         base.Destroy();
     }
+
+    private void WindowOnTopChanged(object? sender, EventArgs e) => Dispatcher.InvokeAsync(() => OnPropertyChanged(nameof(IsWindowOnTop), nameof(WindowOnTopText))).Forget();
 
     private void SessionStarted(object? sender, PlaySession started) => Dispatcher.InvokeAsync(() => Follow(started)).Forget();
 

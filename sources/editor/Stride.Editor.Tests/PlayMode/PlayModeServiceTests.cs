@@ -233,6 +233,52 @@ public sealed class PlayModeServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TheGameLearnsWhetherTheEditorIsActiveAndFollowsThePin()
+    {
+        var changes = 0;
+        service.WindowOnTopChanged += (_, _) => ++changes;
+        service.WindowOnTop = true;
+        service.IsEditorActive = true;
+
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+
+        Assert.Equal("1", games[0].Environment[PlayProtocol.WindowOnTopVariable]);
+        Assert.True(service.Session!.LaunchOptions.WindowOnTop);
+        agents.Add(transports[0].Connect());
+        agents[0].Send(new PlayHello(1234, Version, Version, null, []));
+        // Told at the connection that the editor is active (the agent starts with it inactive)
+        Assert.Equal(new PlayEditorActive(true), await agents[0].ReceiveAsync<PlayEditorActive>());
+
+        service.IsEditorActive = false;
+        Assert.Equal(new PlayEditorActive(false), await agents[0].ReceiveAsync<PlayEditorActive>());
+        // The same value again sends nothing
+        service.IsEditorActive = false;
+        service.WindowOnTop = false;
+        Assert.Equal(new PlayWindowOnTop(false), await agents[0].ReceiveAsync<PlayWindowOnTop>());
+        Assert.Equal(2, changes);
+
+        // The next game starts as the pin says
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+        Assert.False(games[1].Environment.ContainsKey(PlayProtocol.WindowOnTopVariable));
+    }
+
+    [Fact]
+    public async Task ThePinChangedBeforeTheGameConnectsIsSentWhenItDoes()
+    {
+        service.WindowOnTop = true;
+        service.Start(Path.Combine(directory, "MyGame.dll"), new LoggerResult());
+        var session = service.Session!;
+
+        // Not connected yet: nothing to send to
+        service.WindowOnTop = false;
+        agents.Add(transports[0].Connect());
+        agents[0].Send(new PlayHello(1234, Version, Version, null, []));
+        await WaitForStateAsync(session, PlaySessionState.Connected);
+
+        Assert.Equal(new PlayWindowOnTop(false), await agents[0].ReceiveAsync<PlayWindowOnTop>());
+    }
+
+    [Fact]
     public void AGameStartedWithoutTheConnectionHasNoLaunchOptions()
     {
         service.ConnectToGame = () => false;

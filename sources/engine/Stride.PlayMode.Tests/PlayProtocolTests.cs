@@ -59,6 +59,17 @@ public sealed class PlayProtocolTests
         Assert.IsType<PlayResume>(await RoundTripAsync(new PlayResume().Encode()));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task TheWindowMessagesKeepTheirValue(bool value)
+    {
+        Assert.Equal(new PlayWindowOnTop(value), await RoundTripAsync(new PlayWindowOnTop(value).Encode()));
+        Assert.Equal(new PlayEditorActive(value), await RoundTripAsync(new PlayEditorActive(value).Encode()));
+        Assert.Equal(PlayMessageType.WindowOnTop, new PlayWindowOnTop(value).Type);
+        Assert.Equal(PlayMessageType.EditorActive, new PlayEditorActive(value).Type);
+    }
+
     [Fact]
     public async Task SnapshotKeepsItsPayloadsAndErrors()
     {
@@ -161,7 +172,7 @@ public sealed class PlayProtocolTests
     [Fact]
     public void TheLaunchOptionsGoThroughTheGameVariables()
     {
-        var options = new PlayLaunchOptions(StartPaused: true, PauseOnScriptException: true, Hotkey: new PlayHotkey("F7", PlayHotkeyModifiers.Shift), Scene: "/MyGame/Scenes/Level2");
+        var options = new PlayLaunchOptions(StartPaused: true, PauseOnScriptException: true, Hotkey: new PlayHotkey("F7", PlayHotkeyModifiers.Shift), Scene: "/MyGame/Scenes/Level2", WindowOnTop: true);
 
         var variables = options.ToVariables();
 
@@ -169,6 +180,7 @@ public sealed class PlayProtocolTests
         Assert.Equal("1", variables[PlayProtocol.PauseOnScriptExceptionVariable]);
         Assert.Equal("Shift+F7", variables[PlayProtocol.HotkeyVariable]);
         Assert.Equal("/MyGame/Scenes/Level2", variables[PlayProtocol.SceneVariable]);
+        Assert.Equal("1", variables[PlayProtocol.WindowOnTopVariable]);
         Assert.All(variables.Keys, x => Assert.StartsWith(PlayProtocol.VariablePrefix, x));
         Assert.All(variables.Keys, x => Assert.Contains(x, PlayProtocol.GameVariables));
         Assert.Equal(options, PlayLaunchOptions.FromVariables(variables));
@@ -343,6 +355,8 @@ public sealed class PlayProtocolTests
             ["EditNewInstance"] = new PlayEdit(19, 4, Guid.NewGuid(), [PlayPathSegment.Member("Shapes"), PlayPathSegment.Item(1)], PlayEditOperation.Insert, PlayEditValue.NewInstanceOf("Game.Box, Game")),
             ["EditResult"] = new PlayEditResult(17, 120, PlayEditStatus.Applied, PlayEditValue.Of(new byte[] { 7 }), null),
             ["EditResultFailed"] = new PlayEditResult(18, 121, PlayEditStatus.Failed, PlayEditValue.Null, "The setter threw."),
+            ["WindowOnTop"] = new PlayWindowOnTop(true),
+            ["EditorActive"] = new PlayEditorActive(true),
         };
     }
 }

@@ -227,6 +227,86 @@ public sealed class PlayAgentOptionsTests : IDisposable
     }
 
     [Fact]
+    public void ThePlayModeTurnsOffTheCapOfAnUnfocusedGameUntilNoEditorFollowsIt()
+    {
+        Assert.True(game.TreatNotFocusedLikeMinimized);
+
+        var agent = CreateAgent(PlayLaunchOptions.None);
+
+        Assert.False(game.TreatNotFocusedLikeMinimized);
+        agent.NoEditor();
+        Frame(agent);
+        Assert.True(game.TreatNotFocusedLikeMinimized);
+    }
+
+    [Fact]
+    public void TheDestroyedAgentGivesTheCapBack()
+    {
+        game.TreatNotFocusedLikeMinimized = false;
+        var agent = CreateAgent(PlayLaunchOptions.None);
+        game.TreatNotFocusedLikeMinimized = true;
+        // The game's own value from before the agent comes back, even when it was off
+        agent.Dispose();
+
+        Assert.False(game.TreatNotFocusedLikeMinimized);
+    }
+
+    [Fact]
+    public async Task TheEditorKeepsTheWindowOnTopWhileItIsActiveAndThePinTurnsItOff()
+    {
+        var window = new AgentWindow();
+        var agent = CreateAgent(new PlayLaunchOptions(WindowOnTop: true), window: window);
+        Assert.True(agent.WindowController.IsEnabled);
+        Assert.False(window.OnTop);
+        var editor = await ConnectAsync(agent);
+
+        editor.Send(new PlayEditorActive(true));
+        await FrameUntilAsync(agent, () => window.OnTop, "the window on top");
+        Assert.True(agent.WindowController.IsEditorActive);
+
+        editor.Send(new PlayWindowOnTop(false));
+        await FrameUntilAsync(agent, () => !window.OnTop, "the window back among the others");
+        Assert.False(agent.WindowController.IsEnabled);
+
+        editor.Send(new PlayWindowOnTop(true));
+        await FrameUntilAsync(agent, () => window.OnTop, "the window on top again");
+
+        // The editor leaves: the window goes back, and the game is capped again when unfocused
+        editor.Dispose();
+        await FrameUntilAsync(agent, () => agent.SubscriberCount == 0, "the editor gone");
+        Assert.False(window.OnTop);
+        Assert.True(agent.WindowController.IsReleased);
+        Assert.True(game.TreatNotFocusedLikeMinimized);
+    }
+
+    [Fact]
+    public void AGameWithoutAWindowIsNotKeptOnTop()
+    {
+        // A game that is not run has no window: the agent says it once, and the game goes on
+        var warnings = new List<string>();
+        void OnLogged(ILogMessage message)
+        {
+            if (message.Module == "PlayMode" && message.Type == LogMessageType.Warning)
+                warnings.Add(message.Text);
+        }
+        GlobalLogger.GlobalMessageLogged += OnLogged;
+        try
+        {
+            var agent = CreateAgent(new PlayLaunchOptions(WindowOnTop: true));
+            agent.WindowController.SetEditorActive(true);
+            agent.WindowController.SetEditorActive(false);
+            agent.WindowController.SetEditorActive(true);
+
+            Assert.False(agent.WindowController.IsOnTop);
+            Assert.Single(warnings, x => x.Contains("on top", StringComparison.Ordinal));
+        }
+        finally
+        {
+            GlobalLogger.GlobalMessageLogged -= OnLogged;
+        }
+    }
+
+    [Fact]
     public void WithoutASceneTheDefaultSceneStays()
     {
         game.SceneSystem.InitialSceneUrl = "MainScene";
@@ -237,9 +317,9 @@ public sealed class PlayAgentOptionsTests : IDisposable
         Assert.Equal("MainScene", game.SceneSystem.InitialSceneUrl);
     }
 
-    private PlayAgentSystem CreateAgent(PlayLaunchOptions options, Func<string, bool>? sceneExists = null)
+    private PlayAgentSystem CreateAgent(PlayLaunchOptions options, Func<string, bool>? sceneExists = null, IPlayWindow? window = null)
     {
-        var agent = new PlayAgentSystem(game, options, sceneExists);
+        var agent = new PlayAgentSystem(game, options, sceneExists, window);
         disposables.Add(agent);
         return agent;
     }
@@ -252,6 +332,21 @@ public sealed class PlayAgentOptionsTests : IDisposable
                 game.Script.Update(new GameTime());
             agent.Update(new GameTime());
             agent.Draw(new GameTime());
+        }
+    }
+
+    /// <summary>
+    /// Runs frames until the condition holds: the editor's messages arrive on the connection's task.
+    /// </summary>
+    private async Task FrameUntilAsync(PlayAgentSystem agent, Func<bool> condition, string what)
+    {
+        var start = DateTime.UtcNow;
+        while (!condition())
+        {
+            if (DateTime.UtcNow - start > Timeout)
+                Assert.Fail($"Timed out waiting for {what}.");
+            Frame(agent);
+            await Task.Delay(10);
         }
     }
 
@@ -297,7 +392,37 @@ public sealed class PlayAgentOptionsTests : IDisposable
             }
         }
 
+        public void Send(PlayMessage message) => Assert.True(connection.Send(message));
+
         public void Dispose() => connection.DisposeAsync().AsTask().Wait(Timeout);
+    }
+
+    /// <summary>
+    /// The game's window, as the agent keeps it on top: a game that is not run has none.
+    /// </summary>
+    private sealed class AgentWindow : IPlayWindow
+    {
+        public event EventHandler<EventArgs>? Activated
+        {
+            add { }
+            remove { }
+        }
+
+        public event EventHandler<EventArgs>? Deactivated
+        {
+            add { }
+            remove { }
+        }
+
+        public bool IsActive => false;
+
+        public bool OnTop { get; private set; }
+
+        public bool TrySetOnTop(bool onTop)
+        {
+            OnTop = onTop;
+            return true;
+        }
     }
 
     private sealed class CountingScript : SyncScript

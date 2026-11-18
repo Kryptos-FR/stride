@@ -53,6 +53,8 @@ public abstract record PlayMessage
             PlayMessageType.TimeScale => PlayTimeScale.Read(reader),
             PlayMessageType.Edit => PlayEdit.Read(reader),
             PlayMessageType.EditResult => PlayEditResult.Read(reader),
+            PlayMessageType.WindowOnTop => PlayWindowOnTop.Read(reader),
+            PlayMessageType.EditorActive => PlayEditorActive.Read(reader),
             _ => new PlayUnknownMessage(frame.Type, frame.Payload),
         };
     }

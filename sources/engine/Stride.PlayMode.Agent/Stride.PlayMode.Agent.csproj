@@ -19,6 +19,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Stride.Engine\Stride.Engine.csproj" />
     <ProjectReference Include="..\Stride.PlayMode.Protocol\Stride.PlayMode.Protocol.csproj" />
+    <!-- SDL's "always on top" for the game's window (the engine references it the same way: the game has it at run time) -->
+    <PackageReference Include="Silk.NET.Sdl" PrivateAssets="compile" />
   </ItemGroup>
   <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk/Sdk/Sdk.targets" />
 </Project>

@@ -6,6 +6,7 @@ using Stride.Core.IO;
 using Stride.Core.Mathematics;
 using Stride.Core.Settings;
 using Stride.Core.Translation;
+using Stride.Editor.PlayMode;
 using Stride.GameStudio.Avalonia.Helpers;
 using Stride.PlayMode.Protocol;
 
@@ -59,6 +60,12 @@ internal static class GameStudioEditorSettings
             DisplayName = $"{PlayMode}/{Tr._p("Settings", "Pause key in the game window")}",
             Description = Tr._p("Settings", "The key that pauses and resumes the game from its own window, and frees a mouse the game locked (\"F7\", \"Shift+F7\"). \"None\" for no key."),
         };
+        // The game would go behind the editor at each click in it otherwise
+        PlayModeGameWindowOnTop = new SettingsKey<bool>("PlayMode/GameWindowOnTop", EditorSettings.SettingsContainer, true)
+        {
+            DisplayName = $"{PlayMode}/{Tr._p("Settings", "Keep the game window on top")}",
+            Description = Tr._p("Settings", "While the game plays, its window stays above the editor while the editor or the game is the active app, and goes back among the other windows when you switch to another app. The pin of the Live tab's toolbar changes it for the game that plays."),
+        };
         // On by default: the last tree of a game that exited stays readable
         PlayModeKeepLiveTabAfterExit = new SettingsKey<bool>("PlayMode/KeepLiveTabAfterExit", EditorSettings.SettingsContainer, true)
         {
@@ -99,9 +106,45 @@ internal static class GameStudioEditorSettings
     public static SettingsKey<string> PlayModeGameHotkey { get; }
 
     /// <summary>
+    /// Whether the game's window stays on top while the editor or the game is the active app (the pin of the Live tab's toolbar).
+    /// </summary>
+    public static SettingsKey<bool> PlayModeGameWindowOnTop { get; }
+
+    /// <summary>
     /// Whether the Live tab stays open when its game exits normally. It stays open after a crash or a lost connection anyway.
     /// </summary>
     public static SettingsKey<bool> PlayModeKeepLiveTabAfterExit { get; }
+
+    /// <summary>
+    /// Makes the play mode's pin (<see cref="PlayModeService.WindowOnTop"/>) and <see cref="PlayModeGameWindowOnTop"/> one: the
+    /// pin starts from the setting, a click on it changes and saves the setting, and a change in the settings moves it.
+    /// </summary>
+    /// <param name="playMode">The play mode of an editor.</param>
+    /// <param name="save">Saves the settings.</param>
+    public static void FollowWindowOnTop(PlayModeService playMode, Action save)
+    {
+        ArgumentNullException.ThrowIfNull(playMode);
+        ArgumentNullException.ThrowIfNull(save);
+        playMode.WindowOnTop = PlayModeGameWindowOnTop.GetValue();
+        playMode.WindowOnTopChanged += (_, _) =>
+        {
+            if (PlayModeGameWindowOnTop.GetValue() == playMode.WindowOnTop)
+                return;
+            PlayModeGameWindowOnTop.SetValue(playMode.WindowOnTop);
+            save();
+        };
+        var weak = new WeakReference<PlayModeService>(playMode);
+        EventHandler<ChangesValidatedEventArgs>? changed = null;
+        changed = (_, _) =>
+        {
+            // The settings outlive an editor (the tests open several)
+            if (weak.TryGetTarget(out var target))
+                target.WindowOnTop = PlayModeGameWindowOnTop.GetValue();
+            else
+                PlayModeGameWindowOnTop.ChangesValidated -= changed;
+        };
+        PlayModeGameWindowOnTop.ChangesValidated += changed;
+    }
 
     /// <summary>
     /// The options of a game started in play mode, from the settings: read at each start, so that a change applies to the next one.
@@ -109,7 +152,8 @@ internal static class GameStudioEditorSettings
     public static PlayLaunchOptions GetPlayLaunchOptions() => new(
         StartPaused: PlayModeStartPaused.GetValue(),
         PauseOnScriptException: PlayModePauseOnScriptException.GetValue(),
-        Hotkey: PlayHotkey.TryParse(PlayModeGameHotkey.GetValue(), out var hotkey) ? hotkey : null);
+        Hotkey: PlayHotkey.TryParse(PlayModeGameHotkey.GetValue(), out var hotkey) ? hotkey : null,
+        WindowOnTop: PlayModeGameWindowOnTop.GetValue());
 
     /// <summary>
     /// The session to open at startup when no path is given on the command line.

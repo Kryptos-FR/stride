@@ -37,6 +37,12 @@ namespace Stride.PlayMode.Agent;
 /// game starts on another scene than its default one (<see cref="PlayLaunchOptions.Scene"/>). A game that no editor connects
 /// to (<see cref="NoEditor"/>) plays, and its exceptions end it again.
 /// </para>
+/// <para>
+/// While an editor follows the game, the game's window stays on top while the editor or the game is the active app
+/// (<see cref="PlayLaunchOptions.WindowOnTop"/>, <see cref="PlayWindowOnTop"/>, <see cref="PlayEditorActive"/>,
+/// <see cref="PlayWindowController"/>), and the game plays at its own rate while its window does not have the focus: the
+/// engine's cap of an unfocused game (<see cref="GameBase.TreatNotFocusedLikeMinimized"/>) is off.
+/// </para>
 /// </remarks>
 public sealed class PlayAgentSystem : GameSystemBase
 {
@@ -52,6 +58,12 @@ public sealed class PlayAgentSystem : GameSystemBase
     private readonly ILogger log = GlobalLogger.GetLogger("PlayMode");
     private readonly PlayHotkeyListener? hotkey;
     private readonly PlayScriptExceptionWatcher? exceptionWatcher;
+    private readonly Stopwatch windowClock = Stopwatch.StartNew();
+    // The game's own choice, given back when no editor follows it any more
+    private readonly bool throttledWhenUnfocused;
+    // The adapter of the game's own window, when no window was given (tests give theirs)
+    private readonly PlayGameWindow? gameWindow;
+    private bool throttleRestored;
     // The last script exception caught, for the subscribers that join later
     private (PlayCaughtScriptException Caught, long Frame)? lastException;
     private bool hotkeyResume;
@@ -94,7 +106,8 @@ public sealed class PlayAgentSystem : GameSystemBase
     /// <param name="options">What the editor asked for when it started the game; none otherwise.</param>
     /// <param name="sceneExists">Whether the game's content has a URL; the game's content manager otherwise (the tests give
     /// their own, for a game that is not run).</param>
-    internal PlayAgentSystem(Game game, PlayLaunchOptions? options, Func<string, bool>? sceneExists)
+    /// <param name="window">The game's window, kept on top; the game's own otherwise (the tests give a fake one).</param>
+    internal PlayAgentSystem(Game game, PlayLaunchOptions? options, Func<string, bool>? sceneExists, IPlayWindow? window = null)
         : base(game?.Services ?? throw new ArgumentNullException(nameof(game)))
     {
         this.game = game;
@@ -126,6 +139,12 @@ public sealed class PlayAgentSystem : GameSystemBase
         // Before the first update of the scene: no script starts
         if (Options.StartPaused)
             PauseController.Pause(PlayPauseReason.StartPaused);
+        // The user works in the editor while the game plays: the game keeps its own rate, and its window stays in sight
+        throttledWhenUnfocused = game.TreatNotFocusedLikeMinimized;
+        game.TreatNotFocusedLikeMinimized = false;
+        if (window is null)
+            window = gameWindow = new PlayGameWindow(game);
+        WindowController = new PlayWindowController(window, Options.WindowOnTop, () => windowClock.Elapsed, x => log.Warning(x));
     }
 
     /// <summary>
@@ -159,6 +178,11 @@ public sealed class PlayAgentSystem : GameSystemBase
     /// Pauses, steps and resumes the game, on the game thread.
     /// </summary>
     internal PlayPauseController PauseController { get; }
+
+    /// <summary>
+    /// Keeps the game's window on top while the editor or the game is active, on the game thread.
+    /// </summary>
+    internal PlayWindowController WindowController { get; }
 
     /// <summary>
     /// The game system that applies the subscribers' edits at the start of each frame (<see cref="ApplyEdits"/>): add it to the
@@ -240,6 +264,7 @@ public sealed class PlayAgentSystem : GameSystemBase
         PauseController.OnUpdate();
         if (Interlocked.Exchange(ref noEditor, 0) != 0)
             ReleaseGame();
+        WindowController.Update();
         if (hotkeyResume)
         {
             // The key pressed again in the game's window: the next frame plays
@@ -318,6 +343,9 @@ public sealed class PlayAgentSystem : GameSystemBase
             game.Input?.RemoveListener(hotkey);
         exceptionWatcher?.Dispose();
         EditSystem.Dispose();
+        WindowController.Dispose();
+        gameWindow?.Dispose();
+        RestoreThrottle();
         GlobalLogger.GlobalMessageLogged -= OnMessageLogged;
         AppDomain.CurrentDomain.AssemblyLoad -= OnAssemblyLoad;
         game.Exiting -= OnGameExiting;
@@ -353,6 +381,16 @@ public sealed class PlayAgentSystem : GameSystemBase
     {
         exceptionWatcher?.Stop();
         PauseController.Release();
+        WindowController.Release();
+        RestoreThrottle();
+    }
+
+    private void RestoreThrottle()
+    {
+        if (throttleRestored)
+            return;
+        throttleRestored = true;
+        game.TreatNotFocusedLikeMinimized = throttledWhenUnfocused;
     }
 
     private void OnHotkey()
@@ -431,6 +469,12 @@ public sealed class PlayAgentSystem : GameSystemBase
                         break;
                     case PlayTimeScale timeScale:
                         PauseController.SetTimeScale(timeScale.Scale);
+                        break;
+                    case PlayWindowOnTop onTop:
+                        WindowController.SetEnabled(onTop.OnTop);
+                        break;
+                    case PlayEditorActive editor:
+                        WindowController.SetEditorActive(editor.Active);
                         break;
                 }
             }

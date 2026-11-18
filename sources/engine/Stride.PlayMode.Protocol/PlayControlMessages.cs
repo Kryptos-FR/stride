@@ -65,6 +65,39 @@ public sealed record PlayTimeScale(double Scale) : PlayMessage
 }
 
 /// <summary>
+/// A subscriber turns on or off keeping the game's window on top while the editor or the game is the active app (the play
+/// toolbar's pin). The launch gives the first value (<see cref="PlayLaunchOptions.WindowOnTop"/>).
+/// </summary>
+/// <param name="OnTop">Whether the window stays on top.</param>
+public sealed record PlayWindowOnTop(bool OnTop) : PlayMessage
+{
+    /// <inheritdoc/>
+    public override PlayMessageType Type => PlayMessageType.WindowOnTop;
+
+    internal static PlayWindowOnTop Read(PlayReader reader) => new(reader.ReadBoolean());
+
+    /// <inheritdoc/>
+    protected override void WritePayload(PlayWriter writer) => writer.Write(OnTop);
+}
+
+/// <summary>
+/// A subscriber says whether the editor is the active app (its main window has the focus): the game's window stays on top
+/// while the editor or the game is active, and goes back among the other windows when the user switches to another app.
+/// Sent when the editor connects, and each time its main window is activated or deactivated.
+/// </summary>
+/// <param name="Active">Whether the editor is active.</param>
+public sealed record PlayEditorActive(bool Active) : PlayMessage
+{
+    /// <inheritdoc/>
+    public override PlayMessageType Type => PlayMessageType.EditorActive;
+
+    internal static PlayEditorActive Read(PlayReader reader) => new(reader.ReadBoolean());
+
+    /// <inheritdoc/>
+    protected override void WritePayload(PlayWriter writer) => writer.Write(Active);
+}
+
+/// <summary>
 /// The state of the played game: sent when it is paused, resumed or stepped and when its time scale changes, and after each
 /// heartbeat (about once a second).
 /// </summary>

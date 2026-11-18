@@ -102,6 +102,44 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
     public PlaySceneRequest? NextStartScene { get; set; }
 
     /// <summary>
+    /// Whether the game's window stays on top while the editor or the game is the active app (the play toolbar's pin, and the
+    /// editor's setting): given to each game at its start, and to the game that plays at once when it changes.
+    /// </summary>
+    public bool WindowOnTop
+    {
+        get;
+        set
+        {
+            if (field == value)
+                return;
+            field = value;
+            Session?.SetWindowOnTop(value);
+            WindowOnTopChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Raised when <see cref="WindowOnTop"/> changes, on the thread that changed it.
+    /// </summary>
+    public event EventHandler? WindowOnTopChanged;
+
+    /// <summary>
+    /// Whether the editor is the active app (its main window has the focus): the game's window stays on top while the editor or
+    /// the game is active. The editor's window sets it; the game that plays is told at once, and each game when it connects.
+    /// </summary>
+    public bool IsEditorActive
+    {
+        get;
+        set
+        {
+            if (field == value)
+                return;
+            field = value;
+            Session?.SetEditorActive(value);
+        }
+    }
+
+    /// <summary>
     /// The current session, or the last one once its game exited; <c>null</c> before the first start.
     /// </summary>
     public PlaySession? Session { get; private set; }
@@ -136,7 +174,20 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
             launch = launch with { StartPaused = true };
         if (scene is not null)
             launch = launch with { Scene = scene.Url };
+        if (connect)
+            launch = launch with { WindowOnTop = WindowOnTop };
         var session = new PlaySession(connect ? createTransport() : new NoPlayTransport(), agentFiles, options) { LaunchOptions = launch, Scene = scene };
+        // The game learns that the editor is active when it connects (it starts with the editor inactive), then at each
+        // change; and the pin, if it changed since the launch
+        session.StateChanged += (_, change) =>
+        {
+            if (change.NewState != PlaySessionState.Connected)
+                return;
+            if (IsEditorActive)
+                session.SetEditorActive(true);
+            if (connect && WindowOnTop != session.LaunchOptions.WindowOnTop)
+                session.SetWindowOnTop(WindowOnTop);
+        };
         if (scene is not null)
         {
             // Once the agent connects: the Output pane follows the game's output only after this call returns

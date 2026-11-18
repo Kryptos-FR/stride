@@ -417,6 +417,8 @@ public partial class App : Application
             ConnectToGame = () => GameStudioEditorSettings.PlayModeConnect.GetValue(),
             LaunchOptions = GameStudioEditorSettings.GetPlayLaunchOptions,
         };
+        // The pin of the Live tab and the setting are one
+        GameStudioEditorSettings.FollowWindowOnTop(playMode, EditorSettings.Save);
         // A game that plays ends with the editor, even when the system ends it; then the sessions end, with their pipes (a
         // pipe's file stays on Linux and macOS otherwise)
         if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

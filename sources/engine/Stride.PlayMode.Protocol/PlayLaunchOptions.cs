@@ -12,7 +12,9 @@ namespace Stride.PlayMode.Protocol;
 /// <param name="Hotkey">The key that pauses the game from its window, frees the mouse, and resumes it; <c>null</c> for none.</param>
 /// <param name="Scene">The URL of the scene the game starts on instead of its default scene (Play this scene); <c>null</c> for the
 /// default scene. The scene must be in the game's built data.</param>
-public sealed record PlayLaunchOptions(bool StartPaused = false, bool PauseOnScriptException = false, PlayHotkey? Hotkey = null, string? Scene = null)
+/// <param name="WindowOnTop">Whether the game's window stays on top of the other windows while the editor or the game is the
+/// active app; the editor can change it while the game plays (<see cref="PlayWindowOnTop"/>).</param>
+public sealed record PlayLaunchOptions(bool StartPaused = false, bool PauseOnScriptException = false, PlayHotkey? Hotkey = null, string? Scene = null, bool WindowOnTop = false)
 {
     /// <summary>
     /// The options of a game started without any: it plays at once, a script's exception ends it as without play mode, and no
@@ -31,7 +33,8 @@ public sealed record PlayLaunchOptions(bool StartPaused = false, bool PauseOnScr
             IsOn(variables, PlayProtocol.StartPausedVariable),
             IsOn(variables, PlayProtocol.PauseOnScriptExceptionVariable),
             variables.TryGetValue(PlayProtocol.HotkeyVariable, out var hotkey) && PlayHotkey.TryParse(hotkey, out var parsed) ? parsed : null,
-            variables.TryGetValue(PlayProtocol.SceneVariable, out var scene) && !string.IsNullOrWhiteSpace(scene) ? scene : null);
+            variables.TryGetValue(PlayProtocol.SceneVariable, out var scene) && !string.IsNullOrWhiteSpace(scene) ? scene : null,
+            IsOn(variables, PlayProtocol.WindowOnTopVariable));
     }
 
     /// <summary>
@@ -48,6 +51,8 @@ public sealed record PlayLaunchOptions(bool StartPaused = false, bool PauseOnScr
             variables[PlayProtocol.HotkeyVariable] = hotkey.ToString();
         if (!string.IsNullOrWhiteSpace(Scene))
             variables[PlayProtocol.SceneVariable] = Scene;
+        if (WindowOnTop)
+            variables[PlayProtocol.WindowOnTopVariable] = "1";
         return variables;
     }
 

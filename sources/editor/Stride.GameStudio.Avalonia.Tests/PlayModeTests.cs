@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.IO.Pipes;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -376,6 +377,65 @@ public sealed class PlayModeTests : IAsyncLifetime
     }
 
     [AvaloniaFact]
+    public async Task ThePinKeepsTheGameWindowOnTopAndTheGameLearnsWhenTheEditorIsActive()
+    {
+        playMode.WindowOnTop = true;
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode);
+        fixture.ReplaceProjectBuilder();
+        fixture.ReplaceDialogService();
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        try
+        {
+            playMode.IsEditorActive = true;
+            var game = await PlayAsync(window, fixture);
+            Assert.Equal("1", game.Environment[PlayProtocol.WindowOnTopVariable]);
+            Assert.Equal(new PlayEditorActive(true), await game.NextWindowMessageAsync());
+
+            // The pin of the Live tab's toolbar, checked: a click lets the game's window go behind the editor
+            var view = window.GetVisualDescendants().OfType<LiveView>().Single();
+            var pin = view.GetVisualDescendants().OfType<ToggleButton>().Single(x => x.Name == "WindowOnTopButton");
+            Assert.True(pin.IsChecked);
+            pin.IsChecked = false;
+            Assert.Equal(new PlayWindowOnTop(false), await game.NextWindowMessageAsync());
+            Assert.False(playMode.WindowOnTop);
+            Assert.Contains("Keep the game window on top", ToolTip.GetTip(pin)?.ToString());
+
+            // The editor deactivated: the game is told
+            playMode.IsEditorActive = false;
+            Assert.Equal(new PlayEditorActive(false), await game.NextWindowMessageAsync());
+        }
+        finally
+        {
+            await window.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
+    public void ThePinAndTheSettingAreOne()
+    {
+        var saves = 0;
+        var service = new PlayModeService(new PlaySessionOptions());
+        try
+        {
+            GameStudioEditorSettings.FollowWindowOnTop(service, () => ++saves);
+            // On by default
+            Assert.True(service.WindowOnTop);
+
+            // A click on the pin changes and saves the setting
+            service.WindowOnTop = false;
+            Assert.False(GameStudioEditorSettings.PlayModeGameWindowOnTop.GetValue());
+            Assert.Equal(1, saves);
+            Assert.Equal(PlayLaunchOptions.None with { Hotkey = new PlayHotkey("F7") }, GameStudioEditorSettings.GetPlayLaunchOptions());
+        }
+        finally
+        {
+            GameStudioEditorSettings.PlayModeGameWindowOnTop.SetValue(true);
+            service.DisposeAsync().AsTask().Wait();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task CtrlF5StartsTheGameWithoutTheLiveConnection()
     {
         using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode);
@@ -548,7 +608,7 @@ public sealed class PlayModeTests : IAsyncLifetime
     [AvaloniaFact]
     public void TheSettingsGiveTheLaunchOptions()
     {
-        Assert.Equal(PlayLaunchOptions.None with { Hotkey = new PlayHotkey("F7") }, GameStudioEditorSettings.GetPlayLaunchOptions());
+        Assert.Equal(PlayLaunchOptions.None with { Hotkey = new PlayHotkey("F7"), WindowOnTop = true }, GameStudioEditorSettings.GetPlayLaunchOptions());
         Assert.All([GameStudioEditorSettings.PlayModeStartPaused, GameStudioEditorSettings.PlayModePauseOnScriptException],
             x => Assert.StartsWith(GameStudioEditorSettings.PlayMode + "/", x.DisplayName.ToString()));
         Assert.StartsWith(GameStudioEditorSettings.PlayMode + "/", GameStudioEditorSettings.PlayModeGameHotkey.DisplayName.ToString());
@@ -557,7 +617,7 @@ public sealed class PlayModeTests : IAsyncLifetime
             GameStudioEditorSettings.PlayModeStartPaused.SetValue(true);
             GameStudioEditorSettings.PlayModePauseOnScriptException.SetValue(true);
             GameStudioEditorSettings.PlayModeGameHotkey.SetValue("ctrl+shift+F8");
-            Assert.Equal(new PlayLaunchOptions(true, true, new PlayHotkey("F8", PlayHotkeyModifiers.Ctrl | PlayHotkeyModifiers.Shift)), GameStudioEditorSettings.GetPlayLaunchOptions());
+            Assert.Equal(new PlayLaunchOptions(true, true, new PlayHotkey("F8", PlayHotkeyModifiers.Ctrl | PlayHotkeyModifiers.Shift), WindowOnTop: true), GameStudioEditorSettings.GetPlayLaunchOptions());
 
             // "None" (or nothing) turns the key off
             GameStudioEditorSettings.PlayModeGameHotkey.SetValue("None");
@@ -798,6 +858,8 @@ public sealed class PlayModeTests : IAsyncLifetime
                     subscribes.Enqueue(subscribe);
                 if (message is PlayPause or PlayResume or PlayStep or PlayTimeScale)
                     Controls.Enqueue(message);
+                if (message is PlayWindowOnTop or PlayEditorActive)
+                    WindowMessages.Enqueue(message);
                 if (message is not PlayQuit)
                     return;
                 quit.TrySetResult();
@@ -830,6 +892,21 @@ public sealed class PlayModeTests : IAsyncLifetime
         {
             PlayMessage? next = null;
             await WindowTestHelper.WaitUntilAsync(() => Controls.TryDequeue(out next), "a pause, resume, step or time scale message");
+            return next!;
+        }
+
+        /// <summary>
+        /// The window on top and editor activation messages the editor sent, not read yet.
+        /// </summary>
+        public ConcurrentQueue<PlayMessage> WindowMessages { get; } = new();
+
+        /// <summary>
+        /// The next window on top or editor activation message the editor sent.
+        /// </summary>
+        public async Task<PlayMessage> NextWindowMessageAsync()
+        {
+            PlayMessage? next = null;
+            await WindowTestHelper.WaitUntilAsync(() => WindowMessages.TryDequeue(out next), "a window on top or editor activation message");
             return next!;
         }
 
