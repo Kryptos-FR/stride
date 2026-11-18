@@ -248,6 +248,18 @@ public sealed class PlayEditTests : IDisposable
     }
 
     [Fact]
+    public void AnEditWithoutComponentChangesTheEntityItself()
+    {
+        var edit = new PlayEdit(++nextId, tracker.GetHandle(player), Guid.Empty, [PlayPathSegment.Member(nameof(Entity.Name))], PlayEditOperation.Set, Value("Hero"));
+
+        var result = Apply(edit);
+
+        Assert.Equal(PlayEditStatus.Applied, result.Status);
+        Assert.Equal("Hero", player.Name);
+        Assert.Equal("Hero", ReadBack(result));
+    }
+
+    [Fact]
     public void AnEditOfAnEntityOrComponentNoLongerInTheGameSaysSo()
     {
         var other = new Entity("Other") { new EditableComponent() };

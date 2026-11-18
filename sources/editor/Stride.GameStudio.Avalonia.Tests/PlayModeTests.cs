@@ -301,8 +301,8 @@ public sealed class PlayModeTests : IAsyncLifetime
             Assert.False(grid.GetVisualDescendants().OfType<TextBlock>().Single(x => x.Name == "LiveBadgeText").IsEffectivelyVisible);
             var badge = grid.GetVisualDescendants().OfType<Border>().Single(x => x.Name == "LiveBadge");
             Assert.Contains("stopped", badge.Classes);
-            // No lock: there are no values any more
-            Assert.False(grid.GetVisualDescendants().OfType<Control>().Single(x => x.Name == "LiveBadgeLock").IsEffectivelyVisible);
+            // No lock of the edits: there is nothing to edit any more
+            Assert.False(grid.GetVisualDescendants().OfType<Control>().Single(x => x.Name == "LiveEditsToggle").IsEffectivelyVisible);
             Assert.Equal(global::Avalonia.Media.Color.Parse("#808080"), Assert.IsAssignableFrom<global::Avalonia.Media.ISolidColorBrush>(badge.Background).Color);
 
             // Nothing selected: the grid goes back

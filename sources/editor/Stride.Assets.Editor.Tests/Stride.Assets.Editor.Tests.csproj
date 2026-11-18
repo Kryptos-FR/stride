@@ -23,6 +23,8 @@
     <ProjectReference Include="..\Stride.Assets.Editor.Testing\Stride.Assets.Editor.Testing.csproj" />
     <!-- The curve editor tests edit the curves of a particle system -->
     <ProjectReference Include="..\..\plugins\Particles\Stride.Particles\Stride.Particles.csproj" />
+    <!-- The live grid's support matrix knows the physics bodies -->
+    <ProjectReference Include="..\..\plugins\BulletPhysics\Stride.Physics\Stride.Physics.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- Build order only: TestEditorPackageToolkit reads the build manifests of the toolkit-neutral plugin Editor packages,

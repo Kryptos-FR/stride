@@ -260,6 +260,73 @@ public sealed class PlaySessionTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AnEditGoesToTheGameAndItsResultAnswersIt()
+    {
+        await ConnectAsync();
+        var answered = Wait<PlayEditAnswer>(x => session.EditAnswered += x);
+        var edit = Edit(PlayEditValue.Of(new byte[] { 1, 2, 3 }));
+
+        var result = session.EditAsync(edit);
+        var received = await agent!.ReceiveAsync<PlayEdit>();
+        Assert.Equal(edit.Encode(), received.Encode());
+        Assert.Equal(1, session.PendingEditCount);
+        agent.Send(new PlayEditResult(edit.Id, 7, PlayEditStatus.Applied, PlayEditValue.Of(new byte[] { 4 }), null));
+
+        var answer = await result.WaitAsync(Timeout);
+        Assert.Equal(PlayEditStatus.Applied, answer.Status);
+        Assert.Equal(7, answer.Frame);
+        Assert.Equal([4], answer.ReadBack.Payload.ToArray());
+        Assert.Same(edit, (await answered).Edit);
+        Assert.Equal(0, session.PendingEditCount);
+    }
+
+    [Fact]
+    public async Task AnEditOfAnEntityGoneIsAnsweredGone()
+    {
+        await ConnectAsync();
+        var edit = Edit(PlayEditValue.Null);
+
+        var result = session.EditAsync(edit);
+        await agent!.ReceiveAsync<PlayEdit>();
+        agent.Send(new PlayEditResult(edit.Id, 3, PlayEditStatus.Gone, PlayEditValue.Null, "The entity is no longer in the game."));
+
+        var answer = await result.WaitAsync(Timeout);
+        Assert.Equal(PlayEditStatus.Gone, answer.Status);
+        Assert.Equal("The entity is no longer in the game.", answer.Error);
+    }
+
+    [Fact]
+    public async Task AnEditWithoutTheGameFailsAtOnce()
+    {
+        var answer = await session.EditAsync(Edit(PlayEditValue.Null)).WaitAsync(Timeout);
+
+        Assert.Equal(PlayEditStatus.Failed, answer.Status);
+        Assert.Contains("not connected", answer.Error);
+        Assert.Equal(0, session.PendingEditCount);
+    }
+
+    [Fact]
+    public async Task AnEditOnItsWayWhenTheGameStopsFailsWithoutAnException()
+    {
+        await ConnectAsync();
+        var edit = Edit(PlayEditValue.Of(new byte[] { 1 }));
+        var result = session.EditAsync(edit);
+        await agent!.ReceiveAsync<PlayEdit>();
+        agent.Received += x =>
+        {
+            if (x is PlayQuit)
+                game!.Exit(0);
+        };
+
+        await session.StopAsync().WaitAsync(Timeout);
+
+        var answer = await result.WaitAsync(Timeout);
+        Assert.Equal(PlayEditStatus.Failed, answer.Status);
+        Assert.Equal("The game stopped before the edit applied.", answer.Error);
+        Assert.Equal(0, session.PendingEditCount);
+    }
+
+    [Fact]
     public async Task AConnectionThatEndsWhileTheGameRunsFails()
     {
         await ConnectAsync();
@@ -414,6 +481,9 @@ public sealed class PlaySessionTests : IAsyncLifetime
         agent!.Send(hello ?? Hello());
         await connected;
     }
+
+    private PlayEdit Edit(PlayEditValue value)
+        => new(session.NextEditId(), 4, Guid.NewGuid(), [PlayPathSegment.Member("Speed")], PlayEditOperation.Set, value);
 
     private static PlayHello Hello(params PlayAssemblyInfo[] assemblies) => new(1234, Version, Version, "MyGame.Game", assemblies);
 

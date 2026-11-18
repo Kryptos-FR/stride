@@ -268,6 +268,40 @@ public sealed class PlayModeServiceTests : IAsyncLifetime
         Assert.Contains("at MyGame.PlayerController.Update()", message.Text);
     }
 
+    [Fact]
+    public async Task AnEditTheGameRefusesGoesToTheOutputButNotOneAStopCutShort()
+    {
+        var output = new LoggerResult();
+        service.Start(Path.Combine(directory, "MyGame.dll"), output);
+        var agent = transports.Single().Connect();
+        agents.Add(agent);
+        agent.Send(new PlayHello(1234, Version, Version, "MyGame.Game", []));
+        await WaitForStateAsync(service.Session!, PlaySessionState.Connected);
+        agent.Send(new PlayTree(1, [], [new PlayEntityInfo(4, Guid.NewGuid(), "Player", true, 0, 0, [])]));
+        await WaitUntilAsync(() => service.Session!.Tree is not null);
+        var session = service.Session!;
+
+        var refused = new PlayEdit(session.NextEditId(), 4, Guid.NewGuid(), [PlayPathSegment.Member("Count")], PlayEditOperation.Set, PlayEditValue.Null);
+        var answer = session.EditAsync(refused);
+        await agent.ReceiveAsync<PlayEdit>();
+        agent.Send(new PlayEditResult(refused.Id, 2, PlayEditStatus.Failed, PlayEditValue.Null, "The setter threw ArgumentOutOfRangeException: the count cannot be negative."));
+        await answer.WaitAsync(PlaySessionTests.Timeout);
+        var cut = session.EditAsync(refused with { Id = session.NextEditId() });
+        await agent.ReceiveAsync<PlayEdit>();
+        await agent.CloseAsync();
+        await cut.WaitAsync(PlaySessionTests.Timeout);
+
+        var message = Assert.Single(output.Messages, x => x.Type == LogMessageType.Warning);
+        Assert.Equal("The game refused the edit of Player > Count: The setter threw ArgumentOutOfRangeException: the count cannot be negative. The game goes on with the value it had.", message.Text);
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        using var timeout = new CancellationTokenSource(PlaySessionTests.Timeout);
+        while (!condition())
+            await Task.Delay(10, timeout.Token);
+    }
+
     private static Task WaitForStateAsync(PlaySession session, PlaySessionState state)
     {
         var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -115,12 +115,12 @@ public sealed class LivePropertyGridTests
     }
 
     [AvaloniaFact]
-    public async Task EveryEditorOfTheLiveGridIsReadOnly()
+    public async Task WithEditsOffEveryEditorOfTheLiveGridIsReadOnly()
     {
         using var fixture = await OpenAsync();
         // A camera: a ranged slider (field of view), a combo box (projection), check boxes and numbers
         player.Add(new CameraComponent());
-        var properties = new LivePropertiesViewModel(fixture.Session);
+        var properties = new LivePropertiesViewModel(fixture.Session) { EditsEnabled = false };
         var window = new Window { Width = 500, Height = 3000, Content = new PropertyGridView { DataContext = properties } };
         var refused = new List<string>();
         void OnLogged(ILogMessage message)
@@ -335,15 +335,16 @@ public sealed class LivePropertyGridTests
     }
 
     [AvaloniaFact]
-    public async Task NothingIsWrittenBackThroughTheGrid()
+    public async Task WithoutAGameNothingIsWrittenThroughTheGrid()
     {
         using var fixture = await OpenAsync();
         var properties = new LivePropertiesViewModel(fixture.Session);
         try
         {
+            // No play session (a tool drives the grid): the values can change, but nothing takes the edits
             await properties.ApplyAsync(Snapshot());
             var speed = Node(properties.ViewModel!, typeof(LiveTestScript), nameof(LiveTestScript.Speed));
-            Assert.True(speed.IsReadOnly);
+            Assert.False(speed.IsReadOnly);
 
             speed.NodeValue = 1234f;
             speed.NodePresenters.Single().UpdateValue(1234f);
@@ -351,10 +352,11 @@ public sealed class LivePropertyGridTests
 
             Assert.Equal(script.Speed, speed.NodeValue);
             Assert.True(properties.RefusedWrites >= 2, $"{properties.RefusedWrites} writes refused");
+            Assert.Equal(0, properties.SentEdits);
             Assert.DoesNotContain(Components(properties.ViewModel!).Children, x => x.NodeValue is LiveTestSecondScript);
-            // Only the commands that read a value
-            var commands = Descendants(properties.ViewModel!.RootNode).SelectMany(x => x.NodePresenters).SelectMany(x => x.Commands).Select(x => x.Name).ToHashSet();
-            Assert.Subset(new HashSet<string> { CopyPropertyCommand.CommandName, FetchAssetCommand.CommandName }, commands);
+            // The components cannot be added: only the members' commands
+            Assert.True(Components(properties.ViewModel!).IsReadOnly);
+            Assert.DoesNotContain(Components(properties.ViewModel!).NodePresenters.Single().Commands, x => x.Name == AddNewItemCommand.CommandName);
         }
         finally
         {
