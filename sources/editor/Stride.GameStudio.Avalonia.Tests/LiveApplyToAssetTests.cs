@@ -1,7 +1,10 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.VisualTree;
+using Stride.Assets.Editor.Avalonia.Views;
 using Stride.Assets.Editor.PlayMode;
 using Stride.Assets.Editor.Quantum.NodePresenters.Keys;
 using Stride.Assets.Entities;
@@ -298,6 +301,25 @@ public sealed partial class LiveEditTests
             Assert.False(countRow.IsChecked);
             Assert.Equal("Changed by the game", countRow.Origin);
             Assert.Equal(1, list.CheckedCount);
+
+            // The window: a cell whose text is cut shows it whole in its tooltip, one that fits has none
+            var window = new LiveApplyListWindow { DataContext = list, Width = 480 };
+            try
+            {
+                window.Show();
+                await WindowTestHelper.PumpAsync();
+                var cells = window.GetVisualDescendants().OfType<TextBlock>().ToList();
+                var path = cells.First(x => x.Name == "PathText" && x.Text == staminaRow.Path);
+                Assert.True(LiveApplyListWindow.IsCut(path));
+                Assert.Equal(staminaRow.Path, ToolTip.GetTip(path));
+                var value = cells.First(x => x.Name == "LiveText" && x.Text == staminaRow.LiveValue);
+                Assert.False(LiveApplyListWindow.IsCut(value));
+                Assert.Null(ToolTip.GetTip(value));
+            }
+            finally
+            {
+                window.Close();
+            }
 
             // OK applies the rows checked, in one undo step
             lists.Answer = _ => true;

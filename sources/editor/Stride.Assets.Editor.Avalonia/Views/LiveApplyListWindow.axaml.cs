@@ -39,6 +39,18 @@ public sealed partial class LiveApplyListWindow : Window
         ToolTip.SetShowOnDisabled(item, true);
     }
 
+    // A cell whose text is cut shows it whole in its tooltip; one that fits leaves the row's tooltip
+    private void OnCellSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (sender is TextBlock cell)
+            ToolTip.SetTip(cell, IsCut(cell) ? cell.Text : null);
+    }
+
+    /// <summary>
+    /// Gets whether a text block shows its text cut (with an ellipsis).
+    /// </summary>
+    internal static bool IsCut(TextBlock text) => text.TextLayout.TextLines.Any(x => x.HasCollapsed);
+
     private void OnAllClick(object? sender, RoutedEventArgs e)
     {
         List?.ToggleAll();
