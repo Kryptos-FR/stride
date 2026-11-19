@@ -64,7 +64,30 @@ public sealed class LivePropertyGrid : ILiveSelectionView
     /// <summary>
     /// The live grid of the current play session; <c>null</c> before the first selection and once the game stopped.
     /// </summary>
-    public LivePropertiesViewModel? Properties { get; private set; }
+    public LivePropertiesViewModel? Properties
+    {
+        get;
+        private set
+        {
+            if (field == value)
+                return;
+            var wasEnabled = EditsEnabled;
+            if (field is not null)
+                field.PropertyChanged -= PropertiesPropertyChanged;
+            field = value;
+            if (value is not null)
+                value.PropertyChanged += PropertiesPropertyChanged;
+            if (wasEnabled != EditsEnabled)
+                EditsEnabledChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>The lock of the live grid of the current play session: on until the user turns it off there.</remarks>
+    public bool EditsEnabled => Properties?.EditsEnabled ?? true;
+
+    /// <inheritdoc/>
+    public event EventHandler? EditsEnabledChanged;
 
     /// <summary>
     /// The live entities selected, or <c>null</c>.
@@ -179,6 +202,12 @@ public sealed class LivePropertyGrid : ILiveSelectionView
     {
         if (e.PropertyName == nameof(SessionViewModel.ActiveProperties))
             UpdateReceiving();
+    }
+
+    private void PropertiesPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(LivePropertiesViewModel.EditsEnabled))
+            EditsEnabledChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void GridPanelPropertyChanged(object? sender, PropertyChangedEventArgs e)

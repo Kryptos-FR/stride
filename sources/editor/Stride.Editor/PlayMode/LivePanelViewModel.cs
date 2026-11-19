@@ -84,6 +84,9 @@ public sealed class LivePanelViewModel : PanelViewModel
     private bool sceneChecked;
     private PlayScriptException? shownException;
     private readonly bool ownsControls;
+    private readonly ILivePrefabPicker? prefabPicker;
+    // The entities a command added, to select once a tree batch brings them
+    private List<int>? pendingSelection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LivePanelViewModel"/> class.
@@ -98,7 +101,8 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// <c>null</c> for none.</param>
     /// <param name="controls">Pause, Step and the time scale of the toolbar, shared with the main window's commands; a new one
     /// the tab destroys otherwise.</param>
-    public LivePanelViewModel(PanelContext context, PlayModeService playMode, ILiveSceneAssets? sceneAssets, ILiveSelectionView? selectionView = null, ICommandBase? reloadCodeCommand = null, PlayControlsViewModel? controls = null)
+    /// <param name="prefabPicker">Picks the prefab to spawn in the running game; <c>null</c> to offer no spawn.</param>
+    public LivePanelViewModel(PanelContext context, PlayModeService playMode, ILiveSceneAssets? sceneAssets, ILiveSelectionView? selectionView = null, ICommandBase? reloadCodeCommand = null, PlayControlsViewModel? controls = null, ILivePrefabPicker? prefabPicker = null)
         : base(context)
     {
         ArgumentNullException.ThrowIfNull(playMode);
@@ -122,6 +126,13 @@ public sealed class LivePanelViewModel : PanelViewModel
         DismissExceptionCommand = new AnonymousCommand(ServiceProvider, () => ScriptException = null);
         StopGameCommand = new AnonymousTaskCommand(ServiceProvider, () => session?.StopAsync() ?? Task.CompletedTask);
         ShowSelectionCommand = new AnonymousCommand(ServiceProvider, () => selectionView?.Show(Selection));
+        this.prefabPicker = prefabPicker;
+        CreateEntityCommand = new AnonymousTaskCommand<object?>(ServiceProvider, CreateEntityAsync) { IsEnabled = false };
+        DeleteEntityCommand = new AnonymousTaskCommand<object?>(ServiceProvider, DeleteEntitiesAsync) { IsEnabled = false };
+        DuplicateEntityCommand = new AnonymousTaskCommand<object?>(ServiceProvider, DuplicateEntitiesAsync) { IsEnabled = false };
+        SpawnPrefabCommand = new AnonymousTaskCommand<object?>(ServiceProvider, SpawnPrefabAsync) { IsEnabled = false };
+        if (selectionView is not null)
+            selectionView.EditsEnabledChanged += SelectionViewEditsEnabledChanged;
 
         playMode.SessionStarted += SessionStarted;
         if (playMode.Session is { } current)
@@ -330,6 +341,45 @@ public sealed class LivePanelViewModel : PanelViewModel
     public ICommandBase CollapseAllCommand { get; }
 
     /// <summary>
+    /// Creates an empty entity in the running game: under the entity of the row (the parameter, or the first selected entity),
+    /// else at the root of the selected scene, else at the root of the root scene. The tree selects it.
+    /// </summary>
+    public ICommandBase CreateEntityCommand { get; }
+
+    /// <summary>
+    /// Removes the selected entities (or the entity of the parameter), with their children, from the running game. There is no
+    /// undo: the scene assets keep their entities, and the game gets them back at its next start.
+    /// </summary>
+    public ICommandBase DeleteEntityCommand { get; }
+
+    /// <summary>
+    /// Clones the selected entities (or the entity of the parameter) with their children in the running game, each copy right
+    /// after its original. The tree selects the copies.
+    /// </summary>
+    public ICommandBase DuplicateEntityCommand { get; }
+
+    /// <summary>
+    /// Picks a prefab of the game's build and spawns it in the running game, where <see cref="CreateEntityCommand"/> creates an
+    /// entity. The tree selects its roots.
+    /// </summary>
+    public ICommandBase SpawnPrefabCommand { get; }
+
+    /// <summary>
+    /// Whether the tab offers to spawn prefabs (a picker was given).
+    /// </summary>
+    public bool CanSpawnPrefabs => prefabPicker is not null;
+
+    /// <summary>
+    /// Whether the user can change the structure of the running game now: the game is connected and the edits are on.
+    /// </summary>
+    public bool CanChangeStructure { get; private set => SetValue(ref field, value); }
+
+    /// <summary>
+    /// Why the structure of the running game cannot be changed now, for the tooltips; <c>null</c> when it can.
+    /// </summary>
+    public string? StructureDisabledReason { get; private set => SetValue(ref field, value); } = Tr._p("Play", "No game is connected.");
+
+    /// <summary>
     /// The session the tab follows.
     /// </summary>
     internal PlaySession? Session => session;
@@ -343,6 +393,8 @@ public sealed class LivePanelViewModel : PanelViewModel
     public override void Destroy()
     {
         playMode.SessionStarted -= SessionStarted;
+        if (selectionView is not null)
+            selectionView.EditsEnabledChanged -= SelectionViewEditsEnabledChanged;
         Detach();
         SelectedItems.CollectionChanged -= SelectedItemsChanged;
         lifetime.Cancel();
@@ -395,6 +447,8 @@ public sealed class LivePanelViewModel : PanelViewModel
         SceneText = newSession.Scene?.Description;
         sceneChecked = newSession.Scene is null;
         waiting = false;
+        pendingSelection = null;
+        Tree.IsAddedWhilePlaying = newSession.IsAddedWhilePlaying;
         newSession.StateChanged += SessionStateChanged;
         newSession.TreeReceived += SessionTreeReceived;
         newSession.TreeChanged += SessionTreeChanged;
@@ -511,8 +565,10 @@ public sealed class LivePanelViewModel : PanelViewModel
                 ClearSelectedItems();
                 Selection = null;
                 StoppedNotice = Tree.EntityCount > 0 || Tree.Rows.Count > 0 ? Tr._p("Play", "The game has stopped. This is its last tree: the entities have no values any more, and the property grid says so. Start the project again to see them live.") : null;
+                pendingSelection = null;
                 break;
         }
+        UpdateStructureCommands();
     }
 
     /// <summary>
@@ -651,9 +707,11 @@ public sealed class LivePanelViewModel : PanelViewModel
             }
         }
         if (batches.Count > 0)
-            removed.UnionWith(Tree.Apply(batches));
+            ApplyKeepingSelection(batches, removed);
         ++ApplyCount;
         EntityCount = Tree.EntityCount;
+
+        SelectAdded();
 
         // A selected entity that is gone leaves the selection
         if (removed.Count > 0)
@@ -680,6 +738,7 @@ public sealed class LivePanelViewModel : PanelViewModel
     {
         if (!updatingSelection)
             UpdateSelection();
+        UpdateStructureCommands();
     }
 
     /// <summary>
@@ -721,6 +780,243 @@ public sealed class LivePanelViewModel : PanelViewModel
     }
 
     private LiveEntityItem? Target(object? parameter) => parameter as LiveEntityItem ?? SelectedItems.OfType<LiveEntityItem>().FirstOrDefault();
+
+    /// <summary>
+    /// Whether the dragged entities can go under the target row (an entity, or a scene for its root): not under one of them or
+    /// their descendants, and only while the structure can change.
+    /// </summary>
+    /// <param name="items">The dragged entities.</param>
+    /// <param name="target">The row they are dropped on.</param>
+    public bool CanMove(IReadOnlyCollection<LiveEntityItem> items, LiveTreeItem? target)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        if (!CanChangeStructure || target is null || items.Count == 0)
+            return false;
+        var roots = TopLevel(items);
+        // Under itself or one of its descendants: refused, as the scene editor refuses it
+        if (roots.Any(x => x.IsSelfOrAncestorOf(target)))
+            return false;
+        // Somewhere new for at least one of them
+        return roots.Any(x => x.Parent != target);
+    }
+
+    /// <summary>
+    /// Moves the dragged entities under the target row: under an entity, or to the root of a scene. As in the scene editor, they
+    /// keep their local transform, relative to their new parent, unless <paramref name="keepWorldTransform"/> (Alt) keeps their
+    /// place in the world. Each goes last among its new siblings.
+    /// </summary>
+    /// <param name="items">The dragged entities.</param>
+    /// <param name="target">The row they are dropped on.</param>
+    /// <param name="keepWorldTransform">Whether they keep their place in the world.</param>
+    /// <returns>The game's answers, one per entity moved.</returns>
+    public async Task<IReadOnlyList<PlayStructureResult>> MoveAsync(IReadOnlyCollection<LiveEntityItem> items, LiveTreeItem target, bool keepWorldTransform)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(target);
+        if (!CanMove(items, target) || session is not { } current)
+            return [];
+        var (parentHandle, sceneHandle) = target is LiveEntityItem entity ? (entity.Handle, 0) : (0, target.Handle);
+        // Sent in the order of the tree, so that they keep it among their new siblings
+        var commands = Tree.InTreeOrder(TopLevel(items).Where(x => x.Parent != target))
+            .Select(x => current.ChangeStructureAsync(new PlayStructureEdit(current.NextEditId(), PlayStructureOperation.MoveEntity, EntityHandle: x.Handle, SceneHandle: sceneHandle, ParentHandle: parentHandle, KeepWorldTransform: keepWorldTransform)))
+            .ToList();
+        // The target opens, to show them there
+        target.IsExpanded = true;
+        return await Task.WhenAll(commands);
+    }
+
+    /// <summary>
+    /// Applies the tree batches, and keeps the selected rows selected: a row that moves in the list (an entity moved to
+    /// another parent, as a drop does, or a sibling before it) leaves the view's selection, as the list removes it and adds it
+    /// back. The rows of the entities that are gone are not selected again.
+    /// </summary>
+    private void ApplyKeepingSelection(List<PlayTreeBatch> batches, HashSet<int> removed)
+    {
+        var selected = SelectedItems.ToList();
+        updatingSelection = true;
+        try
+        {
+            removed.UnionWith(Tree.Apply(batches));
+            var index = 0;
+            foreach (var item in selected)
+            {
+                var stays = item is LiveEntityItem entity ? Tree.FindEntity(entity.Handle) == entity : item is not LiveTreeItem || Tree.Rows.Contains(item);
+                if (stays && !SelectedItems.Contains(item))
+                    SelectedItems.Insert(Math.Min(index, SelectedItems.Count), item);
+                if (stays)
+                    index++;
+            }
+        }
+        finally
+        {
+            updatingSelection = false;
+        }
+        // Only a row that left the tree changes the selection (the gone entities are handled after)
+        if (!SelectedItems.SequenceEqual(selected))
+            UpdateSelection();
+    }
+
+    private void SelectionViewEditsEnabledChanged(object? sender, EventArgs e) => Track(dispatcher.InvokeAsync(UpdateStructureCommands, lifetime.Token));
+
+    /// <summary>
+    /// Enables the commands that change the game's structure: the game is connected, the property grid's lock is open, and the
+    /// selection fits each command.
+    /// </summary>
+    private void UpdateStructureCommands()
+    {
+        string? reason = null;
+        if (session is not { State: PlaySessionState.Connected } || !IsLive)
+            reason = State == LiveTabState.Stopped ? Tr._p("Play", "The game has stopped.") : Tr._p("Play", "No game is connected.");
+        else if (selectionView is { EditsEnabled: false })
+            reason = Tr._p("Play", "Live edits are off: turn them on in the property grid.");
+        StructureDisabledReason = reason;
+        CanChangeStructure = reason is null;
+        var hasEntity = SelectedItems.OfType<LiveEntityItem>().Any();
+        CreateEntityCommand.IsEnabled = CanChangeStructure;
+        SpawnPrefabCommand.IsEnabled = CanChangeStructure && prefabPicker is not null;
+        DeleteEntityCommand.IsEnabled = CanChangeStructure && hasEntity;
+        DuplicateEntityCommand.IsEnabled = CanChangeStructure && hasEntity;
+    }
+
+    /// <summary>
+    /// The entities of the parameter (a row) or of the selection, without those under another of them.
+    /// </summary>
+    private List<LiveEntityItem> TargetEntities(object? parameter)
+        => parameter is LiveEntityItem item && !SelectedItems.Contains(item) ? [item] : TopLevel(SelectedItems.OfType<LiveEntityItem>().ToList());
+
+    private static List<LiveEntityItem> TopLevel(IReadOnlyCollection<LiveEntityItem> items)
+        => [.. items.Distinct().Where(x => !items.Any(other => other != x && other.IsSelfOrAncestorOf(x)))];
+
+    /// <summary>
+    /// Where a new entity goes: under the entity of the parameter or of the selection, else at the root of the selected scene,
+    /// else at the root of the root scene.
+    /// </summary>
+    private (int ParentHandle, int SceneHandle) NewEntityPlace(object? parameter)
+    {
+        var row = parameter as LiveTreeItem ?? SelectedItems.OfType<LiveTreeItem>().FirstOrDefault();
+        return row switch
+        {
+            LiveEntityItem entity => (entity.Handle, 0),
+            LiveSceneItem scene => (0, scene.Handle),
+            _ => (0, 0),
+        };
+    }
+
+    private async Task CreateEntityAsync(object? parameter)
+    {
+        if (!CanChangeStructure || session is not { } current)
+            return;
+        var (parentHandle, sceneHandle) = NewEntityPlace(parameter);
+        var result = await current.ChangeStructureAsync(new PlayStructureEdit(current.NextEditId(), PlayStructureOperation.CreateEntity, SceneHandle: sceneHandle, ParentHandle: parentHandle));
+        await SelectWhenAddedAsync(current, result, roots: 1);
+    }
+
+    private async Task DeleteEntitiesAsync(object? parameter)
+    {
+        if (!CanChangeStructure || session is not { } current)
+            return;
+        var entities = TargetEntities(parameter);
+        if (entities.Count == 0)
+            return;
+        // No confirmation: the game gets its entities back at its next start
+        await Task.WhenAll(entities.Select(x => current.ChangeStructureAsync(new PlayStructureEdit(current.NextEditId(), PlayStructureOperation.DeleteEntity, EntityHandle: x.Handle))));
+    }
+
+    private async Task DuplicateEntitiesAsync(object? parameter)
+    {
+        if (!CanChangeStructure || session is not { } current)
+            return;
+        var entities = TargetEntities(parameter);
+        if (entities.Count == 0)
+            return;
+        var results = await Task.WhenAll(entities.Select(x => current.ChangeStructureAsync(new PlayStructureEdit(current.NextEditId(), PlayStructureOperation.DuplicateEntity, EntityHandle: x.Handle))));
+        // The copies are selected, as the scene editor selects them: the first entity of each answer is a copy's root
+        await SelectWhenAddedAsync(current, results.Where(x => x.Status == PlayEditStatus.Applied && x.Entities.Count > 0).Select(x => x.Entities[0]).ToList());
+    }
+
+    private async Task SpawnPrefabAsync(object? parameter)
+    {
+        if (!CanChangeStructure || session is not { } current || prefabPicker is null)
+            return;
+        // Taken before the picker opens: the selection may change while it is open
+        var (parentHandle, sceneHandle) = NewEntityPlace(parameter);
+        using var stopped = new CancellationTokenSource();
+        void OnStateChanged(object? sender, PlaySessionStateChange change)
+        {
+            if (current.State != PlaySessionState.Connected)
+                stopped.Cancel();
+        }
+        current.StateChanged += OnStateChanged;
+        string? url;
+        try
+        {
+            url = await prefabPicker.PickPrefabAsync(current, stopped.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            url = null;
+        }
+        finally
+        {
+            current.StateChanged -= OnStateChanged;
+        }
+        if (url is null || current != session || current.State != PlaySessionState.Connected)
+            return;
+        var result = await current.ChangeStructureAsync(new PlayStructureEdit(current.NextEditId(), PlayStructureOperation.SpawnPrefab, SceneHandle: sceneHandle, ParentHandle: parentHandle, Url: url));
+        await SelectWhenAddedAsync(current, result, roots: -1);
+    }
+
+    /// <summary>
+    /// Selects the entities a command added: the first <paramref name="roots"/> handles of its answer (all its roots when
+    /// negative: those whose parent is not among them, once the tree has them).
+    /// </summary>
+    private Task SelectWhenAddedAsync(PlaySession from, PlayStructureResult result, int roots)
+    {
+        if (result.Status != PlayEditStatus.Applied || result.Entities.Count == 0)
+            return Task.CompletedTask;
+        return SelectWhenAddedAsync(from, roots >= 0 ? result.Entities.Take(roots).ToList() : [.. result.Entities]);
+    }
+
+    private Task SelectWhenAddedAsync(PlaySession from, List<int> handles)
+    {
+        if (handles.Count == 0)
+            return Task.CompletedTask;
+        // The answer comes before the tree batch that adds the entities, at the end of the same frame
+        var task = dispatcher.InvokeAsync(() =>
+        {
+            if (from != session)
+                return;
+            pendingSelection = handles;
+            SelectAdded();
+        }, lifetime.Token);
+        Track(task);
+        return task;
+    }
+
+    /// <summary>
+    /// Selects the entities a command added, once the tree has them: the rows that lead to them are expanded.
+    /// </summary>
+    private void SelectAdded()
+    {
+        if (pendingSelection is not { } handles)
+            return;
+        var entities = handles.Select(Tree.FindEntity).OfType<LiveEntityItem>().ToList();
+        if (entities.Count == 0)
+            return;
+        pendingSelection = null;
+        // Only the roots of what was added: a prefab's children come with their root
+        entities = TopLevel(entities);
+        foreach (var entity in entities)
+        {
+            for (var parent = entity.Parent; parent is not null; parent = parent.Parent)
+                parent.IsExpanded = true;
+        }
+        if (!string.IsNullOrEmpty(SearchText) && entities.Any(x => !x.IsMatch))
+            SearchText = string.Empty;
+        SelectedItems.Clear();
+        foreach (var entity in entities)
+            SelectedItems.Add(entity);
+    }
 
     private async Task ShowInSceneEditorAsync(object? parameter)
     {

@@ -664,7 +664,7 @@ internal sealed class MainViewModel : ViewModelBase, IMainViewModel, IEditorRest
         {
             registry.Register(LivePanel.Create(context => new LivePanelViewModel(context, playMode, new LiveSceneAssets(context.Session),
                 context.Session is SessionViewModel session ? new LivePropertyGrid(session, () => Panels.GetPanel(BuiltInPanels.PropertyGrid)) : null,
-                CodeReload.ReloadCommand, PlayControls)), BuiltInPanelsOwner);
+                CodeReload.ReloadCommand, PlayControls, new LivePrefabPicker(context.Session))), BuiltInPanelsOwner);
         }
         // The preview service exists once the plugins have initialized the session, before the panels are created
         registry.Register(BuiltInPanels.CreatePreviewPanel(context => new AssetPreviewPanelViewModel(context, Preview ?? throw new InvalidOperationException("The session has no preview."))), BuiltInPanelsOwner);

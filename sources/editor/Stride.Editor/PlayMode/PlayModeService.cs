@@ -209,6 +209,11 @@ public sealed class PlayModeService : IGameLauncher, IAsyncDisposable
             if (answer.Result.Status is PlayEditStatus.Failed or PlayEditStatus.Gone && session.State == PlaySessionState.Connected)
                 output.Warning(PlayEditText.DescribeRefusal(answer, session.Tree?.Entities.FirstOrDefault(x => x.Handle == answer.Edit.EntityHandle)?.Name));
         };
+        session.StructureAnswered += (_, answer) =>
+        {
+            if (answer.Result.Status is PlayEditStatus.Failed or PlayEditStatus.Gone && session.State == PlaySessionState.Connected)
+                output.Warning(PlayEditText.DescribeStructureRefusal(answer, session.Tree?.Entities.FirstOrDefault(x => x.Handle == answer.Edit.EntityHandle)?.Name));
+        };
         PlaySession? previous;
         lock (@lock)
         {

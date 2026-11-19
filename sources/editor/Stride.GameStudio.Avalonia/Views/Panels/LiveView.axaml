@@ -74,6 +74,10 @@
     <Style Selector="TextBlock.match">
       <Setter Property="FontWeight" Value="Bold"/>
     </Style>
+    <!-- Added by the editor while the game plays: it goes when the game stops -->
+    <Style Selector="TextBlock.added">
+      <Setter Property="FontStyle" Value="Italic"/>
+    </Style>
     <Style Selector="ToggleButton.expander">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
@@ -190,8 +194,49 @@
     <!-- Why the game is paused, when the editor did not pause it -->
     <TextBlock DockPanel.Dock="Top" Name="PauseReason" Text="{Binding PauseText}" TextWrapping="Wrap" Margin="6,0,6,2" Opacity="0.8"
                IsVisible="{Binding PauseText, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-    <!-- The search, expand and collapse, and the number of entities -->
+    <!-- Create, spawn, duplicate and delete entities of the running game; the search, expand and collapse, and the number of
+         entities -->
     <DockPanel DockPanel.Dock="Top" Margin="2">
+      <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Margin="0,0,4,0">
+        <Button Name="CreateEntityButton" Focusable="False" Background="Transparent" Padding="4"
+                IsEnabled="{Binding CanChangeStructure}" ToolTip.ShowOnDisabled="True"
+               >
+          <ToolTip.Tip>
+            <StackPanel>
+              <TextBlock Text="{sd:LocalizeString Create an entity in the running game, Context=ToolTip}"/>
+              <TextBlock Text="{Binding StructureDisabledReason}" Opacity="0.8" IsVisible="{Binding StructureDisabledReason, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+            </StackPanel>
+          </ToolTip.Tip>
+          <Image Source="{StaticResource ImageNewAsset}" Width="16" Height="16"/>
+          <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+              <MenuItem Name="CreateEntityFlyoutItem" Header="{sd:LocalizeString Empty entity, Context=Menu}" Command="{Binding CreateEntityCommand}"/>
+              <MenuItem Name="SpawnPrefabFlyoutItem" Header="{sd:LocalizeString Spawn prefab..., Context=Menu}" Command="{Binding SpawnPrefabCommand}"
+                        IsVisible="{Binding CanSpawnPrefabs}"/>
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
+        <Button Name="DuplicateEntityButton" Focusable="False" Background="Transparent" Padding="4" Command="{Binding DuplicateEntityCommand}"
+                ToolTip.ShowOnDisabled="True">
+          <ToolTip.Tip>
+            <StackPanel>
+              <TextBlock Text="{sd:LocalizeString Duplicate the selected entities in the running game (Ctrl+D), Context=ToolTip}"/>
+              <TextBlock Text="{Binding StructureDisabledReason}" Opacity="0.8" IsVisible="{Binding StructureDisabledReason, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+            </StackPanel>
+          </ToolTip.Tip>
+          <Image Source="{StaticResource ImageCopy}" Width="16" Height="16"/>
+        </Button>
+        <Button Name="DeleteEntityButton" Focusable="False" Background="Transparent" Padding="4" Command="{Binding DeleteEntityCommand}"
+                ToolTip.ShowOnDisabled="True">
+          <ToolTip.Tip>
+            <StackPanel>
+              <TextBlock Text="{sd:LocalizeString Delete the selected entities from the running game (Delete), Context=ToolTip}"/>
+              <TextBlock Text="{Binding StructureDisabledReason}" Opacity="0.8" IsVisible="{Binding StructureDisabledReason, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+            </StackPanel>
+          </ToolTip.Tip>
+          <Image Source="{StaticResource ImageDelete}" Width="16" Height="16"/>
+        </Button>
+      </StackPanel>
       <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0" Opacity="0.8"
                  Text="{Binding EntityCount, StringFormat={}{0} entities}"/>
       <Button DockPanel.Dock="Right" Focusable="False" Background="Transparent" Padding="4" Command="{Binding CollapseAllCommand}"
@@ -215,9 +260,28 @@
              Classes.stopped="{Binding !IsLive}"
              GotFocus="OnTreeGotFocus"
              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+      <!-- Only while the tree has the focus: Delete and Ctrl+D act on the running game, not on a scene asset -->
+      <sd:EditCommands.Bindings>
+        <sd:EditCommandBinding Kind="Delete" Command="{Binding DeleteEntityCommand}"/>
+      </sd:EditCommands.Bindings>
+      <ListBox.KeyBindings>
+        <KeyBinding Gesture="Ctrl+D" Command="{Binding DuplicateEntityCommand}"/>
+      </ListBox.KeyBindings>
       <ListBox.ContextMenu>
-        <!-- On the selected rows: a right click selects the row under the pointer first -->
+        <!-- On the selected rows: a right click selects the row under the pointer first. The changes of the structure go to the
+             running game only: the scene assets keep their entities. -->
         <ContextMenu>
+          <MenuItem Name="CreateEntityMenuItem" Header="{sd:LocalizeString Empty entity, Context=Menu}" Command="{Binding CreateEntityCommand}"/>
+          <MenuItem Name="SpawnPrefabMenuItem" Header="{sd:LocalizeString Spawn prefab..., Context=Menu}" Command="{Binding SpawnPrefabCommand}"
+                    IsVisible="{Binding CanSpawnPrefabs}"/>
+          <Separator/>
+          <MenuItem Name="DuplicateEntityMenuItem" Header="{sd:LocalizeString Duplicate, Context=Menu}" Command="{Binding DuplicateEntityCommand}" InputGesture="Ctrl+D">
+            <MenuItem.Icon><Image Source="{StaticResource ImageCopy}"/></MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Name="DeleteEntityMenuItem" Header="{sd:LocalizeString Delete, Context=Menu}" Command="{Binding DeleteEntityCommand}" InputGesture="{x:Static sd:EditCommands.DeleteGesture}">
+            <MenuItem.Icon><Image Source="{StaticResource ImageDelete}"/></MenuItem.Icon>
+          </MenuItem>
+          <Separator/>
           <MenuItem Name="ShowInSceneEditorMenuItem" Header="{sd:LocalizeString Show in scene editor, Context=Menu}" Command="{Binding ShowInSceneEditorCommand}"/>
           <Separator/>
           <MenuItem Name="CopyNameMenuItem" Header="{sd:LocalizeString Copy name, Context=Menu}" Command="{Binding CopyNameCommand}"/>
@@ -249,10 +313,18 @@
             <Border Width="16" IsVisible="{Binding !HasChildren}"/>
             <Image Source="{Binding ComponentTypeNames, Converter={local:LiveEntityIcon}}" Width="16" Height="16" Margin="2,0"/>
             <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="4,0"
-                       Classes.disabled="{Binding !IsEnabled}" Classes.match="{Binding IsMatch}"/>
+                       Classes.disabled="{Binding !IsEnabled}" Classes.match="{Binding IsMatch}" Classes.added="{Binding IsAddedWhilePlaying}"/>
+            <!-- Added from this tab while the game plays: it has no counterpart in a scene asset, and goes when the game stops -->
+            <TextBlock Text="{sd:LocalizeString added while playing, Context=Play}" VerticalAlignment="Center" FontStyle="Italic" FontSize="11"
+                       Foreground="{DynamicResource SystemControlForegroundAccentBrush}" IsVisible="{Binding IsAddedWhilePlaying}">
+              <ToolTip.Tip>
+                <TextBlock MaxWidth="360" TextWrapping="Wrap"
+                           Text="{sd:LocalizeString 'Added while playing: you created, duplicated or spawned this entity in the running game from this tab. No scene asset has it, so it cannot be shown in a scene editor, and it goes when the game stops.', Context=ToolTip}"/>
+              </ToolTip.Tip>
+            </TextBlock>
             <!-- Made by the game at run time: no entity of a scene asset is its counterpart -->
             <TextBlock Text="{sd:LocalizeString spawned, Context=Play}" VerticalAlignment="Center" FontStyle="Italic" FontSize="11"
-                       Foreground="{DynamicResource SystemControlForegroundAccentBrush}" IsVisible="{Binding IsSpawned}">
+                       Foreground="{DynamicResource SystemControlForegroundAccentBrush}" IsVisible="{Binding ShowsSpawned}">
               <ToolTip.Tip>
                 <TextBlock MaxWidth="360" TextWrapping="Wrap"
                            Text="{sd:LocalizeString 'The game created this entity at run time: no entity of the scene assets of the running scenes is its counterpart. Instances of a prefab keep the ids of the prefab, so several live entities can share an id; only the first that has the id of an entity of a scene is its counterpart, and the others are marked spawned.', Context=ToolTip}"/>

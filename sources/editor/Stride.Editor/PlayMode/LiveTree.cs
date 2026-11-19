@@ -176,6 +176,24 @@ public sealed class LiveTree
         RefreshRows();
     }
 
+    /// <summary>
+    /// Sorts items in the order of the tree: each after its parent and its previous siblings.
+    /// </summary>
+    /// <param name="items">Items of this tree.</param>
+    public IReadOnlyList<T> InTreeOrder<T>(IEnumerable<T> items) where T : LiveTreeItem
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        var order = new Dictionary<LiveTreeItem, int>();
+        var stack = new Stack<LiveTreeItem>(roots.AsEnumerable().Reverse());
+        while (stack.TryPop(out var item))
+        {
+            order[item] = order.Count;
+            for (var i = item.ChildList.Count - 1; i >= 0; --i)
+                stack.Push(item.ChildList[i]);
+        }
+        return [.. items.OrderBy(x => order.GetValueOrDefault(x, int.MaxValue))];
+    }
+
     internal void OnExpandedChanged()
     {
         if (!deferRows)
