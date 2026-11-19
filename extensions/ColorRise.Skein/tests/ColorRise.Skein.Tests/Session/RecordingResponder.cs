@@ -29,6 +29,8 @@ internal sealed class RecordingResponder : IDialogueResponder
 
     public Action? OnComplete { get; set; }
 
+    public Func<string, ValueTask>? OnNodeStart { get; set; }
+
     public bool RecordNodes { get; set; }
 
     public int Completions { get; private set; }
@@ -69,11 +71,12 @@ internal sealed class RecordingResponder : IDialogueResponder
             await OnCommand(commandText, cancellation);
     }
 
-    public ValueTask HandleNodeStartAsync(string node)
+    public async ValueTask HandleNodeStartAsync(string node)
     {
         if (RecordNodes)
             Transcript.Add($"node: {node}");
-        return default;
+        if (OnNodeStart is not null)
+            await OnNodeStart(node);
     }
 
     public ValueTask HandleNodeCompleteAsync(string node)

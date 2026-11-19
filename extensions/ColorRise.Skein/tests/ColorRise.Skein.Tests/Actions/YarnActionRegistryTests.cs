@@ -371,18 +371,22 @@ public sealed class YarnActionRegistryTests
     }
 
     [Fact]
-    public void Functions_go_to_the_library_of_a_dialogue()
+    public async Task A_function_is_called_with_the_values_of_a_script()
     {
-        var library = new Yarn.Library();
         var registry = Registry();
         registry.AddFunction("tide", () => 3f);
+        registry.AddFunction("sum", (int first, params float[] rest) => first + rest.Sum());
 
-        registry.CopyFunctionsTo(library);
-        registry.CopyFunctionsTo(library);
+        Assert.True(registry.HasFunction("tide"));
+        Assert.False(registry.HasFunction("ebb"));
+        Assert.Equal(true, await registry.InvokeFunctionAsync("has_item", [(Yarn.Value)"oil"]));
+        // A number of any type comes back as a float
+        Assert.Equal(4f, await registry.InvokeFunctionAsync("double_of", [(Yarn.Value)2f]));
+        Assert.Equal(3f, await registry.InvokeFunctionAsync("tide", []));
+        Assert.Equal(6f, await registry.InvokeFunctionAsync("sum", [(Yarn.Value)1f, (Yarn.Value)2f, (Yarn.Value)3f]));
 
-        Assert.Equal(true, library.GetFunction("has_item").DynamicInvoke("oil"));
-        Assert.Equal(4, library.GetFunction("double_of").DynamicInvoke(2));
-        Assert.Equal(3f, library.GetFunction("tide").DynamicInvoke());
+        Assert.Contains("ebb", (await Assert.ThrowsAsync<ArgumentException>(() => registry.InvokeFunctionAsync("ebb", []).AsTask())).Message);
+        Assert.Contains("takes 0 parameters", (await Assert.ThrowsAsync<ArgumentException>(() => registry.InvokeFunctionAsync("tide", [(Yarn.Value)1f]).AsTask())).Message);
     }
 
     private static class Bad
@@ -474,25 +478,10 @@ public sealed class YarnActionRegistryTests
             """;
         var registry = Registry();
         var compilation = Scripts.Compile(Script, [.. registry.Describe().Where(d => d.Kind == YarnActionKind.Function).Select(YarnFunctionDeclaration.From)]);
-        var lines = new List<string>();
-        var dialogue = new Yarn.Dialogue(new VariableStorage())
-        {
-            LineHandler = line => lines.Add(compilation.Lines[line.ID].Text),
-            CommandHandler = _ => { },
-            OptionsHandler = _ => { },
-            NodeStartHandler = _ => { },
-            NodeCompleteHandler = _ => { },
-            DialogueCompleteHandler = () => { },
-        };
-        registry.CopyFunctionsTo(dialogue.Library);
-        dialogue.SetProgram(compilation.Program!);
-        dialogue.SetNode("Start");
-        for (var steps = 0; steps < 10 && (steps == 0 || dialogue.IsActive); steps++)
-        {
-            dialogue.Continue();
-        }
+        var recorder = new LineRecorder(registry);
+        var dialogue = new Yarn.Dialogue(new VariableStorage()) { Responder = recorder, Program = compilation.Program };
+        await dialogue.StartDialogue("Start");
 
-        await Task.CompletedTask;
-        Assert.Equal(["Odile: Light it."], lines);
+        Assert.Equal(["Odile: Light it."], recorder.LineIds.Select(id => compilation.Lines[id].Text));
     }
 }

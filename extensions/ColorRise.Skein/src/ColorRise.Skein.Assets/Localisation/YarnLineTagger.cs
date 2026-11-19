@@ -61,7 +61,7 @@ public static class YarnLineTagger
     }
 
     private static (string Text, ICollection<string> Ids, List<ILineTagGenerator.LineTaggingException> Failures) Tag(string fileName, string text, ISet<string> existingIds, ILineTagGenerator generator)
-        => Utility.TagLines(new CompilationJob.File { FileName = fileName, Source = text }, [.. existingIds], generator);
+        => Utility.TagLines(new CompilationJob.Raw { Name = fileName, Source = text }, [.. existingIds], generator);
 
     /// <summary>
     /// The line ids written in the text of scripts, whether the scripts compile or not; a <c>#line:</c> in a comment

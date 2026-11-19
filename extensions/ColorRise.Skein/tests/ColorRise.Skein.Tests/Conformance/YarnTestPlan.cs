@@ -95,9 +95,9 @@ internal static partial class YarnTestPlan
                 case "saliency:":
                     run.Steps.Add(new SetSaliency(Next("a mode", "word").Value));
                     break;
-                case "node:":
-                    if (run.Steps.Count > 0)
-                        throw new FormatException("A test plan names its node at the start of a run.");
+                case "start:" or "node:":
+                    if (run.Steps.Any(s => s is ExpectLine or ExpectOption or ExpectCommand or ExpectStop))
+                        throw new FormatException("A test plan names its node before what the dialogue says.");
                     run.StartNode = Next("a node", "word").Value;
                     break;
                 default:
@@ -120,9 +120,9 @@ internal static partial class YarnTestPlan
 
     [GeneratedRegex("""
         (?<text>`[^`]*`)
-        |(?<skip>\#[^\r\n]*|\s+)
+        |(?<skip>//[^\r\n]*|\#[^\s\#]+|\s+)
         |(?<separator>---)
-        |(?<keyword>(line|option|command|select|set|saliency|node):)
+        |(?<keyword>(line|option|command|select|set|saliency|node|start):)
         |(?<disabled>\[disabled\])
         |(?<variable>\$[A-Za-z_][A-Za-z0-9_]*)
         |(?<word>[A-Za-z_][A-Za-z0-9_]*)

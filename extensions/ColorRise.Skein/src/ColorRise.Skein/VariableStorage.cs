@@ -509,7 +509,7 @@ public sealed class VariableStorage : IVariableStorage
     /// Computes the smart variables of one program for game code: a Yarn Spinner dialogue that never runs, on the
     /// variables of the storage.
     /// </summary>
-    private sealed class SmartReader : IVariableStorage
+    private sealed class SmartReader : IVariableStorage, IYarnFunctionSource
     {
         private readonly VariableStorage storage;
         private readonly Program owner;
@@ -519,17 +519,7 @@ public sealed class VariableStorage : IVariableStorage
         {
             this.storage = storage;
             this.owner = owner;
-            dialogue = new Dialogue(this)
-            {
-                LineHandler = _ => { },
-                OptionsHandler = _ => { },
-                CommandHandler = _ => { },
-                NodeStartHandler = _ => { },
-                NodeCompleteHandler = _ => { },
-                DialogueCompleteHandler = () => { },
-                PrepareForLinesHandler = _ => { },
-            };
-            dialogue.SetProgram(owner);
+            dialogue = new YarnResponder(this, owner, events: null, this).Dialogue;
             SmartVariableEvaluator = dialogue;
         }
 
@@ -539,9 +529,26 @@ public sealed class VariableStorage : IVariableStorage
 
         public bool TryRead<T>(string name, YarnActionRegistry? functions, [NotNullWhen(true)] out T? result)
         {
-            functions?.CopyFunctionsTo(dialogue.Library);
-            return dialogue.TryGetSmartVariable(name, out result);
+            Functions = functions;
+            try
+            {
+                return dialogue.TryGetSmartVariable(name, out result);
+            }
+            finally
+            {
+                Functions = null;
+            }
         }
+
+        bool IYarnFunctionSource.CanCall(string name) => Functions?.HasFunction(name) == true;
+
+        ValueTask<IConvertible> IYarnFunctionSource.InvokeAsync(string name, IConvertible[] arguments, CancellationToken cancellation)
+            => Functions!.InvokeFunctionAsync(name, arguments, cancellation);
+
+        /// <summary>
+        /// The functions of the game while a smart variable is read.
+        /// </summary>
+        private YarnActionRegistry? Functions { get; set; }
 
         public bool TryGetValue<T>(string variableName, [NotNullWhen(true)] out T? result)
         {

@@ -56,7 +56,8 @@ public sealed class ProjectEditorViewTests
             Assert.Contains(texts, t => t.Contains("1 line has no line id", StringComparison.Ordinal));
             Assert.Contains("1 line has no id and cannot be translated.", texts);
             Assert.Contains("Commands and functions", texts);
-            Assert.Contains(texts, t => t.StartsWith("The code of the game gives the scripts no command", StringComparison.Ordinal));
+            // The test's assembly is the game's code
+            Assert.Contains("has_item(item: string) → bool", texts);
 
             // The page takes the width of the window, whatever its rows hold
             var page = view!.GetVisualDescendants().OfType<StackPanel>().First();

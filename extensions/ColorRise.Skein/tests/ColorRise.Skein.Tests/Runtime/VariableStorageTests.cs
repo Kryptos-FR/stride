@@ -327,7 +327,7 @@ public sealed class VariableStorageTests
     }
 
     [Fact]
-    public void A_dialogue_of_yarn_spinner_runs_on_the_storage()
+    public async Task A_dialogue_of_yarn_spinner_runs_on_the_storage()
     {
         const string Script = """
             title: Start
@@ -343,24 +343,11 @@ public sealed class VariableStorageTests
             """;
         var compilation = Scripts.Compile(Script);
         var storage = new VariableStorage();
-        var lines = new List<string>();
-        var dialogue = new Yarn.Dialogue(storage)
-        {
-            LineHandler = line => lines.Add(compilation.Lines[line.ID].Text),
-            CommandHandler = _ => { },
-            OptionsHandler = _ => { },
-            NodeStartHandler = _ => { },
-            NodeCompleteHandler = _ => { },
-            DialogueCompleteHandler = () => { },
-        };
-        dialogue.SetProgram(compilation.Program!);
-        dialogue.SetNode("Start");
-        for (var steps = 0; steps < 10 && (steps == 0 || dialogue.IsActive); steps++)
-        {
-            dialogue.Continue();
-        }
+        var recorder = new LineRecorder();
+        var dialogue = new Yarn.Dialogue(storage) { Responder = recorder, Program = compilation.Program };
+        await dialogue.StartDialogue("Start");
 
-        Assert.Equal(["Odile: Rich."], lines);
+        Assert.Equal(["Odile: Rich."], recorder.LineIds.Select(id => compilation.Lines[id].Text));
         Assert.Equal(205f, storage.Save().Numbers["$gold"]);
         Assert.DoesNotContain("$rich", storage.Save().Bools.Keys);
     }

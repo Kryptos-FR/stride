@@ -182,6 +182,67 @@ public sealed class DialogueSessionTests
     }
 
     [Fact]
+    public async Task A_node_start_is_awaited_before_the_node_runs()
+    {
+        var dialogue = new TestDialogue("""
+            title: Start
+            ---
+            <<declare $gold = 0>>
+            Kye: One.
+            <<jump Second>>
+            ===
+            title: Second
+            ---
+            <<set $gold = 10>>
+            Kye: Two.
+            ===
+            """);
+        var loading = new TaskCompletionSource();
+        var seen = new List<(string Node, float Gold)>();
+        dialogue.Responder.OnNodeStart = async node =>
+        {
+            seen.Add((node, dialogue.Variables.TryGetValue<float>("$gold", out var gold) ? gold : -1));
+            if (node == "Second")
+                await loading.Task;
+        };
+
+        var run = dialogue.RunAsync();
+
+        // The dialogue waits for the start of the node, and the node has run nothing yet
+        Assert.Equal(["line: Kye: One."], dialogue.Transcript);
+        Assert.Equal([("Start", 0f), ("Second", 0f)], seen);
+        loading.SetResult();
+        await run;
+        Assert.Equal(["line: Kye: One.", "line: Kye: Two.", "complete"], dialogue.Transcript);
+    }
+
+    [Fact]
+    public async Task A_function_of_the_game_changed_during_a_run_is_called_as_it_is_now()
+    {
+        var actions = new YarnActionRegistry();
+        actions.AddFunction("price", (string item) => 3f);
+        var dialogue = new TestDialogue(
+            """
+            title: Start
+            ---
+            Kye: The lamp is {price("lamp")} coins.
+            Kye: Now it is {price("lamp")}.
+            ===
+            """,
+            actions);
+        dialogue.Responder.OnLine = (_, _) =>
+        {
+            actions.RemoveFunction("price");
+            actions.AddFunction("price", (string item) => 10f);
+            return default;
+        };
+
+        await dialogue.RunAsync();
+
+        Assert.Equal(["line: Kye: The lamp is 3 coins.", "line: Kye: Now it is 10.", "complete"], dialogue.Transcript);
+    }
+
+    [Fact]
     public async Task Running_twice_at_once_or_an_unknown_node_is_refused()
     {
         var dialogue = new TestDialogue(Post);

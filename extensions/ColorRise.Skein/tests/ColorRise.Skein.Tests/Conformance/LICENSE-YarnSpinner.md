@@ -1,7 +1,7 @@
 # Yarn Spinner's test cases
 
 The files of `TestCases/` are Yarn Spinner's own test scripts and test plans, copied unchanged from the folder
-`Tests/TestCases` of [YarnSpinner](https://github.com/YarnSpinnerTool/YarnSpinner) at the tag `v3.2.2`. Skein runs
+`Tests/TestCases` of [YarnSpinner](https://github.com/YarnSpinnerTool/YarnSpinner) at the tag `v3.3.1`. Skein runs
 them to check that its dialogue session behaves as Yarn Spinner's own runner does. They are under Yarn Spinner's
 license:
 

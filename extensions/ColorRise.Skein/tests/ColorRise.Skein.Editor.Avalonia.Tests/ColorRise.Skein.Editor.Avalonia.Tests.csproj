@@ -28,5 +28,6 @@
     <!-- The session of the view model tests, with Skein's services -->
     <Compile Include="..\ColorRise.Skein.Editor.Tests\SkeinTest.cs" Link="SkeinTest.cs" />
     <Compile Include="..\ColorRise.Skein.Editor.Tests\TestAssemblies.cs" Link="TestAssemblies.cs" />
+    <Compile Include="..\ColorRise.Skein.Editor.Tests\GameFunctions.cs" Link="GameFunctions.cs" />
   </ItemGroup>
 </Project>

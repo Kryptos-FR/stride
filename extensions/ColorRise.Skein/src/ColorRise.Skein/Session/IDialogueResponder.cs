@@ -35,7 +35,8 @@ public interface IDialogueResponder
     ValueTask HandleCommandAsync(string commandText, CancellationToken cancellation);
 
     /// <summary>
-    /// The dialogue enters a node. For a node group, the group's name comes first, then the name of the node picked.
+    /// The dialogue enters a node, and runs it once the task completes. For a node group, the group's name comes first,
+    /// then the name of the node picked.
     /// </summary>
     ValueTask HandleNodeStartAsync(string node);
 

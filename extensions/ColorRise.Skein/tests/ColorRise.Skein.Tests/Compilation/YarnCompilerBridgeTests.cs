@@ -388,7 +388,7 @@ public sealed class YarnCompilerBridgeTests
     }
 
     [Fact]
-    public void The_functions_the_scripts_call_give_their_types()
+    public void A_function_the_game_does_not_declare_is_an_error_at_its_call()
     {
         var result = YarnCompilerBridge.Compile(new YarnCompilationRequest
         {
@@ -396,15 +396,14 @@ public sealed class YarnCompilerBridgeTests
             Functions = [new YarnFunctionDeclaration { Name = "standing", ParameterTypes = [YarnFunctionDeclaration.String], ReturnType = YarnFunctionDeclaration.Number }],
         });
 
-        Assert.DoesNotContain(result.Diagnostics, d => d.Severity == YarnSeverity.Error);
+        // The compiler does not guess the type of a function from its call
+        var error = Assert.Single(result.Diagnostics, d => d.Message.Contains("has_item", StringComparison.Ordinal));
+        Assert.Equal((YarnSeverity.Error, 3, 6), (error.Severity, error.Line, error.Column));
+        Assert.Null(result.Program);
 
-        // One the game declares, and one the compiler guesses from its call
         var standing = Assert.Single(result.Functions, f => f.Name == "standing");
         Assert.Equal(["string"], standing.ParameterTypes);
         Assert.Equal("number", standing.ReturnType);
-        var hasItem = Assert.Single(result.Functions, f => f.Name == "has_item");
-        Assert.Equal(["string"], hasItem.ParameterTypes);
-        Assert.Equal("bool", hasItem.ReturnType);
     }
 
     [Fact]
@@ -479,10 +478,10 @@ public sealed class YarnCompilerBridgeTests
         Assert.DoesNotContain(result.Diagnostics, d => d.Severity == YarnSeverity.Error);
         Assert.NotNull(result.Program);
 
-        // A game may give its own in their place
+        // A game's function of the same name runs in its place, with the type Yarn Spinner gives it
         var own = YarnCompilerBridge.Compile(new YarnCompilationRequest
         {
-            Files = [("Visits.yarn", "title: Start\n---\n<<set $times = visited_count(1) + 1>>\n===\n")],
+            Files = [("Visits.yarn", "title: Start\n---\n<<set $times = visited_count(\"Start\") + 1>>\n===\n")],
             Functions = [new YarnFunctionDeclaration { Name = "visited_count", ParameterTypes = [YarnFunctionDeclaration.Number], ReturnType = YarnFunctionDeclaration.Number }],
         });
         Assert.DoesNotContain(own.Diagnostics, d => d.Severity == YarnSeverity.Error);

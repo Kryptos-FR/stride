@@ -12,12 +12,11 @@ namespace ColorRise.Skein.Assets.Compilation;
 public static class YarnCompilerBridge
 {
     /// <summary>
-    /// The functions every dialogue has beside the standard library: the compiler knows the library, not these.
+    /// The functions every dialogue has beside Yarn Spinner's standard library: the compiler knows the library (with
+    /// <c>visited</c> and <c>visited_count</c>), not these.
     /// </summary>
     private static readonly YarnFunctionDeclaration[] DialogueFunctions =
     [
-        new() { Name = "visited", ParameterTypes = [YarnFunctionDeclaration.String], ReturnType = YarnFunctionDeclaration.Bool },
-        new() { Name = "visited_count", ParameterTypes = [YarnFunctionDeclaration.String], ReturnType = YarnFunctionDeclaration.Number },
         new() { Name = "has_any_content", ParameterTypes = [YarnFunctionDeclaration.String], ReturnType = YarnFunctionDeclaration.Bool },
     ];
 
@@ -32,16 +31,19 @@ public static class YarnCompilerBridge
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        // A game's function of the name of one of the standard library keeps the library's type: the compiler refuses a
+        // second declaration of it
+        var functions = request.Functions.Where(f => !StandardLibrary.TryGetFunction(f.Name, out _)).ToList();
         var declarations = DialogueFunctions
-            .Where(d => request.Functions.All(f => f.Name != d.Name))
-            .Concat(request.Functions)
+            .Where(d => functions.All(f => f.Name != d.Name))
+            .Concat(functions)
             .Select(ToDeclaration)
             .ToList();
         request.Cancellation.ThrowIfCancellationRequested();
         if (request.Files.Count == 0)
             return new YarnCompilation();
 
-        var inputs = request.Files.Select(f => (ISourceInput)new CompilationJob.File { FileName = f.FileName, Source = f.Text }).ToList();
+        var inputs = request.Files.Select(f => (ISourceInput)new CompilationJob.Raw { Name = f.FileName, Source = f.Text }).ToList();
         var job = CompilationJob.CreateFromInputs(inputs);
         job.CompilationType = request.StringsOnly ? CompilationJob.Type.StringsOnly : CompilationJob.Type.FullCompilation;
         job.Declarations = declarations;

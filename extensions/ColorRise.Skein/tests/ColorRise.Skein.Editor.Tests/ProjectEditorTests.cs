@@ -83,30 +83,22 @@ public sealed class ProjectEditorTests
     [Fact]
     public async Task The_overview_lists_the_commands_and_functions_of_the_game()
     {
-        // The game's code is this assembly while the test runs
-        AssemblyRegistry.Register(typeof(OverviewGame).Assembly, "SkeinTestGame");
-        try
-        {
-            await using var session = await OpenAsync();
-            var editor = session.EditProject("Dialogue/Story");
-            await editor.WhenRefreshed();
+        // The game's code is this assembly (TestAssemblies registers it)
+        await using var session = await OpenAsync();
+        var editor = session.EditProject("Dialogue/Story");
+        await editor.WhenRefreshed();
 
-            var actions = editor.Actions.ToDictionary(a => a.Name);
-            Assert.Equal("<<dig tool: Tool [depth: number = 1]>>", actions["dig"].Usage);
-            Assert.Equal(("Digs a hole.", "OverviewGame.Dig", true, false), (actions["dig"].Description, actions["dig"].Method, actions["dig"].IsCommand, actions["dig"].Waits));
-            Assert.Equal("<<open door: Door>>", actions["open"].Usage);
-            Assert.Equal("<<walk who: string pace: Slow | Fast [running: bool = false] words: string...>>", actions["walk"].Usage);
-            Assert.True(actions["walk"].Waits);
-            Assert.Equal("found_coins(place: string) → number", actions["found_coins"].Usage);
-            Assert.False(actions["found_coins"].IsCommand);
+        var actions = editor.Actions.ToDictionary(a => a.Name);
+        Assert.Equal("<<dig tool: Tool [depth: number = 1]>>", actions["dig"].Usage);
+        Assert.Equal(("Digs a hole.", "OverviewGame.Dig", true, false), (actions["dig"].Description, actions["dig"].Method, actions["dig"].IsCommand, actions["dig"].Waits));
+        Assert.Equal("<<open door: Door>>", actions["open"].Usage);
+        Assert.Equal("<<walk who: string pace: Slow | Fast [running: bool = false] words: string...>>", actions["walk"].Usage);
+        Assert.True(actions["walk"].Waits);
+        Assert.Equal("found_coins(place: string) → number", actions["found_coins"].Usage);
+        Assert.False(actions["found_coins"].IsCommand);
 
-            // Commands first, then functions, each by name
-            Assert.Equal(["dig", "open", "walk", "found_coins"], editor.Actions.Select(a => a.Name));
-        }
-        finally
-        {
-            AssemblyRegistry.Unregister(typeof(OverviewGame).Assembly);
-        }
+        // Commands first, then functions, each by name
+        Assert.Equal(["dig", "open", "walk", "debt", "found_coins", "has_item", "tide"], editor.Actions.Select(a => a.Name));
     }
 
     [Fact]

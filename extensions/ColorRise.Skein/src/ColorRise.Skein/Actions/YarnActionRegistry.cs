@@ -310,18 +310,92 @@ public sealed class YarnActionRegistry
     }
 
     /// <summary>
-    /// Gives the functions to the library of a dialogue. A function of the registry takes the place of one of the same
-    /// name the library already has.
+    /// Whether a function has this name.
     /// </summary>
-    public void CopyFunctionsTo(Yarn.Library library)
+    public bool HasFunction(string name) => functions.ContainsKey(name);
+
+    /// <summary>
+    /// Calls a function with values of a script.
+    /// </summary>
+    /// <param name="name">The name of the function.</param>
+    /// <param name="arguments">The values of the script: booleans, numbers and strings, converted to the function's parameters.</param>
+    /// <param name="cancellation">Not used by functions yet.</param>
+    /// <returns>A boolean, a number (a float) or a string.</returns>
+    /// <exception cref="ArgumentException">No function has the name, or the arguments do not fit its parameters.</exception>
+    public ValueTask<IConvertible> InvokeFunctionAsync(string name, IReadOnlyList<IConvertible> arguments, CancellationToken cancellation = default)
     {
-        ArgumentNullException.ThrowIfNull(library);
-        foreach (var function in functions.Values)
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(arguments);
+        if (!functions.TryGetValue(name, out var function))
+            throw new ArgumentException($"No function is named '{name}'.", nameof(name));
+
+        var parameters = function.Delegate.Method.GetParameters();
+        var values = new object?[parameters.Length];
+        var next = 0;
+        for (var i = 0; i < parameters.Length; i++)
         {
-            library.DeregisterFunction(function.Name);
-            library.RegisterFunction(function.Name, function.Delegate);
+            var parameter = parameters[i];
+            if (i == parameters.Length - 1 && IsParams(parameter))
+            {
+                var elementType = parameter.ParameterType.GetElementType()!;
+                var rest = Array.CreateInstance(elementType, Math.Max(arguments.Count - next, 0));
+                for (var j = 0; next < arguments.Count; j++)
+                {
+                    rest.SetValue(ToParameter(function, arguments[next++], elementType), j);
+                }
+
+                values[i] = rest;
+            }
+            else if (next < arguments.Count)
+            {
+                values[i] = ToParameter(function, arguments[next++], parameter.ParameterType);
+            }
+            else if (parameter.HasDefaultValue)
+            {
+                values[i] = parameter.DefaultValue;
+            }
+            else
+            {
+                throw new ArgumentException($"The function '{name}' takes {parameters.Length} parameter{(parameters.Length == 1 ? "" : "s")}, and was given {arguments.Count}.");
+            }
+        }
+
+        if (next < arguments.Count)
+            throw new ArgumentException($"The function '{name}' takes {parameters.Length} parameter{(parameters.Length == 1 ? "" : "s")}, and was given {arguments.Count}.");
+
+        object? result;
+        try
+        {
+            result = function.Delegate.DynamicInvoke(values);
+        }
+        catch (TargetInvocationException exception) when (exception.InnerException is not null)
+        {
+            // What the function throws comes out as it threw it
+            ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
+            throw;
+        }
+
+        return new ValueTask<IConvertible>(ToScript(function, result));
+    }
+
+    private static object ToParameter(Function function, IConvertible argument, Type type)
+    {
+        try
+        {
+            return System.Convert.ChangeType(argument, Nullable.GetUnderlyingType(type) ?? type, CultureInfo.InvariantCulture);
+        }
+        catch (Exception exception) when (exception is FormatException or OverflowException or InvalidCastException)
+        {
+            throw new ArgumentException($"The function '{function.Name}' was given '{argument}', which is not a {type.Name}.", exception);
         }
     }
+
+    private static IConvertible ToScript(Function function, object? result) => result switch
+    {
+        bool or string => (IConvertible)result,
+        IConvertible number when IsNumber(number.GetType()) => number.ToSingle(CultureInfo.InvariantCulture),
+        _ => throw new InvalidOperationException($"The function '{function.Name}' ({Name(function.Delegate.Method)}) returned {(result is null ? "null" : $"a {result.GetType().Name}")}: a function returns a boolean, a number or a string."),
+    };
 
     private void AddCommand(Command command)
     {

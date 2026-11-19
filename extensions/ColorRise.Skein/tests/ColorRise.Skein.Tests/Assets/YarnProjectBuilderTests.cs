@@ -82,11 +82,14 @@ public sealed class YarnProjectBuilderTests
             <<endif>>
             ===
             """;
-        var declared = new YarnFunctionDeclaration { Name = "keeper_name", ReturnType = YarnFunctionDeclaration.String };
+        YarnFunctionDeclaration[] declared =
+        [
+            new() { Name = "keeper_name", ReturnType = YarnFunctionDeclaration.String },
+            new() { Name = "gull_count", ReturnType = YarnFunctionDeclaration.Number },
+        ];
 
-        var content = YarnProjectBuilder.Build(Project(), "Dialogue/Story", [("Dialogue/Start.yarn", script)], [declared]).Project!;
+        var content = YarnProjectBuilder.Build(Project(), "Dialogue/Story", [("Dialogue/Start.yarn", script)], declared).Project!;
 
-        // One the game declares, and one the compiler infers from its use
         Assert.Equal(YarnFunctionDeclaration.String, content.FunctionTypes["keeper_name"]);
         Assert.Equal(YarnFunctionDeclaration.Number, content.FunctionTypes["gull_count"]);
     }

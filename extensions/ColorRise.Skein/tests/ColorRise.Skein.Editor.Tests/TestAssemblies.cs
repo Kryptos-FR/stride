@@ -25,5 +25,8 @@ internal static class TestAssemblies
         // Sounds, the voice-over clips of a project, and the type of their content
         AssemblyRegistry.Register(typeof(Stride.Audio.Assets.SoundAsset).Assembly, AssemblyCommonCategories.Assets);
         AssemblyRegistry.Register(typeof(Stride.Audio.Sound).Assembly, AssemblyCommonCategories.Assets);
+
+        // The game's code is this assembly: the functions its scripts call are declared here
+        AssemblyRegistry.Register(typeof(GameFunctions).Assembly, "SkeinTestGame");
     }
 }

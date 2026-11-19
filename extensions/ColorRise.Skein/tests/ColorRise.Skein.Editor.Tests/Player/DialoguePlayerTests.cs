@@ -296,7 +296,8 @@ public sealed class DialoguePlayerTests
         // After the detour the run is back in the first node
         await player.Continue();
         Assert.Equal(("Kye: Back outside.", "Start"), (player.CurrentStep.Text, player.CurrentNode));
-        Assert.Equal(2, player.NodePath.Count);
+        // Start, the group, and the node it picked
+        Assert.Equal(3, player.NodePath.Count);
     }
 
     [Fact]
@@ -495,7 +496,8 @@ public sealed class DialoguePlayerTests
         Assert.Equal([(false, "$gold > 10"), (true, null)], pick.Candidates.Select(c => (c.Passed, c.FailedCondition)));
         Assert.Equal(pick.Candidates[1].Name, pick.Chosen);
         Assert.Equal(pick.Chosen, player.CurrentNode);
-        Assert.Equal(["Start", pick.Chosen!], player.NodePath);
+        // The group is entered first, then the node it picks
+        Assert.Equal(["Start", "Greeting", pick.Chosen!], player.NodePath);
         Assert.Equal("Greeting picks " + pick.Chosen, player.Steps[index].Text);
         Assert.Equal([(false, false, "$gold > 10 fails"), (true, true, "score 1")], player.Steps[index].Candidates.Select(c => (c.IsChosen, c.Passed, c.Detail)));
     }

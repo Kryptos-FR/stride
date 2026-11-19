@@ -58,10 +58,9 @@ public sealed class StockYarnToolsTests
         var files = project.SourceFiles.ToList();
         Assert.Equal(StoryFiles.Scripts().Count, files.Count);
 
-        // No declaration of the game's functions: the compiler has the scripts and the functions of every Yarn Spinner
-        // dialogue, as its command line has, and finds the types of the game's functions from how the scripts use them
-        var job = Yarn.Compiler.CompilationJob.CreateFromFiles(files, new Yarn.Dialogue(new Yarn.MemoryVariableStore()).Library);
-        job.LanguageVersion = project.FileVersion;
+        // As Yarn Spinner's command line and editor extension do: the game's functions come from the definitions file the
+        // project file names
+        var job = Yarn.Compiler.CompilationJob.CreateFromProject(project);
         var result = Yarn.Compiler.Compiler.Compile(job);
 
         Assert.Empty(result.Diagnostics.Where(d => d.Severity == Yarn.Compiler.Diagnostic.DiagnosticSeverity.Error).Select(d => $"{Path.GetFileName(d.FileName)} {d}"));

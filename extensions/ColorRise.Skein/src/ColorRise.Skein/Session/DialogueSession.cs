@@ -66,7 +66,7 @@ public sealed class DialogueSessionOptions
 /// Everything happens on the thread that calls <see cref="RunAsync"/> and where its awaits resume; the other members are
 /// called from that thread too (from a responder, or between two of its awaits).
 /// </remarks>
-public sealed class DialogueSession : IYarnDialogueEvents
+public sealed class DialogueSession : IYarnDialogueEvents, IYarnFunctionSource
 {
     private static readonly string[] RandomFunctions = ["random", "random_range", "random_range_float", "dice"];
 
@@ -74,7 +74,7 @@ public sealed class DialogueSession : IYarnDialogueEvents
     private readonly YarnActionRegistry actions;
     private readonly DialogueSessionOptions options;
     private readonly ILogger? log;
-    private readonly Yarn32Adapter adapter;
+    private readonly YarnResponder yarn;
     private readonly SeededSaliencyStrategy saliency;
     private readonly HashSet<string> calledFunctions = [];
     private readonly HashSet<string> reportedFunctions = [];
@@ -110,28 +110,10 @@ public sealed class DialogueSession : IYarnDialogueEvents
         log = this.options.Log;
 
         var view = new SessionVariables(variables, program);
-        adapter = new Yarn32Adapter(view, program);
-        adapter.Dialogue.LogErrorMessage = message => log?.Error(message);
+        yarn = new YarnResponder(view, program, this, this);
+        yarn.Dialogue.LogErrorMessage = message => log?.Error(message);
         saliency = new SeededSaliencyStrategy(view, () => this.options.RandomSeed is null ? null : random, OnPicked) { Kind = this.options.Saliency };
-        adapter.Dialogue.ContentSaliencyStrategy = saliency;
-
-        // Yarn Spinner's own asks the strategy: ours asks without telling a pick
-        var library = adapter.Dialogue.Library;
-        library.DeregisterFunction("has_any_content");
-        library.RegisterFunction("has_any_content", (string nodeGroup) => program.Nodes.ContainsKey(nodeGroup) && HasSalientContent(nodeGroup));
-        if (this.options.RandomSeed is not null)
-        {
-            // The same formulas as Yarn Spinner's, on the session's numbers
-            foreach (var name in RandomFunctions)
-            {
-                library.DeregisterFunction(name);
-            }
-
-            library.RegisterFunction("random", () => (float)random.NextDouble());
-            library.RegisterFunction("random_range", (float min, float max) => random.Next((int)max - (int)min + 1) + min);
-            library.RegisterFunction("random_range_float", (float min, float max) => random.Next((int)max - (int)min + 1) + min);
-            library.RegisterFunction("dice", (int sides) => random.Next(sides) + 1);
-        }
+        yarn.Dialogue.ContentSaliencyStrategy = saliency;
 
         foreach (var node in program.Nodes.Values)
         {
@@ -177,7 +159,7 @@ public sealed class DialogueSession : IYarnDialogueEvents
     /// <summary>
     /// The name, in the program, of the node the dialogue is in; null when none runs.
     /// </summary>
-    public string? CurrentNode => IsRunning ? adapter.Dialogue.CurrentNode : null;
+    public string? CurrentNode => IsRunning ? yarn.Dialogue.CurrentNode : null;
 
     /// <summary>
     /// How the session picks among the nodes of a group. It can change between two runs or during one.
@@ -200,15 +182,14 @@ public sealed class DialogueSession : IYarnDialogueEvents
     /// <exception cref="ArgumentException">The program has no node of this name.</exception>
     public bool HasSalientContent(string nodeGroup)
     {
-        // A dialogue that runs keeps the functions of its start
-        if (!IsRunning)
-            PrepareFunctions();
+        if (!Program.Nodes.ContainsKey(nodeGroup))
+            throw new ArgumentException($"The program has no node named '{nodeGroup}'.", nameof(nodeGroup));
 
         var wasAsking = saliency.IsAsking;
         saliency.IsAsking = true;
         try
         {
-            return adapter.Dialogue.HasSalientContent(nodeGroup);
+            return yarn.Dialogue.HasAnyContent(nodeGroup);
         }
         finally
         {
@@ -241,8 +222,16 @@ public sealed class DialogueSession : IYarnDialogueEvents
         {
             if (options.RandomSeed is { } seed)
                 random = new Random(seed);
-            PrepareFunctions();
-            await adapter.RunAsync(node, this, stopping.Token);
+            try
+            {
+                await yarn.Dialogue.StartDialogue(node, stopping.Token);
+            }
+            finally
+            {
+                // Stopped by an exception: the dialogue is left ready for its next run
+                if (yarn.Dialogue.IsActive)
+                    await yarn.Dialogue.Stop();
+            }
         }
         catch (OperationCanceledException) when (stopping.IsCancellationRequested)
         {
@@ -283,24 +272,24 @@ public sealed class DialogueSession : IYarnDialogueEvents
         nextLine?.Cancel();
     }
 
-    ValueTask IYarnDialogueEvents.NodeStartAsync(string node) => responder.HandleNodeStartAsync(node);
+    ValueTask IYarnDialogueEvents.NodeStartAsync(string node, CancellationToken cancellation) => responder.HandleNodeStartAsync(node);
 
-    ValueTask IYarnDialogueEvents.NodeCompleteAsync(string node) => responder.HandleNodeCompleteAsync(node);
+    ValueTask IYarnDialogueEvents.NodeCompleteAsync(string node, CancellationToken cancellation) => responder.HandleNodeCompleteAsync(node);
 
-    ValueTask IYarnDialogueEvents.PrepareForLinesAsync(IReadOnlyList<string> lineIds) => responder.PrepareForLinesAsync(lineIds);
+    ValueTask IYarnDialogueEvents.PrepareForLinesAsync(IReadOnlyList<string> lineIds, CancellationToken cancellation) => responder.PrepareForLinesAsync(lineIds);
 
-    async ValueTask IYarnDialogueEvents.LineAsync(Line line)
+    async ValueTask IYarnDialogueEvents.LineAsync(Line line, CancellationToken cancellation)
     {
         var localized = Lines.GetLine(line.ID, line.Substitutions ?? []);
-        using var hurrying = CancellationTokenSource.CreateLinkedTokenSource(stop!.Token);
-        using var ending = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
+        using var hurrying = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+        using var ending = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         hurryUp = hurrying;
         nextLine = ending;
         try
         {
             await responder.HandleLineAsync(localized, new LineCancellation(hurrying.Token, ending.Token));
         }
-        catch (OperationCanceledException) when (ending.IsCancellationRequested && !stop!.IsCancellationRequested)
+        catch (OperationCanceledException) when (ending.IsCancellationRequested && !cancellation.IsCancellationRequested)
         {
             // The presenter left by the cancellation of its line: the line is over
         }
@@ -311,7 +300,7 @@ public sealed class DialogueSession : IYarnDialogueEvents
         }
     }
 
-    async ValueTask<int> IYarnDialogueEvents.OptionsAsync(OptionSet set)
+    async ValueTask<int> IYarnDialogueEvents.OptionsAsync(OptionSet set, CancellationToken cancellation)
     {
         var offered = new List<DialogueOption>(set.Options.Length);
         foreach (var option in set.Options)
@@ -319,7 +308,7 @@ public sealed class DialogueSession : IYarnDialogueEvents
             offered.Add(new DialogueOption(option.ID, Lines.GetLine(option.Line.ID, option.Line.Substitutions ?? []), option.IsAvailable));
         }
 
-        var choice = await responder.HandleOptionsAsync(offered, stop!.Token);
+        var choice = await responder.HandleOptionsAsync(offered, cancellation);
         if (choice is null)
             return Dialogue.NoOptionSelected;
 
@@ -336,9 +325,8 @@ public sealed class DialogueSession : IYarnDialogueEvents
         throw new InvalidOperationException($"The responder chose the option {choice}, which was not offered: the choice is the Index of one of the {offered.Count} options, or null.");
     }
 
-    async ValueTask IYarnDialogueEvents.CommandAsync(string text)
+    async ValueTask IYarnDialogueEvents.CommandAsync(string text, CancellationToken cancellation)
     {
-        var cancellation = stop!.Token;
         try
         {
             if (await actions.RunCommandAsync(text, options.Targets, cancellation))
@@ -362,31 +350,68 @@ public sealed class DialogueSession : IYarnDialogueEvents
         await responder.HandleCommandAsync(text, cancellation);
     }
 
-    /// <summary>
-    /// Gives the dialogue the functions of the game as they are now, and a stand-in for each function the program calls
-    /// and nothing provides, so that a script written ahead of the game's code runs.
-    /// </summary>
-    private void PrepareFunctions()
+    bool IYarnFunctionSource.CanCall(string name)
+        => actions.HasFunction(name)
+            || name == "has_any_content"
+            || (options.RandomSeed is not null && RandomFunctions.Contains(name))
+            // A function the program calls and nothing provides gets a stand-in, so that a script written ahead of the
+            // game's code runs
+            || (calledFunctions.Contains(name) && !StandardLibrary.TryGetFunction(name, out _));
+
+    ValueTask<IConvertible> IYarnFunctionSource.InvokeAsync(string name, IConvertible[] arguments, CancellationToken cancellation)
     {
-        var library = adapter.Dialogue.Library;
-        actions.CopyFunctionsTo(library);
-        foreach (var name in calledFunctions)
+        // The game's functions as they are now: one added during a run is called from then on
+        if (actions.HasFunction(name))
+            return actions.InvokeFunctionAsync(name, arguments, cancellation);
+
+        IConvertible result = name switch
         {
-            if (library.FunctionExists(name))
-                continue;
-
-            library.RegisterFunction(name, object (object[] arguments) =>
-            {
-                if (options.MissingFunction is { } answer)
-                    return answer(name, arguments);
-
-                var standIn = DefaultOf(name);
-                if (reportedFunctions.Add(name))
-                    log?.Error($"The scripts call the function '{name}', which the game does not provide: it gives {Describe(standIn)} until it does.");
-                return standIn;
-            });
-        }
+            // Yarn Spinner's own asks the strategy: ours asks without telling a pick
+            "has_any_content" => Program.Nodes.ContainsKey(Text(arguments[0])) && HasSalientContent(Text(arguments[0])),
+            // The same formulas as Yarn Spinner's, on the session's numbers
+            "random" when options.RandomSeed is not null => (float)random.NextDouble(),
+            "random_range" or "random_range_float" when options.RandomSeed is not null => RandomRange(Number(arguments[0]), Number(arguments[1])),
+            "dice" when options.RandomSeed is not null => (float)(random.Next(System.Convert.ToInt32(arguments[0], CultureInfo.InvariantCulture)) + 1),
+            _ => StandIn(name, arguments),
+        };
+        return new ValueTask<IConvertible>(result);
     }
+
+    private float RandomRange(float min, float max) => random.Next((int)max - (int)min + 1) + min;
+
+    private static string Text(IConvertible value) => value.ToString(CultureInfo.InvariantCulture);
+
+    private static float Number(IConvertible value) => value.ToSingle(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// What a function the program calls and nothing provides gives: the answer of <see cref="DialogueSessionOptions.MissingFunction"/>,
+    /// or the default of its type.
+    /// </summary>
+    private IConvertible StandIn(string name, IConvertible[] arguments)
+    {
+        if (options.MissingFunction is { } answer)
+        {
+            object[] values = [.. arguments.Select(Unwrap)];
+            return answer(name, values) switch
+            {
+                (bool or string or float) and IConvertible given => given,
+                IConvertible number => number.ToSingle(CultureInfo.InvariantCulture),
+                var other => throw new InvalidOperationException($"The answer for the function '{name}' is {(other is null ? "null" : $"a {other.GetType().Name}")}: a function gives a boolean, a number or a string."),
+            };
+        }
+
+        var standIn = DefaultOf(name);
+        if (reportedFunctions.Add(name))
+            log?.Error($"The scripts call the function '{name}', which the game does not provide: it gives {Describe(standIn)} until it does.");
+        return (IConvertible)standIn;
+    }
+
+    private static object Unwrap(IConvertible value) => value.GetTypeCode() switch
+    {
+        TypeCode.Boolean => value.ToBoolean(CultureInfo.InvariantCulture),
+        TypeCode.String => value.ToString(CultureInfo.InvariantCulture),
+        _ => value.ToSingle(CultureInfo.InvariantCulture),
+    };
 
     private object DefaultOf(string function) => options.FunctionTypes?.GetValueOrDefault(function) switch
     {
@@ -408,7 +433,7 @@ public sealed class DialogueSession : IYarnDialogueEvents
             return;
 
         var isLineGroup = candidates[0].ContentType == ContentSaliencyContentType.Line;
-        var group = adapter.Dialogue.CurrentNode ?? "";
+        var group = yarn.Dialogue.CurrentNode ?? "";
         var described = new List<SaliencyCandidate>(candidates.Count);
         foreach (var candidate in candidates)
         {
@@ -425,8 +450,7 @@ public sealed class DialogueSession : IYarnDialogueEvents
         }
 
         // Told after the nodes the dialogue entered before the pick, and before what was picked
-        var pick = new SaliencyPick(group, isLineGroup, described, chosen?.ContentID);
-        adapter.Enqueue(() => SaliencyPicked?.Invoke(pick));
+        SaliencyPicked?.Invoke(new SaliencyPick(group, isLineGroup, described, chosen?.ContentID));
     }
 
     /// <summary>
@@ -437,7 +461,7 @@ public sealed class DialogueSession : IYarnDialogueEvents
         var index = 0;
         foreach (var variable in node.ContentSaliencyConditionVariables)
         {
-            if (adapter.Dialogue.TryGetSmartVariable<bool>(variable, out var holds) && !holds)
+            if (yarn.Dialogue.TryGetSmartVariable<bool>(variable, out var holds) && !holds)
             {
                 if (nodeInfos.TryGetValue(node.Name, out var info))
                 {
