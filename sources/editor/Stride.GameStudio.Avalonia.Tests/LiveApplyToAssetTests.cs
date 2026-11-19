@@ -11,12 +11,14 @@ using Stride.Core.Assets.Quantum;
 using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Presentation.Quantum.ViewModels;
 using Stride.Core.Presentation.ViewModels;
+using Stride.Core.Quantum;
 using Stride.Core.Serialization;
 using Stride.Editor.PlayMode;
 using Stride.Engine;
 using Stride.GameStudio.Avalonia.Tests.Helpers;
 using Stride.PlayMode.Protocol;
 using Stride.PlayMode.Snapshots;
+using Stride.Rendering.Lights;
 
 namespace Stride.GameStudio.Avalonia.Tests;
 
@@ -73,6 +75,19 @@ public sealed partial class LiveEditTests
         {
             properties.ViewModel?.Destroy();
         }
+    }
+
+    [Fact]
+    public void TheListNamesThePropertiesAsTheGridDoes()
+    {
+        // The display attribute of each member, split as the grid splits names, walked on the live instance of an abstract member
+        var light = new LightComponent { Type = new LightDirectional() };
+        Assert.Equal("Light", LiveAssetApplier.ComponentDisplayName(typeof(LightComponent)));
+        Assert.Equal("Live Edit Test Script", LiveAssetApplier.ComponentDisplayName(typeof(LiveEditTestScript)));
+        Assert.Equal("Light > Color", LiveAssetApplier.DisplayText(light, [LiveApplyStep.Of(nameof(LightComponent.Type)), LiveApplyStep.Of(nameof(LightDirectional.Color))]));
+        Assert.Equal("Values[1]", LiveAssetApplier.DisplayText(new LiveEditTestScript(), [LiveApplyStep.Of(nameof(LiveEditTestScript.Values)), LiveApplyStep.At(new NodeIndex(1))]));
+        Assert.Equal("Table[Slow]", LiveAssetApplier.DisplayText(new LiveEditTestScript(), [LiveApplyStep.Of(nameof(LiveEditTestScript.Table)), LiveApplyStep.At(new NodeIndex("Slow"))]));
+        Assert.Equal(string.Empty, LiveAssetApplier.DisplayText(light, []));
     }
 
     [AvaloniaFact]
@@ -274,12 +289,12 @@ public sealed partial class LiveEditTests
             Assert.Equal(3, asset.Count);
             Assert.Equal(transactions, undoRedo.RetrieveAllTransactions().Count());
 
-            var staminaRow = list.Items.Single(x => x.Path == "LiveEditTestScript.Stamina");
+            var staminaRow = list.Items.Single(x => x.Path == "Live Edit Test Script > Stamina");
             Assert.True(staminaRow.IsChecked);
             Assert.Equal("Edited live", staminaRow.Origin);
             Assert.Equal("1", staminaRow.AssetValue);
             Assert.Equal("0.5", staminaRow.LiveValue);
-            var countRow = list.Items.Single(x => x.Path == "LiveEditTestScript.Count");
+            var countRow = list.Items.Single(x => x.Path == "Live Edit Test Script > Count");
             Assert.False(countRow.IsChecked);
             Assert.Equal("Changed by the game", countRow.Origin);
             Assert.Equal(1, list.CheckedCount);
@@ -289,7 +304,7 @@ public sealed partial class LiveEditTests
             Assert.Equal(1, await properties.ApplyComponentToAssetAsync(header.NodePresenters));
             Assert.Equal(0.5f, asset.Stamina);
             Assert.Equal(3, asset.Count);
-            Assert.Equal("Apply to asset: LiveEditTestScript.Stamina of Player", undoRedo.GetName(undoRedo.RetrieveAllTransactions().Last()));
+            Assert.Equal("Apply to asset: Stamina of Player", undoRedo.GetName(undoRedo.RetrieveAllTransactions().Last()));
 
             // Every row checked: one step for all
             lists.Answer = shown =>

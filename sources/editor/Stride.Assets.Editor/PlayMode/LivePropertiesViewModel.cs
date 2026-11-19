@@ -11,6 +11,7 @@ using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Assets.Quantum;
 using Stride.Core.Extensions;
 using Stride.Core.Diagnostics;
+using Stride.Core.Presentation.Core;
 using Stride.Core.Presentation.Quantum;
 using Stride.Core.Presentation.Quantum.Presenters;
 using Stride.Core.Quantum;
@@ -619,7 +620,7 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
                 continue;
             }
             // The name the grid shows (Color, not Type.Color), for the undo step
-            member ??= presenter.DisplayName;
+            member ??= Utils.SplitCamelCase(presenter.DisplayName);
             changes.AddRange(found.Where(x => x.CanApply));
         }
         if (changes.Count == 0)
@@ -666,7 +667,7 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
         if (chosen.Count == 0)
             return 0;
         var name = chosen.Count == 1
-            ? $"Apply to asset: {chosen[0].DisplayPath} of {chosen[0].Source.Name}"
+            ? $"Apply to asset: {(chosen[0].DisplayText.Length > 0 ? chosen[0].DisplayText : chosen[0].ComponentName)} of {chosen[0].Source.Name}"
             : $"Apply to asset: {chosen.Count} values of {title}";
         return assetApplier.Apply(chosen, name);
     }

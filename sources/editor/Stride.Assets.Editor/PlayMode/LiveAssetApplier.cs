@@ -13,6 +13,7 @@ using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Assets.Presentation.Services;
 using Stride.Core.Diagnostics;
 using Stride.Core.Extensions;
+using Stride.Core.Presentation.Core;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Quantum;
 using Stride.Core.Reflection;
@@ -124,13 +125,14 @@ public sealed record LiveApplySource(LiveMirrorReferences References, LiveEntity
 [Experimental("STREXP012")]
 public sealed class LiveApplyChange
 {
-    internal LiveApplyChange(LiveApplySource source, Guid componentId, string componentName, IReadOnlyList<LiveApplyStep> path, LiveApplyKind kind, object? liveValue, string assetText, string liveText, LiveApplyOrigin origin, string? reason)
+    internal LiveApplyChange(LiveApplySource source, Guid componentId, string componentName, IReadOnlyList<LiveApplyStep> path, string displayText, LiveApplyKind kind, object? liveValue, string assetText, string liveText, LiveApplyOrigin origin, string? reason)
     {
         Source = source;
         ComponentId = componentId;
         ComponentName = componentName;
         Path = path;
         PathText = LiveApplyStep.Format(path);
+        DisplayText = displayText;
         Kind = kind;
         LiveValue = liveValue;
         AssetText = assetText;
@@ -145,7 +147,7 @@ public sealed class LiveApplyChange
     /// <summary>The component's id; <see cref="Guid.Empty"/> for a member of the entity itself.</summary>
     public Guid ComponentId { get; }
 
-    /// <summary>The component's type name, as its header shows it; empty for a member of the entity itself.</summary>
+    /// <summary>The component's name, as its header in the property grid shows it; empty for a member of the entity itself.</summary>
     public string ComponentName { get; }
 
     /// <summary>The path of the member from its component.</summary>
@@ -154,8 +156,14 @@ public sealed class LiveApplyChange
     /// <summary>The path as text (<see cref="LiveApplyStep.Format"/>); empty for a whole component.</summary>
     public string PathText { get; }
 
-    /// <summary>The component and the path, as a list shows it: <c>Transform.Position</c>.</summary>
-    public string DisplayPath => PathText.Length == 0 ? ComponentName : ComponentName.Length == 0 ? PathText : $"{ComponentName}.{PathText}";
+    /// <summary>
+    /// The path with the names the property grid shows: <c>Run Speed</c> for <c>MaxRunSpeed</c>, <c>Light &gt; Color</c>; empty for
+    /// a whole component.
+    /// </summary>
+    public string DisplayText { get; }
+
+    /// <summary>The component and the path, as the list shows them: <c>Player Controller &gt; Run Speed</c>.</summary>
+    public string DisplayPath => DisplayText.Length == 0 ? ComponentName : ComponentName.Length == 0 ? DisplayText : $"{ComponentName} > {DisplayText}";
 
     /// <summary>What applying it does.</summary>
     public LiveApplyKind Kind { get; }
@@ -383,9 +391,73 @@ public sealed class LiveAssetApplier(SessionViewModel session)
     /// </summary>
     internal static string DisplayName(Type type) => TypeDescriptorFactory.Default.AttributeRegistry.GetAttribute<DisplayAttribute>(type)?.Name ?? type.Name;
 
+    /// <summary>
+    /// The name of a component as its header in the property grid shows it: <c>Player Controller</c>.
+    /// </summary>
+    internal static string ComponentDisplayName(Type type) => Utils.SplitCamelCase(DisplayName(type));
+
+    /// <summary>
+    /// A path with the names the property grid shows (the display attribute of each member, split as the grid splits it), walked
+    /// on the live value so that an abstract member names the members of its instance.
+    /// </summary>
+    /// <param name="root">The live component, or the live entity.</param>
+    /// <param name="path">The path from it.</param>
+    internal static string DisplayText(object? root, IReadOnlyList<LiveApplyStep> path)
+    {
+        var text = new StringBuilder();
+        var value = root;
+        var type = root?.GetType();
+        foreach (var step in path)
+        {
+            if (step.Member is { } memberName)
+            {
+                var member = type is null ? null : TypeDescriptorFactory.Default.Find(type)?.Members.FirstOrDefault(x => x.Name == memberName);
+                var name = (member?.MemberInfo is { } info ? TypeDescriptorFactory.Default.AttributeRegistry.GetAttribute<DisplayAttribute>(info)?.Name : null) ?? memberName;
+                if (text.Length > 0)
+                    text.Append(" > ");
+                text.Append(Utils.SplitCamelCase(name));
+                value = member is null ? null : GetOrNull(member, value);
+                type = value?.GetType() ?? member?.Type;
+            }
+            else
+            {
+                text.Append('[').Append(Convert.ToString(step.Index.Value, CultureInfo.InvariantCulture)).Append(']');
+                value = value switch
+                {
+                    IList list when step.Index.IsInt && step.Index.Int >= 0 && step.Index.Int < list.Count => list[step.Index.Int],
+                    IDictionary dictionary when step.Index.Value is { } key && dictionary.Contains(key) => dictionary[key],
+                    _ => null,
+                };
+                type = value?.GetType() ?? (type is null ? null : TypeDescriptorFactory.Default.Find(type) switch
+                {
+                    DictionaryDescriptor dictionary => dictionary.ValueType,
+                    CollectionDescriptor collection => collection.ElementType,
+                    ArrayDescriptor array => array.ElementType,
+                    _ => null,
+                });
+            }
+        }
+        return text.ToString();
+
+        static object? GetOrNull(IMemberDescriptor member, object? instance)
+        {
+            if (instance is null)
+                return null;
+            try
+            {
+                return member.Get(instance);
+            }
+            catch (Exception)
+            {
+                // A getter that throws: the names after it come from the member's type
+                return null;
+            }
+        }
+    }
+
     private LiveApplyChange AddedComponent(LiveApplySource source, EntityComponent component)
     {
-        var name = DisplayName(component.GetType());
+        var name = ComponentDisplayName(component.GetType());
         var origin = source.Record?.IsComponentAdded(source.Handle, component.Id) == true ? LiveApplyOrigin.EditedLive : LiveApplyOrigin.ChangedByGame;
         string? reason = null;
         if (component is IUnloadable)
@@ -395,7 +467,7 @@ public sealed class LiveAssetApplier(SessionViewModel session)
         else if (FindCounterpart(source, out _, out var entity) is null && !EntityComponentAttributes.Get(component.GetType()).AllowMultipleComponents
             && entity!.Entity.Components.Any(x => x.GetType() == component.GetType()))
             reason = $"The asset entity already has a {name}, which cannot be there twice.";
-        return new LiveApplyChange(source, component.Id, name, [], LiveApplyKind.Component, component, "(not in the asset)", "added while playing", origin, reason);
+        return new LiveApplyChange(source, component.Id, name, [], string.Empty, LiveApplyKind.Component, component, "(not in the asset)", "added while playing", origin, reason);
     }
 
     private bool ApplyChange(LiveApplyChange change)
@@ -517,7 +589,7 @@ public sealed class LiveAssetApplier(SessionViewModel session)
                 return "The component is no longer in the game.";
             if (live is IUnloadable)
                 return PlaceholderReason;
-            componentName = DisplayName(live.GetType());
+            componentName = ComponentDisplayName(live.GetType());
             if (entity.Entity.Components.FirstOrDefault(x => x.Id == componentId) is not { } asset)
                 return source.Record?.IsComponentAdded(source.Handle, componentId) == true
                     ? "The component was added while the game runs: apply the whole component to add it to the asset."
@@ -969,7 +1041,9 @@ public sealed class LiveAssetApplier(SessionViewModel session)
         private LiveApplyChange Change(IReadOnlyList<LiveApplyStep> path, string componentName, LiveApplyKind kind, object? live, string assetText, string liveText, string? reason)
         {
             var origin = source.Record?.IsEdited(source.Handle, componentId, LiveApplyStep.Format(path)) == true ? LiveApplyOrigin.EditedLive : LiveApplyOrigin.ChangedByGame;
-            return new LiveApplyChange(source, componentId, componentName, path, kind, live, assetText, liveText, origin, reason);
+            var mirror = source.References.Mirror.Entity;
+            object? root = componentId == Guid.Empty ? mirror : mirror.Components.FirstOrDefault(x => x.Id == componentId);
+            return new LiveApplyChange(source, componentId, componentName, path, DisplayText(root, path), kind, live, assetText, liveText, origin, reason);
         }
 
         private static bool IsCollection(IObjectNode node) => node.IsEnumerable && node.Descriptor is CollectionBaseDescriptor;
