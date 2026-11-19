@@ -11,7 +11,7 @@
 
   <PropertyGroup>
     <!-- What a local build of the Stride engine packs today: no released Stride has the plugin model Skein uses -->
-    <SkeinStrideVersion Condition="'$(SkeinStrideVersion)' == ''">4.5.3-dev</SkeinStrideVersion>
+    <SkeinStrideVersion Condition="'$(SkeinStrideVersion)' == ''">4.5.4-dev</SkeinStrideVersion>
     <!-- Yarn Spinner, from nuget.org, unchanged -->
     <SkeinYarnVersion Condition="'$(SkeinYarnVersion)' == ''">3.2.2</SkeinYarnVersion>
     <!-- The Avalonia and AvaloniaEdit versions must be the ones Game Studio ships with -->
