@@ -17,5 +17,12 @@
     "image": "ReferenceViewTests.Images.png",
     "platform": "macOS",
     "allow": { "3-5": 4974, "6-15": 12849, "16-31": 1017, "32+": 0 }
+  },
+  // The macOS golds come from the macos-15 image; CoreText on the macos-26 image draws a few glyph pixels of the Text page
+  // differently (8 pixels, up to 6 away). Same rule as the whole-frame Skia project's.
+  {
+    "image": "ReferenceViewTests.Text.png",
+    "platform": "macOS",
+    "allow": { "3-5": 4, "6-15": 4, "16+": 0 }
   }
 ]
