@@ -1,0 +1,21 @@
+// Image comparison thresholds for Stride.AvaloniaUI.Native.Tests
+// Built-in default (no file needed): any pixel with diff >= 3 fails.
+// Only add entries here for images that need relaxed thresholds.
+//
+// Format:
+//   image    - image filename (required, or omit for suite-wide default)
+//   platform - "Windows", "Linux", "macOS" (optional, omit = any)
+//   api      - "Vulkan", "Direct3D11", "Direct3D12" (optional, omit = any)
+//   device   - "SwiftShader", "WARP", GPU name (optional, omit = any)
+//   allow    - max allowed pixel counts per diff range (e.g. "1-2": 500, "16+": 2)
+[
+  // The native renderer hands bitmaps and image brushes to Skia on the CPU, which draws each run at the origin of its
+  // own pixels. On macOS (ARM), Skia then samples the scaled images (the 96x48 uniform image and the FlipXY tiles)
+  // differently from the whole-frame renderer, which draws them where they are in the frame; on Windows and Linux (x86)
+  // both match pixel for pixel. The counts of the macOS runner (Apple M1), measured against the whole-frame gold.
+  {
+    "image": "ReferenceViewTests.Images.png",
+    "platform": "macOS",
+    "allow": { "3-5": 4974, "6-15": 12849, "16-31": 1017, "32+": 0 }
+  }
+]
