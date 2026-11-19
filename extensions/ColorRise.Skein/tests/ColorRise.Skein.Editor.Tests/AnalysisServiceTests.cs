@@ -44,6 +44,24 @@ public sealed class AnalysisServiceTests
     }
 
     [Fact]
+    public async Task A_call_to_a_function_the_game_does_not_declare_is_an_error_at_its_place()
+    {
+        // has_item is a function of the game (GameFunctions); has_items is not
+        const string Calls = "title: Start\n---\n<<if has_item(\"oil\")>>\nOdile: Full.\n<<endif>>\n<<if has_items(\"oil\")>>\nOdile: Fuller.\n<<endif>>\n===\n";
+        await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", Calls));
+        var analysis = session.Analysis;
+        analysis.AnalysisOf(session.ProjectAt("Dialogue/Story"));
+        await analysis.WhenIdle();
+
+        var result = analysis.AnalysisOf(session.ProjectAt("Dialogue/Story"))!;
+        var unknown = Assert.Single(result.Diagnostics, d => d.Code == "YS0013");
+        Assert.Equal((YarnSeverity.Error, "Dialogue/Act1.yarn", 6, 6), (unknown.Severity, unknown.File, unknown.Line, unknown.Column));
+        Assert.Contains("has_items", unknown.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(result.Diagnostics, d => d.Line == 3);
+        Assert.Null(result.Build.Project);
+    }
+
+    [Fact]
     public async Task Changes_in_a_row_are_compiled_once_and_an_error_keeps_the_nodes_of_before()
     {
         await using var session = await SkeinSession.OpenAsync(SkeinSession.Project("Dialogue/Story"), SkeinSession.Script("Dialogue/Act1", Act1), SkeinSession.Script("Dialogue/Pier", Pier));

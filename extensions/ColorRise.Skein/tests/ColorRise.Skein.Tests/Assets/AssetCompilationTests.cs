@@ -236,6 +236,14 @@ public sealed class AssetCompilationTests : IDisposable
             builder2.Dispose();
 
             Assert.Equal(ResultStatus.Successful, right);
+
+            // A function the game does not declare is an error at its call
+            Script("Dialogue/Chatter/Pier").Text = Script("Dialogue/Chatter/Pier").Text!.Replace("stock_of(\"oil\")", "stock_at(\"oil\")");
+            var (_, unknown, unknownLog, builder3) = Build();
+            builder3.Dispose();
+
+            Assert.Equal(ResultStatus.Failed, unknown);
+            Assert.Contains(unknownLog, m => m.StartsWith("Error: ", StringComparison.Ordinal) && m.Contains("Pier.yarn(3,", StringComparison.Ordinal) && m.Contains("stock_at", StringComparison.Ordinal));
         }
         finally
         {

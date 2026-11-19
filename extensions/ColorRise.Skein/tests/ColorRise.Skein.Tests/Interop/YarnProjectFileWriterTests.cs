@@ -45,7 +45,7 @@ public sealed class YarnProjectFileWriterTests : IDisposable
 
         var project = Yarn.Compiler.Project.LoadFromFile(path);
 
-        Assert.Equal(4, project.FileVersion);
+        Assert.Equal(5, project.FileVersion);
         Assert.Equal(["**/*.yarn", "../Shared/Common.yarn"], project.SourceFilePatterns);
         Assert.Equal(["Drafts/**"], project.ExcludeFilePatterns);
         Assert.Equal("en", project.BaseLanguage);
@@ -85,7 +85,8 @@ public sealed class YarnProjectFileWriterTests : IDisposable
         Assert.Equal(
             ["projectFileVersion", "sourceFiles", "editorOptions", "baseLanguage", "localisation", "definitions", "compilerOptions"],
             merged.Select(p => p.Key));
-        Assert.Equal(3, merged["projectFileVersion"]!.GetValue<int>());
+        // The version of the Yarn Spinner Skein builds with: an earlier one is raised
+        Assert.Equal(5, merged["projectFileVersion"]!.GetValue<int>());
         Assert.Equal("""{"x":1,"list":[1,2.50,"é"]}""", merged["editorOptions"]!.ToJsonString(new() { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
         Assert.Equal("""["**/*.yarn","../Shared/Common.yarn"]""", merged["sourceFiles"]!.ToJsonString());
         Assert.Equal("en", merged["baseLanguage"]!.GetValue<string>());
@@ -113,7 +114,7 @@ public sealed class YarnProjectFileWriterTests : IDisposable
         Assert.Equal(
             """
             {
-                "projectFileVersion": 4,
+                "projectFileVersion": 5,
                 "sourceFiles": [
                     "**/*.yarn"
                 ],

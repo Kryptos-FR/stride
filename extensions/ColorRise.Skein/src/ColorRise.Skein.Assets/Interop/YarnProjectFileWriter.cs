@@ -22,9 +22,10 @@ public static class YarnProjectFileWriter
     public const string FileExtension = ".yarnproject";
 
     /// <summary>
-    /// The version of the format a new file says it has: the one of Yarn Spinner 3.
+    /// The version of the format the file says it has: the one of the Yarn Spinner Skein builds with, whose compiler
+    /// needs a declaration for every function the scripts call.
     /// </summary>
-    public const int FileVersion = 4;
+    public const int FileVersion = Yarn.Compiler.Project.CurrentProjectFileVersion;
 
     private static readonly JsonSerializerOptions Indented = new()
     {
@@ -51,7 +52,10 @@ public static class YarnProjectFileWriter
     {
         var root = Parse(existingJson);
 
-        root["projectFileVersion"] ??= FileVersion;
+        // Skein builds the scripts as this version does: a file of an earlier version says so too, and Yarn Spinner's
+        // own tools then read them the same way, without offering to upgrade the file
+        if (root["projectFileVersion"] is not JsonValue version || !version.TryGetValue<int>(out var number) || number < FileVersion)
+            root["projectFileVersion"] = FileVersion;
         root["sourceFiles"] = List(asset.SourceFiles);
         SetOrRemove(root, "excludeFiles", asset.ExcludedFiles.Count > 0 ? List(asset.ExcludedFiles) : null);
         root["baseLanguage"] = asset.BaseLanguage;

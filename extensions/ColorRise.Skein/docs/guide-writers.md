@@ -244,6 +244,7 @@ You have {$coins} [plural value={$coins} one="coin" other="coins" /].
 - **A space around a marker.** A marker that stands alone, such as `[pause=500 /]`, takes the space that follows it. Write the space before the marker and none after.
 - **`when: once` and `<<once>>`** remember that they ran in a variable of the story: they are saved with the game, and the player's *Variables* does not list them. *Stop* in the player forgets them.
 - **A jump to a node that does not exist** is an error in a new project, at the build and in the editor. Yarn Spinner alone only warns, and the dialogue would stop there in the game.
+- **A function the game does not have** is an error (`YS0013`, *Unknown function call*), at the build and in the editor, and the severities cannot lower it: Yarn Spinner cannot check a call to a function it knows nothing of. Ask a programmer for it, or leave the call out until the code is there. The overview of the project lists the functions the game has.
 - **A command the game does not have** does not fail the build: the scripts are allowed to be ahead of the code. In the game, the log has a warning and the dialogue goes on. The descriptions of the commands that exist are in the `.ysls.json` file.
 
 ## 12. The commands

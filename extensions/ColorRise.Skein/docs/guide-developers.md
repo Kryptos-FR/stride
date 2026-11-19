@@ -57,7 +57,7 @@ No released Stride has the plugin model Skein uses yet. Until one does, a game n
 - Building the game compiles the project. An error in a script fails the build with the file, the line and Yarn Spinner's code. The compiled project is the content a dialogue runner plays (`YarnProject`), with one string table per language.
 - A project is built when something of the game references it: a dialogue runner of a scene, or the list of root assets of the package.
 
-The build knows the functions of the game (section 5): a script that calls one with the wrong types fails the build at its line.
+The build knows the functions of the game (section 5): a script that calls one with the wrong types fails the build at its line, and so does a script that calls a function the game does not declare (`YS0013`, as in Yarn Spinner 3.3, which no longer guesses the type of a function from its call).
 
 ## 3. The dialogue runner
 
@@ -417,7 +417,7 @@ public sealed class Fanfare : StartupScript
 }
 ```
 
-The build and Game Studio only know the methods with attributes: a function added by hand is unknown to the compiler, which then guesses its type from how the script uses it.
+The build and Game Studio only know the methods with attributes. A script that calls a function added by hand does not compile, since Yarn Spinner 3.3 needs a declaration for each function: give a function the scripts call an attribute, and add by hand only what replaces one at run time (the same name and types).
 
 **Built in.** `<<wait 2>>` waits two seconds of game time, `<<stop>>` ends the dialogue, and Yarn Spinner's standard functions (`visited`, `visited_count`, `dice`, `random`, `round`, `format` and the others) are there.
 
