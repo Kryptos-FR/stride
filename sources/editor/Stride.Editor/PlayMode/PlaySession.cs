@@ -530,6 +530,12 @@ public sealed class PlaySession : IAsyncDisposable
     public bool IsAddedWhilePlaying(int handle) => addedEntities.ContainsKey(handle);
 
     /// <summary>
+    /// The edits the game applied and the components added or removed from the editor, for the life of the session (it stays
+    /// readable after the game stopped): Apply to asset tells the values the user changed from those the game changed with it.
+    /// </summary>
+    public PlayEditRecord EditRecord { get; } = new();
+
+    /// <summary>
     /// Sends a change of the game's structure (a component added or removed, an entity created, deleted, duplicated or moved,
     /// a prefab spawned), which the game applies at the start of its next frame, with the edits, in the order they were sent.
     /// </summary>
@@ -727,6 +733,8 @@ public sealed class PlaySession : IAsyncDisposable
             case PlayEditResult result:
                 if (pendingEdits.TryRemove(result.Id, out var pending))
                 {
+                    if (result.Status is PlayEditStatus.Applied or PlayEditStatus.Coalesced)
+                        EditRecord.Add(pending.Edit);
                     Raise(EditAnswered, new PlayEditAnswer(pending.Edit, result));
                     pending.Completion.TrySetResult(result);
                 }
@@ -739,6 +747,7 @@ public sealed class PlaySession : IAsyncDisposable
                     {
                         foreach (var handle in structure.Entities)
                             addedEntities[handle] = command.Edit.Operation;
+                        EditRecord.Add(command.Edit, structure);
                     }
                     Raise(StructureAnswered, new PlayStructureAnswer(command.Edit, structure));
                     command.Completion.TrySetResult(structure);
