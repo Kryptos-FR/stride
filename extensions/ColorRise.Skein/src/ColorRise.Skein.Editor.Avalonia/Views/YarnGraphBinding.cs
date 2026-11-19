@@ -22,6 +22,8 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
     private readonly YarnScriptEditorViewModel editor;
     // The room around the nodes when the graph shows them all: the frames of the nodes and their labels fit in it
     private const double FitMargin = 60;
+    // Between the middles of two cards closer than this, both are in view and the row says where the link leaves from
+    private const double LabelMinLength = 420;
 
     // In multiples of the thickness of the links
     private static readonly IDashStyle DashedLink = new ImmutableDashStyle([4, 3], 0);
@@ -31,6 +33,9 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
     private bool fitted;
     // What the last fit gave: while the graph still has it, a change of its size fits again
     private (double Zoom, Vector Offset, Size Size) fit;
+
+    // The links whose label the graph shows, for the zoom and the place of the view it last drew
+    private HashSet<YarnLinkViewModel> Labelled { get; set; } = [];
 
     /// <summary>
     /// Shows an editor in a graph.
@@ -51,6 +56,7 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
         graph.NodesMoved += OnNodesMoved;
         graph.NodeDoubleClicked += OnNodeDoubleClicked;
         graph.LayoutUpdated += OnLayoutUpdated;
+        graph.PropertyChanged += OnGraphPropertyChanged;
         Observe();
         foreach (var node in editor.Nodes)
         {
@@ -75,8 +81,9 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
     public object? GetTargetSlot(object link) => (link as YarnLinkViewModel)?.TargetSlot;
 
     /// <summary>
-    /// The look of a link: a detour dashed, a jump to an expression dotted, a jump to a node that does not exist red, and
-    /// the option or the branch it leaves from as its label.
+    /// The look of a link: a detour dashed and teal, a jump to an expression dotted and blue-grey, a jump to a node that
+    /// does not exist red. The option or the branch it leaves from is its label, when its cards are far apart or one of
+    /// them is out of view (<see cref="ShowsLabel"/>).
     /// </summary>
     public NodeGraphLinkStyle? GetStyle(object link)
     {
@@ -84,15 +91,36 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
             return null;
 
         var computed = jump.Target is YarnStubCardViewModel { IsComputed: true };
-        if (!jump.IsDetour && !jump.IsBroken && !computed && jump.Label is null)
+        var label = ShowsLabel(jump) ? jump.Label : null;
+        if (!jump.IsDetour && !jump.IsBroken && !computed && label is null)
             return null;
 
         return new NodeGraphLinkStyle
         {
-            Brush = jump.IsBroken ? YarnPalette.Error : null,
+            Brush = jump.IsBroken ? YarnPalette.Error : computed ? YarnPalette.ComputedLink : jump.IsDetour ? YarnPalette.DetourLink : null,
             DashStyle = computed ? DottedLink : jump.IsDetour ? DashedLink : null,
-            Label = jump.Label,
+            Label = label,
         };
+    }
+
+    /// <summary>
+    /// Whether a link shows its label: it has one, and its cards are far apart, or one of them is out of view, so the row
+    /// it leaves from may not be on the screen.
+    /// </summary>
+    public bool ShowsLabel(YarnLinkViewModel link)
+    {
+        if (link.Label is null || BoundsOf(link.Source) is not { } source || BoundsOf(link.Target) is not { } target)
+            return false;
+
+        var (from, to) = (source.Center, target.Center);
+        if (Math.Sqrt(Math.Pow(to.X - from.X, 2) + Math.Pow(to.Y - from.Y, 2)) >= LabelMinLength)
+            return true;
+
+        if (graph.Bounds.Width <= 0 || graph.Bounds.Height <= 0)
+            return false;
+
+        var view = new Rect(graph.ViewToGraph(default), graph.ViewToGraph(new Point(graph.Bounds.Width, graph.Bounds.Height)));
+        return !view.Intersects(source) || !view.Intersects(target);
     }
 
     /// <summary>
@@ -127,6 +155,7 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
         graph.NodesMoved -= OnNodesMoved;
         graph.NodeDoubleClicked -= OnNodeDoubleClicked;
         graph.LayoutUpdated -= OnLayoutUpdated;
+        graph.PropertyChanged -= OnGraphPropertyChanged;
         foreach (var node in observed)
         {
             node.PropertyChanged -= OnNodePropertyChanged;
@@ -247,6 +276,25 @@ public sealed class YarnGraphBinding : INodeGraphLinkResolver, IDisposable
     }
 
     // The first time the graph has its size and its nodes theirs, it shows them all
+    // A pan or a zoom can put a card out of view, or bring it back: the links whose label shows then change
+    private void OnGraphPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property != NodeGraphControl.ZoomProperty && e.Property != NodeGraphControl.OffsetProperty && e.Property != Visual.BoundsProperty)
+            return;
+
+        var labelled = editor.Links.Where(ShowsLabel).ToHashSet();
+        if (labelled.SetEquals(Labelled))
+            return;
+
+        Labelled = labelled;
+        graph.InvalidateLinks();
+    }
+
+    private Rect? BoundsOf(object node)
+        => graph.GetNodePosition(node) is { } position && graph.ContainerFromNode(node) is { Bounds.Width: > 0 } container
+            ? new Rect(position, container.Bounds.Size)
+            : null;
+
     private void OnLayoutUpdated(object? sender, EventArgs e)
     {
         if (graph.Bounds.Width <= 0 || editor.Nodes.Count == 0 || graph.ContainerFromNode(editor.Nodes[0]) is not { Bounds.Width: > 0 })

@@ -139,26 +139,35 @@ public sealed class ScriptEditorViewTests
     }
 
     [AvaloniaFact]
-    public void The_links_are_drawn_by_their_kind_and_labelled_with_the_option_they_leave_from()
+    public void The_links_are_drawn_by_their_kind_and_labelled_with_the_option_they_leave_from_when_it_may_be_out_of_sight()
     {
         using var view = Open(
-            "title: Start\nposition: 0,0\n---\n-> Ask about the pier\n    <<jump Pier>>\n-> Leave\n    <<detour Harbour>>\n<<jump {$next}>>\n<<jump Nowhere>>\n===\n"
-            + "title: Pier\nposition: 340,0\n---\nFisher: Hi.\n===\n");
+            "title: Start\nposition: 0,0\n---\n-> Ask about the pier\n    <<jump Pier>>\n-> Sail away\n    <<jump Far>>\n-> Leave\n    <<detour Harbour>>\n<<jump {$next}>>\n<<jump Nowhere>>\n===\n"
+            + "title: Pier\nposition: 340,0\n---\nFisher: Hi.\n===\n"
+            + "title: Far\nposition: 1200,0\n---\nThe sea.\n===\n");
         var (editor, graph) = (view.Editor, view.View.NodeGraph);
         var resolver = graph.LinkResolver!;
-        NodeGraphLinkStyle? StyleTo(string title) => resolver.GetStyle(editor.Links.Single(l => l.Target is IYarnGraphNode node && node.Title == title));
+        var binding = (YarnGraphBinding)resolver;
+        YarnLinkViewModel To(string title) => editor.Links.Single(l => l.Target is IYarnGraphNode node && node.Title == title);
+        NodeGraphLinkStyle? StyleTo(string title) => resolver.GetStyle(To(title));
 
-        // A label shows only on a link long enough for its option to be out of sight
-        Assert.Equal(420, graph.LinkLabelMinLength);
-        Assert.Equal(new NodeGraphLinkStyle { Label = "Ask about the pier" }, StyleTo("Pier"));
+        // Two cards in view and close to each other: the row on the card says where the link leaves from
+        Assert.Null(StyleTo("Pier"));
+        Assert.Equal(new NodeGraphLinkStyle { Label = "Sail away" }, StyleTo("Far"));
 
         var detour = StyleTo("Harbour")!;
-        Assert.Equal("Leave", detour.Label);
         Assert.Equal([4.0, 3.0], detour.DashStyle!.Dashes!);
-        Assert.Equal([1.0, 2.0], StyleTo("{$next}")!.DashStyle!.Dashes!);
-        Assert.Equal((null, null), (StyleTo("{$next}")!.Label, StyleTo("{$next}")!.Brush));
-        Assert.NotNull(StyleTo("Nowhere")!.Brush);
-        Assert.Null(StyleTo("Nowhere")!.DashStyle);
+        var computed = StyleTo("{$next}")!;
+        Assert.Equal([1.0, 2.0], computed.DashStyle!.Dashes!);
+        Assert.Null(computed.Label);
+        var broken = StyleTo("Nowhere")!;
+        Assert.Null(broken.DashStyle);
+        Assert.Equal(3, new[] { computed.Brush, broken.Brush, graph.LinkBrush }.Distinct().Count());
+
+        // Once the view is moved away from the cards, the links show the option they leave from
+        view.Do(() => graph.Offset = new Vector(-100000, 0));
+        Assert.True(binding.ShowsLabel(To("Pier")));
+        Assert.Equal(new NodeGraphLinkStyle { Label = "Ask about the pier" }, StyleTo("Pier"));
     }
 
     [AvaloniaFact]

@@ -19,6 +19,9 @@ internal static class YarnPalette
     public static readonly IBrush GraphBackground = Brush(0x3A, 0x3A, 0x3F);
     public static readonly IBrush FrameLabel = Brush(0xD8, 0xD8, 0xD8);
     public static readonly Color NodeGroupFrame = Color.FromRgb(0xC8, 0xC8, 0xC8);
+    // The links that are not plain jumps: a detour, which comes back, and a jump to a node an expression names
+    public static readonly IBrush DetourLink = Brush(0x7F, 0xC8, 0xC0);
+    public static readonly IBrush ComputedLink = Brush(0x9F, 0xB2, 0xCF);
 
     // The names Yarn Spinner's editors know for the color header, in tones that keep a white title readable
     private static readonly Dictionary<string, IBrush> Named = new(StringComparer.OrdinalIgnoreCase)

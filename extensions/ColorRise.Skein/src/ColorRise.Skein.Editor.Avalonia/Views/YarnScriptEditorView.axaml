@@ -119,7 +119,7 @@
            links and commands (YarnGraphBinding). -->
       <Panel Grid.Column="0" ClipToBounds="True">
         <views:YarnGraphDecorations x:Name="Decorations"/>
-        <sd:NodeGraphControl x:Name="Graph" AutoLayout="False" Background="Transparent" LinkThickness="2" LinkLabelMinLength="420"
+        <sd:NodeGraphControl x:Name="Graph" AutoLayout="False" Background="Transparent" LinkThickness="2"
                              NodeTemplate="{StaticResource SkeinGraphNodeTemplate}">
           <sd:NodeGraphControl.ContextMenu>
             <!-- "Play from here" is Skein's command: the menu gives it the card it opened on, and shows its shortcut -->
