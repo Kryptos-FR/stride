@@ -11,7 +11,7 @@ public static class SkeinAssetFormat
     public const string Name = "ColorRise.Skein";
 
     /// <summary>
-    /// The version of the assets this build writes.
+    /// The version of the assets this build writes. 1.1: the character colours of a project are a dictionary.
     /// </summary>
-    public const string CurrentVersion = "1.0.0.0";
+    public const string CurrentVersion = "1.1.0.0";
 }

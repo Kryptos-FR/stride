@@ -1,6 +1,6 @@
 !YarnProjectAsset
 Id: 50792aa5-3dcc-5ad7-bbc6-317949f07e0a
-SerializedVersion: {ColorRise.Skein: 1.0.0.0}
+SerializedVersion: {ColorRise.Skein: 1.1.0.0}
 Tags: []
 SourceFiles:
     3eab7d54f02b97196b746392bd99bba9: '**/*.yarn'

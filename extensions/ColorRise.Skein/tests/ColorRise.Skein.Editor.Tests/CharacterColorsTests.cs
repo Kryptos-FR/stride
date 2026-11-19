@@ -26,8 +26,8 @@ public sealed class CharacterColorsTests
         Assert.False(colors.SameAs(other));
         Assert.True(other.SameAs(YarnCharacterColors.Default));
 
-        // A project's first colour of a name wins; a colour without a name is none
-        var project = new YarnProjectAsset { CharacterColors = { new() { Name = "Odile", Color = new Color3(0, 0, 1) }, new() { Name = "ODILE" }, new() { Name = " " } } };
+        // A project's first colour of a name in any case wins; a colour without a name is none
+        var project = new YarnProjectAsset { CharacterColors = { ["Odile"] = new Color3(0, 0, 1), ["ODILE"] = new Color3(1, 1, 1), [" "] = new Color3(1, 0, 0) } };
         Assert.Equal(new Color3(0, 0, 1), YarnCharacterColors.From(project).Of("odile"));
         Assert.Equal(colors.Of("Kye"), YarnCharacterColors.From(project).Of("Kye"));
 
@@ -60,9 +60,9 @@ public sealed class CharacterColorsTests
         var build = session.Analysis.AnalysisOf(project)!.Build;
         var changes = 0;
         session.Player.Changed += () => changes++;
-        project.Asset.CharacterColors.Add(new YarnCharacterColor { Name = "odile", Color = new Color3(1, 0, 0) });
-        project.Asset.CharacterColors.Add(new YarnCharacterColor { Name = "Odile", Color = new Color3(0, 1, 0) });
-        project.Asset.CharacterColors.Add(new YarnCharacterColor());
+        project.Asset.CharacterColors.Add("odile", new Color3(1, 0, 0));
+        project.Asset.CharacterColors.Add("Odile", new Color3(0, 1, 0));
+        project.Asset.CharacterColors.Add("", new Color3(0, 0, 1));
         session.Analysis.Invalidate();
         await session.Analysis.WhenIdle();
 

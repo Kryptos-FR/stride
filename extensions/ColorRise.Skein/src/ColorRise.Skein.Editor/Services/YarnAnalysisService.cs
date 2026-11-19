@@ -358,7 +358,10 @@ public sealed class YarnAnalysisService
             settings.DiagnosticSeverities[code] = severity;
         }
 
-        settings.CharacterColors.AddRange(asset.CharacterColors.Select(c => new YarnCharacterColor { Name = c.Name, Color = c.Color }));
+        foreach (var (name, color) in asset.CharacterColors)
+        {
+            settings.CharacterColors[name] = color;
+        }
 
         return new Input(settings, project.Url, scripts, actionsVersion);
     }

@@ -25,7 +25,7 @@ Select the project in the asset view to see its settings in the property grid:
 | Line id style | How *Add line ids* names the ids: random (`line:0a1b2c3`) or descriptive (`line:Tavern_0100_Odile`). |
 | Saliency | How the game picks among the lines of a line group or the nodes of a node group (section 4). |
 | Severities | How serious a message of the compiler is, by its code. In a new project, a jump to a node that does not exist (`YS0012`) is an error. |
-| Character colours | The colour of a character's name on the cards, in the text and in the dialogue player: *+* adds a name and its colour. A character that is not listed gets a colour made from its name, the same each time. The game does not use these colours. |
+| Character colours | The colour of a character's name on the cards, in the text and in the dialogue player: *+* asks for the name, as the lines write it (the case does not matter), and Enter adds it with a colour to choose. A character that is not listed gets a colour made from its name, the same each time. The game does not use these colours. |
 | Yarn project file | Keeps the files Yarn Spinner's own tools read beside the project (section 9). |
 
 A double click on the project opens its **overview**: its scripts with their nodes and errors, its variables, the **commands and functions** the game's code gives the scripts (how a script writes each one, `<<give item: string [count: number = 1]>>` or `has_item(item: string) → bool`, what it does, and the method of the code; *waits* marks a command the dialogue waits for), its languages (section 8) and what the compiler says.
@@ -84,7 +84,7 @@ How the graph looks is written in the script itself, with headers that Yarn Spin
 
 The search box dims the cards that do not match: it looks in the titles, the headers and the text.
 
-A jump is a solid arrow, a detour a dashed one, a jump to an expression (`<<jump {$next}>>`) a dotted one, and a jump to a node that does not exist is red. A link between cards placed far apart shows, at its middle, the option or the branch it leaves from.
+A jump is a solid grey arrow, a detour a dashed teal one, a jump to an expression (`<<jump {$next}>>`) a dotted blue-grey one, and a jump to a node that does not exist is red. A link shows, at its middle, the option or the branch it leaves from when its cards are far apart, or when one of them is out of view.
 
 *Export graph…* writes the graph of the script as text that documentation tools draw: a `.mmd` file (Mermaid), a `.md` file with the Mermaid chart under the name of the script (GitHub, GitLab and most wikis draw it), or a `.dot` or `.gv` file (Graphviz). The format follows the extension of the name. A node group is one box with its count of nodes, the notes stay out, a jump is a solid arrow and a detour a dashed one, each labelled with the option or the branch it leaves from, and the nodes of other scripts, missing nodes and jumps to an expression have a shape of their own.
 

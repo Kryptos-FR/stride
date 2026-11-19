@@ -31,16 +31,16 @@ public sealed class YarnCharacterColors
     }
 
     /// <summary>
-    /// The colours a project chose: the first colour of a name wins, a colour without a name is none.
+    /// The colours a project chose: the first colour of a name in any case wins, a colour without a name is none.
     /// </summary>
     public static YarnCharacterColors From(YarnProjectAsset project)
     {
         ArgumentNullException.ThrowIfNull(project);
         var chosen = new Dictionary<string, Color3>(StringComparer.OrdinalIgnoreCase);
-        foreach (var character in project.CharacterColors)
+        foreach (var (name, color) in project.CharacterColors)
         {
-            if (!string.IsNullOrWhiteSpace(character.Name))
-                chosen.TryAdd(character.Name.Trim(), character.Color);
+            if (!string.IsNullOrWhiteSpace(name))
+                chosen.TryAdd(name.Trim(), color);
         }
 
         return new YarnCharacterColors(chosen);
