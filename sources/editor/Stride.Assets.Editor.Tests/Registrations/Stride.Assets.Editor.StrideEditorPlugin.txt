@@ -101,6 +101,8 @@ Commands:
   Stride.SpriteSheet.UseWholeImage []
   Stride.SpriteSheet.ToggleMagicWand []
   Stride.SpriteSheet.FocusOnRegion []
+  Stride.PlayMode.ApplyToAsset []
+  Stride.PlayMode.ApplyComponentToAsset []
 Registry<Stride.Assets.Editor.AssetEditors.EntityHierarchyEditor.Tools.SceneViewToolDescriptor>:
   Stride.Assets.Editor.EditorGame.Tools.RotateTool (order 20)
   Stride.Assets.Editor.EditorGame.Tools.ScaleTool (order 30)
