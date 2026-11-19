@@ -1,0 +1,19 @@
+// Image comparison thresholds for Stride.AvaloniaUI.Tests
+// Built-in default (no file needed): any pixel with diff >= 3 fails.
+// Only add entries here for images that need relaxed thresholds.
+//
+// Format:
+//   image    - image filename (required, or omit for suite-wide default)
+//   platform - "Windows", "Linux", "macOS" (optional, omit = any)
+//   api      - "Vulkan", "Direct3D11", "Direct3D12" (optional, omit = any)
+//   device   - "SwiftShader", "WARP", GPU name (optional, omit = any)
+//   allow    - max allowed pixel counts per diff range (e.g. "1-2": 500, "16+": 2)
+[
+  // The macOS golds come from the macos-15 image; CoreText on the macos-26 image draws a few glyph pixels of the Text page
+  // differently (8 pixels, up to 6 away). The native project has the same rule.
+  {
+    "image": "ReferenceViewTests.Text.png",
+    "platform": "macOS",
+    "allow": { "3-5": 4, "6-15": 4, "16+": 0 }
+  }
+]
