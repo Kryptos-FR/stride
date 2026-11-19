@@ -354,9 +354,11 @@ public sealed class LivePropertyGridTests
             Assert.True(properties.RefusedWrites >= 2, $"{properties.RefusedWrites} writes refused");
             Assert.Equal(0, properties.SentEdits);
             Assert.DoesNotContain(Components(properties.ViewModel!).Children, x => x.NodeValue is LiveTestSecondScript);
-            // The components cannot be added: only the members' commands
+            // The Add component list sends nothing: no game takes it
             Assert.True(Components(properties.ViewModel!).IsReadOnly);
-            Assert.DoesNotContain(Components(properties.ViewModel!).NodePresenters.Single().Commands, x => x.Name == AddNewItemCommand.CommandName);
+            var components = Components(properties.ViewModel!).NodePresenters.Single();
+            await components.Commands.Single(x => x.Name == AddNewItemCommand.CommandName).Execute(components, typeof(LiveTestSecondScript), null);
+            Assert.Equal(0, properties.SentEdits);
         }
         finally
         {

@@ -365,6 +365,73 @@ public sealed class PlaySessionTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AStructureCommandGoesToTheGameAndMarksTheEntitiesItAdded()
+    {
+        await ConnectAsync();
+        var answered = Wait<PlayStructureAnswer>(x => session.StructureAnswered += x);
+        var command = new PlayStructureEdit(session.NextEditId(), PlayStructureOperation.SpawnPrefab, SceneHandle: 1, Url: "Prefabs/Crate");
+
+        var result = session.ChangeStructureAsync(command);
+        var received = await agent!.ReceiveAsync<PlayStructureEdit>();
+        Assert.Equal(command, received);
+        Assert.Equal(1, session.PendingStructureCount);
+        agent.Send(new PlayStructureResult(command.Id, 9, PlayEditStatus.Applied, [12, 13], Guid.Empty, null));
+
+        var answer = await result.WaitAsync(Timeout);
+        Assert.Equal([12, 13], answer.Entities);
+        Assert.Same(command, (await answered).Edit);
+        Assert.Equal(0, session.PendingStructureCount);
+        Assert.True(session.IsAddedWhilePlaying(13));
+        Assert.Equal(PlayStructureOperation.SpawnPrefab, session.AddedEntities[12]);
+        Assert.False(session.IsAddedWhilePlaying(4));
+    }
+
+    [Fact]
+    public async Task ARefusedStructureCommandAddsNothing()
+    {
+        await ConnectAsync();
+        var command = new PlayStructureEdit(session.NextEditId(), PlayStructureOperation.DuplicateEntity, EntityHandle: 4);
+
+        var result = session.ChangeStructureAsync(command);
+        await agent!.ReceiveAsync<PlayStructureEdit>();
+        agent.Send(new PlayStructureResult(command.Id, 9, PlayEditStatus.Gone, [], Guid.Empty, "The entity is no longer in the game."));
+
+        var answer = await result.WaitAsync(Timeout);
+        Assert.Equal(PlayEditStatus.Gone, answer.Status);
+        Assert.Empty(session.AddedEntities);
+    }
+
+    [Fact]
+    public async Task AStructureCommandWithoutTheGameFailsAtOnce()
+    {
+        var answer = await session.ChangeStructureAsync(new PlayStructureEdit(session.NextEditId(), PlayStructureOperation.CreateEntity)).WaitAsync(Timeout);
+
+        Assert.Equal(PlayEditStatus.Failed, answer.Status);
+        Assert.Contains("not connected", answer.Error);
+        Assert.Equal(0, session.PendingStructureCount);
+    }
+
+    [Fact]
+    public async Task AStructureCommandOnItsWayWhenTheGameStopsFailsAndAddsNothing()
+    {
+        await ConnectAsync();
+        var result = session.ChangeStructureAsync(new PlayStructureEdit(session.NextEditId(), PlayStructureOperation.CreateEntity));
+        await agent!.ReceiveAsync<PlayStructureEdit>();
+        agent.Received += x =>
+        {
+            if (x is PlayQuit)
+                game!.Exit(0);
+        };
+
+        await session.StopAsync().WaitAsync(Timeout);
+
+        var answer = await result.WaitAsync(Timeout);
+        Assert.Equal(PlayEditStatus.Failed, answer.Status);
+        Assert.Equal(0, session.PendingStructureCount);
+        Assert.Empty(session.AddedEntities);
+    }
+
+    [Fact]
     public async Task AConnectionThatEndsWhileTheGameRunsFails()
     {
         await ConnectAsync();

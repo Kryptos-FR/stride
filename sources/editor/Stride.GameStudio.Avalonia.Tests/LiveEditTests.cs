@@ -367,7 +367,10 @@ public sealed partial class LiveEditTests : IAsyncLifetime
             var pickers = Descendants(properties.ViewModel.RootNode).SelectMany(x => x.NodePresenters).SelectMany(x => x.Commands)
                 .Where(x => x.Name is PickupAssetCommand.CommandName or PickupEntityCommand.CommandName or PickupEntityComponentCommand.CommandName);
             Assert.All(pickers, x => Assert.True(x is LivePickupAssetCommand or LivePickupEntityCommand, x.GetType().Name));
-            Assert.DoesNotContain(components.NodePresenters.Single().Commands, x => x.Name == AddNewItemCommand.CommandName);
+            // The components are added and removed by the game: the transform cannot be removed
+            Assert.IsType<LiveAddComponentCommand>(components.NodePresenters.Single().Commands.Single(x => x.Name == AddNewItemCommand.CommandName));
+            Assert.DoesNotContain(components.Children.Single(x => x.NodeValue is TransformComponent).NodePresenters.Single().Commands, x => x.Name == RemoveItemCommand.CommandName);
+            Assert.IsType<LiveRemoveComponentCommand>(components.Children.Single(x => x.NodeValue is LiveEditTestScript).NodePresenters.Single().Commands.Single(x => x.Name == RemoveItemCommand.CommandName));
 
             // A member the engine reads once
             Assert.Null(LiveMemberSupport.GetReadOnlyReason(typeof(LiveEditTestScript), nameof(LiveEditTestScript.Once)));
@@ -376,6 +379,67 @@ public sealed partial class LiveEditTests : IAsyncLifetime
             properties.EditsEnabled = true;
             await WindowTestHelper.WaitUntilAsync(() => properties.ViewModel is not null && Node(properties, nameof(LiveEditTestScript.Once)).IsReadOnly, "the grid built again");
             Assert.Equal("Read when the script starts.", Node(properties, nameof(LiveEditTestScript.Once))[LiveEditData.Tip]);
+        }
+        finally
+        {
+            properties.ViewModel?.Destroy();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task ComponentsAreAddedAndRemovedByTheGame()
+    {
+        using var fixture = await OpenAsync();
+        var properties = await ShowAsync(fixture, PlayerHandle);
+        try
+        {
+            var components = properties.ViewModel!.RootNode.Children.Single(x => x.Name == nameof(Entity.Components)).NodePresenters.Single();
+            // The list of the Add component button: every type the entity can take, but a second transform
+            Assert.True(components.AttachedProperties.TryGetValue(EntityHierarchyData.EntityComponentAvailableTypesKey, out var types));
+            Assert.Contains(types, x => x.Type == typeof(ModelComponent));
+            Assert.DoesNotContain(types, x => x.Type == typeof(TransformComponent));
+            Assert.True(components.AttachedProperties.ContainsKey(EntityHierarchyData.EntityComponentAvailableTypeGroupsKey));
+
+            await components.Commands.Single(x => x.Name == AddNewItemCommand.CommandName).Execute(components, new AbstractNodeType(typeof(ModelComponent)), null);
+            var add = await Game.NextStructureEditAsync();
+            Assert.Equal((PlayStructureOperation.AddComponent, PlayerHandle, "Stride.Engine.ModelComponent, Stride.Engine"), (add.Operation, add.EntityHandle, add.TypeName));
+            Game.Send(new PlayStructureResult(add.Id, frame + 1, PlayEditStatus.Applied, [], Guid.NewGuid(), null));
+            await WindowTestHelper.WaitUntilAsync(() => properties.PendingEdits == 0, "the add answered");
+
+            // The game refuses to remove the script: the Output pane says why (PlayModeService)
+            var scriptItem = properties.ViewModel!.RootNode.Children.Single(x => x.Name == nameof(Entity.Components)).Children.Single(x => x.NodeValue is LiveEditTestScript).NodePresenters.Single();
+            await scriptItem.Commands.Single(x => x.Name == RemoveItemCommand.CommandName).Execute(scriptItem, null, null);
+            var remove = await Game.NextStructureEditAsync();
+            Assert.Equal((PlayStructureOperation.RemoveComponent, script.Id), (remove.Operation, remove.ComponentId));
+            Game.Send(new PlayStructureResult(remove.Id, frame + 1, PlayEditStatus.Failed, [], Guid.Empty, "Another component requires it."));
+            await WindowTestHelper.WaitUntilAsync(() => properties.PendingEdits == 0, "the remove answered");
+            Assert.Equal(1, properties.RefusedEdits);
+            // The rows of the component still change the game
+            Node(properties, nameof(LiveEditTestScript.Speed)).NodeValue = 5f;
+            Assert.Equal(5f, Read((await Game.NextEditAsync()).Value));
+            // Nothing in the undo history, nothing to save
+            Assert.False(fixture.Session.ActionHistory.CanUndo);
+        }
+        finally
+        {
+            properties.ViewModel?.Destroy();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task WithEditsOffComponentsCannotBeAddedOrRemoved()
+    {
+        using var fixture = await OpenAsync();
+        var properties = await ShowAsync(fixture, PlayerHandle);
+        try
+        {
+            properties.EditsEnabled = false;
+            await WindowTestHelper.WaitUntilAsync(() => properties.ViewModel is not null && Node(properties, nameof(LiveEditTestScript.Speed)).IsReadOnly, "the read-only grid");
+
+            var components = properties.ViewModel!.RootNode.Children.Single(x => x.Name == nameof(Entity.Components));
+            Assert.DoesNotContain(components.NodePresenters.Single().Commands, x => x.Name == AddNewItemCommand.CommandName);
+            Assert.False(components.NodePresenters.Single().AttachedProperties.ContainsKey(EntityHierarchyData.EntityComponentAvailableTypesKey));
+            Assert.All(components.Children, x => Assert.DoesNotContain(x.NodePresenters.Single().Commands, c => c.Name == RemoveItemCommand.CommandName));
         }
         finally
         {
@@ -562,6 +626,15 @@ public sealed partial class LiveEditTests : IAsyncLifetime
 
         public ConcurrentQueue<PlayEdit> Edits { get; } = new();
 
+        public ConcurrentQueue<PlayStructureEdit> StructureEdits { get; } = new();
+
+        public async Task<PlayStructureEdit> NextStructureEditAsync()
+        {
+            PlayStructureEdit? next = null;
+            await WindowTestHelper.WaitUntilAsync(() => StructureEdits.TryDequeue(out next), "a structure command");
+            return next!;
+        }
+
         public async Task ConnectAsync()
         {
             var pipe = new NamedPipeClientStream(".", environment[PlayProtocol.PipeVariable], PipeDirection.InOut, PipeOptions.Asynchronous);
@@ -576,6 +649,9 @@ public sealed partial class LiveEditTests : IAsyncLifetime
                         break;
                     case PlayEdit edit:
                         Edits.Enqueue(edit);
+                        break;
+                    case PlayStructureEdit command:
+                        StructureEdits.Enqueue(command);
                         break;
                     case PlayQuit when ExitOnQuit:
                         Exit(0);

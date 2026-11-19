@@ -33,6 +33,7 @@ public sealed class LivePanelTests : IAsyncLifetime
     private readonly FakeClipboardService clipboard = new();
     private readonly FakeSceneAssets sceneAssets = new();
     private readonly FakeSelectionView selectionView = new();
+    private readonly FakePrefabPicker prefabPicker = new();
     private readonly ICommandBase reloadCode = new AnonymousCommand(ViewModelServiceProvider.NullServiceProvider, () => { });
     private PlayModeService playMode = null!;
     private LivePanelViewModel panel = null!;
@@ -695,6 +696,162 @@ public sealed class LivePanelTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CreateDuplicateAndDeleteGoToTheGameAndTheTabSelectsWhatTheyAdded()
+    {
+        Start();
+        var agent = await ConnectAsync();
+        agent.Send(Tree());
+        await WaitAsync(() => panel.EntityCount == 3, "the tree");
+        Assert.True(Read(() => panel.CanChangeStructure));
+        Assert.False(Read(() => panel.DeleteEntityCommand.IsEnabled));
+        dispatcher.Invoke(() => panel.SelectedItems.Add(panel.Tree.FindEntity(2)!));
+        Assert.True(Read(() => panel.DeleteEntityCommand.IsEnabled && panel.DuplicateEntityCommand.IsEnabled));
+
+        // Under the selected entity
+        dispatcher.Invoke(() => panel.CreateEntityCommand.Execute());
+        var create = await agent.ReceiveAsync<PlayStructureEdit>();
+        Assert.Equal((PlayStructureOperation.CreateEntity, 2, 0), (create.Operation, create.ParentHandle, create.SceneHandle));
+        // The answer comes before the tree batch that adds it, in the same frame
+        agent.Send(new PlayStructureResult(create.Id, 5, PlayEditStatus.Applied, [10], Guid.Empty, null));
+        agent.Send(new PlayTreeBatch(5, [new PlayEntityAdded(Entity(10, Guid.NewGuid(), "Entity", 2))]));
+        await WaitAsync(() => panel.Selection?.Handles.SequenceEqual([10]) == true, "the new entity selected");
+        var created = Read(() => panel.Tree.FindEntity(10)!);
+        Assert.True(created.IsAddedWhilePlaying);
+        Assert.False(created.ShowsSpawned);
+        Assert.True(Read(() => created.Parent!.IsExpanded));
+        Assert.False(Read(() => panel.ShowInSceneEditorCommand.CanExecute(created)));
+
+        // A duplicate of the player keeps the ids of its scene asset's entity, but the editor added it
+        dispatcher.Invoke(() =>
+        {
+            panel.SelectedItems.Clear();
+            panel.SelectedItems.Add(panel.Tree.FindEntity(2)!);
+            panel.DuplicateEntityCommand.Execute();
+        });
+        var duplicate = await agent.ReceiveAsync<PlayStructureEdit>();
+        Assert.Equal((PlayStructureOperation.DuplicateEntity, 2), (duplicate.Operation, duplicate.EntityHandle));
+        agent.Send(new PlayStructureResult(duplicate.Id, 6, PlayEditStatus.Applied, [11, 12], Guid.Empty, null));
+        agent.Send(new PlayTreeBatch(6, [new PlayEntityAdded(Entity(11, PlayerId, "Player", 0, Transform)), new PlayEntityAdded(Entity(12, CameraId, "Camera", 11))]));
+        await WaitAsync(() => panel.Selection?.Handles.SequenceEqual([11]) == true, "the copy selected");
+        Assert.True(Read(() => panel.Tree.FindEntity(12)!.IsAddedWhilePlaying));
+        Assert.Null(Read(() => panel.Tree.FindEntity(11)!.CounterpartScene));
+        Assert.NotNull(Read(() => panel.Tree.FindEntity(2)!.CounterpartScene));
+
+        // Delete: the copy and the entity under the player, which goes with the player itself
+        dispatcher.Invoke(() =>
+        {
+            panel.SelectedItems.Add(panel.Tree.FindEntity(2)!);
+            panel.SelectedItems.Add(panel.Tree.FindEntity(10)!);
+            panel.DeleteEntityCommand.Execute();
+        });
+        var deletes = new[] { await agent.ReceiveAsync<PlayStructureEdit>(), await agent.ReceiveAsync<PlayStructureEdit>() };
+        Assert.All(deletes, x => Assert.Equal(PlayStructureOperation.DeleteEntity, x.Operation));
+        Assert.Equal([2, 11], deletes.Select(x => x.EntityHandle).Order());
+    }
+
+    [Fact]
+    public async Task SpawnPrefabPicksAPrefabAndSpawnsItInTheSelectedScene()
+    {
+        Start();
+        var agent = await ConnectAsync();
+        agent.Send(Tree());
+        await WaitAsync(() => panel.EntityCount == 3, "the tree");
+        dispatcher.Invoke(() => panel.SelectedItems.Add(panel.Tree.Roots[0]));
+
+        // Nothing picked: nothing sent
+        dispatcher.Invoke(() => panel.SpawnPrefabCommand.Execute());
+        await WaitAsync(() => prefabPicker.Opened == 1, "the picker");
+        prefabPicker.Answer = "Prefabs/Crate";
+        dispatcher.Invoke(() => panel.SpawnPrefabCommand.Execute());
+
+        var spawn = await agent.ReceiveAsync<PlayStructureEdit>();
+        Assert.Equal((PlayStructureOperation.SpawnPrefab, "Prefabs/Crate", 1, 0), (spawn.Operation, spawn.Url, spawn.SceneHandle, spawn.ParentHandle));
+        agent.Send(new PlayStructureResult(spawn.Id, 7, PlayEditStatus.Applied, [20, 21, 22], Guid.Empty, null));
+        agent.Send(new PlayTreeBatch(7, [new PlayEntityAdded(Entity(20, Guid.NewGuid(), "Crate", 0)), new PlayEntityAdded(Entity(21, Guid.NewGuid(), "Lid", 20)), new PlayEntityAdded(Entity(22, Guid.NewGuid(), "Pallet", 0))]));
+        // Its roots are selected
+        await WaitAsync(() => panel.Selection?.Handles.SequenceEqual([20, 22]) == true, "the prefab's roots selected");
+        Assert.Equal(2, prefabPicker.Opened);
+    }
+
+    [Fact]
+    public async Task AGameThatStopsWhileThePickerIsOpenSpawnsNothing()
+    {
+        Start();
+        var agent = await ConnectAsync();
+        agent.Send(Tree());
+        await WaitAsync(() => panel.EntityCount == 3, "the tree");
+        prefabPicker.Pending = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        dispatcher.Invoke(() => panel.SpawnPrefabCommand.Execute());
+        await WaitAsync(() => prefabPicker.Opened == 1, "the picker");
+
+        games.Single().Exit(0);
+        await WaitAsync(() => panel.State == LiveTabState.Stopped, "stopped");
+        prefabPicker.Pending.TrySetResult("Prefabs/Crate");
+
+        Assert.False(Read(() => panel.CanChangeStructure));
+        Assert.Equal(0, playMode.Session!.PendingStructureCount);
+        Assert.False(Read(() => panel.SpawnPrefabCommand.IsEnabled));
+    }
+
+    [Fact]
+    public async Task TheCommandsFollowTheLockOfThePropertyGridAndTheGame()
+    {
+        Start();
+        var agent = await ConnectAsync();
+        agent.Send(Tree());
+        await WaitAsync(() => panel.EntityCount == 3, "the tree");
+        dispatcher.Invoke(() => panel.SelectedItems.Add(panel.Tree.FindEntity(4)!));
+
+        dispatcher.Invoke(() => selectionView.EditsEnabled = false);
+        await WaitAsync(() => !panel.CanChangeStructure, "the commands off");
+        Assert.Contains("Live edits are off", Read(() => panel.StructureDisabledReason));
+        Assert.False(Read(() => panel.CreateEntityCommand.IsEnabled || panel.DeleteEntityCommand.IsEnabled || panel.DuplicateEntityCommand.IsEnabled || panel.SpawnPrefabCommand.IsEnabled));
+        Assert.False(Read(() => panel.CanMove([panel.Tree.FindEntity(4)!], panel.Tree.FindEntity(2))));
+
+        dispatcher.Invoke(() => selectionView.EditsEnabled = true);
+        await WaitAsync(() => panel.CanChangeStructure, "the commands on");
+        Assert.Null(Read(() => panel.StructureDisabledReason));
+
+        games.Single().Exit(0);
+        await WaitAsync(() => panel.State == LiveTabState.Stopped, "stopped");
+        Assert.False(Read(() => panel.CanChangeStructure));
+        Assert.Contains("stopped", Read(() => panel.StructureDisabledReason));
+    }
+
+    [Fact]
+    public async Task ADraggedEntityMovesUnderAnotherRowButNotUnderItsOwnChild()
+    {
+        Start();
+        var agent = await ConnectAsync();
+        agent.Send(Tree());
+        await WaitAsync(() => panel.EntityCount == 3, "the tree");
+        var (player, camera, ground, scene) = Read(() => (panel.Tree.FindEntity(2)!, panel.Tree.FindEntity(3)!, panel.Tree.FindEntity(4)!, panel.Tree.Roots[0]));
+
+        Assert.False(Read(() => panel.CanMove([player], camera)));
+        Assert.False(Read(() => panel.CanMove([player], player)));
+        // Already there
+        Assert.False(Read(() => panel.CanMove([ground], scene)));
+        Assert.True(Read(() => panel.CanMove([camera], scene)));
+        Assert.True(Read(() => panel.CanMove([ground, camera], player)));
+
+        // The camera is under the player already: only the ground moves, keeping its place in the world (Alt)
+        var moving = dispatcher.Invoke(() => panel.MoveAsync([ground, camera], player, keepWorldTransform: true));
+        var move = await agent.ReceiveAsync<PlayStructureEdit>();
+        Assert.Equal((PlayStructureOperation.MoveEntity, 4, 2, true), (move.Operation, move.EntityHandle, move.ParentHandle, move.KeepWorldTransform));
+        agent.Send(new PlayStructureResult(move.Id, 8, PlayEditStatus.Applied, [], Guid.Empty, null));
+        agent.Send(new PlayTreeBatch(8, [new PlayEntityMoved(4, 2, 1)]));
+        Assert.Single(await moving.WaitAsync(Timeout));
+        await WaitAsync(() => panel.Tree.FindEntity(4)!.Parent == player, "the ground under the player");
+
+        // To the root of the scene
+        var back = dispatcher.Invoke(() => panel.MoveAsync([ground], scene, keepWorldTransform: false));
+        var root = await agent.ReceiveAsync<PlayStructureEdit>();
+        Assert.Equal((0, 1, false), (root.ParentHandle, root.SceneHandle, root.KeepWorldTransform));
+        agent.Send(new PlayStructureResult(root.Id, 9, PlayEditStatus.Applied, [], Guid.Empty, null));
+        await back.WaitAsync(Timeout);
+    }
+
+    [Fact]
     public void ClosingTheTabDisposesTheViewOfTheSelection()
     {
         dispatcher.Invoke(panel.Destroy);
@@ -708,7 +865,7 @@ public sealed class LivePanelTests : IAsyncLifetime
     {
         var services = new ViewModelServiceProvider([dispatcher, clipboard]);
         var descriptor = LivePanel.Create(_ => throw new NotSupportedException());
-        return dispatcher.Invoke(() => new LivePanelViewModel(new PanelContext { Descriptor = descriptor, Session = new FakeSession(), ServiceProvider = services }, playMode, sceneAssets, selectionView, reloadCode));
+        return dispatcher.Invoke(() => new LivePanelViewModel(new PanelContext { Descriptor = descriptor, Session = new FakeSession(), ServiceProvider = services }, playMode, sceneAssets, selectionView, reloadCode, prefabPicker: prefabPicker));
     }
 
     private FakeGame Start()
@@ -753,9 +910,39 @@ public sealed class LivePanelTests : IAsyncLifetime
 
         public bool Disposed { get; private set; }
 
+        public bool EditsEnabled
+        {
+            get;
+            set
+            {
+                field = value;
+                EditsEnabledChanged?.Invoke(this, EventArgs.Empty);
+            }
+        } = true;
+
+        public event EventHandler? EditsEnabledChanged;
+
         public void Show(LiveSelection? selection) => Shown.Add(selection);
 
         public void Dispose() => Disposed = true;
+    }
+
+    /// <summary>
+    /// The picker of Spawn prefab: answers what the test set, and records that it opened.
+    /// </summary>
+    private sealed class FakePrefabPicker : ILivePrefabPicker
+    {
+        public string? Answer { get; set; }
+
+        public TaskCompletionSource<string?>? Pending { get; set; }
+
+        public int Opened { get; private set; }
+
+        public Task<string?> PickPrefabAsync(PlaySession session, CancellationToken cancellationToken)
+        {
+            ++Opened;
+            return Pending is { } pending ? pending.Task.WaitAsync(cancellationToken) : Task.FromResult(Answer);
+        }
     }
 
     /// <summary>

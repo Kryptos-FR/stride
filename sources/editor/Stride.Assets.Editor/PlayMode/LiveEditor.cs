@@ -107,7 +107,7 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
     /// <summary>
     /// The edits on their way.
     /// </summary>
-    public int PendingEdits => sets.Values.Count(x => x.InFlight != 0) + operations.Values.Sum();
+    public int PendingEdits => sets.Values.Count(x => x.InFlight != 0) + operations.Values.Sum() + PendingCommands;
 
     /// <summary>
     /// Whether a value of the mirror must not be overwritten by a snapshot of this frame: its edit is on its way, or its
@@ -288,24 +288,18 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
         var edit = create(playSession, references.Mirror.Handle);
         ++PendingCommands;
         ++SentEdits;
-        SetState(presenter, LiveEditData.Pending, null);
+        // No state on the row: a state refreshes the row's view, which would end the rows of its components. The snapshot that
+        // follows an applied command rebuilds the grid; a refusal is in the Output pane (PlayModeService).
         var sentGeneration = generation;
         playSession.ChangeStructureAsync(edit).ContinueWith(task => dispatcher.InvokeAsync(() =>
         {
             --PendingCommands;
-            if (sentGeneration != generation || task.Result is not { } result || presenter.IsDisposedPresenter())
+            if (sentGeneration != generation || task.Result is not { } result)
                 return;
-            // The game stopped before it answered: nothing was refused. A refusal is in the Output pane too (PlayModeService).
-            var refused = result.Status is PlayEditStatus.Failed or PlayEditStatus.Gone && session() is { State: PlaySessionState.Connected };
-            if (refused)
+            if (result.Status is PlayEditStatus.Failed or PlayEditStatus.Gone && session() is { State: PlaySessionState.Connected })
             {
                 ++RefusedEdits;
-                SetState(presenter, LiveEditData.Refused, result.Error);
-            }
-            else
-            {
-                // Applied: the snapshot that follows rebuilds the grid with the components as they are now
-                SetState(presenter, null, null);
+                log.Verbose($"The game refused a change of the components of {references.Mirror.Name}: {result.Error}");
             }
         }), TaskScheduler.Default).Forget();
         return true;
