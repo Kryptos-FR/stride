@@ -9,6 +9,7 @@ using Avalonia.Input.Platform;
 using Avalonia.VisualTree;
 using Stride.Assets.Editor.Avalonia.Views;
 using Stride.Assets.Editor.Commands;
+using Stride.Assets.Editor.PlayMode;
 using Stride.Assets.Editor.ViewModels;
 using Stride.Assets.Editor.ViewModels.SpriteEditor;
 using Stride.Assets.Sprite;
@@ -86,8 +87,10 @@ public sealed class ContextMenuCommandsTests
                 // A property of the property grid
                 var item = await ShowPropertyAsync(fixture, window, asset, nameof(TextPropertiesAsset.Label));
                 await OpenAsync(item.ContextMenu!, item);
-                Assert.Equal([PropertyGridCommands.ResetToBaseId, GameStudioCommands.CopyId, GameStudioCommands.PasteId, PropertyGridCommands.ReplaceId], BoundIds(item.ContextMenu!));
+                Assert.Equal([PropertyGridCommands.ResetToBaseId, GameStudioCommands.CopyId, GameStudioCommands.PasteId, PropertyGridCommands.ReplaceId, LiveApplyCommands.ApplyToAssetId, LiveApplyCommands.ApplyComponentToAssetId], BoundIds(item.ContextMenu!));
                 AssertBound(item.ContextMenu!, host);
+                // Apply to asset is for the live grid only
+                Assert.All(MenuItems(item.ContextMenu!).Where(x => x.Command is CommandReference { Id: LiveApplyCommands.ApplyToAssetId or LiveApplyCommands.ApplyComponentToAssetId }), x => Assert.False(x.IsVisible));
                 var replace = MenuItems(item.ContextMenu!).Single(x => x.Command is CommandReference { Id: PropertyGridCommands.ReplaceId });
                 Assert.Equal(new KeyGesture(Key.V, KeyModifiers.Control | KeyModifiers.Shift), replace.InputGesture);
                 item.ContextMenu!.Close();

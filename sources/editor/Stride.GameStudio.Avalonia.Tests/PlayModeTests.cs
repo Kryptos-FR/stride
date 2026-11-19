@@ -450,7 +450,7 @@ public sealed class PlayModeTests : IAsyncLifetime
             // The context menu has the scene editor's words
             var menu = list.ContextMenu!;
             var names = menu.Items.OfType<MenuItem>().Select(x => x.Name).ToList();
-            Assert.Equal(["CreateEntityMenuItem", "SpawnPrefabMenuItem", "DuplicateEntityMenuItem", "DeleteEntityMenuItem", "ShowInSceneEditorMenuItem", "CopyNameMenuItem", "CopyIdMenuItem"], names);
+            Assert.Equal(["CreateEntityMenuItem", "SpawnPrefabMenuItem", "DuplicateEntityMenuItem", "DeleteEntityMenuItem", "ShowInSceneEditorMenuItem", "ApplyToAssetMenuItem", "CopyNameMenuItem", "CopyIdMenuItem"], names);
             Assert.Equal("Empty entity", menu.Items.OfType<MenuItem>().First().Header);
 
             // The ground dropped on the player goes under it; Alt keeps its place in the world
