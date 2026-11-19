@@ -100,6 +100,8 @@ Yarn Spinner's own terms are kept, so their documentation applies.
 - **A. 3.2.2 from nuget.org** (picked), as the Godot plugin does, behind one adapter shaped like 3.3's `IDialogueResponder`.
 - B. The unreleased 3.3 built from source and embedded: an API that still moves, and a private build inside our packages.
 
+*As built (E5 C, 2026-11-19):* Skein moved to 3.3.1 once it reached nuget.org. The adapter became `YarnResponder`, Yarn's own `IDialogueResponder`, and the game's functions go through it too, so they may return a task. A source generator stays a later step: Yarn's is not published on nuget.org.
+
 ### D4. The name **(D: A)**
 
 Yarn Spinner's branding rules for "a non-game product or tool that supports Yarn Spinner" forbid "Yarn Spinner" or "Yarn" in the product name without written permission, and allow referential phrases.

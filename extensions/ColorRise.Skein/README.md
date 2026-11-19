@@ -97,7 +97,7 @@ This section follows the work: it says what can be tried at the current commit.
   - What it shows of Skein in a game: a dialogue runner with the line presenter, the options presenter (numbered) and the line advancer; a presenter of the game's own (`MoodPresenter`); a second runner whose lines are captions (`Chatter`); commands and functions in C# (`StoryCommands`, and `walk` on a `Talkable`); a node group `Events` that the game plays whenever one of its nodes has something to say (`StoryDirector`); the screen's own words taken from line ids, so that they are translated with the story; a save of the variables with the game's state (`SaveSlot`); the voice-over presenter, with placeholder clips (a blip per word) for the three lines of narration that open the story in English.
   - The story in short: light the lamp of the lighthouse before the first night, or a ship strikes the rocks; take a side at the town meeting and follow the trail of the missing keeper; on the third day the island votes who keeps the light, and each voter listens to the courier only if a deed of the first two days moved them.
   - Its tests (`Brinemoor.Tests`) need no running game: they play the story to each of its four endings, in English and in French, and check that the scripts use each feature of Yarn Spinner and that every line is translated.
-  - Yarn Spinner's own tools read the story as it is: `Brinemoor.yarnproject` and `Brinemoor.ysls.json` beside the Yarn project are the files Skein writes, a test compiles the scripts with Yarn Spinner's compiler from that project file alone, and Yarn Spinner's command line (`ysc compile Brinemoor.yarnproject`, version 3.2.2) compiles it without a message.
+  - Yarn Spinner's own tools read the story as it is: `Brinemoor.yarnproject` and `Brinemoor.ysls.json` beside the Yarn project are the files Skein writes, and a test compiles the scripts with Yarn Spinner's compiler from that project file and the definitions file it names, as Yarn Spinner's command line does. The command line itself (`ysc compile Brinemoor.yarnproject`) compiled the story without a message in version 3.2.2; version 3.3 was not run.
   - Open it in Game Studio:
 
     ```sh
@@ -110,8 +110,8 @@ This section follows the work: it says what can be tried at the current commit.
 ### Not yet
 
 - A check on Windows: everything here was built and run on Linux. The WPF Game Studio gets none of Skein's views, and was not opened with a game that uses Skein.
-- Yarn Spinner's Visual Studio Code extension was not run on the files Skein writes: its compiler and its command line were.
-- A trimmed or ahead-of-time build of a game (the developers' guide says what it needs).
+- Yarn Spinner's Visual Studio Code extension, and its command line in version 3.3, were not run on the files Skein writes: its 3.3 compiler was, from the project file as they read it.
+- A trimmed or ahead-of-time build of a game (the developers' guide says what it needs). Skein finds commands and functions by reflection; a source generator in its place is a later step.
 
 ## Tied to the fork
 

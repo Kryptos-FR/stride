@@ -223,7 +223,7 @@ Yarn Spinner has an extension for Visual Studio Code, with completion, hover, an
 
 - Saving the project in Game Studio writes a `.yarnproject` file beside it, with the scripts, the base language and the localisations. The extension finds it when the folder is opened. What the extension keeps in that file stays when Skein writes it again.
 - Once the game is built, Skein also writes a `.ysls.json` file with the commands and the functions of the game and their descriptions: the extension completes them and checks their parameters.
-- Yarn Spinner's command line reads the same file: `ysc compile <project>.yarnproject` compiles the story as Skein's build does, without the game. It does not read the definitions file: it finds the types of the game's functions from how the scripts use them.
+- Yarn Spinner's command line reads the same file: `ysc compile <project>.yarnproject` compiles the story as Skein's build does, without the game. It reads the definitions file for the game's functions, so build the game once first: without that file, every call to a function of the game is an error there.
 - The layout is in the scripts (`position:`, `color:`, `cluster:`, `style: note`), so a graph arranged in one tool looks the same in the other.
 - A script that another program changes while Game Studio is open is read again. When it has no unsaved change in Game Studio, this happens at once, and one undo gives the text of before back. When it has, Game Studio asks first.
 

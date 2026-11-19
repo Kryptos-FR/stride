@@ -162,7 +162,7 @@ public sealed class YarnCompilerBridgeTests
     {
         var result = Compile(("Odile.yarn", Odile));
 
-        // Yarn Spinner 3.2 reports a missing jump target as a warning: the script still compiles
+        // Yarn Spinner reports a missing jump target as a warning: the script still compiles
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal("YS0012", diagnostic.Code);
         Assert.Equal(YarnSeverity.Warning, diagnostic.Severity);

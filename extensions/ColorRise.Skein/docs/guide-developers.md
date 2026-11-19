@@ -570,12 +570,12 @@ public static class TrimmedGame
 }
 ```
 
-Registering a type twice changes nothing, so this is safe beside the search by attributes. A trimmed or ahead-of-time build has not been tried with Skein yet: a source generator that replaces the reflection is planned.
+Registering a type twice changes nothing, so this is safe beside the search by attributes. A trimmed or ahead-of-time build has not been tried with Skein yet. Yarn Spinner 3.3 has a source generator, but it is written for Unity's attributes and is not published on nuget.org: a generator of Skein's own, in place of the reflection, is a later step.
 
 ## 11. Limits
 
 - A dialogue cannot be saved while it runs (section 7).
-- One Yarn Spinner version: 3.2.2, taken from nuget.org unchanged. Scripts use the language of Yarn Spinner 3.
+- One Yarn Spinner version: 3.3.1, taken from nuget.org unchanged. Scripts use the language of Yarn Spinner 3.
 - The build and the editor know the commands and functions with attributes only (section 5).
 - Voice-over clips are found by name in one folder per language. A clip per line and language only: no lip sync, no subtitles timed on the clip, and Game Studio's dialogue player shows which lines have a clip but does not play them.
 - The UI presenters use Stride's UI. Their look is a UI page, or the default one; the UI editor of the cross-platform Game Studio is not there yet, so a page is made in code or in the Windows Game Studio.
