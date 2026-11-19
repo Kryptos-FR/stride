@@ -36,6 +36,18 @@ internal interface ILiveNodePresenter : INodePresenter
 }
 
 /// <summary>
+/// A row of the live grid for an item of a collection that the game may not hold, such as a material slot of a model that the
+/// scene does not override: its edits go to that item.
+/// </summary>
+internal interface ILiveItemSlot : ILiveNodePresenter
+{
+    /// <summary>
+    /// The collection of the item.
+    /// </summary>
+    INodePresenter Collection { get; }
+}
+
+/// <summary>
 /// Turns the writes of the live grid into edits of the running game, and shows their answers.
 /// </summary>
 /// <remarks>
@@ -502,6 +514,7 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
             }
             path.Insert(0, current switch
             {
+                ILiveItemSlot slot => Segment(slot.Collection, slot.Index, references),
                 MemberNodePresenter member => PlayPathSegment.Member(member.MemberDescriptor.MemberInfo?.Name ?? member.Name),
                 ItemNodePresenter item => Segment(item.OwnerCollection, item.Index, references),
                 _ => throw new InvalidOperationException($"{current.Name} is computed by the editor: it has no value in the game."),

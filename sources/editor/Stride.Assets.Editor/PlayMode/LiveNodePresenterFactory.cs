@@ -70,6 +70,21 @@ internal sealed class LiveNodePresenterFactory(INodeBuilder nodeBuilder, IReadOn
         return new LiveItemNodePresenter(this, propertyProvider, containerPresenter, (IAssetObjectNode)containerNode, index);
     }
 
+    /// <summary>
+    /// Adds a row for an item of <paramref name="collection"/> that the game may not hold (a material slot of a model that the
+    /// scene does not override): its value is <paramref name="getter"/>'s, a write sets the item in the game, adds it when the
+    /// game has none, and a <c>null</c> removes it.
+    /// </summary>
+    public INodePresenter CreateItemSlot(ILiveNodePresenter collection, IObjectNode collectionNode, string name, Type type, int order, NodeIndex index, Func<object?> getter, Func<bool> isPresent)
+    {
+        var slot = new LiveItemSlotNodePresenter(this, collection, name, type, order, getter, isPresent);
+        slot.ChangeParent(collection);
+        slot.RegisterAssociatedNode(new NodeAccessor(collectionNode, index));
+        RunUpdaters(slot);
+        FinalizeTree(slot.Root);
+        return slot;
+    }
+
     private void Write(ILiveNodePresenter presenter, object? value)
     {
         if (Editor?.Set(presenter, value) != true)
@@ -86,6 +101,18 @@ internal sealed class LiveNodePresenterFactory(INodeBuilder nodeBuilder, IReadOn
     {
         if (Editor?.Insert(presenter, NewItem(value), index) != true)
             Refuse(presenter, "an item added");
+    }
+
+    private void WriteSlot(LiveItemSlotNodePresenter slot, object? value)
+    {
+        var collection = (ILiveNodePresenter)slot.Parent!;
+        bool sent;
+        if (slot.IsPresent)
+            sent = value is null ? Editor?.Remove(collection, slot.Index) == true : Editor?.Set(slot, value) == true;
+        else
+            sent = value is null || Editor?.Insert(collection, value, slot.Index) == true;
+        if (!sent)
+            Refuse(slot, $"a write ({value ?? "null"})");
     }
 
     // A new item of a collection of entities or components is empty, and is then picked from the Live tab: an entity or a
@@ -156,6 +183,34 @@ internal sealed class LiveNodePresenterFactory(INodeBuilder nodeBuilder, IReadOn
         public override void RemoveItem(object value, NodeIndex index) => factory.Remove(this, index);
 
         public void WriteLocal(object? value) => WriteCopy(this, value, x => base.UpdateValue(x));
+
+        protected override void Dispose(bool disposing)
+        {
+            IsDisposed = true;
+            base.Dispose(disposing);
+        }
+    }
+
+    // A row for an item the game may not hold: the edits go to the item of the collection (Locate), its value comes from the
+    // getter, and it refreshes when the collection's item changes (its associated node)
+    private sealed class LiveItemSlotNodePresenter(LiveNodePresenterFactory factory, ILiveNodePresenter collection, string name, Type type, int order, Func<object?> getter, Func<bool> isPresent)
+        : AssetVirtualNodePresenter(factory, collection.PropertyProvider, collection, name, type, order, () => getter()!, static _ => { }, isInerited: static () => false, isOverridden: isPresent), ILiveItemSlot
+    {
+        public bool IsDisposed { get; private set; }
+
+        // Whether the game holds the item: shown in bold, as an override
+        public bool IsPresent => IsOverridden;
+
+        public INodePresenter Collection => Parent!;
+
+        public override void UpdateValue(object? newValue) => ((LiveNodePresenterFactory)Factory).WriteSlot(this, newValue);
+
+        // The game's answer of a set: the item of the mirror takes it (the row shows it through its associated node)
+        public void WriteLocal(object? value)
+        {
+            if (Parent!.Children.OfType<ItemNodePresenter>().FirstOrDefault(x => x.Index == Index) is ILiveNodePresenter item)
+                item.WriteLocal(value);
+        }
 
         protected override void Dispose(bool disposing)
         {

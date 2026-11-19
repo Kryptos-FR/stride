@@ -84,6 +84,7 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
         foreach (var updater in source.NodePresenterUpdaters)
             RegisterNodePresenterUpdater(new GuardedNodeUpdater(updater, Log));
         RegisterNodePresenterUpdater(new GuardedNodeUpdater(new LiveEntityNodeUpdater(FindCameraSlot), Log));
+        RegisterNodePresenterUpdater(new GuardedNodeUpdater(new LiveModelMaterialsNodeUpdater(url => session.GetAssetByUrl(url)), Log));
         var references = new LiveReferenceContext(session, () => playSession, () => Tree, () => EditsEnabled ? editor : null, Log);
         editUpdater = new LiveEditNodeUpdater(() => EditsEnabled, () => EditsEnabled ? editor : null, references);
         RegisterNodePresenterUpdater(editUpdater);

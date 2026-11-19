@@ -16,6 +16,7 @@ using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Quantum.NodePresenters.Commands;
 using Stride.Core.Assets.Editor.Quantum.NodePresenters.Keys;
 using Stride.Core.Assets.Editor.ViewModels;
+using Stride.Core.Assets.Presentation.Quantum.NodePresenters;
 using Stride.Core.Assets.Presentation.ViewModels;
 using Stride.Core.Presentation.Quantum.Presenters;
 using Stride.Core.Presentation.Quantum.ViewModels;
@@ -166,6 +167,81 @@ public sealed partial class LiveEditTests
             ReferenceNode(properties, nameof(LiveReferenceTestScript.Watched)).NodePresenters.Single().AddItem(new Entity("New"));
             var add = await Game.NextEditAsync();
             Assert.Equal((PlayEditOperation.Add, "Watched", PlayEditValueKind.Null), (add.Operation, add.PathText, add.Value.Kind));
+        }
+        finally
+        {
+            properties.ViewModel?.Destroy();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task AModelShowsARowPerMaterialSlotWhoseOverrideAPickAddsOrSetsAndClearRemoves()
+    {
+        var red = new MaterialAsset { Id = AssetId.New() };
+        var body = new ModelMaterial { Name = "Body", MaterialInstance = new MaterialInstance(AttachedReferenceManager.CreateProxyObject<Material>(red.Id, MaterialLocation)) };
+        var glass = new ModelMaterial { Name = "Glass", MaterialInstance = new MaterialInstance() };
+        using var fixture = await ShellSessionFixture.OpenAsync((ModelLocation, new ModelAsset { Materials = { body, glass } }), (SphereLocation, new ModelAsset()), (UnusedLocation, new ModelAsset()), (MaterialLocation, red));
+        var dialogs = fixture.ReplaceDialogService();
+        dialogs.PickAsset = picker => picker.FilteredAssets.Single(x => x.Url.EndsWith(MaterialLocation, StringComparison.Ordinal));
+        // The scene overrides the second slot only
+        var model = new ModelComponent { Model = Proxy<Model>(ModelLocation) };
+        model.Materials[1] = Proxy<Material>(MaterialLocation);
+        player.Add(model);
+        var properties = await ShowReferencesAsync(fixture, PlayerHandle);
+        try
+        {
+            // One row per slot of the model, named after its material; a slot the scene does not override shows the model's material
+            var rows = MaterialSlots(properties);
+            Assert.Equal(["MaterialSlot0", "MaterialSlot1"], rows.Select(x => x.Name));
+            Assert.Equal(["Body", "Glass"], rows.Select(x => x.DisplayName));
+            Assert.All(rows, x => Assert.Equal(red.Id, AttachedReferenceManager.GetAttachedReference(x.NodeValue!)!.Id));
+            Assert.All(rows, x => Assert.False(x.IsReadOnly));
+            Assert.Equal([false, true], rows.Select(x => x.NodePresenters.Single() is AssetVirtualNodePresenter { IsOverridden: true }));
+
+            // A slot without an override: the pick adds it under the slot's key
+            await PickAsync(rows[0], PickupAssetCommand.CommandName, typeof(Material));
+            var added = await Game.NextEditAsync();
+            Assert.Equal((PlayEditOperation.Insert, "Materials[0]"), (added.Operation, added.PathText));
+            Assert.Equal(MaterialLocation, AttachedReferenceManager.GetUrl(Read(added.Value)!));
+            Game.Send(ReferenceAnswer(added, PlayEditStatus.Applied, null));
+            model.Materials[0] = Proxy<Material>(MaterialLocation);
+            await properties.ApplyAsync(Snapshot(frame + 2));
+            await WindowTestHelper.PumpAsync();
+            rows = MaterialSlots(properties);
+            Assert.Equal([true, true], rows.Select(x => x.NodePresenters.Single() is AssetVirtualNodePresenter { IsOverridden: true }));
+
+            // A slot with an override: the pick sets it
+            await PickAsync(rows[1], PickupAssetCommand.CommandName, typeof(Material));
+            var set = await Game.NextEditAsync();
+            Assert.Equal((PlayEditOperation.Set, "Materials[1]"), (set.Operation, set.PathText));
+            Game.Send(ReferenceAnswer(set, PlayEditStatus.Applied, Proxy<Material>(MaterialLocation)));
+            await WindowTestHelper.WaitUntilAsync(() => State(rows[1]) is null, "the answer");
+
+            // Clear removes the override, so the model's material shows again
+            rows[1].NodeValue = null;
+            var removed = await Game.NextEditAsync();
+            Assert.Equal((PlayEditOperation.Remove, "Materials[1]"), (removed.Operation, removed.PathText));
+        }
+        finally
+        {
+            properties.ViewModel?.Destroy();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task ASlotWithoutAnOverrideIsClearedWithoutAnEdit()
+    {
+        using var fixture = await ShellSessionFixture.OpenAsync((ModelLocation, new ModelAsset { Materials = { new ModelMaterial { Name = "Body", MaterialInstance = new MaterialInstance() } } }), (MaterialLocation, new MaterialAsset()));
+        player.Add(new ModelComponent { Model = Proxy<Model>(ModelLocation) });
+        var properties = await ShowReferencesAsync(fixture, PlayerHandle);
+        try
+        {
+            var sent = properties.SentEdits;
+
+            MaterialSlots(properties).Single().NodeValue = null;
+
+            Assert.Equal(sent, properties.SentEdits);
+            Assert.Equal(0, properties.RefusedWrites);
         }
         finally
         {
@@ -469,6 +545,14 @@ public sealed partial class LiveEditTests
         var viewModel = properties.ViewModel ?? throw new InvalidOperationException("The grid is being built.");
         var components = viewModel.RootNode.Children.Single(x => x.Name == nameof(Entity.Components));
         return components.Children.First(x => x.NodeValue is LiveReferenceTestScript).Children.Single(x => x.Name == member);
+    }
+
+    private static List<NodeViewModel> MaterialSlots(LivePropertiesViewModel properties)
+    {
+        var viewModel = properties.ViewModel ?? throw new InvalidOperationException("The grid is being built.");
+        var components = viewModel.RootNode.Children.Single(x => x.Name == nameof(Entity.Components));
+        var materials = components.Children.First(x => x.NodeValue is ModelComponent).Children.Single(x => x.Name == nameof(ModelComponent.Materials));
+        return [.. materials.Children.Where(x => x.IsVisible)];
     }
 
     private sealed class FakeLivePicker(Func<LiveEntityPickerViewModel, CancellationToken, Task<LiveEntityPick?>> pick) : ILiveEntityPickerService

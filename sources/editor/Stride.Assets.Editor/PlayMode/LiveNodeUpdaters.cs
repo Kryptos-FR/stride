@@ -3,15 +3,21 @@
 
 using Stride.Assets.Editor.Quantum.NodePresenters.Updaters;
 using Stride.Assets.Editor.Quantum.NodePresenters.Keys;
+using Stride.Assets.Models;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Quantum.NodePresenters.Commands;
 using Stride.Core.Assets.Editor.Quantum.NodePresenters.Keys;
+using Stride.Core.Assets.Presentation.ViewModels;
+using Stride.Core.Collections;
 using Stride.Core.Diagnostics;
 using Stride.Core.Extensions;
 using Stride.Core.Presentation.Quantum.Presenters;
+using Stride.Core.Quantum;
 using Stride.Core.Reflection;
+using Stride.Core.Serialization;
 using Stride.Core.Yaml;
 using Stride.Engine;
+using Stride.Rendering;
 using Stride.Rendering.Compositing;
 
 namespace Stride.Assets.Editor.PlayMode;
@@ -176,6 +182,60 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
     // A component of the entity: its members change, not the component itself
     private static bool IsComponentItem(INodePresenter node)
         => node is ItemNodePresenter && node.Parent is { Type: var type, Parent.Parent: null } && type == typeof(EntityComponentCollection);
+}
+
+/// <summary>
+/// One row per material slot of the model of a live <see cref="ModelComponent"/>, named after the model's material, as the
+/// asset grid shows them (<see cref="ModelComponentNodeUpdater"/>, which works on assets only). A slot the scene does not
+/// override shows the model's material; picking a material sets the slot's override in the game, or adds it, and Clear removes
+/// it, so the model's own material shows again.
+/// </summary>
+/// <param name="findAsset">Finds an asset of the session by its URL.</param>
+internal sealed class LiveModelMaterialsNodeUpdater(Func<string, AssetViewModel?> findAsset) : NodePresenterUpdaterBase
+{
+    public override void UpdateNode(INodePresenter node)
+    {
+        if (node is not ILiveNodePresenter)
+            return;
+        // The slots follow the model
+        if (node.Value is ModelComponent && node.Parent?.Value is EntityComponentCollection)
+        {
+            if (Child(node, nameof(ModelComponent.Materials)) is { } materialsNode && Child(node, nameof(ModelComponent.Model)) is { } modelNode)
+                materialsNode.AddDependency(modelNode, false);
+            return;
+        }
+        if (node.Value is not IndexingDictionary<Material> materials || node.Parent?.Value is not ModelComponent component
+            || node.Factory is not LiveNodePresenterFactory factory || node.GetNodeAccessor().Node is not IMemberNode { Target: { } collectionNode })
+            return;
+        if (ModelAsset(component) is not { } model)
+            return;
+
+        foreach (var child in node.Children.ToList())
+            child.IsVisible = false;
+        var slots = model.Materials.Count;
+        for (var i = 0; i < slots; i++)
+        {
+            var slot = i;
+            var row = factory.CreateItemSlot((ILiveNodePresenter)node, collectionNode, $"MaterialSlot{slot}", typeof(Material), slot, new NodeIndex(slot),
+                () => materials.SafeGet(slot) ?? ModelMaterial(component, slot),
+                () => materials.ContainsKey(slot));
+            row.DisplayName = model.Materials[slot]?.Name ?? $"(Material {slot + 1})";
+        }
+    }
+
+    // The model's own material of a slot, which shows when the scene does not override it
+    private Material? ModelMaterial(ModelComponent component, int slot)
+        => ModelAsset(component) is { } model && slot < model.Materials.Count
+            ? model.Materials[slot]?.MaterialInstance?.Material
+            : null;
+
+    // The game knows its content by URL
+    private IModelAsset? ModelAsset(ModelComponent component)
+        => component.Model is { } reference && AttachedReferenceManager.GetUrl(reference) is { } url
+            ? findAsset(url)?.Asset as IModelAsset
+            : null;
+
+    private static INodePresenter? Child(INodePresenter node, string name) => node.Children.FirstOrDefault(x => x.Name == name);
 }
 
 /// <summary>
