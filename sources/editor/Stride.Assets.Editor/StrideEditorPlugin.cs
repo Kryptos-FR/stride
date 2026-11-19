@@ -4,6 +4,7 @@
 using System.Reflection;
 using Stride.Assets.Editor.Commands;
 using Stride.Assets.Editor.EditorGame;
+using Stride.Assets.Editor.PlayMode;
 using Stride.Assets.Editor.Quantum.NodePresenters;
 using Stride.Assets.Editor.EntityFactories;
 using Stride.Assets.Editor.ViewModels;
@@ -92,6 +93,9 @@ public sealed class StrideEditorPlugin : StrideAssetsPlugin
             context.Commands.Register(command);
         // The commands of the scene and prefab editors and of the sprite sheet editor: their context menus and their shortcuts
         foreach (var command in SceneEditorCommands.Create().Concat(SpriteSheetEditorCommands.Create()))
+            context.Commands.Register(command);
+        // Apply to asset, in the context menu of the live property grid of a running game
+        foreach (var command in LiveApplyCommands.Create())
             context.Commands.Register(command);
 
         context.CopyProcessors.Register(new EntityComponentCopyProcessor());

@@ -270,7 +270,7 @@
       <ListBox.ContextMenu>
         <!-- On the selected rows: a right click selects the row under the pointer first. The changes of the structure go to the
              running game only: the scene assets keep their entities. -->
-        <ContextMenu>
+        <ContextMenu Opening="OnContextMenuOpening">
           <MenuItem Name="CreateEntityMenuItem" Header="{sd:LocalizeString Empty entity, Context=Menu}" Command="{Binding CreateEntityCommand}"/>
           <MenuItem Name="SpawnPrefabMenuItem" Header="{sd:LocalizeString Spawn prefab..., Context=Menu}" Command="{Binding SpawnPrefabCommand}"
                     IsVisible="{Binding CanSpawnPrefabs}"/>
@@ -283,6 +283,8 @@
           </MenuItem>
           <Separator/>
           <MenuItem Name="ShowInSceneEditorMenuItem" Header="{sd:LocalizeString Show in scene editor, Context=Menu}" Command="{Binding ShowInSceneEditorCommand}"/>
+          <MenuItem Name="ApplyToAssetMenuItem" Header="{sd:LocalizeString Apply to asset..., Context=Menu}" Command="{Binding ApplyToAssetCommand}"
+                    ToolTip.Tip="{Binding ApplyToAssetDisabledReason}" ToolTip.ShowOnDisabled="True"/>
           <Separator/>
           <MenuItem Name="CopyNameMenuItem" Header="{sd:LocalizeString Copy name, Context=Menu}" Command="{Binding CopyNameCommand}"/>
           <MenuItem Name="CopyIdMenuItem" Header="{sd:LocalizeString Copy id, Context=Menu}" Command="{Binding CopyIdCommand}"/>

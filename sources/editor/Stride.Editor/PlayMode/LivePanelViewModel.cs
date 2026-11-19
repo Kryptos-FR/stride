@@ -131,6 +131,7 @@ public sealed class LivePanelViewModel : PanelViewModel
         DeleteEntityCommand = new AnonymousTaskCommand<object?>(ServiceProvider, DeleteEntitiesAsync) { IsEnabled = false };
         DuplicateEntityCommand = new AnonymousTaskCommand<object?>(ServiceProvider, DuplicateEntitiesAsync) { IsEnabled = false };
         SpawnPrefabCommand = new AnonymousTaskCommand<object?>(ServiceProvider, SpawnPrefabAsync) { IsEnabled = false };
+        ApplyToAssetCommand = new AnonymousTaskCommand(ServiceProvider, ApplyToAssetAsync) { IsEnabled = false };
         if (selectionView is not null)
             selectionView.EditsEnabledChanged += SelectionViewEditsEnabledChanged;
 
@@ -378,6 +379,17 @@ public sealed class LivePanelViewModel : PanelViewModel
     /// Why the structure of the running game cannot be changed now, for the tooltips; <c>null</c> when it can.
     /// </summary>
     public string? StructureDisabledReason { get; private set => SetValue(ref field, value); } = Tr._p("Play", "No game is connected.");
+
+    /// <summary>
+    /// Lists the live values of the selected entities that differ from their scene assets, to copy those the user checks into
+    /// the assets; works on the last values received once the game stopped. <see cref="UpdateApplyToAsset"/> enables it.
+    /// </summary>
+    public ICommandBase ApplyToAssetCommand { get; }
+
+    /// <summary>
+    /// Why <see cref="ApplyToAssetCommand"/> is disabled, or <c>null</c>.
+    /// </summary>
+    public string? ApplyToAssetDisabledReason { get; private set => SetValue(ref field, value); }
 
     /// <summary>
     /// The session the tab follows.
@@ -876,6 +888,29 @@ public sealed class LivePanelViewModel : PanelViewModel
         SpawnPrefabCommand.IsEnabled = CanChangeStructure && prefabPicker is not null;
         DeleteEntityCommand.IsEnabled = CanChangeStructure && hasEntity;
         DuplicateEntityCommand.IsEnabled = CanChangeStructure && hasEntity;
+    }
+
+    /// <summary>
+    /// Enables <see cref="ApplyToAssetCommand"/> for the selection, with the reason when it is not: called when the context menu
+    /// of the tab opens, as the answer depends on the values received and on the scene assets.
+    /// </summary>
+    public void UpdateApplyToAsset()
+    {
+        string? reason;
+        if (Selection is not { } selection)
+            reason = Tr._p("Play", "Select the entities to apply.");
+        else if (selectionView is null)
+            reason = Tr._p("Play", "Apply to asset is not available here.");
+        else
+            reason = selectionView.GetApplyToAssetDisabledReason(selection);
+        ApplyToAssetDisabledReason = reason;
+        ApplyToAssetCommand.IsEnabled = reason is null;
+    }
+
+    private async Task ApplyToAssetAsync()
+    {
+        if (Selection is { } selection && selectionView is not null)
+            await selectionView.ApplyToAssetAsync(selection);
     }
 
     /// <summary>

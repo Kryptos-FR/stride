@@ -50,7 +50,14 @@ public sealed partial class LiveView : UserControl
     /// <summary>
     /// Coming back to the tree shows its selection in the property grid again, after another selection took it.
     /// </summary>
-    private void OnTreeGotFocus(object? sender, FocusChangedEventArgs e)
+    private void OnContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        // Apply to asset depends on the values received and on the scene assets: asked each time the menu opens
+        if (DataContext is LivePanelViewModel viewModel)
+            viewModel.UpdateApplyToAsset();
+    }
+
+        private void OnTreeGotFocus(object? sender, FocusChangedEventArgs e)
     {
         if (DataContext is LivePanelViewModel { Selection: not null } viewModel)
             viewModel.ShowSelectionCommand.Execute();

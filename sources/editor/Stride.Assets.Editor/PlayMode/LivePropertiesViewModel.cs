@@ -94,6 +94,7 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
         presenterFactory = new LiveNodePresenterFactory(mirrorNodes.NodeBuilder, ViewModelService.AvailableCommands, ViewModelService.AvailableUpdaters, Log) { Editor = editor };
         ViewModelService.NodePresenterFactory = presenterFactory;
         applier = new LiveMirrorApplier { FindAsset = url => session.GetAssetByUrl(url)?.Id };
+        AssetApplier = new LiveAssetApplier(session);
     }
 
     /// <summary>
@@ -520,6 +521,174 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
         }
     }
 
+    /// <summary>
+    /// Copies live values into the scene assets (Apply to asset).
+    /// </summary>
+    public LiveAssetApplier AssetApplier { get; }
+
+    /// <summary>
+    /// The live entity, the component and the path of the member that a property of the grid shows, for Apply to asset: a value
+    /// computed by the editor (a field of a vector) stands for its owner; <c>null</c> for the entity itself and its components
+    /// collection. A component's header gives an empty path.
+    /// </summary>
+    public (LiveApplySource Source, Guid ComponentId, IReadOnlyList<LiveApplyStep> Path)? LocateForApply(INodePresenter presenter)
+    {
+        ArgumentNullException.ThrowIfNull(presenter);
+        if (presenter.IsDisposedPresenter() || presenter.Root.Value is not Stride.Engine.Entity entity || FindMirror(entity) is not { } references)
+            return null;
+        var path = new List<LiveApplyStep>();
+        var componentId = Guid.Empty;
+        for (var current = presenter; current != presenter.Root; current = current.Parent)
+        {
+            if (current.Parent is null)
+                return null;
+            if (current.Type == typeof(Stride.Engine.EntityComponentCollection) && current.Parent == presenter.Root)
+                return null;
+            // The component the path starts from: an item of the entity's components
+            if (current is ItemNodePresenter { Value: Stride.Engine.EntityComponent component } && current.Parent.Type == typeof(Stride.Engine.EntityComponentCollection) && current.Parent.Parent == presenter.Root)
+            {
+                componentId = component.Id;
+                break;
+            }
+            switch (current)
+            {
+                case ILiveItemSlot slot:
+                    path.Insert(0, LiveApplyStep.At(slot.Index));
+                    break;
+                case MemberNodePresenter member:
+                    path.Insert(0, LiveApplyStep.Of(member.MemberDescriptor.Name));
+                    break;
+                case ItemNodePresenter item:
+                    path.Insert(0, LiveApplyStep.At(item.Index));
+                    break;
+                default:
+                    // Computed by the editor (a field of a vector, a color's channel): it writes its owner
+                    path.Clear();
+                    break;
+            }
+        }
+        if (componentId == Guid.Empty && path.Count == 0)
+            return null;
+        return (CreateApplySource(references), componentId, path);
+    }
+
+    /// <summary>
+    /// Whether Apply to asset can set the asset values of properties of the grid (a property of each entity shown), and why not.
+    /// </summary>
+    /// <param name="presenters">The node presenters of the property, one per entity.</param>
+    /// <param name="wholeComponent">Whether the property is a component's header and the whole component is applied.</param>
+    public LiveApplyState GetApplyState(IReadOnlyCollection<INodePresenter> presenters, bool wholeComponent = false)
+    {
+        ArgumentNullException.ThrowIfNull(presenters);
+        if (playSession is not { State: PlaySessionState.Connected } || IsStopped)
+            return new LiveApplyState(0, presenters.Count, "The game has stopped: use Apply to asset... on the entity in the Live tab.");
+        var reasons = new List<string>();
+        var applicable = 0;
+        foreach (var presenter in presenters)
+        {
+            var changes = ListChangesForApply(presenter, wholeComponent, out var reason);
+            if (reason is null && changes.Count == 0)
+                reason = LiveAssetApplier.SameAsAssetReason;
+            else if (reason is null && changes.All(x => !x.CanApply))
+                reason = changes[0].Reason;
+            if (reason is null)
+                ++applicable;
+            else
+                reasons.Add(presenters.Count > 1 && presenter.Root.Value is Stride.Engine.Entity { Name: var name } ? $"{name}: {reason}" : reason);
+        }
+        return new LiveApplyState(applicable, presenters.Count, applicable > 0 ? null : string.Join(Environment.NewLine, reasons.Distinct()));
+    }
+
+    /// <summary>
+    /// Sets the asset value of a property of each entity shown that has a counterpart (Apply to asset), in one undo step; the
+    /// entities with none are left out. The running game keeps its value.
+    /// </summary>
+    /// <returns>The number of values set.</returns>
+    public int ApplyToAsset(IReadOnlyCollection<INodePresenter> presenters)
+    {
+        ArgumentNullException.ThrowIfNull(presenters);
+        Dispatcher.EnsureAccess();
+        var changes = new List<LiveApplyChange>();
+        string? member = null;
+        foreach (var presenter in presenters)
+        {
+            var found = ListChangesForApply(presenter, wholeComponent: false, out var reason);
+            if (reason is not null)
+            {
+                Log.Info($"Apply to asset left out {(presenter.Root.Value as Stride.Engine.Entity)?.Name}: {reason}");
+                continue;
+            }
+            // The name the grid shows (Color, not Type.Color), for the undo step
+            member ??= presenter.DisplayName;
+            changes.AddRange(found.Where(x => x.CanApply));
+        }
+        if (changes.Count == 0)
+            return 0;
+        var entities = changes.Select(x => x.Source.Handle).Distinct().Count();
+        var name = $"Apply to asset: {member ?? changes[0].DisplayPath} of {(entities == 1 ? changes[0].Source.Name : $"{entities} entities")}";
+        return AssetApplier.Apply(changes, name);
+    }
+
+    /// <summary>
+    /// Opens the list of the values of a component that differ from the asset's (one list for the component of each entity
+    /// shown), and applies those the user checks, in one undo step.
+    /// </summary>
+    /// <param name="presenters">The node presenters of the component's header, one per entity.</param>
+    /// <returns>The number of values set; 0 when the user cancelled.</returns>
+    public async Task<int> ApplyComponentToAssetAsync(IReadOnlyCollection<INodePresenter> presenters)
+    {
+        ArgumentNullException.ThrowIfNull(presenters);
+        Dispatcher.EnsureAccess();
+        var changes = new List<LiveApplyChange>();
+        foreach (var presenter in presenters)
+            changes.AddRange(ListChangesForApply(presenter, wholeComponent: true, out _));
+        if (changes.Count == 0)
+            return 0;
+        var component = changes[0].ComponentName;
+        var entities = changes.Select(x => x.Source.Handle).Distinct().Count();
+        var title = $"{component} of {(entities == 1 ? changes[0].Source.Name : $"{entities} entities")}";
+        return await ShowApplyListAsync(Session, title, changes, entities > 1, AssetApplier);
+    }
+
+    /// <summary>
+    /// Shows the list of the values that differ, and applies the values the user checks in one undo step.
+    /// </summary>
+    /// <returns>The number of values set; 0 when the user cancelled, or when no list service is registered.</returns>
+    internal static async Task<int> ShowApplyListAsync(SessionViewModel session, string title, IReadOnlyList<LiveApplyChange> changes, bool showEntities, LiveAssetApplier assetApplier)
+    {
+        if (session.ServiceProvider.TryGet<ILiveApplyListService>() is not { } service)
+            return 0;
+        var list = new LiveApplyListViewModel(session.ServiceProvider, $"Apply to asset: {title}", changes, showEntities,
+            "Components removed while the game runs, and entities created, deleted or moved, are not applied: change them in the scene editor.");
+        if (!await service.ShowAsync(list))
+            return 0;
+        var chosen = list.CheckedChanges;
+        if (chosen.Count == 0)
+            return 0;
+        var name = chosen.Count == 1
+            ? $"Apply to asset: {chosen[0].DisplayPath} of {chosen[0].Source.Name}"
+            : $"Apply to asset: {chosen.Count} values of {title}";
+        return assetApplier.Apply(chosen, name);
+    }
+
+    private IReadOnlyList<LiveApplyChange> ListChangesForApply(INodePresenter presenter, bool wholeComponent, out string? reason)
+    {
+        if (LocateForApply(presenter) is not { } target || wholeComponent != (target.Path.Count == 0))
+        {
+            reason = "This property cannot be applied to the asset.";
+            return [];
+        }
+        return wholeComponent
+            ? AssetApplier.ListChanges(target.Source, target.ComponentId, out reason)
+            : AssetApplier.ListChanges(target.Source, target.ComponentId, target.Path, out reason);
+    }
+
+    /// <summary>
+    /// The live entity of a mirror shown, with its row of the Live tab and the edits of the session.
+    /// </summary>
+    internal LiveApplySource CreateApplySource(LiveMirrorReferences references)
+        => new(references, Tree?.FindEntity(references.Mirror.Handle), Tree, playSession?.EditRecord);
+
     private LiveMirrorReferences? FindMirror(Stride.Engine.Entity entity)
         => entries.FirstOrDefault(x => x.References.Mirror.Entity == entity)?.References;
 
@@ -550,6 +719,19 @@ public sealed class LivePropertiesViewModel : SessionObjectPropertiesViewModel
 
         public bool ShouldConstructItem(IObjectNode collection, NodeIndex index) => true;
     }
+}
+
+/// <summary>
+/// Whether Apply to asset can set a property of the live grid (<see cref="LivePropertiesViewModel.GetApplyState"/>).
+/// </summary>
+/// <param name="Applicable">The entities whose asset value can be set.</param>
+/// <param name="Entities">The entities shown.</param>
+/// <param name="Reason">Why none can, or <c>null</c>.</param>
+[Experimental("STREXP012")]
+public sealed record LiveApplyState(int Applicable, int Entities, string? Reason)
+{
+    /// <summary>Whether at least one entity's asset value can be set.</summary>
+    public bool CanApply => Applicable > 0;
 }
 
 /// <summary>

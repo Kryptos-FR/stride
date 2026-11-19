@@ -48,7 +48,12 @@ public sealed class LiveSceneAssets(ISessionViewModel session) : ILiveSceneAsset
         return true;
     }
 
-    private SceneViewModel? FindScene(PlaySceneInfo scene)
+    private SceneViewModel? FindScene(PlaySceneInfo scene) => FindScene(session, scene);
+
+    /// <summary>
+    /// The scene asset of a running scene: by its asset's id, else by its URL.
+    /// </summary>
+    internal static SceneViewModel? FindScene(ISessionViewModel session, PlaySceneInfo scene)
     {
         if (session.GetAssetById(new AssetId(scene.Id)) is SceneViewModel byId)
             return byId;

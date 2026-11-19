@@ -170,6 +170,7 @@ public static class CommandSlot
                     Icon = CreateIcon(descriptor.Icon),
                     InputGesture = ShortcutOf?.Invoke(descriptor),
                 };
+                SetDisabledReason(item, host, descriptor, context);
                 // A toggle shows whether it is on
                 if (isChecked is { } on)
                 {
@@ -223,12 +224,27 @@ public static class CommandSlot
                 item.SetValue(HeaderFromCommandProperty, true);
             }
             item.InputGesture = ShortcutOf?.Invoke(descriptor);
+            SetDisabledReason(item, host!, descriptor, context!);
             if (host!.IsCommandChecked(descriptor, context!) is { } isChecked)
             {
                 item.ToggleType = MenuItemToggleType.CheckBox;
                 item.IsChecked = isChecked;
             }
         }
+    }
+
+    /// <summary>
+    /// Gives a menu item of a command that cannot run in its context the reason in its tooltip
+    /// (<see cref="CommandDescriptor.DisabledReason"/>), and none once it can.
+    /// </summary>
+    private static void SetDisabledReason(MenuItem item, EditorPluginHost host, CommandDescriptor descriptor, CommandContext context)
+    {
+        // A command with no reason to give keeps the item's own tooltip
+        if (descriptor.DisabledReason is null)
+            return;
+        var reason = host.CanExecuteCommand(descriptor, context) ? null : host.GetCommandDisabledReason(descriptor, context);
+        ToolTip.SetTip(item, reason);
+        ToolTip.SetShowOnDisabled(item, reason is not null);
     }
 
     /// <summary>

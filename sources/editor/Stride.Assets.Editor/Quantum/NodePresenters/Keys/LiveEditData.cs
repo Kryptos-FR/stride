@@ -23,6 +23,12 @@ public static class LiveEditData
     /// <summary>The name of <see cref="ReadOnlyReasonKey"/>.</summary>
     public const string ReadOnlyReason = "LiveReadOnlyReason";
 
+    /// <summary>The name of <see cref="ApplyToAssetKey"/>.</summary>
+    public const string ApplyToAsset = "LiveApplyToAsset";
+
+    /// <summary>The name of <see cref="ApplyComponentKey"/>.</summary>
+    public const string ApplyComponent = "LiveApplyComponent";
+
     /// <summary>The value of <see cref="StateKey"/> while an edit of the property is on its way to the game.</summary>
     public const string Pending = "Pending";
 
@@ -45,6 +51,20 @@ public static class LiveEditData
     /// Why the property cannot change while the game runs (a reference, a member the engine reads once), when it cannot.
     /// </summary>
     public static readonly PropertyKey<string> ReadOnlyReasonKey = new(ReadOnlyReason, typeof(LiveEditData), new PropertyCombinerMetadata(CombineTips));
+
+    /// <summary>
+    /// Set on a property whose value can be applied to the asset of the entity (Apply to asset): a member of a component, or of
+    /// the entity itself. The view shows the command where it is (<c>[HasAssociatedData_LiveApplyToAsset]</c>).
+    /// </summary>
+    public static readonly PropertyKey<bool> ApplyToAssetKey = new(ApplyToAsset, typeof(LiveEditData), new PropertyCombinerMetadata(CombineAll));
+
+    /// <summary>
+    /// Set on a component's header: its values can be applied to the asset (Apply component to asset...).
+    /// </summary>
+    public static readonly PropertyKey<bool> ApplyComponentKey = new(ApplyComponent, typeof(LiveEditData), new PropertyCombinerMetadata(CombineAll));
+
+    private static object? CombineAll(IEnumerable<object> values)
+        => values.All(x => x is true) ? true : null;
 
     private static object? CombineState(IEnumerable<object> states)
     {

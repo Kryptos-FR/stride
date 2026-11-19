@@ -45,6 +45,9 @@ public sealed class LivePropertyGrid : ILiveSelectionView
     private SessionObjectPropertiesViewModel? previous;
     // The selection the live grid was last asked to show, while it follows it
     private LiveSelection? shown;
+    // The last values received of the entities shown, kept after the game stopped for Apply to asset...
+    private readonly Dictionary<int, LiveMirrorReferences> kept = [];
+    private PlaySession? keptSession;
     private bool disposed;
 
     /// <summary>
@@ -59,7 +62,13 @@ public sealed class LivePropertyGrid : ILiveSelectionView
         this.session = session;
         this.findGridPanel = findGridPanel ?? (static () => null);
         session.PropertyChanged += SessionPropertyChanged;
+        AssetApplier = new LiveAssetApplier(session);
     }
+
+    /// <summary>
+    /// Copies the live values into the scene assets (Apply to asset... of the Live tab).
+    /// </summary>
+    public LiveAssetApplier AssetApplier { get; }
 
     /// <summary>
     /// The live grid of the current play session; <c>null</c> before the first selection and once the game stopped.
@@ -73,10 +82,16 @@ public sealed class LivePropertyGrid : ILiveSelectionView
                 return;
             var wasEnabled = EditsEnabled;
             if (field is not null)
+            {
                 field.PropertyChanged -= PropertiesPropertyChanged;
+                field.Applied -= PropertiesApplied;
+            }
             field = value;
             if (value is not null)
+            {
                 value.PropertyChanged += PropertiesPropertyChanged;
+                value.Applied += PropertiesApplied;
+            }
             if (wasEnabled != EditsEnabled)
                 EditsEnabledChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -135,6 +150,66 @@ public sealed class LivePropertyGrid : ILiveSelectionView
         }
         session.ActiveProperties = properties;
         UpdateReceiving();
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>The entities need values received while the game ran: those of the last entities the grid showed.</remarks>
+    public string? GetApplyToAssetDisabledReason(LiveSelection selection)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+        var reasons = new List<string>();
+        var applicable = 0;
+        foreach (var source in ApplySources(selection, reasons))
+        {
+            if (AssetApplier.FindCounterpart(source, out _, out _) is { } reason)
+                reasons.Add(selection.Handles.Count > 1 ? $"{source.Name}: {reason}" : reason);
+            else
+                ++applicable;
+        }
+        return applicable > 0 ? null : string.Join(Environment.NewLine, reasons.Distinct());
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> ApplyToAssetAsync(LiveSelection selection)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+        var changes = new List<LiveApplyChange>();
+        var entities = 0;
+        foreach (var source in ApplySources(selection, []))
+        {
+            var found = AssetApplier.ListChanges(source, null, out var reason);
+            if (reason is not null)
+                continue;
+            ++entities;
+            changes.AddRange(found);
+        }
+        if (entities == 0)
+            return 0;
+        var title = entities == 1 ? changes.FirstOrDefault()?.Source.Name ?? string.Empty : $"{entities} entities";
+        return await LivePropertiesViewModel.ShowApplyListAsync(session, title, changes, entities > 1, AssetApplier);
+    }
+
+    /// <summary>
+    /// The selected entities whose values the grid received, with the reasons of those it did not.
+    /// </summary>
+    private List<LiveApplySource> ApplySources(LiveSelection selection, List<string> reasons)
+    {
+        var sources = new List<LiveApplySource>();
+        for (var i = 0; i < selection.Handles.Count; i++)
+        {
+            var handle = selection.Handles[i];
+            if (keptSession == selection.Session && kept.TryGetValue(handle, out var references))
+            {
+                sources.Add(new LiveApplySource(references, selection.Tree?.FindEntity(handle), selection.Tree, selection.Session.EditRecord));
+                continue;
+            }
+            var reason = selection.IsStopped
+                ? "The game stopped before its values of this entity arrived: select it while the game runs to apply them after it stops."
+                : "The game's values of this entity have not arrived yet.";
+            var name = selection.Names is { } names && i < names.Count ? names[i] : selection.Tree?.FindEntity(handle)?.Name;
+            reasons.Add(selection.Handles.Count > 1 && name is not null ? $"{name}: {reason}" : reason);
+        }
+        return sources;
     }
 
     /// <summary>
@@ -208,6 +283,19 @@ public sealed class LivePropertyGrid : ILiveSelectionView
     {
         if (e.PropertyName == nameof(LivePropertiesViewModel.EditsEnabled))
             EditsEnabledChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void PropertiesApplied(object? sender, LiveApplyEventArgs e)
+    {
+        if (sender is not LivePropertiesViewModel properties || liveSession is null)
+            return;
+        if (keptSession != liveSession)
+        {
+            kept.Clear();
+            keptSession = liveSession;
+        }
+        foreach (var references in properties.Mirrors)
+            kept[references.Mirror.Handle] = references;
     }
 
     private void GridPanelPropertyChanged(object? sender, PropertyChangedEventArgs e)

@@ -62,6 +62,8 @@ public sealed class StrideEditorViewPlugin : StrideAssetsAvaloniaPlugin
         context.Services.Register(new AvaloniaEntityPickerService());
         // The Pick buttons of the live grid's references to entities and components show the entities of the running game
         context.Services.Register(new AvaloniaLiveEntityPickerService());
+        // Apply component to asset... shows the live values that differ from the asset's
+        context.Services.Register(new AvaloniaLiveApplyListService());
 
         if (GameStudioPreviewService.DisablePreview)
             return;

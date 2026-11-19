@@ -36,4 +36,19 @@ public interface ILiveSelectionView : IDisposable
         add { }
         remove { }
     }
+
+    /// <summary>
+    /// Why the live values of the selected entities cannot be copied into the scene assets (Apply to asset... of the Live tab),
+    /// or <c>null</c> when they can.
+    /// </summary>
+    /// <param name="selection">The selection.</param>
+    string? GetApplyToAssetDisabledReason(LiveSelection selection) => "Apply to asset is not available here.";
+
+    /// <summary>
+    /// Lists the live values of the selected entities that differ from their scene assets, and copies those the user checks.
+    /// Works on the last values received once the game stopped.
+    /// </summary>
+    /// <param name="selection">The selection.</param>
+    /// <returns>The number of values copied.</returns>
+    Task<int> ApplyToAssetAsync(LiveSelection selection) => Task.FromResult(0);
 }

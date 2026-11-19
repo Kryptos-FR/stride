@@ -61,6 +61,13 @@
                 <Image Source="{StaticResource ImagePaste}"/>
               </MenuItem.Icon>
             </MenuItem>
+            <!-- The live grid of a running game: the value goes into the scene asset; disabled with the reason in its tooltip -->
+            <Separator IsVisible="{Binding [HasAssociatedData_LiveApplyToAsset], FallbackValue={sd:False}}"/>
+            <MenuItem Command="{cmd:Command Stride.PlayMode.ApplyToAsset}"
+                      IsVisible="{Binding [HasAssociatedData_LiveApplyToAsset], FallbackValue={sd:False}}"/>
+            <Separator IsVisible="{Binding [HasAssociatedData_LiveApplyComponent], FallbackValue={sd:False}}"/>
+            <MenuItem Command="{cmd:Command Stride.PlayMode.ApplyComponentToAsset}"
+                      IsVisible="{Binding [HasAssociatedData_LiveApplyComponent], FallbackValue={sd:False}}"/>
           </ContextMenu>
         </Template>
       </Setter>

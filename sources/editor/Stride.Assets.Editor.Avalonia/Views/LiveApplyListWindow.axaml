@@ -1,0 +1,81 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+        xmlns:pm="using:Stride.Assets.Editor.PlayMode"
+        mc:Ignorable="d" d:DesignWidth="760" d:DesignHeight="420"
+        x:Class="Stride.Assets.Editor.Avalonia.Views.LiveApplyListWindow"
+        x:DataType="pm:LiveApplyListViewModel"
+        Title="{Binding Title}"
+        Width="760" Height="420"
+        MinWidth="480" MinHeight="220"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+  <!-- The live values that differ from the asset's, each with the asset's value, the live value and who changed it: the values
+       edited live are checked, those the game changed itself are not. OK applies the checked values in one undo step. -->
+  <DockPanel Margin="10">
+    <StackPanel DockPanel.Dock="Bottom"
+                Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="0,10,0,0">
+      <Button x:Name="OkButton"
+              Content="{sd:LocalizeString Apply, Context=Button}"
+              ToolTip.Tip="{sd:LocalizeString Set the checked values in the scene asset (one undo step), Context=ToolTip}"
+              IsDefault="True"
+              IsEnabled="{Binding CanApply}"
+              Click="OnOkClick" MinWidth="80"/>
+      <Button x:Name="CancelButton"
+              Content="{sd:LocalizeString Cancel, Context=Button}"
+              ToolTip.Tip="{sd:LocalizeString Cancel (Esc), Context=ToolTip}"
+              IsCancel="True"
+              Click="OnCancelClick" MinWidth="80"/>
+    </StackPanel>
+    <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Opacity="0.7" TextWrapping="Wrap"
+               Text="{Binding Notes}" IsVisible="{Binding Notes, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+    <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" TextWrapping="Wrap"
+               Text="{sd:LocalizeString Check the values to set in the scene asset. The running game keeps its values., Context=Message}"/>
+    <!-- The header of the columns -->
+    <Grid DockPanel.Dock="Top" Margin="6,0,6,4" ColumnDefinitions="28,110,2*,*,*,130">
+      <CheckBox x:Name="AllCheckBox" Grid.Column="0" Padding="0" MinWidth="0"
+                ToolTip.Tip="{sd:LocalizeString Check or uncheck every value, Context=ToolTip}"
+                Click="OnAllClick"/>
+      <TextBlock Grid.Column="1" FontWeight="SemiBold" Text="{sd:LocalizeString Entity}" VerticalAlignment="Center"
+                 IsVisible="{Binding ShowEntities}"/>
+      <TextBlock Grid.Column="2" FontWeight="SemiBold" Text="{sd:LocalizeString Property}" VerticalAlignment="Center"/>
+      <TextBlock Grid.Column="3" FontWeight="SemiBold" Text="{sd:LocalizeString Asset}" VerticalAlignment="Center"/>
+      <TextBlock Grid.Column="4" FontWeight="SemiBold" Text="{sd:LocalizeString Live}" VerticalAlignment="Center"/>
+      <TextBlock Grid.Column="5" FontWeight="SemiBold" Text="{sd:LocalizeString Changed by}" VerticalAlignment="Center"/>
+    </Grid>
+    <Panel>
+      <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"
+                 Text="{Binding EmptyMessage}" IsVisible="{Binding IsEmpty}"/>
+      <ListBox x:Name="ItemList" ItemsSource="{Binding Items}" SelectionMode="Single"
+               ContainerPrepared="OnRowPrepared">
+        <ListBox.Styles>
+          <Style Selector="ListBoxItem">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="6,2"/>
+          </Style>
+          <!-- What the game changed itself is told apart from what the user edited -->
+          <Style Selector="ListBoxItem.byGame TextBlock#OriginText">
+            <Setter Property="FontStyle" Value="Italic"/>
+            <Setter Property="Opacity" Value="0.75"/>
+          </Style>
+        </ListBox.Styles>
+        <ListBox.ItemTemplate>
+          <DataTemplate DataType="pm:LiveApplyListItem">
+            <Grid ColumnDefinitions="28,110,2*,*,*,130">
+              <CheckBox Grid.Column="0" Padding="0" MinWidth="0" IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanApply}"/>
+              <TextBlock Grid.Column="1" Text="{Binding Entity}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                         IsVisible="{Binding $parent[Window].((pm:LiveApplyListViewModel)DataContext).ShowEntities, FallbackValue={sd:False}}"/>
+              <TextBlock Grid.Column="2" Text="{Binding Path}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,6,0"/>
+              <TextBlock Grid.Column="3" Text="{Binding AssetValue}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,6,0"/>
+              <TextBlock Grid.Column="4" Text="{Binding LiveValue}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,6,0"/>
+              <TextBlock x:Name="OriginText" Grid.Column="5" Text="{Binding Origin}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Panel>
+  </DockPanel>
+</Window>

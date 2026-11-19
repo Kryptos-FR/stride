@@ -103,6 +103,12 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
 
     public override void UpdateNode(INodePresenter node)
     {
+        // Apply to asset changes the scene asset, not the game: it is offered with edits off too
+        if (IsComponentItem(node))
+            node.AttachedProperties.Set(LiveEditData.ApplyComponentKey, true);
+        else if (node.Parent is not null && node.Type != typeof(EntityComponentCollection) && !IsInsideReadOnlyObject(node))
+            node.AttachedProperties.Set(LiveEditData.ApplyToAssetKey, true);
+
         // The components of the entity: added from the list of the types the game can make, removed by their button
         if (editsEnabled() && node.Parent is { Parent: null } && node.Type == typeof(EntityComponentCollection))
         {
@@ -216,6 +222,23 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Whether a property is in a component the editor could not read, or inside a reference or content: nothing there is the
+    /// entity's own value, to apply to its asset.
+    /// </summary>
+    private static bool IsInsideReadOnlyObject(INodePresenter node)
+    {
+        for (var current = node; current.Parent is not null; current = current.Parent)
+        {
+            if (current.Value is IUnloadable)
+                return true;
+            if (current != node && !IsComponentItem(current)
+                && (LiveNodePresenterFactory.IsOutsideOfMirror(current) || IsEntityReferenceType(current.Type) || AssetRegistry.CanBeAssignedToContentTypes(current.Type, checkIsUrlType: true)))
+                return true;
+        }
+        return false;
     }
 
     private static bool IsEntityReferenceType(Type type)
