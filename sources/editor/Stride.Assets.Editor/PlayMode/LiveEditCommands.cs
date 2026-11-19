@@ -4,6 +4,7 @@
 using Stride.Core.Assets.Editor.Quantum.NodePresenters.Commands;
 using Stride.Core.Presentation.Quantum.Presenters;
 using Stride.Core.Quantum;
+using Stride.Engine;
 
 namespace Stride.Assets.Editor.PlayMode;
 
@@ -36,4 +37,40 @@ internal sealed class LiveRenameStringKeyCommand(Func<LiveEditor?> editor) : Ren
         if (AddPrimitiveKeyCommand.GenerateGenericKey(collection.Value, collection.Descriptor, parameter) is { } key)
             editor()?.Move(collection, item.Index, key);
     }
+}
+
+/// <summary>
+/// The Add component list of a live entity: the game makes a component of the picked type and adds it to the entity, where the
+/// asset grid's command adds it to the asset.
+/// </summary>
+internal sealed class LiveAddComponentCommand(Func<LiveEditor?> editor) : SyncNodePresenterCommandBase
+{
+    public override string Name => AddNewItemCommand.CommandName;
+
+    public override bool CanAttach(INodePresenter nodePresenter) => nodePresenter.Type == typeof(EntityComponentCollection);
+
+    protected override void ExecuteSync(INodePresenter nodePresenter, object? parameter, object? preExecuteResult)
+    {
+        var type = parameter switch
+        {
+            AbstractNodeType nodeType => nodeType.Type,
+            Type value => value,
+            _ => null,
+        };
+        if (type is not null)
+            editor()?.AddComponent(nodePresenter, type);
+    }
+}
+
+/// <summary>
+/// The remove button of a component of a live entity: the game removes the component from the entity. The transform has none.
+/// </summary>
+internal sealed class LiveRemoveComponentCommand(Func<LiveEditor?> editor) : SyncNodePresenterCommandBase
+{
+    public override string Name => RemoveItemCommand.CommandName;
+
+    public override bool CanAttach(INodePresenter nodePresenter) => nodePresenter.Value is EntityComponent and not TransformComponent;
+
+    protected override void ExecuteSync(INodePresenter nodePresenter, object? parameter, object? preExecuteResult)
+        => editor()?.RemoveComponent(nodePresenter);
 }

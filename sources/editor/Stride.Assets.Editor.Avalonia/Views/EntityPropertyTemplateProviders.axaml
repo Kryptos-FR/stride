@@ -70,8 +70,8 @@
                 MinHeight="26" Margin="4,4,1,8"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                 ToolTip.Tip="{Binding [Documentation]}">
-          <!-- Only where components can be added: the entity of a scene or a prefab (the updater lists the types), not a live
-               entity of a running game -->
+          <!-- Only where components can be added (the updater lists the types): the entity of a scene or a prefab, or a live
+               entity of a running game while its edits are on -->
           <aev:AddEntityComponentView AvailableComponentTypes="{Binding [EntityComponentAvailableTypes]}"
                                       AvailableComponentTypeGroups="{Binding [EntityComponentAvailableTypeGroups]}"
                                       AddNewItemCommand="{Binding [AddNewItem]}"

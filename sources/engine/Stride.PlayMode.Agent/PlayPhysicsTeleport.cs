@@ -20,7 +20,8 @@ namespace Stride.PlayMode.Agent;
 /// </para>
 /// <list type="bullet">
 /// <item>Bullet (<c>Stride.Engine.PhysicsComponent</c> and its kinds): <c>UpdatePhysicsTransformation</c>, the engine's own call
-/// that sets the body's world transform from the entity's (with the collider's offset). A rigid body also gets the same
+/// that sets the body's world transform from the entity's (with the collider's offset), and scales its shapes with the entity
+/// (except shapes of a collider asset). A rigid body also gets the same
 /// transform as the start of its interpolation, which Bullet writes back to the entity at each step, even a step of no time
 /// (a paused game), and is woken up. A character's transform is its body's turned by its <c>Orientation</c>: the body gets the
 /// inverse turn, so that the entity ends where it was put. Velocities are kept, as Bullet's own <c>Teleport</c> does. A body
@@ -40,10 +41,12 @@ internal static class PlayPhysicsTeleport
     private static readonly ConcurrentDictionary<Type, Teleporter?> Teleporters = new();
 
     /// <summary>
-    /// Whether an edit of this member of a transform moves the entity: its position, its rotation, or its matrices.
+    /// Whether an edit of this member of a transform moves the entity: its position, its rotation, its scale (Bullet scales the
+    /// shapes of a body with it), or its matrices.
     /// </summary>
     public static bool MovesEntity(string? member)
-        => member is nameof(TransformComponent.Position) or nameof(TransformComponent.Rotation) or nameof(TransformComponent.LocalMatrix) or nameof(TransformComponent.WorldMatrix);
+        => member is nameof(TransformComponent.Position) or nameof(TransformComponent.Rotation) or nameof(TransformComponent.Scale)
+            or nameof(TransformComponent.LocalMatrix) or nameof(TransformComponent.WorldMatrix);
 
     /// <summary>
     /// Moves the bodies of the entity and its descendants to their transforms.

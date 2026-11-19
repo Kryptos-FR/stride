@@ -255,6 +255,62 @@ internal sealed class LiveEditor(Func<PlaySession?> session, Func<Entity, LiveMi
     public bool Move(ILiveNodePresenter collection, NodeIndex from, NodeIndex to)
         => SendOperation(collection, "an item moved", PlayEditOperation.Move, from, null, to);
 
+    /// <summary>
+    /// Adds a new component of <paramref name="type"/> to the live entity whose components <paramref name="components"/> shows:
+    /// the game makes it with its default values, and the grid shows it with the next snapshot.
+    /// </summary>
+    public bool AddComponent(INodePresenter components, Type type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        return SendStructure(components, (playSession, handle) => new PlayStructureEdit(playSession.NextEditId(), PlayStructureOperation.AddComponent, EntityHandle: handle, TypeName: PlayMirrorSerializer.TypeNameOf(type)));
+    }
+
+    /// <summary>
+    /// Removes the component of the live entity that <paramref name="component"/> (an item of its components) shows.
+    /// </summary>
+    public bool RemoveComponent(INodePresenter component)
+    {
+        if (component.Value is not EntityComponent value)
+            return false;
+        return SendStructure(component, (playSession, handle) => new PlayStructureEdit(playSession.NextEditId(), PlayStructureOperation.RemoveComponent, EntityHandle: handle, ComponentId: value.Id));
+    }
+
+    /// <summary>
+    /// The structure commands sent from the grid and not answered yet.
+    /// </summary>
+    public int PendingCommands { get; private set; }
+
+    private bool SendStructure(INodePresenter presenter, Func<PlaySession, int, PlayStructureEdit> create)
+    {
+        if (presenter.IsDisposedPresenter() || presenter.Root.Value is not Entity entity || findMirror(entity) is not { } references
+            || session() is not { State: PlaySessionState.Connected } playSession)
+            return false;
+        var edit = create(playSession, references.Mirror.Handle);
+        ++PendingCommands;
+        ++SentEdits;
+        SetState(presenter, LiveEditData.Pending, null);
+        var sentGeneration = generation;
+        playSession.ChangeStructureAsync(edit).ContinueWith(task => dispatcher.InvokeAsync(() =>
+        {
+            --PendingCommands;
+            if (sentGeneration != generation || task.Result is not { } result || presenter.IsDisposedPresenter())
+                return;
+            // The game stopped before it answered: nothing was refused. A refusal is in the Output pane too (PlayModeService).
+            var refused = result.Status is PlayEditStatus.Failed or PlayEditStatus.Gone && session() is { State: PlaySessionState.Connected };
+            if (refused)
+            {
+                ++RefusedEdits;
+                SetState(presenter, LiveEditData.Refused, result.Error);
+            }
+            else
+            {
+                // Applied: the snapshot that follows rebuilds the grid with the components as they are now
+                SetState(presenter, null, null);
+            }
+        }), TaskScheduler.Default).Forget();
+        return true;
+    }
+
     private bool SendOperation(ILiveNodePresenter collection, string what, PlayEditOperation operation, NodeIndex? index, object? value, NodeIndex? target)
     {
         if (Locate(collection) is not { } located || session() is not { State: PlaySessionState.Connected } playSession)

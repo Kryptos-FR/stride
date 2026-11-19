@@ -4,6 +4,8 @@
 using Stride.Assets.Editor.Quantum.NodePresenters.Updaters;
 using Stride.Assets.Editor.Quantum.NodePresenters.Keys;
 using Stride.Assets.Models;
+using Stride.Core;
+using Stride.Core.Annotations;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Quantum.NodePresenters.Commands;
 using Stride.Core.Assets.Editor.Quantum.NodePresenters.Keys;
@@ -75,7 +77,7 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
     public const string InsideReferenceReason = "Inside a reference to an entity or a component: select that entity in the Live tab to change it.";
     public const string SharedContentReason = "Inside content (a model, a texture, a material...), which everything that uses it shares: it cannot change while the game runs. Set the reference to another asset instead.";
     public const string ComputedReason = "Computed by the editor: it is not a value of the game.";
-    public const string ComponentsReason = "Components cannot be added, removed or reordered while the game runs yet.";
+    public const string ComponentsReason = "Components cannot be reordered while the game runs: the engine would remove each and add it back, which restarts scripts and physics bodies.";
 
     private static readonly HashSet<string> ReadCommands = [CopyPropertyCommand.CommandName, FetchAssetCommand.CommandName];
 
@@ -87,6 +89,8 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
     ];
 
     private readonly LiveMoveItemCommand move = new(editor);
+    private readonly LiveAddComponentCommand addComponent = new(editor);
+    private readonly LiveRemoveComponentCommand removeComponent = new(editor);
     private readonly LiveRenameStringKeyCommand rename = new(editor);
     private readonly LivePickupAssetCommand? pickAsset = references is null ? null : new(references);
     private readonly LivePickupEntityCommand? pickEntity = references is null ? null : new(references, pickComponent: false);
@@ -99,6 +103,20 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
 
     public override void UpdateNode(INodePresenter node)
     {
+        // The components of the entity: added from the list of the types the game can make, removed by their button
+        if (editsEnabled() && node.Parent is { Parent: null } && node.Type == typeof(EntityComponentCollection))
+        {
+            UpdateComponents(node);
+            return;
+        }
+        if (editsEnabled() && IsComponentItem(node) && GetReadOnlyReason(node) is null)
+        {
+            node.IsReadOnly = true;
+            node.Commands.RemoveAll(x => !ReadCommands.Contains(x.Name));
+            if (removeComponent.CanAttach(node))
+                node.Commands.Add(removeComponent);
+            return;
+        }
         if (!editsEnabled() || node.Parent is null || IsComponentItem(node) || GetReadOnlyReason(node) is not null)
         {
             node.IsReadOnly = true;
@@ -136,6 +154,30 @@ internal sealed class LiveEditNodeUpdater(Func<bool> editsEnabled, Func<LiveEdit
             node.Commands.Add(pickEntity);
             node.AttachedProperties.Remove(ReferenceData.Key);
         }
+    }
+
+    /// <summary>
+    /// The types of component the entity can take, for the Add component list, as the asset grid lists them
+    /// (<see cref="EntityHierarchyAssetNodeUpdater"/>): the game makes the component by its type name. Reordering stays off.
+    /// </summary>
+    private void UpdateComponents(INodePresenter node)
+    {
+        node.IsReadOnly = true;
+        node.Commands.RemoveAll(x => !ReadCommands.Contains(x.Name));
+        node.Commands.Add(addComponent);
+        node.AttachedProperties.Set(LiveEditData.TipKey, ComponentsReason);
+        var components = (EntityComponentCollection)node.Value;
+        var types = typeof(EntityComponent).GetInheritedInstantiableTypes()
+            .Where(x => Attribute.GetCustomAttribute(x, typeof(NonInstantiableAttribute)) == null
+                        && !typeof(TransformComponent).IsAssignableFrom(x)
+                        && (EntityComponentAttributes.Get(x).AllowMultipleComponents || components.All(y => y.GetType() != x)))
+            .OrderBy(DisplayAttribute.GetDisplayName)
+            .Select(x => new AbstractNodeType(x)).ToArray();
+        node.AttachedProperties.Set(EntityHierarchyData.EntityComponentAvailableTypesKey, types);
+        var groups = types.GroupBy(x => ComponentCategoryAttribute.GetCategory(x.Type))
+            .OrderBy(x => x.Key)
+            .Select(x => new AbstractNodeTypeGroup(x.Key, x.ToArray())).ToArray();
+        node.AttachedProperties.Set(EntityHierarchyData.EntityComponentAvailableTypeGroupsKey, groups);
     }
 
     /// <summary>

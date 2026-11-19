@@ -21,9 +21,9 @@ namespace Stride.Assets.Editor.PlayMode;
 /// </para>
 /// <para>
 /// Built in: the collider shapes and the collision filters of a Bullet physics component, read when it joins the
-/// simulation; the position and the rotation of an entity that a dynamic physics body moves (a Bullet character or a
-/// rigid body that is not kinematic, a Bepu body that is not kinematic), which the simulation writes back each frame, even
-/// while play mode pauses the game.
+/// simulation; the scale of an entity whose Bullet physics component uses a collider shape asset, which Bullet does not scale.
+/// The position, the rotation and the scale of an entity that a physics body moves can change: the game moves its bodies
+/// there (<c>PlayPhysicsTeleport</c> in the game's agent), so the simulation does not write the old place back.
 /// </para>
 /// </remarks>
 [Experimental("STREXP012")]
@@ -42,8 +42,7 @@ public static class LiveMemberSupport
 
     private static readonly ConcurrentDictionary<(string Type, string Member), Func<object, string?>> ReadOnlyRules = new()
     {
-        [(typeof(TransformComponent).FullName!, nameof(TransformComponent.Position))] = MovedByPhysics,
-        [(typeof(TransformComponent).FullName!, nameof(TransformComponent.Rotation))] = MovedByPhysics,
+        [(typeof(TransformComponent).FullName!, nameof(TransformComponent.Scale))] = ScaledByBullet,
     };
 
     /// <summary>
@@ -97,46 +96,31 @@ public static class LiveMemberSupport
         return null;
     }
 
-    private static string? MovedByPhysics(object owner)
+    private static string? ScaledByBullet(object owner)
     {
         if (owner is not TransformComponent { Entity: { } entity })
             return null;
         foreach (var component in entity.Components)
         {
-            if (IsDynamicBody(component))
-                return "A physics body moves this entity: the simulation writes its position and rotation back each frame, even while the game is paused. Moving a body while the game runs is not supported yet.";
+            if (!IsOrDerives(component.GetType(), "Stride.Engine.PhysicsComponent")
+                || component.GetType().GetProperty("ColliderShapes")?.GetValue(component) is not System.Collections.IEnumerable shapes)
+                continue;
+            foreach (var shape in shapes)
+            {
+                if (shape is not null && IsOrDerives(shape.GetType(), "Stride.Physics.ColliderShapeAssetDesc"))
+                    return "A Bullet physics component of this entity uses a collider shape asset, which Bullet does not scale: a new scale while the game runs would change what is drawn, not what collides.";
+            }
         }
         return null;
     }
 
-    // A Bullet character, a Bullet rigid body or a Bepu body that is not kinematic (a kinematic body follows the transform)
-    private static bool IsDynamicBody(EntityComponent component)
+    private static bool IsOrDerives(Type type, string fullName)
     {
-        for (var type = component.GetType(); type is not null; type = type.BaseType)
+        for (var current = type; current is not null; current = current.BaseType)
         {
-            switch (type.FullName)
-            {
-                case "Stride.Physics.CharacterComponent":
-                    return true;
-                case "Stride.Physics.RigidbodyComponent":
-                    return !IsTrue(component, "IsKinematic");
-                case "Stride.BepuPhysics.BodyComponent":
-                    return !IsTrue(component, "Kinematic");
-            }
+            if (current.FullName == fullName)
+                return true;
         }
         return false;
-    }
-
-    private static bool IsTrue(object owner, string property)
-    {
-        try
-        {
-            return owner.GetType().GetProperty(property)?.GetValue(owner) is true;
-        }
-        catch (Exception)
-        {
-            // A getter that needs the simulation: say the body moves the entity
-            return false;
-        }
     }
 }
