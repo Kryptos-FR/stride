@@ -106,6 +106,28 @@ public static class Purse
     }
 }
 
+public static class Weather
+{
+    // <<if rain_tomorrow("Brinemoor")>>: asks a forecast the game loads
+    [YarnFunction("rain_tomorrow", Description = "Whether it rains tomorrow in a town: rain_tomorrow(\"Brinemoor\").")]
+    public static async Task<bool> RainTomorrow(string town, CancellationToken cancellation)
+    {
+        var forecast = await Forecasts.LoadAsync(town, cancellation);
+        return forecast.Rain > 0.5f;
+    }
+}
+
+public sealed record Forecast(float Rain);
+
+public static class Forecasts
+{
+    public static async Task<Forecast> LoadAsync(string town, CancellationToken cancellation)
+    {
+        await Task.Delay(1, cancellation);
+        return new Forecast(town.Length % 2);
+    }
+}
+
 public sealed class Gate : StartupScript
 {
     public bool IsOpen { get; private set; }

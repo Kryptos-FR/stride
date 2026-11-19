@@ -13,5 +13,5 @@ internal static class GameFunctions
     public static float Debt(string who) => who.Length;
 
     [YarnFunction("tide")]
-    public static float Tide() => 0;
+    public static Task<float> Tide(CancellationToken cancellation) => Task.FromResult(0f);
 }

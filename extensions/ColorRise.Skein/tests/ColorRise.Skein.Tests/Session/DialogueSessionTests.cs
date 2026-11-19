@@ -668,6 +668,72 @@ public sealed class DialogueSessionTests
     }
 
     [Fact]
+    public async Task The_dialogue_waits_for_a_function_that_returns_a_task_and_a_stop_cancels_it()
+    {
+        var answer = new TaskCompletionSource<float>();
+        var given = CancellationToken.None;
+        var actions = new YarnActionRegistry();
+        actions.AddFunction("price", (string item, CancellationToken cancellation) =>
+        {
+            given = cancellation;
+            return answer.Task.WaitAsync(cancellation);
+        });
+        var dialogue = new TestDialogue(
+            """
+            title: Start
+            ---
+            Kye: Ready.
+            Kye: The lamp is {price("lamp")} coins.
+            ===
+            """,
+            actions);
+
+        var run = dialogue.RunAsync();
+        Assert.Equal(["line: Kye: Ready."], dialogue.Transcript);
+        answer.SetResult(3);
+        await run;
+        Assert.Equal(["line: Kye: Ready.", "line: Kye: The lamp is 3 coins.", "complete"], dialogue.Transcript);
+
+        answer = new TaskCompletionSource<float>();
+        run = dialogue.RunAsync();
+        Assert.False(given.IsCancellationRequested);
+        dialogue.Session.Stop();
+        Assert.True(given.IsCancellationRequested);
+        await run;
+        Assert.Equal(["line: Kye: Ready.", "complete"], dialogue.Transcript.Skip(3));
+        Assert.Empty(dialogue.Errors);
+    }
+
+    [Fact]
+    public async Task A_function_that_does_not_answer_at_once_in_a_when_header_gives_its_default_and_says_so()
+    {
+        var bread = new TaskCompletionSource<bool>();
+        var actions = new YarnActionRegistry();
+        actions.AddFunction("has_bread", () => bread.Task);
+        var dialogue = new TestDialogue(
+            """
+            title: Gulls
+            when: has_bread()
+            ---
+            The gulls dive.
+            ===
+            title: Gulls
+            when: always
+            ---
+            The gulls sleep.
+            ===
+            """,
+            actions);
+
+        await dialogue.RunAsync("Gulls");
+
+        Assert.Equal(["line: The gulls sleep.", "complete"], dialogue.Transcript);
+        var error = Assert.Single(dialogue.Errors);
+        Assert.Contains("'has_bread'", error, StringComparison.Ordinal);
+        Assert.Contains("it gives false there", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_condition_of_a_node_group_calls_the_functions_of_the_game_before_any_run()
     {
         var has = false;

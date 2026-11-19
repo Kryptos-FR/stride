@@ -104,6 +104,9 @@ public sealed class YarnTestPlanTests
         actions.AddFunction("set_objective_complete", (string objective) => true);
         actions.AddFunction("is_objective_active", (string objective) => true);
         actions.AddFunction("get_quest_status", (string questName) => "InProgress");
+        actions.AddFunction("adds_two", (int value) => new ValueTask<int>(value + 2));
+        actions.AddFunction("adds_one", (int value) => Task.FromResult(value + 1));
+        actions.AddFunction("adds_all", (int first, int second, params int[] rest) => new ValueTask<int>(first + second + rest.Sum()));
         return actions;
     }
 

@@ -96,6 +96,8 @@ public sealed class ProjectEditorTests
         Assert.True(actions["walk"].Waits);
         Assert.Equal("found_coins(place: string) → number", actions["found_coins"].Usage);
         Assert.False(actions["found_coins"].IsCommand);
+        // A function that returns a task gives scripts its result, and the dialogue waits for it
+        Assert.Equal(("tide() → number", true), (actions["tide"].Usage, actions["tide"].Waits));
 
         // Commands first, then functions, each by name
         Assert.Equal(["dig", "open", "walk", "debt", "found_coins", "has_item", "tide"], editor.Actions.Select(a => a.Name));

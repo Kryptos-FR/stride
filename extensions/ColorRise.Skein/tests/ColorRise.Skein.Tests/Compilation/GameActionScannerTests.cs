@@ -45,7 +45,7 @@ public sealed class GameActionScannerTests
         Assert.Equal(
             [
                 "The command 'go' (Places.Go) returns a Int32: a command returns nothing, or a task the dialogue waits for.",
-                "The function 'where' (Places.Where) returns a Guid: a function returns a boolean, a number or a string.",
+                "The function 'where' (Places.Where) returns a Guid: a function returns a boolean, a number or a string, or a task of one.",
             ],
             actions.Problems.Order(StringComparer.Ordinal));
         var count = Assert.Single(actions.Actions);

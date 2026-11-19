@@ -45,7 +45,8 @@ public sealed class YarnActionRegistry
     public bool RemoveCommandHandler(string name) => commands.Remove(name);
 
     /// <summary>
-    /// Adds a function: it takes and returns booleans, numbers and strings.
+    /// Adds a function: it takes and returns booleans, numbers and strings, and may return a task of one and take a
+    /// <see cref="CancellationToken"/> (<see cref="YarnFunctionAttribute"/>).
     /// </summary>
     /// <exception cref="ArgumentException">The name is not one word, or a type of the function is not one scripts have.</exception>
     /// <exception cref="InvalidOperationException">Another function has the name.</exception>
@@ -199,7 +200,7 @@ public sealed class YarnActionRegistry
 
             var signature = method.GetParameters().Select(p => p.ParameterType).Append(method.ReturnType).ToArray();
             if (method.ReturnType == typeof(void) || signature.Any(t => t.IsByRef || t.IsPointer))
-                throw new ArgumentException($"The function '{name}' ({Name(method)}) must return a boolean, a number or a string, and take its parameters by value.");
+                throw new ArgumentException($"The function '{name}' ({Name(method)}) must return a boolean, a number or a string (or a task of one), and take its parameters by value.");
 
             AddFunction(new Function(name, method.CreateDelegate(Expression.GetFuncType(signature)), function.Description));
         }
@@ -298,8 +299,9 @@ public sealed class YarnActionRegistry
             {
                 Name = function.Name,
                 Kind = YarnActionKind.Function,
-                Parameters = [.. function.Delegate.Method.GetParameters().Select(DescribeParameter)],
-                ReturnType = YarnType(function.Delegate.Method.ReturnType),
+                Parameters = [.. function.Delegate.Method.GetParameters().Where(p => p.ParameterType != typeof(CancellationToken)).Select(DescribeParameter)],
+                ReturnType = YarnType(ResultType(function.Delegate.Method.ReturnType)),
+                IsAsync = ResultType(function.Delegate.Method.ReturnType) != function.Delegate.Method.ReturnType,
                 Documentation = function.Documentation,
                 Method = Name(function.Delegate.Method),
             });
@@ -319,8 +321,8 @@ public sealed class YarnActionRegistry
     /// </summary>
     /// <param name="name">The name of the function.</param>
     /// <param name="arguments">The values of the script: booleans, numbers and strings, converted to the function's parameters.</param>
-    /// <param name="cancellation">Not used by functions yet.</param>
-    /// <returns>A boolean, a number (a float) or a string.</returns>
+    /// <param name="cancellation">Given to the function when it takes one.</param>
+    /// <returns>A boolean, a number (a float) or a string; once the function's task completes, for a function that returns one.</returns>
     /// <exception cref="ArgumentException">No function has the name, or the arguments do not fit its parameters.</exception>
     public ValueTask<IConvertible> InvokeFunctionAsync(string name, IReadOnlyList<IConvertible> arguments, CancellationToken cancellation = default)
     {
@@ -335,7 +337,11 @@ public sealed class YarnActionRegistry
         for (var i = 0; i < parameters.Length; i++)
         {
             var parameter = parameters[i];
-            if (i == parameters.Length - 1 && IsParams(parameter))
+            if (parameter.ParameterType == typeof(CancellationToken))
+            {
+                values[i] = cancellation;
+            }
+            else if (i == parameters.Length - 1 && IsParams(parameter))
             {
                 var elementType = parameter.ParameterType.GetElementType()!;
                 var rest = Array.CreateInstance(elementType, Math.Max(arguments.Count - next, 0));
@@ -356,12 +362,12 @@ public sealed class YarnActionRegistry
             }
             else
             {
-                throw new ArgumentException($"The function '{name}' takes {parameters.Length} parameter{(parameters.Length == 1 ? "" : "s")}, and was given {arguments.Count}.");
+                throw WrongCount();
             }
         }
 
         if (next < arguments.Count)
-            throw new ArgumentException($"The function '{name}' takes {parameters.Length} parameter{(parameters.Length == 1 ? "" : "s")}, and was given {arguments.Count}.");
+            throw WrongCount();
 
         object? result;
         try
@@ -375,8 +381,61 @@ public sealed class YarnActionRegistry
             throw;
         }
 
-        return new ValueTask<IConvertible>(ToScript(function, result));
+        return result switch
+        {
+            Task task when !task.IsCompletedSuccessfully => AwaitAsync(function, task),
+            Task task => new ValueTask<IConvertible>(ToScript(function, ResultOf(task))),
+            _ when result?.GetType() is { IsGenericType: true } type && type.GetGenericTypeDefinition() == typeof(ValueTask<>) => FromValueTask(function, result),
+            _ => new ValueTask<IConvertible>(ToScript(function, result)),
+        };
+
+        ArgumentException WrongCount()
+        {
+            var count = parameters.Count(p => p.ParameterType != typeof(CancellationToken));
+            return new ArgumentException($"The function '{name}' takes {count} parameter{(count == 1 ? "" : "s")}, and was given {arguments.Count}.");
+        }
     }
+
+    private static ValueTask<IConvertible> FromValueTask(Function function, object valueTask)
+    {
+        // A ValueTask<T> that is done gives its result at once: a condition Yarn Spinner computes without waiting can use it
+        var type = valueTask.GetType();
+        if (type.GetProperty(nameof(ValueTask<int>.IsCompletedSuccessfully))!.GetValue(valueTask) is true)
+            return new ValueTask<IConvertible>(ToScript(function, type.GetProperty(nameof(ValueTask<int>.Result))!.GetValue(valueTask)));
+
+        return AwaitAsync(function, (Task)type.GetMethod(nameof(ValueTask<int>.AsTask))!.Invoke(valueTask, null)!);
+    }
+
+    private static async ValueTask<IConvertible> AwaitAsync(Function function, Task task)
+    {
+        await task.ConfigureAwait(true);
+        return ToScript(function, ResultOf(task));
+    }
+
+    private static object? ResultOf(Task task)
+    {
+        // What the task threw comes out as it threw it
+        task.GetAwaiter().GetResult();
+        return task.GetType().GetProperty(nameof(Task<int>.Result))!.GetValue(task);
+    }
+
+    /// <summary>
+    /// The type a function gives the script: the T of a task of T, or the type it returns.
+    /// </summary>
+    private static Type ResultType(Type returns)
+        => returns.IsGenericType && (returns.GetGenericTypeDefinition() == typeof(Task<>) || returns.GetGenericTypeDefinition() == typeof(ValueTask<>))
+            ? returns.GetGenericArguments()[0]
+            : returns;
+
+    /// <summary>
+    /// What a function gives when it cannot answer: false, 0 or an empty string, by the type of its result.
+    /// </summary>
+    internal IConvertible DefaultResultOf(string name) => YarnType(ResultType(functions[name].Delegate.Method.ReturnType)) switch
+    {
+        "number" => 0f,
+        "string" => "",
+        _ => false,
+    };
 
     private static object ToParameter(Function function, IConvertible argument, Type type)
     {
@@ -427,14 +486,16 @@ public sealed class YarnActionRegistry
     private void AddFunction(Function function)
     {
         var method = function.Delegate.Method;
-        if (YarnType(method.ReturnType) is null)
-            throw new ArgumentException($"The function '{function.Name}' ({Name(method)}) returns a {method.ReturnType.Name}: a function returns a boolean, a number or a string.");
+        if (YarnType(ResultType(method.ReturnType)) is null)
+            throw new ArgumentException($"The function '{function.Name}' ({Name(method)}) returns a {method.ReturnType.Name}: a function returns a boolean, a number or a string, or a task of one.");
 
         var parameters = method.GetParameters();
         for (var i = 0; i < parameters.Length; i++)
         {
             var parameter = parameters[i];
             var type = i == parameters.Length - 1 && IsParams(parameter) ? parameter.ParameterType.GetElementType()! : parameter.ParameterType;
+            if (type == typeof(CancellationToken))
+                continue;
             if (YarnType(type) is null)
                 throw new ArgumentException($"The parameter '{parameter.Name}' of the function '{function.Name}' ({Name(method)}) is a {type.Name}: a function takes booleans, numbers and strings.");
         }

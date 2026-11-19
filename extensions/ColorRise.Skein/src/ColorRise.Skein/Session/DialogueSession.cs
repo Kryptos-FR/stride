@@ -362,7 +362,18 @@ public sealed class DialogueSession : IYarnDialogueEvents, IYarnFunctionSource
     {
         // The game's functions as they are now: one added during a run is called from then on
         if (actions.HasFunction(name))
-            return actions.InvokeFunctionAsync(name, arguments, cancellation);
+        {
+            var answer = actions.InvokeFunctionAsync(name, arguments, cancellation);
+
+            // Yarn Spinner computes a when: header or a smart variable without a cancellation, and cannot wait there
+            if (answer.IsCompleted || cancellation.CanBeCanceled)
+                return answer;
+
+            var standIn = actions.DefaultResultOf(name);
+            if (reportedFunctions.Add(name))
+                log?.Error($"The function '{name}' did not answer at once in a condition Yarn Spinner computes without waiting (a when: header or a smart variable): it gives {Describe(standIn)} there.");
+            return new ValueTask<IConvertible>(standIn);
+        }
 
         IConvertible result = name switch
         {

@@ -317,9 +317,28 @@ Tam: A bed is three coins.
 
 - Skein finds the methods by their attributes in the assemblies of the game when the game starts. Nothing is registered by hand.
 - The `Description` is for the writers: Game Studio and Yarn Spinner's Visual Studio Code extension show it.
-- A **function** is static, takes and returns booleans, numbers and strings, and changes nothing in the game: Yarn Spinner calls it when it evaluates a condition, as often as it likes.
+- A **function** is static, takes and returns booleans, numbers and strings, and changes nothing in the game: Yarn Spinner calls it when it evaluates a condition, as often as it likes. It can also return a task of one (below).
 - A **command** returns nothing, or a task the dialogue waits for. Its parameters are the words of the command, converted: strings, booleans, numbers, enums, and entities or components found by name. Optional parameters, a `params` array and a `CancellationToken` work.
 - A command that cannot be done throws `YarnCommandException`: the log has the error, and the dialogue goes on.
+
+**A function that waits.** A function can return a `Task<T>` or a `ValueTask<T>` of a boolean, a number or a string, and take a `CancellationToken`. The dialogue waits for the answer, and the token is cancelled when the dialogue stops. The build and the editor see a function of `T`: scripts call it as any other.
+
+```csharp
+public static class Weather
+{
+    // <<if rain_tomorrow("Brinemoor")>>: asks a forecast the game loads
+    [YarnFunction("rain_tomorrow", Description = "Whether it rains tomorrow in a town: rain_tomorrow(\"Brinemoor\").")]
+    public static async Task<bool> RainTomorrow(string town, CancellationToken cancellation)
+    {
+        var forecast = await Forecasts.LoadAsync(town, cancellation);
+        return forecast.Rain > 0.5f;
+    }
+}
+```
+
+- A function whose task is already done (`Task.FromResult`, a `ValueTask` made from a value) answers at once.
+- Yarn Spinner computes a `when:` header and a smart variable without waiting. A function there that has not answered at once gives false, 0 or an empty string, and the log says so once per function. Keep the functions of those conditions quick, or have them answer from what the game already knows.
+- The dialogue player in Game Studio does not run the game's code: it asks the writer for the answer of a function, a function that waits included.
 
 **A command on an object.** A command can be an instance method of a component. The first word after the command then names the entity:
 

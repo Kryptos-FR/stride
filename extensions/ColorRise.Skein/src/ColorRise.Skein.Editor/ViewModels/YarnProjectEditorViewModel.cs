@@ -38,7 +38,7 @@ public sealed record YarnProjectVariableItem(string Name, string Type, string De
 /// <param name="Description">What its attribute says it does.</param>
 /// <param name="Method">The C# method, as <c>Type.Method</c>.</param>
 /// <param name="IsCommand">Whether it is a command; a function otherwise.</param>
-/// <param name="Waits">Whether the dialogue waits for the command to end.</param>
+/// <param name="Waits">Whether the dialogue waits for the command or the function to end: it returns a task.</param>
 public sealed record YarnProjectActionItem(string Name, string Usage, string Description, string Method, bool IsCommand, bool Waits)
 {
     /// <summary>
@@ -50,7 +50,7 @@ public sealed record YarnProjectActionItem(string Name, string Usage, string Des
 
         var parameters = action.Parameters.Select(ParameterText).ToList();
         if (action.Kind != YarnActionKind.Command)
-            return new YarnProjectActionItem(action.Name, $"{action.Name}({string.Join(", ", parameters)}) → {action.ReturnType}", action.Documentation ?? "", action.Method, IsCommand: false, Waits: false);
+            return new YarnProjectActionItem(action.Name, $"{action.Name}({string.Join(", ", parameters)}) → {action.ReturnType}", action.Documentation ?? "", action.Method, IsCommand: false, action.IsAsync);
 
         // The first word of a command on an object names the object
         if (action.TargetType is { Length: > 0 } target)

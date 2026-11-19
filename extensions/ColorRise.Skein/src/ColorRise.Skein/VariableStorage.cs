@@ -543,7 +543,11 @@ public sealed class VariableStorage : IVariableStorage
         bool IYarnFunctionSource.CanCall(string name) => Functions?.HasFunction(name) == true;
 
         ValueTask<IConvertible> IYarnFunctionSource.InvokeAsync(string name, IConvertible[] arguments, CancellationToken cancellation)
-            => Functions!.InvokeFunctionAsync(name, arguments, cancellation);
+        {
+            // Yarn Spinner computes smart variables without waiting
+            var answer = Functions!.InvokeFunctionAsync(name, arguments, cancellation);
+            return answer.IsCompleted ? answer : new ValueTask<IConvertible>(Functions.DefaultResultOf(name));
+        }
 
         /// <summary>
         /// The functions of the game while a smart variable is read.

@@ -389,6 +389,45 @@ public sealed class YarnActionRegistryTests
         Assert.Contains("takes 0 parameters", (await Assert.ThrowsAsync<ArgumentException>(() => registry.InvokeFunctionAsync("tide", [(Yarn.Value)1f]).AsTask())).Message);
     }
 
+    private static class Weather
+    {
+        [YarnFunction("tide_at")]
+        public static async Task<int> TideAt(string place, CancellationToken cancellation)
+        {
+            await Task.Delay(1, cancellation);
+            return place.Length;
+        }
+
+        [YarnFunction("wind")]
+        public static ValueTask<float> Wind() => new(3f);
+    }
+
+    [Fact]
+    public async Task A_function_may_return_a_task_and_take_the_cancellation_of_the_dialogue()
+    {
+        var registry = new YarnActionRegistry();
+        registry.RegisterType(typeof(Weather));
+
+        // Scripts see the result of the task, and no parameter for the cancellation
+        var tide = Assert.Single(registry.Describe(), d => d.Name == "tide_at");
+        Assert.Equal(("number", true), (tide.ReturnType, tide.IsAsync));
+        Assert.Equal(["place"], tide.Parameters.Select(p => p.Name));
+        Assert.Equal(new YarnFunctionDeclaration { Name = "tide_at", ParameterTypes = ["string"], ReturnType = "number" }.ParameterTypes, YarnFunctionDeclaration.From(tide).ParameterTypes);
+
+        Assert.Equal(4f, await registry.InvokeFunctionAsync("tide_at", [(Yarn.Value)"pier"]));
+        // A task that is done answers at once
+        var wind = registry.InvokeFunctionAsync("wind", []);
+        Assert.True(wind.IsCompletedSuccessfully);
+        Assert.Equal(3f, wind.Result);
+
+        using var stopped = new CancellationTokenSource();
+        await stopped.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => registry.InvokeFunctionAsync("tide_at", [(Yarn.Value)"pier"], stopped.Token).AsTask());
+
+        // A task of something scripts do not have is refused by name
+        Assert.Contains("lamp", Assert.Throws<ArgumentException>(() => registry.AddFunction("lamp", () => Task.FromResult(DateTime.Now))).Message);
+    }
+
     private static class Bad
     {
         public static void NotStatic()

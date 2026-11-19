@@ -229,7 +229,7 @@ public sealed class AssetCompilationTests : IDisposable
             Assert.Equal(ResultStatus.Failed, wrong);
             Assert.Contains(log, m => m.StartsWith("Error: ", StringComparison.Ordinal) && m.Contains("Pier.yarn(3,", StringComparison.Ordinal));
             Assert.Contains(prepared.Messages, m => m.Type == LogMessageType.Warning
-                && m.Text == "The function 'where' (Places.Where) returns a Guid: a function returns a boolean, a number or a string. Scripts cannot use it.");
+                && m.Text == "The function 'where' (Places.Where) returns a Guid: a function returns a boolean, a number or a string, or a task of one. Scripts cannot use it.");
 
             Script("Dialogue/Chatter/Pier").Text = Script("Dialogue/Chatter/Pier").Text!.Replace("stock_of(3)", "stock_of(\"oil\")");
             var (_, right, _, builder2) = Build();
