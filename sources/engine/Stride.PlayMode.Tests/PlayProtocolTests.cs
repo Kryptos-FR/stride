@@ -332,6 +332,21 @@ public sealed class PlayProtocolTests
         return PlayMessage.Decode(read.Value);
     }
 
+    [Fact]
+    public async Task AStructureCommandKeepsItsFields()
+    {
+        var component = Guid.NewGuid();
+        var edit = new PlayStructureEdit(7, PlayStructureOperation.MoveEntity, 3, component, 2, 5, 1, "Game.Type, Game", "Prefabs/Crate", "Name", true);
+
+        var read = Assert.IsType<PlayStructureEdit>(await RoundTripAsync(edit.Encode()));
+        var result = Assert.IsType<PlayStructureResult>(await RoundTripAsync(new PlayStructureResult(7, 99, PlayEditStatus.Applied, [4, 8], component, null).Encode()));
+
+        Assert.Equal(edit, read);
+        Assert.Equal(new PlayStructureResult(7, 99, PlayEditStatus.Applied, [4, 8], component, null), result);
+        Assert.True((int)PlayMessageType.StructureEdit >= 32);
+        Assert.True((int)PlayMessageType.StructureResult < 32);
+    }
+
     private static Dictionary<string, PlayMessage> Messages()
     {
         var components = new[] { new PlayComponentInfo(Guid.NewGuid(), "Stride.Engine.TransformComponent, Stride.Engine") };
@@ -372,6 +387,13 @@ public sealed class PlayProtocolTests
             ["EditorActive"] = new PlayEditorActive(true),
             ["ContentRequest"] = new PlayContentRequest(),
             ["ContentIndex"] = new PlayContentIndex(["MainScene", "Models/Box", "Materials/Ground"]),
+            ["StructureAddComponent"] = new PlayStructureEdit(20, PlayStructureOperation.AddComponent, EntityHandle: 4, Index: 2, TypeName: "Stride.Engine.LightComponent, Stride.Engine"),
+            ["StructureMove"] = new PlayStructureEdit(21, PlayStructureOperation.MoveEntity, EntityHandle: 4, SceneHandle: 2, ParentHandle: 9, KeepWorldTransform: true),
+            ["StructureSpawn"] = new PlayStructureEdit(22, PlayStructureOperation.SpawnPrefab, SceneHandle: 1, Url: "Prefabs/Crate", Name: "Crate"),
+            ["StructureRemove"] = new PlayStructureEdit(23, PlayStructureOperation.RemoveComponent, EntityHandle: 4, ComponentId: Guid.NewGuid()),
+            ["StructureResult"] = new PlayStructureResult(22, 130, PlayEditStatus.Applied, [12, 13, 14], Guid.Empty, null),
+            ["StructureResultComponent"] = new PlayStructureResult(20, 131, PlayEditStatus.Applied, [], Guid.NewGuid(), null),
+            ["StructureResultFailed"] = new PlayStructureResult(24, 132, PlayEditStatus.Gone, [], Guid.Empty, "The entity is no longer in the game."),
         };
     }
 }
