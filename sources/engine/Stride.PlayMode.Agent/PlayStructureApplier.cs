@@ -18,7 +18,8 @@ namespace Stride.PlayMode.Agent;
 /// <para>
 /// Everything goes through the engine's own collections, as a script would do it, so the processors see the change at once:
 /// a script added is started by the script system later in the same frame (at the next update that runs scripts, when the game
-/// is paused), a script removed has its micro-thread cancelled, a physics body added joins the simulation. The tree tracker
+/// is paused), a script removed has its micro-thread cancelled, a Bepu body added joins the simulation. A Bullet body is
+/// refused: it would join with no shape, and its shapes cannot change while it is in the simulation. The tree tracker
 /// sees the change through the scene instance's events, and the tree batch of the frame carries it.
 /// </para>
 /// <para>
@@ -79,6 +80,10 @@ internal sealed class PlayStructureApplier(PlayTreeTracker tracker, PlayContentL
             throw new PlayEditException($"{type.Name} is abstract in the game: no instance of it can be made.");
         if (typeof(TransformComponent).IsAssignableFrom(type))
             throw new PlayEditException($"{entity.Name} already has its transform: an entity has one, which cannot be removed or added.");
+        // A Bullet body joins the simulation with the shapes it has, and they cannot change while it is in it: one added now
+        // would have none and stay inert
+        if (IsBulletBody(type))
+            throw new PlayEditException($"A Bullet physics component added while the game runs has no collider shape, and its shapes cannot change until the game restarts: add the {type.Name} in the scene editor.");
         // As the engine's collection checks it, with the reason the asset grid gives
         if (!EntityComponentAttributes.Get(type).AllowMultipleComponents && entity.Components.Any(x => x.GetType() == type))
             throw new PlayEditException($"{entity.Name} already has a {type.Name}, and an entity can have only one.");
@@ -251,6 +256,16 @@ internal sealed class PlayStructureApplier(PlayTreeTracker tracker, PlayContentL
                     Add(childEntity);
             }
         }
+    }
+
+    private static bool IsBulletBody(Type type)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            if (current.FullName == "Stride.Engine.PhysicsComponent")
+                return true;
+        }
+        return false;
     }
 
     private Entity FindEntity(int handle, string what = "The entity")

@@ -132,6 +132,18 @@ public sealed class PlayStructureTests : IDisposable
     }
 
     [Fact]
+    public void ABulletBodyIsNotAddedWhileTheGameRuns()
+    {
+        var count = player.Components.Count;
+
+        var result = Apply(Command(PlayStructureOperation.AddComponent, player, typeName: TypeName<RigidbodyComponent>()));
+
+        Assert.Equal(PlayEditStatus.Failed, result.Status);
+        Assert.Contains("A Bullet physics component added while the game runs has no collider shape, and its shapes cannot change until the game restarts: add the RigidbodyComponent in the scene editor.", result.Error);
+        Assert.Equal(count, player.Components.Count);
+    }
+
+    [Fact]
     public void AComponentIsRemovedButNotTheTransform()
     {
         var removed = Apply(Command(PlayStructureOperation.RemoveComponent, player) with { ComponentId = editable.Id });
