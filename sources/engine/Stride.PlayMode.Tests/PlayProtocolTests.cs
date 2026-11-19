@@ -360,7 +360,9 @@ public sealed class PlayProtocolTests
             ["TreeBatch"] = new PlayTreeBatch(11, [
                 new PlaySceneAdded(scene),
                 new PlayEntityAdded(entity),
+                new PlayEntityAdded(entity with { Handle = 6 }, 4),
                 new PlayEntityMoved(4, 0, 1),
+                new PlayEntityMoved(4, 2, 1, 0),
                 new PlayEntityComponentsChanged(4, components),
                 new PlayEntityStateChanged(4, "Renamed", false),
                 new PlayEntityRemoved(4),

@@ -136,9 +136,9 @@ public abstract record PlayTreeOperation
         {
             PlayTreeOperationKind.SceneAdded => new PlaySceneAdded(PlaySceneInfo.Read(reader)),
             PlayTreeOperationKind.SceneRemoved => new PlaySceneRemoved(reader.ReadInt32()),
-            PlayTreeOperationKind.EntityAdded => new PlayEntityAdded(PlayEntityInfo.Read(reader)),
+            PlayTreeOperationKind.EntityAdded => new PlayEntityAdded(PlayEntityInfo.Read(reader), reader.ReadInt32()),
             PlayTreeOperationKind.EntityRemoved => new PlayEntityRemoved(reader.ReadInt32()),
-            PlayTreeOperationKind.EntityMoved => new PlayEntityMoved(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()),
+            PlayTreeOperationKind.EntityMoved => new PlayEntityMoved(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()),
             PlayTreeOperationKind.ComponentsChanged => new PlayEntityComponentsChanged(reader.ReadInt32(), reader.ReadList(PlayComponentInfo.Read, 17)),
             PlayTreeOperationKind.StateChanged => new PlayEntityStateChanged(reader.ReadInt32(), reader.ReadString(), reader.ReadBoolean()),
             _ => throw new PlayProtocolException($"Unknown tree operation {(byte)kind}."),
@@ -177,14 +177,20 @@ public sealed record PlaySceneRemoved(int Handle) : PlayTreeOperation
     private protected override void WriteFields(PlayWriter writer) => writer.Write(Handle);
 }
 
-/// <summary>An entity was added, with its parent at the end of the frame.</summary>
+/// <summary>An entity was added, with its parent and its place among its siblings at the end of the frame.</summary>
 /// <param name="Entity">The entity.</param>
-public sealed record PlayEntityAdded(PlayEntityInfo Entity) : PlayTreeOperation
+/// <param name="AfterHandle">The sibling it comes right after (the previous entity under its parent, or at the root of its
+/// scene): its handle, 0 when it is the first, or -1 when the place is not known and it goes last.</param>
+public sealed record PlayEntityAdded(PlayEntityInfo Entity, int AfterHandle = -1) : PlayTreeOperation
 {
     /// <inheritdoc/>
     public override PlayTreeOperationKind Kind => PlayTreeOperationKind.EntityAdded;
 
-    private protected override void WriteFields(PlayWriter writer) => PlayEntityInfo.Write(writer, Entity);
+    private protected override void WriteFields(PlayWriter writer)
+    {
+        PlayEntityInfo.Write(writer, Entity);
+        writer.Write(AfterHandle);
+    }
 }
 
 /// <summary>An entity was removed; its handle is not used again.</summary>
@@ -197,11 +203,13 @@ public sealed record PlayEntityRemoved(int Handle) : PlayTreeOperation
     private protected override void WriteFields(PlayWriter writer) => writer.Write(Handle);
 }
 
-/// <summary>An entity changed parent or scene; it is now the last child of its new parent.</summary>
+/// <summary>An entity changed parent or scene.</summary>
 /// <param name="Handle">The entity's handle.</param>
 /// <param name="ParentHandle">Its new parent, or 0 at the root of its scene.</param>
 /// <param name="SceneHandle">Its scene.</param>
-public sealed record PlayEntityMoved(int Handle, int ParentHandle, int SceneHandle) : PlayTreeOperation
+/// <param name="AfterHandle">The sibling it now comes right after: its handle, 0 when it is the first, or -1 when the place is
+/// not known and it goes last.</param>
+public sealed record PlayEntityMoved(int Handle, int ParentHandle, int SceneHandle, int AfterHandle = -1) : PlayTreeOperation
 {
     /// <inheritdoc/>
     public override PlayTreeOperationKind Kind => PlayTreeOperationKind.EntityMoved;
@@ -211,6 +219,7 @@ public sealed record PlayEntityMoved(int Handle, int ParentHandle, int SceneHand
         writer.Write(Handle);
         writer.Write(ParentHandle);
         writer.Write(SceneHandle);
+        writer.Write(AfterHandle);
     }
 }
 

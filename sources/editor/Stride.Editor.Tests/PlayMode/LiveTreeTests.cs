@@ -107,6 +107,26 @@ public sealed class LiveTreeTests
     }
 
     [Fact]
+    public void EntitiesAddedOrMovedGoRightAfterTheSiblingTheGameNames()
+    {
+        var tree = new LiveTree();
+        tree.Reset(Tree());
+        tree.SetAllExpanded(true);
+
+        // A copy of the player right after it, an entity first, one after a sibling the tree does not know (last), and the
+        // camera moved to the root right after the ground
+        tree.Apply(new PlayTreeBatch(10,
+        [
+            new PlayEntityAdded(Entity(5, PlayerId, "Copy", 0), AfterHandle: 2),
+            new PlayEntityAdded(Entity(6, Guid.NewGuid(), "First", 0), AfterHandle: 0),
+            new PlayEntityAdded(Entity(7, Guid.NewGuid(), "Lost", 0), AfterHandle: 99),
+            new PlayEntityMoved(3, 0, 1, AfterHandle: 4),
+        ]));
+
+        Assert.Equal(["MainScene", "First", "Player", "Copy", "Ground", "Camera", "Lost"], tree.Rows.Select(x => x.Name));
+    }
+
+    [Fact]
     public void TheRowsThatStayAreTheSameObjects()
     {
         var tree = new LiveTree();

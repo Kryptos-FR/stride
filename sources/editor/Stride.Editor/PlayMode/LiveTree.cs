@@ -214,7 +214,7 @@ public sealed class LiveTree
             case PlayEntityAdded added:
                 // An entity added again after a removal in an earlier frame comes back with its handle
                 removed.Remove(added.Entity.Handle);
-                AddEntity(added.Entity);
+                AddEntity(added.Entity, added.AfterHandle);
                 break;
             case PlayEntityRemoved entityRemoved:
                 if (entities.TryGetValue(entityRemoved.Handle, out var entity))
@@ -225,7 +225,7 @@ public sealed class LiveTree
                 {
                     movedEntity.Parent?.RemoveChild(movedEntity);
                     movedEntity.SceneHandle = moved.SceneHandle;
-                    AttachEntity(movedEntity, moved.ParentHandle, moved.SceneHandle);
+                    AttachEntity(movedEntity, moved.ParentHandle, moved.SceneHandle, moved.AfterHandle);
                     SetSceneOfDescendants(movedEntity, moved.SceneHandle);
                 }
                 break;
@@ -265,7 +265,7 @@ public sealed class LiveTree
         }
     }
 
-    private void AddEntity(PlayEntityInfo info)
+    private void AddEntity(PlayEntityInfo info, int afterHandle = -1)
     {
         if (entities.ContainsKey(info.Handle))
             return;
@@ -275,16 +275,29 @@ public sealed class LiveTree
         // the editor added has none, even a duplicate, which keeps the ids of its original
         if (!entity.IsAddedWhilePlaying && assetEntities.TryGetValue(info.Id, out var scene) && counterparts.TryAdd(info.Id, entity))
             entity.CounterpartScene = scene;
-        AttachEntity(entity, info.ParentHandle, info.SceneHandle);
+        AttachEntity(entity, info.ParentHandle, info.SceneHandle, afterHandle);
     }
 
-    private void AttachEntity(LiveEntityItem entity, int parentHandle, int sceneHandle)
+    /// <summary>
+    /// Puts the entity under its parent, or at the root of its scene, right after the sibling the game names (first among the
+    /// entities for 0); last when the game does not name one, or names one the tree does not have there.
+    /// </summary>
+    private void AttachEntity(LiveEntityItem entity, int parentHandle, int sceneHandle, int afterHandle = -1)
     {
-        if (parentHandle != 0 && entities.TryGetValue(parentHandle, out var parent))
-            parent.AddChild(entity);
-        else if (scenes.TryGetValue(sceneHandle, out var scene))
-            scene.AddChild(entity);
+        LiveTreeItem? owner = parentHandle != 0 && entities.TryGetValue(parentHandle, out var parent) ? parent
+            : scenes.TryGetValue(sceneHandle, out var scene) ? scene : null;
         // Otherwise it stays out of the rows until the tree is sent again
+        if (owner is null)
+            return;
+        var children = owner.ChildList;
+        var index = afterHandle switch
+        {
+            < 0 => children.Count,
+            // First among the entities: child scenes of a scene keep their place
+            0 => children.FindIndex(x => x is LiveEntityItem) is var first and >= 0 ? first : children.Count,
+            _ => children.FindIndex(x => x is LiveEntityItem && x.Handle == afterHandle) is var previous and >= 0 ? previous + 1 : children.Count,
+        };
+        owner.InsertChild(index, entity);
     }
 
     private void RemoveEntity(LiveEntityItem entity, HashSet<int> removed)

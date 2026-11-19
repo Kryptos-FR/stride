@@ -108,6 +108,36 @@ public sealed class PlayTreeTrackerTests : IDisposable
     }
 
     [Fact]
+    public void AnEntityAddedOrMovedNamesTheSiblingItComesAfter()
+    {
+        var parent = new Entity("Parent");
+        var last = new Entity("Last");
+        root.Entities.Add(parent);
+        root.Entities.Add(last);
+        tracker.Update(instance);
+        var first = root.Entities[0];
+        var second = new Entity("Second");
+        var top = new Entity("Top");
+        var child = new Entity("Child");
+
+        // Added in the frame in another order than they end up: each names the one before it then
+        root.Entities.Insert(1, second);
+        parent.AddChild(child);
+        root.Entities.Insert(0, top);
+        last.Transform.Parent = parent.Transform;
+        var operations = tracker.TakeBatch(2)!.Operations;
+
+        var added = operations.OfType<PlayEntityAdded>().ToDictionary(x => x.Entity.Name!, x => x.AfterHandle);
+        Assert.Equal(0, added["Top"]);
+        Assert.Equal(tracker.GetHandle(first), added["Second"]);
+        Assert.Equal(0, added["Child"]);
+        var moved = Assert.Single(operations.OfType<PlayEntityMoved>());
+        Assert.Equal(tracker.GetHandle(child), moved.AfterHandle);
+        // Siblings added in a frame come in their order, so that each one's sibling is there before it
+        Assert.Equal(["Top", "Second", "Child"], operations.OfType<PlayEntityAdded>().Select(x => x.Entity.Name));
+    }
+
+    [Fact]
     public void AnEntityAddedAndRemovedInOneFrameIsNotSent()
     {
         tracker.Update(instance);

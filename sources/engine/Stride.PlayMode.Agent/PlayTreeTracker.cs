@@ -146,15 +146,16 @@ public sealed class PlayTreeTracker : IDisposable
         }
 
         // Scenes added first (their entities refer to them), then entities added, parents before children (the engine adds
-        // the children first), then the other changes, and scenes removed last (their entities go before them)
+        // the children first) and siblings in their order (each names the one it comes after), then the other changes, and
+        // scenes removed last (their entities go before them)
         var operations = new List<PlayTreeOperation>(pending.Count);
         foreach (var change in pending)
         {
             if (change.Kind == PlayTreeOperationKind.SceneAdded)
                 operations.Add(new PlaySceneAdded(Describe(change.Scene!)));
         }
-        foreach (var change in pending.Where(x => x.Kind == PlayTreeOperationKind.EntityAdded).OrderBy(x => Depth(x.Entity!)))
-            operations.Add(new PlayEntityAdded(Describe(change.Entity!)));
+        foreach (var change in pending.Where(x => x.Kind == PlayTreeOperationKind.EntityAdded).OrderBy(x => Depth(x.Entity!)).ThenBy(x => SiblingIndex(x.Entity!)))
+            operations.Add(new PlayEntityAdded(Describe(change.Entity!), AfterHandle(change.Entity!)));
         var moved = new HashSet<Entity>(ReferenceEqualityComparer.Instance);
         foreach (var change in pending)
         {
@@ -166,7 +167,7 @@ public sealed class PlayTreeTracker : IDisposable
                     operations.Add(new PlayEntityRemoved(change.Handle));
                     break;
                 case PlayTreeOperationKind.EntityMoved when !removed.Contains(change.Entity!) && moved.Add(change.Entity!):
-                    operations.Add(new PlayEntityMoved(GetHandle(change.Entity!), ParentHandle(change.Entity!), SceneHandle(change.Entity!)));
+                    operations.Add(new PlayEntityMoved(GetHandle(change.Entity!), ParentHandle(change.Entity!), SceneHandle(change.Entity!), AfterHandle(change.Entity!)));
                     break;
                 case PlayTreeOperationKind.ComponentsChanged when !removed.Contains(change.Entity!):
                     operations.Add(new PlayEntityComponentsChanged(GetHandle(change.Entity!), DescribeComponents(change.Entity!)));
@@ -377,6 +378,33 @@ public sealed class PlayTreeTracker : IDisposable
             depth++;
         return depth;
     }
+
+    /// <summary>
+    /// The handle of the tracked sibling right before the entity, under its parent or at the root of its scene; 0 when there is
+    /// none, -1 when the entity is in neither.
+    /// </summary>
+    private int AfterHandle(Entity entity)
+    {
+        var index = SiblingIndex(entity);
+        if (index < 0)
+            return -1;
+        for (var i = index - 1; i >= 0; i--)
+        {
+            if (Sibling(entity, i) is { } previous && GetHandle(previous) is var handle and > 0)
+                return handle;
+        }
+        return 0;
+    }
+
+    private static int SiblingIndex(Entity entity)
+    {
+        if (entity.Transform.Parent is { } parent)
+            return parent.Children.IndexOf(entity.Transform);
+        return entity.Scene?.Entities.IndexOf(entity) ?? -1;
+    }
+
+    private static Entity? Sibling(Entity entity, int index)
+        => entity.Transform.Parent is { } parent ? parent.Children[index].Entity : entity.Scene!.Entities[index];
 
     private int ParentHandle(Entity entity) => entity.Transform.Parent?.Entity is { } parent ? GetHandle(parent) : 0;
 

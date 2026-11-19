@@ -96,10 +96,12 @@ public abstract class LiveTreeItem : INotifyPropertyChanged
 
     internal List<LiveTreeItem> ChildList { get; } = [];
 
-    internal void AddChild(LiveTreeItem child)
+    internal void AddChild(LiveTreeItem child) => InsertChild(ChildList.Count, child);
+
+    internal void InsertChild(int index, LiveTreeItem child)
     {
         child.Parent = this;
-        ChildList.Add(child);
+        ChildList.Insert(index, child);
         HasChildren = true;
     }
 

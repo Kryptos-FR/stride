@@ -491,7 +491,8 @@ public sealed class PlayStructureTests : IDisposable
         Assert.Equal(duplicate.Frame, batch.Frame);
         var copy = agent.Tracker.Entities[duplicate.Entities[0]];
         Assert.Equal(9f, copy.Get<EditableComponent>()!.Speed);
-        Assert.Contains(batch.Operations, x => x is PlayEntityAdded added && added.Entity.Handle == duplicate.Entities[0]);
+        // The copy comes right after its original
+        Assert.Contains(batch.Operations, x => x is PlayEntityAdded added && added.Entity.Handle == duplicate.Entities[0] && added.AfterHandle == handle);
     }
 
     private PlayStructureResult Apply(PlayStructureEdit edit) => applier.Apply(edit, 1);
