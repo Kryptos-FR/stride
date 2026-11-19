@@ -123,6 +123,9 @@ internal sealed class PlayEditApplier(PlayContentLoads? contentLoads = null)
                     var value = CreateValue(edit.Value, Resolve);
                     var last = edit.Path[^1];
                     PlayEditPath.Change(component, edit.Path.Take(edit.Path.Count - 1).ToList(), x => PlayEditPath.SetStep(x, last, value, ReadKey), ReadKey);
+                    // A physics body moves the entity: it goes where the transform now is, through its engine (teleport)
+                    if (component is TransformComponent { Entity: { } moved } && PlayPhysicsTeleport.MovesEntity(edit.Path[0].Name))
+                        PlayPhysicsTeleport.Teleport(moved);
                     result = new PlayEditResult(edit.Id, frame, PlayEditStatus.Applied, ReadBack(component, edit.Path, ReadKey, handleOf), null);
                     break;
                 }
@@ -289,11 +292,22 @@ internal sealed class PlayEditApplier(PlayContentLoads? contentLoads = null)
     /// Makes a new instance by type name, in the game, with the type's own defaults (case 30: the editor's list of types comes
     /// from its own assemblies, which may differ from the game's).
     /// </summary>
-    private static object CreateInstance(string typeName)
+    private static object CreateInstance(string typeName) => CreateInstance(FindType(typeName));
+
+    /// <summary>
+    /// Finds a type of the game by its name (its full name, a comma and its assembly's simple name).
+    /// </summary>
+    /// <exception cref="PlayEditException">The game has no such type.</exception>
+    internal static Type FindType(string typeName)
+        => AssemblyRegistry.GetType(typeName, throwOnError: false) ?? Type.GetType(typeName, throwOnError: false)
+            ?? throw new PlayEditException($"The game has no type {typeName}; the game's code may differ from the editor's.");
+
+    /// <summary>
+    /// Makes a new instance of a type of the game, with the type's own defaults.
+    /// </summary>
+    /// <exception cref="PlayEditException">The type is abstract, or its constructor threw.</exception>
+    internal static object CreateInstance(Type type)
     {
-        var type = AssemblyRegistry.GetType(typeName, throwOnError: false) ?? Type.GetType(typeName, throwOnError: false);
-        if (type is null)
-            throw new PlayEditException($"The game has no type {typeName}; the game's code may differ from the editor's.");
         if (type.IsAbstract || type.IsInterface)
             throw new PlayEditException($"{type.Name} is abstract in the game: no instance of it can be made.");
         try
@@ -363,7 +377,7 @@ internal sealed class PlayEditApplier(PlayContentLoads? contentLoads = null)
             ?? throw new PlayEditGoneException($"{entity.Name} no longer has the referenced component.");
     }
 
-    private static string Describe(Exception exception)
+    internal static string Describe(Exception exception)
     {
         switch (exception)
         {

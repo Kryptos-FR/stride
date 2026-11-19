@@ -18,17 +18,18 @@ internal sealed class PlaySubscriber(PlayConnection connection)
     /// <summary>The messages read, waiting for the game thread.</summary>
     public ConcurrentQueue<PlayMessage> Incoming { get; } = new();
 
-    /// <summary>The edits read, waiting for the start of the next frame (<see cref="PlayAgentSystem.ApplyEdits"/>).</summary>
-    public ConcurrentQueue<PlayEdit> Edits { get; } = new();
+    /// <summary>The edits and structure commands read, in the order they came, waiting for the start of the next frame
+    /// (<see cref="PlayAgentSystem.ApplyEdits"/>): <see cref="PlayEdit"/> and <see cref="PlayStructureEdit"/>.</summary>
+    public ConcurrentQueue<PlayMessage> Edits { get; } = new();
 
     /// <summary>
-    /// Keeps a message read from the connection for the game thread: an edit for the start of the next frame, anything else for
-    /// the agent's update.
+    /// Keeps a message read from the connection for the game thread: an edit or a structure command for the start of the next
+    /// frame, anything else for the agent's update.
     /// </summary>
     public void Receive(PlayMessage message)
     {
-        if (message is PlayEdit edit)
-            Edits.Enqueue(edit);
+        if (message is PlayEdit or PlayStructureEdit)
+            Edits.Enqueue(message);
         else
             Incoming.Enqueue(message);
     }

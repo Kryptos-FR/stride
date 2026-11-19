@@ -70,11 +70,13 @@ internal sealed class PlayContentLoads(IPlayContent content)
     private readonly Dictionary<Slot, List<object>> loads = [];
     private readonly Dictionary<Slot, IReadOnlyList<PlayPathSegment>> paths = [];
     private readonly List<object> loading = [];
+    // The loads kept until the game exits (prefabs spawned)
+    private readonly List<object> untilExit = [];
 
     /// <summary>
     /// The content loaded and not given back yet.
     /// </summary>
-    public int Count => loads.Values.Sum(x => x.Count);
+    public int Count => loads.Values.Sum(x => x.Count) + untilExit.Count;
 
     /// <summary>
     /// The loads made since the agent started.
@@ -123,6 +125,17 @@ internal sealed class PlayContentLoads(IPlayContent content)
         }
         loading.Add(loaded);
         return loaded;
+    }
+
+    /// <summary>
+    /// The edit being applied loaded content that the game uses in ways the agent cannot follow (the entities of a prefab
+    /// spawned share the content it loaded): what it loaded stays until the game exits.
+    /// </summary>
+    public void KeepUntilExit()
+    {
+        Loaded += loading.Count;
+        untilExit.AddRange(loading);
+        loading.Clear();
     }
 
     /// <summary>
@@ -200,6 +213,9 @@ internal sealed class PlayContentLoads(IPlayContent content)
             foreach (var loaded in kept)
                 UnloadOne(loaded);
         }
+        foreach (var loaded in untilExit)
+            UnloadOne(loaded);
+        untilExit.Clear();
         loads.Clear();
         paths.Clear();
         return Unloaded - before;

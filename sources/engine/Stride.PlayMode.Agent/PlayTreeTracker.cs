@@ -55,6 +55,11 @@ public sealed class PlayTreeTracker : IDisposable
     public IReadOnlyDictionary<int, Entity> Entities => entities;
 
     /// <summary>
+    /// The running scenes followed, by handle.
+    /// </summary>
+    public IReadOnlyDictionary<int, Scene> Scenes => scenes;
+
+    /// <summary>
     /// Gives the handle of an entity of the running scenes, or 0 for an entity the tracker does not follow.
     /// </summary>
     public int GetHandle(Entity entity) => entity is not null && entityHandles.TryGetValue(entity, out var handle) ? handle : 0;

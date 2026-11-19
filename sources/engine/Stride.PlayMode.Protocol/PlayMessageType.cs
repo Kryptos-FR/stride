@@ -44,6 +44,9 @@ public enum PlayMessageType : byte
     /// <summary>The URLs of the game's built content, which a live reference can be set to (<see cref="PlayContentIndex"/>).</summary>
     ContentIndex = 12,
 
+    /// <summary>The game's answer to a change of its structure (<see cref="PlayStructureResult"/>).</summary>
+    StructureResult = 13,
+
     /// <summary>A subscriber's choice of entities to receive snapshots of (<see cref="PlaySubscribe"/>).</summary>
     Subscribe = 32,
 
@@ -73,4 +76,7 @@ public enum PlayMessageType : byte
 
     /// <summary>A subscriber asks for the URLs of the game's built content (<see cref="PlayContentRequest"/>).</summary>
     ContentRequest = 41,
+
+    /// <summary>A subscriber changes the structure of the game: components, entities, prefabs (<see cref="PlayStructureEdit"/>).</summary>
+    StructureEdit = 42,
 }

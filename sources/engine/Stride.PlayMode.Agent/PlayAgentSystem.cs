@@ -75,7 +75,9 @@ public sealed class PlayAgentSystem : GameSystemBase
     private readonly HashSet<string> sentAssemblies = [];
     private readonly Dictionary<int, byte[]> frameSnapshots = [];
     private readonly PlayEditApplier editApplier;
-    private readonly List<(PlaySubscriber Sender, PlayEdit Edit)> frameEdits = [];
+    private readonly PlayStructureApplier structureApplier;
+    private readonly List<(PlaySubscriber Sender, PlayMessage Edit)> frameEdits = [];
+    private readonly List<(PlaySubscriber Sender, PlayEdit Edit)> editRun = [];
     private readonly Stopwatch heartbeatClock = new();
     private long frame;
     private int queuedLogs;
@@ -115,6 +117,7 @@ public sealed class PlayAgentSystem : GameSystemBase
         this.game = game;
         ContentLoads = new PlayContentLoads(content ?? new PlayGameContent(() => game.Content));
         editApplier = new PlayEditApplier(ContentLoads);
+        structureApplier = new PlayStructureApplier(Tracker, ContentLoads);
         Enabled = true;
         // After the scripts and the scene system: a snapshot sees the state at the end of the frame's update
         UpdateOrder = int.MaxValue;
@@ -200,7 +203,7 @@ public sealed class PlayAgentSystem : GameSystemBase
     internal PlayContentLoads ContentLoads { get; }
 
     /// <summary>
-    /// The edits applied since the agent was made (coalesced ones included), and those the game refused.
+    /// The edits and structure commands applied since the agent was made (coalesced edits included), and those the game refused.
     /// </summary>
     public (int Applied, int Failed) EditCounts { get; private set; }
 
@@ -223,8 +226,40 @@ public sealed class PlayAgentSystem : GameSystemBase
 
         var start = Stopwatch.GetTimestamp();
         // The frame this update is: the agent's own update, at the end of the frame, counts it
-        var results = editApplier.Apply(frameEdits, frame + 1, FindLiveEntity, Tracker.GetHandle);
         var (applied, failed) = EditCounts;
+        // In the order they came: the edits between two structure commands go together (a set coalesces with a later set of
+        // the same member in the same run only), each structure command alone
+        foreach (var (sender, message) in frameEdits)
+        {
+            if (message is PlayEdit edit)
+            {
+                editRun.Add((sender, edit));
+                continue;
+            }
+            ApplyEditRun(ref applied, ref failed);
+            if (message is PlayStructureEdit command)
+            {
+                var result = structureApplier.Apply(command, frame + 1);
+                sender.Connection.Send(result);
+                if (result.Status == PlayEditStatus.Applied)
+                    applied++;
+                else
+                    failed++;
+            }
+        }
+        ApplyEditRun(ref applied, ref failed);
+        EditCounts = (applied, failed);
+        foreach (var subscriber in subscribers)
+            subscriber.LastSnapshot = 0;
+        frameEdits.Clear();
+        agentTicks += Stopwatch.GetTimestamp() - start;
+    }
+
+    private void ApplyEditRun(ref int applied, ref int failed)
+    {
+        if (editRun.Count == 0)
+            return;
+        var results = editApplier.Apply(editRun, frame + 1, FindLiveEntity, Tracker.GetHandle);
         foreach (var (sender, result) in results)
         {
             sender.Connection.Send(result);
@@ -233,11 +268,7 @@ public sealed class PlayAgentSystem : GameSystemBase
             else
                 failed++;
         }
-        EditCounts = (applied, failed);
-        foreach (var subscriber in subscribers)
-            subscriber.LastSnapshot = 0;
-        frameEdits.Clear();
-        agentTicks += Stopwatch.GetTimestamp() - start;
+        editRun.Clear();
     }
 
     /// <summary>
