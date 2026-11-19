@@ -1,7 +1,7 @@
 namespace Ashcombe.Tests;
 
 /// <summary>
-/// What writing Ashcombe found in Yarn Spinner (3.2.2) and Skein, kept as tests so that a change shows.
+/// What writing Ashcombe found in Yarn Spinner (found on 3.2.2, still true on 3.3.1) and Skein, kept as tests so that a change shows.
 /// </summary>
 [Collection(GameCollection.Name)]
 public sealed class FindingTests
