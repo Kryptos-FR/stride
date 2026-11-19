@@ -44,4 +44,14 @@ public sealed class EdgeAllowancesTests
         Assert.Equal(990, EdgeAllowances.ForText(platform, driverId, 144, 900));
         Assert.Equal(0, EdgeAllowances.ForText(platform, driverId, 144, 0));
     }
+
+    [Fact]
+    public void SkiaOnMetalOnlyHasTheCountsOfCasesBeyondTheHeadroom()
+    {
+        foreach (var (name, count) in SkiaEdgeAllowanceTests.MetalEdgeCounts)
+        {
+            var onLinux = ShapeCases.EdgeAllowance.TryGetValue(name, out var caseCount) ? caseCount : ReferenceViews.EdgeAllowance[name];
+            Assert.True(count > EdgeAllowances.On(PlatformType.macOS, "MoltenVK", onLinux), $"The headroom of the count of Linux already covers Skia on Metal for {name}.");
+        }
+    }
 }

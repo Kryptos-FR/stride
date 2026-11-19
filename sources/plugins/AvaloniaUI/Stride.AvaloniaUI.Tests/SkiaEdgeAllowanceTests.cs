@@ -25,11 +25,29 @@ namespace Stride.AvaloniaUI.Tests;
 /// The counts are written into <see cref="ShapeCases.EdgeAllowance"/>, <see cref="TextCases.EdgeAllowance"/> and
 /// <see cref="ReferenceViews.EdgeAllowance"/> from a run on Linux with Lavapipe; a failure gives the count measured. Other
 /// devices get the headroom of <see cref="EdgeAllowances"/>.
+/// On macOS, Skia draws with its Metal backend, which anti-aliases some clip edges its own way: the cases where it goes
+/// beyond that headroom have the counts of the macOS runner, in <see cref="MetalEdgeCounts"/>.
 /// </remarks>
 public sealed class SkiaEdgeAllowanceTests : GameTestBase
 {
     // A difference of up to 12 is how far apart the anti-aliasing of two good renderers is on one edge pixel
     private const int Tolerance = 12;
+
+    /// <summary>
+    /// How many pixels Skia on Metal (macOS runner, Apple M1) draws more than 12 away from Skia on the CPU, for the cases
+    /// where that goes beyond the headroom of the count of Linux: all are clipped, and Skia's Metal backend draws their
+    /// clip edges its own way.
+    /// </summary>
+    /// <remarks>
+    /// These counts are only for Skia on Metal. The native renderer is still held to the counts of Linux.
+    /// </remarks>
+    internal static readonly IReadOnlyDictionary<string, int> MetalEdgeCounts = new Dictionary<string, int>
+    {
+        ["Clips"] = 721,
+        ["RotatedClip"] = 151,
+        ["RotatedInScissor"] = 51,
+        ["GeometryClipCase"] = 36,
+    };
 
     // A game registers the plugins it references before it creates its systems; the test runner loads the plugin lazily
     static SkiaEdgeAllowanceTests() => RuntimeHelpers.RunModuleConstructor(typeof(AvaloniaUISystem).Module.ModuleHandle);
@@ -52,6 +70,9 @@ public sealed class SkiaEdgeAllowanceTests : GameTestBase
             var measured = ReferenceViews.EdgeAllowance.TryGetValue(name, out var page) ? page
                 : TextCases.EdgeAllowance.TryGetValue(name, out var text) ? text
                 : ShapeCases.EdgeAllowance[name];
+            // Skia draws with Metal on macOS
+            if (Stride.Core.Platform.Type == PlatformType.macOS && MetalEdgeCounts.TryGetValue(name, out var onMetal))
+                measured = onMetal;
             var allowance = EdgeAllowances.On(adapter, measured);
 
             using (cpu)
