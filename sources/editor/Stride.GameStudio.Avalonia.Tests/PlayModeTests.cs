@@ -412,6 +412,77 @@ public sealed class PlayModeTests : IAsyncLifetime
     }
 
     [AvaloniaFact]
+    public async Task TheLiveTabsToolbarMenuKeysAndDropChangeTheGamesStructure()
+    {
+        using var fixture = await ShellSessionFixture.OpenExecutableAsync(Platform.Type, playMode);
+        fixture.ReplaceProjectBuilder();
+        fixture.ReplaceDialogService();
+        var window = new MainWindow { DataContext = fixture.Main };
+        await window.ShowAsync();
+        try
+        {
+            var game = await PlayAsync(window, fixture);
+            var view = window.GetVisualDescendants().OfType<LiveView>().Single();
+            var list = view.GetVisualDescendants().OfType<ListBox>().Single(x => x.Name == "LiveTree");
+            await WindowTestHelper.WaitUntilAsync(() => list.ItemCount == 3, "the rows of the tree");
+            var viewModel = Assert.IsType<LivePanelViewModel>(view.DataContext);
+            var (player, ground) = (viewModel.Tree.FindEntity(PlayerHandle)!, viewModel.Tree.FindEntity(4)!);
+
+            // The toolbar: create is on, duplicate and delete need a selected entity
+            var create = view.GetVisualDescendants().OfType<Button>().Single(x => x.Name == "CreateEntityButton");
+            var duplicate = view.GetVisualDescendants().OfType<Button>().Single(x => x.Name == "DuplicateEntityButton");
+            var delete = view.GetVisualDescendants().OfType<Button>().Single(x => x.Name == "DeleteEntityButton");
+            await WindowTestHelper.WaitUntilAsync(() => create.IsEffectivelyEnabled, "Create enabled");
+            Assert.False(duplicate.IsEffectivelyEnabled);
+            viewModel.SelectedItems.Add(ground);
+            await WindowTestHelper.WaitUntilAsync(() => duplicate.IsEffectivelyEnabled && delete.IsEffectivelyEnabled, "Duplicate and Delete enabled");
+
+            // Ctrl+D and Delete act on the running game while the tree has the focus (a row, as after a click)
+            Assert.True(list.ContainerFromItem(ground)?.Focus());
+            await WindowTestHelper.PumpAsync();
+            Press(window, Key.D, RawInputModifiers.Control, PhysicalKey.D);
+            var copy = await game.NextStructureEditAsync();
+            Assert.Equal((PlayStructureOperation.DuplicateEntity, 4), (copy.Operation, copy.EntityHandle));
+            Press(window, Key.Delete, RawInputModifiers.None, PhysicalKey.Delete);
+            var deleted = await game.NextStructureEditAsync();
+            Assert.Equal((PlayStructureOperation.DeleteEntity, 4), (deleted.Operation, deleted.EntityHandle));
+
+            // The context menu has the scene editor's words
+            var menu = list.ContextMenu!;
+            var names = menu.Items.OfType<MenuItem>().Select(x => x.Name).ToList();
+            Assert.Equal(["CreateEntityMenuItem", "SpawnPrefabMenuItem", "DuplicateEntityMenuItem", "DeleteEntityMenuItem", "ShowInSceneEditorMenuItem", "CopyNameMenuItem", "CopyIdMenuItem"], names);
+            Assert.Equal("Empty entity", menu.Items.OfType<MenuItem>().First().Header);
+
+            // The ground dropped on the player goes under it; Alt keeps its place in the world
+            Assert.True(view.Drop([ground], player, KeyModifiers.Alt));
+            var move = await game.NextStructureEditAsync();
+            Assert.Equal((PlayStructureOperation.MoveEntity, 4, PlayerHandle, true), (move.Operation, move.EntityHandle, move.ParentHandle, move.KeepWorldTransform));
+            // Once the game moved it, its row is under the player and still selected, as in the scene editor
+            game.Send(new PlayStructureResult(move.Id, 5, PlayEditStatus.Applied, [], Guid.Empty, null));
+            game.Send(new PlayTreeBatch(5, [new PlayEntityMoved(4, PlayerHandle, 1)]));
+            await WindowTestHelper.WaitUntilAsync(() => ground.Parent == player, "the ground under the player");
+            Assert.Equal([ground], list.SelectedItems!.Cast<object>());
+            // Not under its own child
+            Assert.False(view.Drop([player], viewModel.Tree.FindEntity(3), KeyModifiers.None));
+            // The camera moved to the root: the ground's row moves up in the list, and stays selected
+            game.Send(new PlayTreeBatch(6, [new PlayEntityMoved(3, 0, 1)]));
+            await WindowTestHelper.WaitUntilAsync(() => viewModel.Tree.FindEntity(3)!.Parent is LiveSceneItem, "the camera at the root");
+            Assert.Equal(["MainScene", "Player", "Ground", "Camera"], viewModel.Tree.Rows.Select(x => x.Name));
+            Assert.Equal([ground], list.SelectedItems!.Cast<object>());
+            Assert.Equal([ground], viewModel.SelectedItems);
+
+            // An entity the editor added is marked, and not offered to the scene editor
+            game.Send(new PlayTreeBatch(7, [new PlayEntityAdded(new PlayEntityInfo(20, Guid.NewGuid(), "Entity", true, 0, 1, []))]));
+            await WindowTestHelper.WaitUntilAsync(() => viewModel.Tree.FindEntity(20) is not null, "the new entity");
+            Assert.False(viewModel.Tree.FindEntity(20)!.IsAddedWhilePlaying);
+        }
+        finally
+        {
+            await window.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
     public void ThePinAndTheSettingAreOne()
     {
         var saves = 0;
@@ -860,6 +931,8 @@ public sealed class PlayModeTests : IAsyncLifetime
                     Controls.Enqueue(message);
                 if (message is PlayWindowOnTop or PlayEditorActive)
                     WindowMessages.Enqueue(message);
+                if (message is PlayStructureEdit command)
+                    StructureEdits.Enqueue(command);
                 if (message is not PlayQuit)
                     return;
                 quit.TrySetResult();
@@ -892,6 +965,21 @@ public sealed class PlayModeTests : IAsyncLifetime
         {
             PlayMessage? next = null;
             await WindowTestHelper.WaitUntilAsync(() => Controls.TryDequeue(out next), "a pause, resume, step or time scale message");
+            return next!;
+        }
+
+        /// <summary>
+        /// The structure commands the editor sent, not read yet.
+        /// </summary>
+        public ConcurrentQueue<PlayStructureEdit> StructureEdits { get; } = new();
+
+        /// <summary>
+        /// The next structure command the editor sent.
+        /// </summary>
+        public async Task<PlayStructureEdit> NextStructureEditAsync()
+        {
+            PlayStructureEdit? next = null;
+            await WindowTestHelper.WaitUntilAsync(() => StructureEdits.TryDequeue(out next), "a structure command");
             return next!;
         }
 
