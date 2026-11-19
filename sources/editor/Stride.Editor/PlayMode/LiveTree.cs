@@ -70,6 +70,13 @@ public sealed class LiveTree
     } = string.Empty;
 
     /// <summary>
+    /// Tells the entities the editor added to the game while it plays (created, duplicated, spawned from a prefab:
+    /// <see cref="PlaySession.IsAddedWhilePlaying"/>) by their handle; <c>null</c> for none. Asked when an entity comes in the
+    /// tree.
+    /// </summary>
+    public Func<int, bool>? IsAddedWhilePlaying { get; set; }
+
+    /// <summary>
     /// Finds a live entity by its handle.
     /// </summary>
     public LiveEntityItem? FindEntity(int handle) => entities.GetValueOrDefault(handle);
@@ -206,8 +213,10 @@ public sealed class LiveTree
                 break;
             case PlayEntityComponentsChanged componentsChanged:
                 if (entities.TryGetValue(componentsChanged.Handle, out var changed))
+                {
                     changed.Components = componentsChanged.Components;
                     changed.ComponentTypeNames = [.. componentsChanged.Components.Select(x => x.TypeName)];
+                }
                 break;
             case PlayEntityStateChanged stateChanged:
                 if (entities.TryGetValue(stateChanged.Handle, out var stated))
@@ -242,10 +251,11 @@ public sealed class LiveTree
     {
         if (entities.ContainsKey(info.Handle))
             return;
-        var entity = new LiveEntityItem(this, info);
+        var entity = new LiveEntityItem(this, info) { IsAddedWhilePlaying = IsAddedWhilePlaying?.Invoke(info.Handle) == true };
         entities.Add(info.Handle, entity);
-        // The first live entity with the id of an entity of a scene asset is its counterpart; the copies are spawned
-        if (assetEntities.TryGetValue(info.Id, out var scene) && counterparts.TryAdd(info.Id, entity))
+        // The first live entity with the id of an entity of a scene asset is its counterpart; the copies are spawned. An entity
+        // the editor added has none, even a duplicate, which keeps the ids of its original
+        if (!entity.IsAddedWhilePlaying && assetEntities.TryGetValue(info.Id, out var scene) && counterparts.TryAdd(info.Id, entity))
             entity.CounterpartScene = scene;
         AttachEntity(entity, info.ParentHandle, info.SceneHandle);
     }

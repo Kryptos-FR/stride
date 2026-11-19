@@ -21,4 +21,19 @@ public interface ILiveSelectionView : IDisposable
     /// </summary>
     /// <param name="selection">The selection, or <c>null</c>.</param>
     void Show(LiveSelection? selection);
+
+    /// <summary>
+    /// Whether the user can change the running game from this view (its lock is open). The Live tab's commands that change the
+    /// game's structure follow it. <c>true</c> by default.
+    /// </summary>
+    bool EditsEnabled => true;
+
+    /// <summary>
+    /// Raised when <see cref="EditsEnabled"/> changes.
+    /// </summary>
+    event EventHandler? EditsEnabledChanged
+    {
+        add { }
+        remove { }
+    }
 }

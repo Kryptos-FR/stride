@@ -80,6 +80,20 @@ public abstract class LiveTreeItem : INotifyPropertyChanged
     /// </summary>
     public bool IsMatch { get; internal set => SetValue(ref field, value); }
 
+    /// <summary>
+    /// Whether this item is <paramref name="item"/> or one of its ancestors.
+    /// </summary>
+    public bool IsSelfOrAncestorOf(LiveTreeItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        for (LiveTreeItem? current = item; current is not null; current = current.Parent)
+        {
+            if (current == this)
+                return true;
+        }
+        return false;
+    }
+
     internal List<LiveTreeItem> ChildList { get; } = [];
 
     internal void AddChild(LiveTreeItem child)
@@ -182,7 +196,10 @@ public sealed class LiveEntityItem : LiveTreeItem
         internal set
         {
             if (SetValue(ref field, value))
+            {
                 OnPropertyChanged(nameof(IsSpawned));
+                OnPropertyChanged(nameof(ShowsSpawned));
+            }
         }
     }
 
@@ -193,4 +210,24 @@ public sealed class LiveEntityItem : LiveTreeItem
     /// are marked spawned.
     /// </summary>
     public bool IsSpawned => CounterpartScene is null;
+
+    /// <summary>
+    /// Whether the editor added this entity while the game plays: created, duplicated, or spawned from a prefab from the Live
+    /// tab (<see cref="PlaySession.AddedEntities"/>). It has no counterpart in a scene asset, so it cannot be shown in a scene
+    /// editor, and goes when the game stops.
+    /// </summary>
+    public bool IsAddedWhilePlaying
+    {
+        get;
+        internal set
+        {
+            if (SetValue(ref field, value))
+                OnPropertyChanged(nameof(ShowsSpawned));
+        }
+    }
+
+    /// <summary>
+    /// Whether the row says that the game made the entity (<see cref="IsSpawned"/>), when the editor did not add it.
+    /// </summary>
+    public bool ShowsSpawned => IsSpawned && !IsAddedWhilePlaying;
 }

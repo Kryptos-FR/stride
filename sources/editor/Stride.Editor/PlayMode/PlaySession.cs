@@ -20,6 +20,14 @@ namespace Stride.Editor.PlayMode;
 public sealed record PlayEditAnswer(PlayEdit Edit, PlayEditResult Result);
 
 /// <summary>
+/// A change of the game's structure and its answer (<see cref="PlaySession.StructureAnswered"/>).
+/// </summary>
+/// <param name="Edit">The command sent.</param>
+/// <param name="Result">The game's answer, or the session's when the game could not answer.</param>
+[Experimental("STREXP012")]
+public sealed record PlayStructureAnswer(PlayStructureEdit Edit, PlayStructureResult Result);
+
+/// <summary>
 /// Where a play session is.
 /// </summary>
 [Experimental("STREXP012")]
@@ -113,6 +121,10 @@ public sealed class PlaySession : IAsyncDisposable
     private readonly TaskCompletionSource exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
     // The edits sent and not answered yet, by id
     private readonly ConcurrentDictionary<int, (PlayEdit Edit, TaskCompletionSource<PlayEditResult> Completion)> pendingEdits = new();
+    // The structure commands sent and not answered yet, by id
+    private readonly ConcurrentDictionary<int, (PlayStructureEdit Edit, TaskCompletionSource<PlayStructureResult> Completion)> pendingCommands = new();
+    // The entities the editor added to the game, by handle, with the command that added each
+    private readonly ConcurrentDictionary<int, PlayStructureOperation> addedEntities = new();
     private int lastEditId;
     private PlayConnection? connection;
     private Task? exitWatch;
@@ -493,6 +505,51 @@ public sealed class PlaySession : IAsyncDisposable
     }
 
     /// <summary>
+    /// Raised when a structure command sent by <see cref="ChangeStructureAsync"/> is answered, by the game or by the session when
+    /// it ends first: on the session's reading task, or on the thread that ends the session.
+    /// </summary>
+    public event EventHandler<PlayStructureAnswer>? StructureAnswered;
+
+    /// <summary>
+    /// The structure commands sent and not answered yet.
+    /// </summary>
+    public int PendingStructureCount => pendingCommands.Count;
+
+    /// <summary>
+    /// The entities the editor added to the running game (<see cref="PlayStructureOperation.CreateEntity"/>,
+    /// <see cref="PlayStructureOperation.DuplicateEntity"/>, <see cref="PlayStructureOperation.SpawnPrefab"/>), by handle, with
+    /// the command that added each, the descendants of a duplicate or a prefab included. They have no counterpart in a scene
+    /// asset: the game made them, and they go when it stops. An entity the game removes later stays listed (handles are never
+    /// used again).
+    /// </summary>
+    public IReadOnlyDictionary<int, PlayStructureOperation> AddedEntities => addedEntities;
+
+    /// <summary>
+    /// Whether the editor added this entity to the running game (<see cref="AddedEntities"/>).
+    /// </summary>
+    public bool IsAddedWhilePlaying(int handle) => addedEntities.ContainsKey(handle);
+
+    /// <summary>
+    /// Sends a change of the game's structure (a component added or removed, an entity created, deleted, duplicated or moved,
+    /// a prefab spawned), which the game applies at the start of its next frame, with the edits, in the order they were sent.
+    /// </summary>
+    /// <param name="edit">The command, with an id from <see cref="NextEditId"/>.</param>
+    /// <returns>The game's answer: the handles of the entities it added, or the id of the component it added. When the session
+    /// is not connected, or it ends before the game answers, a <see cref="PlayEditStatus.Failed"/> result made by the session.</returns>
+    public Task<PlayStructureResult> ChangeStructureAsync(PlayStructureEdit edit)
+    {
+        ArgumentNullException.ThrowIfNull(edit);
+        var completion = new TaskCompletionSource<PlayStructureResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!pendingCommands.TryAdd(edit.Id, (edit, completion)))
+            throw new ArgumentException($"A command with the id {edit.Id} is already waiting for its result.", nameof(edit));
+        if (State != PlaySessionState.Connected || !SendIfConnected(edit))
+            FailCommand(edit.Id, State == PlaySessionState.Connected ? "The command could not be sent to the game (its queue is full)." : NotConnectedMessage());
+        else if (State != PlaySessionState.Connected)
+            FailPendingEdits();
+        return completion.Task;
+    }
+
+    /// <summary>
     /// Ends the game: asks it to quit, and ends its process if it still runs after <see cref="PlaySessionOptions.StopGracePeriod"/>.
     /// </summary>
     public async Task StopAsync()
@@ -674,6 +731,19 @@ public sealed class PlaySession : IAsyncDisposable
                     pending.Completion.TrySetResult(result);
                 }
                 break;
+            case PlayStructureResult structure:
+                if (pendingCommands.TryRemove(structure.Id, out var command))
+                {
+                    // Known before the tree batch that adds them, which comes at the end of the same frame
+                    if (structure.Status == PlayEditStatus.Applied)
+                    {
+                        foreach (var handle in structure.Entities)
+                            addedEntities[handle] = command.Edit.Operation;
+                    }
+                    Raise(StructureAnswered, new PlayStructureAnswer(command.Edit, structure));
+                    command.Completion.TrySetResult(structure);
+                }
+                break;
         }
     }
 
@@ -694,14 +764,26 @@ public sealed class PlaySession : IAsyncDisposable
         }
     }
 
+    private void FailCommand(int id, string error)
+    {
+        if (pendingCommands.TryRemove(id, out var pending))
+        {
+            var result = new PlayStructureResult(id, 0, PlayEditStatus.Failed, [], Guid.Empty, error);
+            Raise(StructureAnswered, new PlayStructureAnswer(pending.Edit, result));
+            pending.Completion.TrySetResult(result);
+        }
+    }
+
     /// <summary>
-    /// The session is no longer connected: the edits sent will not be answered.
+    /// The session is no longer connected: the edits and commands sent will not be answered.
     /// </summary>
     private void FailPendingEdits()
     {
         var error = NotConnectedMessage();
         foreach (var id in pendingEdits.Keys)
             FailEdit(id, error.Length > 0 ? error : "The game stopped before the edit applied.");
+        foreach (var id in pendingCommands.Keys)
+            FailCommand(id, error.Length > 0 ? error : "The game stopped before the edit applied.");
     }
 
     private bool SetState(PlaySessionState state, string? message)
