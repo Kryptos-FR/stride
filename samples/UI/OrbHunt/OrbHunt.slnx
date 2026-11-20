@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="OrbHunt.Game/OrbHunt.Game.csproj" />
+  <Project Path="OrbHunt.Linux/OrbHunt.Linux.csproj" />
+  <Project Path="OrbHunt.Windows/OrbHunt.Windows.csproj" />
+</Solution>

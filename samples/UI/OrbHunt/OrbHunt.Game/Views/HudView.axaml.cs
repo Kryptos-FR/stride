@@ -3,7 +3,7 @@
 
 using Avalonia.Controls;
 
-namespace Stride.AvaloniaUI.Sample.Views;
+namespace OrbHunt.Views;
 
 /// <summary>
 /// The HUD of a round: score, time left, lives and the pause button.

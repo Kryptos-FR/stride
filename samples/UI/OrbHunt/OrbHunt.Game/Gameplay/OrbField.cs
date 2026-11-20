@@ -3,7 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using Stride.AvaloniaUI.Sample.ViewModels;
+using OrbHunt.ViewModels;
+using Stride.AvaloniaUI;
 using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Engine;
@@ -11,7 +12,7 @@ using Stride.Graphics;
 using Stride.Input;
 using Stride.Rendering;
 
-namespace Stride.AvaloniaUI.Sample.Gameplay;
+namespace OrbHunt.Gameplay;
 
 /// <summary>
 /// The game itself: orbs float over a field of stars, and the player clicks them for points before they fade.

@@ -22,7 +22,7 @@ Hierarchy:
                         Children: {}
                     c77fced224c847a583dec43a6acbe391: !AvaloniaUIComponent
                         Id: 170eadda-d3e7-43d6-a473-92f49883e189
-                        ViewType: Stride.AvaloniaUI.Sample.Views.HudView, Stride.AvaloniaUI.Sample
+                        ViewType: OrbHunt.Views.HudView, OrbHunt.Game
                         Resolution: {X: 1280.0, Y: 720.0}
         -   Entity:
                 Id: 41e2ea28-4cf0-46e9-a6ad-ca98b4341c93
@@ -34,7 +34,7 @@ Hierarchy:
                         Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
                         Scale: {X: 1.0, Y: 1.0, Z: 1.0}
                         Children: {}
-                    990fe30bad7f45c7baf88e6079818c57: !Stride.AvaloniaUI.Sample.Gameplay.OrbField,Stride.AvaloniaUI.Sample
+                    990fe30bad7f45c7baf88e6079818c57: !OrbHunt.Gameplay.OrbField,OrbHunt.Game
                         Id: fc4c4f81-c36c-4c0b-81fa-b024f1128ec4
                         Hud: ref!! 170eadda-d3e7-43d6-a473-92f49883e189
                         Menus: ref!! 57b346ce-83d1-49c3-bcf7-cc8f57495991
@@ -50,6 +50,6 @@ Hierarchy:
                         Children: {}
                     e78c2f06324b43b983a712e1e6dfdc97: !AvaloniaUIComponent
                         Id: 57b346ce-83d1-49c3-bcf7-cc8f57495991
-                        ViewType: Stride.AvaloniaUI.Sample.Views.MenuView, Stride.AvaloniaUI.Sample
+                        ViewType: OrbHunt.Views.MenuView, OrbHunt.Game
                         Resolution: {X: 1280.0, Y: 720.0}
                         DrawOrder: 1
