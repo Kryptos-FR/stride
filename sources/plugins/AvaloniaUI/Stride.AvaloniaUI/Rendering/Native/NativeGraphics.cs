@@ -69,7 +69,7 @@ internal sealed class NativeGraphics : IDisposable
     public bool IsDisposed { get; private set; }
 
     /// <summary>
-    /// Draws quads into a texture, in order, with the scissor and the texture of each segment.
+    /// Draws quads into a texture, in order, with the scissor, the texture and the clip of each segment.
     /// </summary>
     internal void Draw(Texture target, ReadOnlySpan<CanvasInstance> instances, ReadOnlySpan<CanvasSegment> segments)
     {
@@ -99,6 +99,12 @@ internal sealed class NativeGraphics : IDisposable
             commandList.SetPipelineState(segment.Opaque ? opaque.CurrentState : blended.CurrentState);
             commandList.SetScissorRectangle(segment.Scissor);
             effect.Parameters.Set(TexturingKeys.Texture0, segment.Texture ?? white);
+            var clip = CanvasBatch.GetClipConstants(segment.Clip);
+            effect.Parameters.Set(AvaloniaCanvasShaderKeys.ClipX, clip.X);
+            effect.Parameters.Set(AvaloniaCanvasShaderKeys.ClipY, clip.Y);
+            effect.Parameters.Set(AvaloniaCanvasShaderKeys.ClipRect, clip.Rect);
+            effect.Parameters.Set(AvaloniaCanvasShaderKeys.ClipRadiiTop, clip.RadiiTop);
+            effect.Parameters.Set(AvaloniaCanvasShaderKeys.ClipRadiiBottom, clip.RadiiBottom);
             effect.Apply(context);
             commandList.SetVertexBuffer(0, instanceBuffer, 0, CanvasInstance.Size);
             commandList.DrawInstanced(4, segment.Count, 0, segment.Start);
