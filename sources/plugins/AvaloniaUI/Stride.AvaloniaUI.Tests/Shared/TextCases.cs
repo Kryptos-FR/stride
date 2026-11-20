@@ -68,26 +68,26 @@ internal static class TextCases
     /// <summary>
     /// How many pixels of each case the native renderer draws more than 12 away from Skia on the CPU where Skia's
     /// glyphs aren't FreeType's (<see cref="EdgeAllowances.ForText(Stride.Graphics.GraphicsAdapter, int, int)"/>), as the
-    /// Windows game tests of CI measure them; none is measured yet.
+    /// Windows game tests of CI measure them (run 44621323042, Vulkan).
     /// </summary>
     public static readonly IReadOnlyDictionary<string, int> OtherGlyphsAllowance = new Dictionary<string, int>
     {
-        ["FractionalPositions"] = 0,
-        ["Scaled4By3"] = 0,
-        ["Scaled5By4"] = 0,
-        ["ScaleTransform"] = 0,
-        ["Colors"] = 0,
-        ["HintingModes"] = 0,
-        ["Aliased"] = 0,
-        ["SubpixelRequested"] = 0,
-        ["UnalignedBaseline"] = 0,
-        ["Simulations"] = 0,
-        ["TwoColorsSameGlyphs"] = 0,
+        ["FractionalPositions"] = 740,
+        ["Scaled4By3"] = 478,
+        ["Scaled5By4"] = 528,
+        ["ScaleTransform"] = 155,
+        ["Colors"] = 470,
+        ["HintingModes"] = 784,
+        ["Aliased"] = 404,
+        ["SubpixelRequested"] = 200,
+        ["UnalignedBaseline"] = 418,
+        ["Simulations"] = 247,
+        ["TwoColorsSameGlyphs"] = 68,
         ["Rotated"] = 0,
         ["LargeText"] = 0,
         ["ColorEmoji"] = 0,
         ["GradientText"] = 0,
-        ["Whitespace"] = 0,
+        ["Whitespace"] = 6,
     };
 
     /// <summary>
