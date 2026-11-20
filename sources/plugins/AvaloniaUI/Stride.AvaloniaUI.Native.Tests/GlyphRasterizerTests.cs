@@ -4,6 +4,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using Avalonia.Media;
@@ -109,6 +110,34 @@ public sealed class GlyphRasterizerTests : IDisposable
         Assert.Equal(-1, NativeFont.FindFaceIndex(library.Handle, collection, TablesOf(inter)));
     }
 
+    [Fact]
+    public void FileIsReadOncePerTypeface() => TestAvalonia.Run(() =>
+    {
+        // The typeface opened in two libraries, as by the atlases of a device detached and attached again
+        var counting = new CountingTypeface(GetTypeface("Inter Regular").PlatformTypeface);
+        var typeface = new GlyphTypeface(counting, FontSimulations.None);
+        using var otherLibrary = new FreeTypeLibrary();
+        Assert.True(NativeFont.TryOpen(library.Handle, typeface, out var first, out var reason), $"Inter can't be opened: {reason}.");
+        first.Dispose();
+        Assert.True(NativeFont.TryOpen(otherLibrary.Handle, typeface, out var second, out reason), $"Inter can't be opened again: {reason}.");
+        using (second)
+        {
+            Assert.Equal(1, counting.Streams);
+            Assert.Same(first.File, second.File);
+        }
+    });
+
+    [Fact]
+    public void FacesOfACollectionShareItsFile() => TestAvalonia.Run(() =>
+    {
+        Assert.True(NativeFont.TryOpen(library.Handle, GetTypeface("Collection Arabic"), out var arabic, out var reason), $"Face 0 of the collection can't be opened: {reason}.");
+        using var arabicFont = arabic;
+        Assert.True(NativeFont.TryOpen(library.Handle, GetTypeface("Collection Japanese"), out var japanese, out reason), $"Face 1 of the collection can't be opened: {reason}.");
+        using var japaneseFont = japanese;
+        Assert.Equal("Noto Sans JP", japanese.FamilyName);
+        Assert.Same(arabic.File, japanese.File);
+    });
+
     [Theory]
     [InlineData("COLR")]
     [InlineData("CBDT")]
@@ -140,6 +169,8 @@ public sealed class GlyphRasterizerTests : IDisposable
         "Noto Sans Arabic" => new Typeface("fonts:Test#Noto Sans Arabic").GlyphTypeface,
         "Noto Sans Arabic Bold" => new Typeface("fonts:Test#Noto Sans Arabic", FontStyle.Normal, FontWeight.Bold).GlyphTypeface,
         "Noto Sans JP" => new Typeface("fonts:Test#Noto Sans JP").GlyphTypeface,
+        "Collection Arabic" => new Typeface("fonts:TestCollection#Noto Sans Arabic").GlyphTypeface,
+        "Collection Japanese" => new Typeface("fonts:TestCollection#Noto Sans JP").GlyphTypeface,
         _ => throw new ArgumentOutOfRangeException(nameof(face), face, "No test face has this name."),
     };
 
@@ -274,6 +305,34 @@ public sealed class GlyphRasterizerTests : IDisposable
         Assert.True(failures.Count == 0, $"{face} at {size} px, {edging}:\n{string.Join("\n", failures)}");
         Assert.Equal(0, maxDifference);
         Assert.Equal(0, skiaInkOutsideTheImage);
+    }
+
+    // A typeface that counts the streams of its file it gives
+    private sealed class CountingTypeface(IPlatformTypeface typeface) : IPlatformTypeface
+    {
+        public int Streams { get; private set; }
+
+        public string FamilyName => typeface.FamilyName;
+
+        public FontWeight Weight => typeface.Weight;
+
+        public FontStyle Style => typeface.Style;
+
+        public FontStretch Stretch => typeface.Stretch;
+
+        public FontSimulations FontSimulations => typeface.FontSimulations;
+
+        public bool TryGetStream([NotNullWhen(true)] out Stream? stream)
+        {
+            Streams++;
+            return typeface.TryGetStream(out stream);
+        }
+
+        public bool TryGetTable(OpenTypeTag tag, out ReadOnlyMemory<byte> table) => typeface.TryGetTable(tag, out table);
+
+        public void Dispose()
+        {
+        }
     }
 
     // The alpha of a glyph drawn alone into the cleared surface at (x, OriginY)

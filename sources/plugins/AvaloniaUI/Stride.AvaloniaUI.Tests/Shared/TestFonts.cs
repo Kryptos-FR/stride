@@ -5,15 +5,18 @@ using System;
 using System.IO;
 using Avalonia.Media;
 using Avalonia.Media.Fonts;
+using SkiaSharp;
 
 namespace Stride.AvaloniaUI.Tests;
 
 /// <summary>
 /// The test fonts, embedded in the test assemblies: subsets of Noto Sans Arabic, Noto Sans JP and Noto Color Emoji, in the
-/// font collection <c>fonts:Test</c>, and a collection file of the first two.
+/// font collection <c>fonts:Test</c>, and a collection file of the first two, whose faces are in <c>fonts:TestCollection</c>.
 /// </summary>
 /// <remarks>
-/// The families are <c>fonts:Test#Noto Sans Arabic</c>, <c>fonts:Test#Noto Sans JP</c> and <c>fonts:Test#Noto Color Emoji</c>.
+/// The families are <c>fonts:Test#Noto Sans Arabic</c>, <c>fonts:Test#Noto Sans JP</c>, <c>fonts:Test#Noto Color Emoji</c>,
+/// <c>fonts:TestCollection#Noto Sans Arabic</c> (face 0 of the collection file) and <c>fonts:TestCollection#Noto Sans JP</c>
+/// (face 1).
 /// </remarks>
 internal sealed class TestFonts : FontCollectionBase
 {
@@ -27,26 +30,31 @@ internal sealed class TestFonts : FontCollectionBase
     /// </summary>
     public const string CollectionFile = "TestCollection.ttc";
 
-    private static readonly Uri CollectionKey = new("fonts:Test");
     private static bool added;
 
-    private TestFonts()
-    {
-        // The typefaces read their streams for their whole life
-        foreach (var file in Files)
-            TryAddGlyphTypeface(new MemoryStream(Read(file)), out _);
-    }
+    private TestFonts(Uri key) => Key = key;
 
-    public override Uri Key => CollectionKey;
+    public override Uri Key { get; }
 
     /// <summary>
-    /// Adds the collection to Avalonia's font manager, once Avalonia is set up; later calls do nothing.
+    /// Adds the collections to Avalonia's font manager, once Avalonia is set up; later calls do nothing.
     /// </summary>
     public static void EnsureAdded()
     {
         if (added)
             return;
-        FontManager.Current.AddFontCollection(new TestFonts());
+
+        var fonts = new TestFonts(new Uri("fonts:Test"));
+        // The typefaces read their streams for their whole life
+        foreach (var file in Files)
+            fonts.TryAddGlyphTypeface(new MemoryStream(Read(file)), out _);
+        FontManager.Current.AddFontCollection(fonts);
+
+        var collection = new TestFonts(new Uri("fonts:TestCollection"));
+        var data = Read(CollectionFile);
+        for (var index = 0; index < 2; index++)
+            collection.TryAddGlyphTypeface(CreateFace(data, index));
+        FontManager.Current.AddFontCollection(collection);
         added = true;
     }
 
@@ -60,5 +68,15 @@ internal sealed class TestFonts : FontCollectionBase
         var bytes = new byte[stream.Length];
         stream.ReadExactly(bytes);
         return bytes;
+    }
+
+    // A face of a collection file as the system fonts give it: Skia's typeface of the file and the face's index, whose
+    // stream is the whole file. Avalonia loads only the first face of a collection from a stream, and has no public way to
+    // make a Skia typeface.
+    private static GlyphTypeface CreateFace(byte[] collection, int index)
+    {
+        var type = Type.GetType("Avalonia.Skia.SkiaTypeface, Avalonia.Skia", throwOnError: true)!;
+        var typeface = (IPlatformTypeface)Activator.CreateInstance(type, SKTypeface.FromData(SKData.CreateCopy(collection), index), FontSimulations.None)!;
+        return new GlyphTypeface(typeface, FontSimulations.None);
     }
 }
