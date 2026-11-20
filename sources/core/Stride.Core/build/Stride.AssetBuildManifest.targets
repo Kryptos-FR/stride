@@ -622,7 +622,7 @@
     <ItemGroup>
       <_StrideAssetBuildManifestAssembly Include="$(TargetPath)" Condition="'$(StrideContainsAssetTypes)' == 'true' And '$(_StrideManifestIsHostFramework)' == 'true'" />
       <_StrideAssetBuildManifestAssembly Include="@(StrideAssetBuildManifestAssembly)" />
-      <_StrideAssetBuildManifestCandidate Include="@(Compile);@(None);@(AdditionalFiles)" />
+      <_StrideAssetBuildManifestCandidate Include="@(Compile);@(None);@(AdditionalFiles);@(StrideProjectAsset)" />
     </ItemGroup>
 
     <StrideWriteAssetBuildManifest
