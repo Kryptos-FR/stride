@@ -1,0 +1,156 @@
+!SceneAsset
+Id: 08f88c51-dd35-4b7d-80d3-d07e132a4fdb
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 0.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! 153cde4b-eb96-4c71-9243-63b11a62076b
+        - ref!! a2273de9-f673-4764-a42f-b3ba1c5abe0f
+        - ref!! b69a1f00-11f3-4af3-b525-777926fe9447
+        - ref!! 5903bba3-4d8f-436e-97a3-fa8fc3df7859
+        - ref!! 8a87a8b9-69c5-4ef1-95c3-4a72553ce0bd
+        - ref!! 83617e96-faac-445c-834a-100e2aa76ca9
+        - ref!! 17e1f09f-4c7d-4750-a851-8f26402253ee
+    Parts:
+        -   Entity:
+                Id: 029a3e0f-cb26-4017-9e9b-33701c17e2cd
+                Name: Planet
+                Components:
+                    33c5cf0c7c7d4a4c8c6a445c482b0d6f: !TransformComponent
+                        Id: 9d1bfe1c-ecda-47f5-8049-3e0592b0132a
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    e97546a918274cfa84bb8d9efca2d640: !ModelComponent
+                        Id: acd3d18c-3c6b-43b4-9209-f9691ac2398a
+                        Model: 888defeb-1c8c-4ae9-8058-a4dacd1b45d6:Planet
+                        Materials: {}
+                    2b16ecf1e7fa4111a7afa4184c0ca06f: !OrbHunt.Gameplay.Spin,OrbHunt.Game
+                        Id: f0d15f3e-52f1-4eca-b151-e9d1f54e9305
+                        Speed: 3.0
+        -   Entity:
+                Id: 153cde4b-eb96-4c71-9243-63b11a62076b
+                Name: Camera
+                Components:
+                    a643957625c5400a938cb19b3e42c7e4: !TransformComponent
+                        Id: 7ca03d73-8736-46a9-a313-b8e800c1918e
+                        Position: {X: 0.0, Y: 1.871, Z: 8.803}
+                        Rotation: {X: -0.104528, Y: 0.0, Z: 0.0, W: 0.994522}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: 
+                            7cb1283a819745babc97904a3a359b43: ref!! 9f42b736-23e6-4797-a57b-ac9069e52248
+                    2ff1945788774935845284dea0010413: !CameraComponent
+                        Id: ac3b982c-5056-48ce-ba5e-76c58af25377
+                        Name: null
+                        Projection: Perspective
+                        Slot: 92128f92-e45d-48c1-9949-6abc3c6c0ae6
+                    cd815210e09e41ebbd93232b97a4ae75: !OrbHunt.Gameplay.OrbitCamera,OrbHunt.Game
+                        Id: 6d06cf31-c00e-433b-a7bc-a20fada88386
+                        Target: ref!! 5903bba3-4d8f-436e-97a3-fa8fc3df7859
+                        Distance: 9.0
+                        Elevation: 12.0
+                        Speed: 4.0
+        -   Entity:
+                Id: 17e1f09f-4c7d-4750-a851-8f26402253ee
+                Name: Menus
+                Components:
+                    72f6d351b1884379b96272f148d77b08: !TransformComponent
+                        Id: e323ac11-ee42-4d52-9215-ce7838ce28e9
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    4183b564efc442698d6802d398da7f2e: !AvaloniaUIComponent
+                        Id: ae18a66b-f61d-40ec-af06-48ed15c8f68f
+                        ViewType: OrbHunt.Views.MenuView, OrbHunt.Game
+                        Resolution: {X: 1280.0, Y: 720.0}
+                        DrawOrder: 1
+        -   Entity:
+                Id: 224a8504-8447-4853-9037-3254e5c69a75
+                Name: Sun
+                Components:
+                    3ae8c6ae48844107bf74ae4d3326fc8f: !TransformComponent
+                        Id: 9f42b736-23e6-4797-a57b-ac9069e52248
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: -0.1840489, Y: -0.4376431, Z: -0.0920244, W: 0.8752862}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    0d7bfc158b8248a586744a2049b3344f: !LightComponent
+                        Id: 14730132-4dc6-423e-b023-e81c75fd8ad3
+                        Type: !LightDirectional
+                            Color: !ColorRgbProvider
+                                Value: {R: 1.0, G: 0.95, B: 0.88}
+                        Intensity: 1.1
+        -   Entity:
+                Id: 5903bba3-4d8f-436e-97a3-fa8fc3df7859
+                Name: Planet axis
+                Components:
+                    0e6d5ec18c7f4e5d993b72ac63edb175: !TransformComponent
+                        Id: b169d161-1693-446d-949d-52c37f6c91db
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.173648, W: 0.984808}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: 
+                            9c4afdeb900140c3b53a0e95ebbdf9f3: ref!! 9d1bfe1c-ecda-47f5-8049-3e0592b0132a
+        -   Entity:
+                Id: 83617e96-faac-445c-834a-100e2aa76ca9
+                Name: HUD
+                Components:
+                    3fb5cdca485a4d78b85781701af34e8d: !TransformComponent
+                        Id: e5f3fa10-2d72-430f-9c32-cfab4c77d5f8
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ebc3eb8a06124d56bc9e8ffa5e8abf2c: !AvaloniaUIComponent
+                        Id: 9805d82b-ed39-4f86-8df1-5409d6e65d95
+                        ViewType: OrbHunt.Views.HudView, OrbHunt.Game
+                        Resolution: {X: 1280.0, Y: 720.0}
+                        ResolutionStretch: FixedHeightAdaptableWidth
+        -   Entity:
+                Id: 8a87a8b9-69c5-4ef1-95c3-4a72553ce0bd
+                Name: Game
+                Components:
+                    271af68c2ccf44caa84fdfca2ab609e6: !TransformComponent
+                        Id: d88bf3e9-e7dc-4bc4-bef2-ffd264add3be
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    6114a81c5d8c47568c8c899d11054320: !OrbHunt.Gameplay.HudOrbs,OrbHunt.Game
+                        Id: a9dad7b6-ba80-4ff0-87cb-89fae2ff62c0
+                        Hud: ref!! 9805d82b-ed39-4f86-8df1-5409d6e65d95
+                        Menus: ref!! ae18a66b-f61d-40ec-af06-48ed15c8f68f
+        -   Entity:
+                Id: a2273de9-f673-4764-a42f-b3ba1c5abe0f
+                Name: Stars
+                Components:
+                    7558d26c91b5466695616d42519a07c4: !TransformComponent
+                        Id: 628497bb-48dd-46a8-ab84-f24d3159524c
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    40bd93671282485b8ae751ab43a0bee6: !BackgroundComponent
+                        Id: e2fb3d3d-d7cf-4baa-a28c-a5c3a8d69031
+                        Texture: 5a4f324e-2f37-4be5-aa4a-c9c241ded27a:Stars
+                        Intensity: 1.6
+        -   Entity:
+                Id: b69a1f00-11f3-4af3-b525-777926fe9447
+                Name: Starlight
+                Components:
+                    7ad0b9e5e4fb4819b4352e4d3b5f3e21: !TransformComponent
+                        Id: 366e1ad5-a40e-44d6-9633-3b153f91caf4
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    c3b59be3dd954001b7d4d17799dcb265: !LightComponent
+                        Id: 4a52bde4-0258-4b4c-9a73-57eeda432534
+                        Type: !LightAmbient
+                            Color: !ColorRgbProvider
+                                Value: {R: 0.55, G: 0.6, B: 1.0}
+                        Intensity: 0.03

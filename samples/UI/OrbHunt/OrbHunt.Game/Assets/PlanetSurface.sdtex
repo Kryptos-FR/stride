@@ -1,0 +1,7 @@
+!Texture
+Id: f31567d7-d435-4004-b616-293b8ba45f67
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../Resources/PlanetSurface.jpg
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

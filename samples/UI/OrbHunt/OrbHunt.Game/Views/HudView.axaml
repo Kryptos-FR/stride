@@ -7,6 +7,7 @@
   <!--
     The HUD, drawn over the game during a round. Its entity names it by type (ViewType), as a scene made in Game Studio
     would, and the game gives it its view model. Only its controls take the mouse: a click anywhere else goes to the game.
+    In the planet scene, the orbs are controls of the HUD too (Orbs), which the game moves every frame.
   -->
   <UserControl.Styles>
     <Style Selector="Ellipse.life">
@@ -22,38 +23,101 @@
     <Style Selector="Ellipse.life.lost">
       <Setter Property="Opacity" Value="0.2" />
     </Style>
+
+    <!-- An orb: a round button that pops on press, in a light. A ring is all that is left of an orb that popped. -->
+    <Style Selector="ItemsControl.orbs > ContentPresenter" x:DataType="vm:OrbViewModel">
+      <Setter Property="Canvas.Left" Value="{Binding Left}" />
+      <Setter Property="Canvas.Top" Value="{Binding Top}" />
+    </Style>
+    <Style Selector="Button.orb">
+      <Setter Property="ClickMode" Value="Press" />
+      <Setter Property="Focusable" Value="False" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}" CornerRadius="1000"
+                  BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" />
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Grid.bomb Button.orb">
+      <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}" />
+      <Setter Property="BorderThickness" Value="3" />
+    </Style>
+    <Style Selector="Grid.pop Button.orb, Grid.pop Ellipse.glow, Grid:not(.pop) Ellipse.ring">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,*,Auto" Margin="28,18">
-    <Grid ColumnDefinitions="*,Auto,*">
-      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-        <TextBlock Classes="label" Text="SCORE" VerticalAlignment="Center" />
-        <TextBlock Classes="hud" Text="{Binding Score}" />
-      </StackPanel>
+  <Panel>
+    <!-- The red flash after a red orb -->
+    <Border IsHitTestVisible="False" Opacity="{Binding Hurt}">
+      <Border.Background>
+        <RadialGradientBrush>
+          <GradientStop Color="#00F43F5E" Offset="0.3" />
+          <GradientStop Color="#A0E11D48" Offset="1" />
+        </RadialGradientBrush>
+      </Border.Background>
+    </Border>
 
-      <StackPanel Grid.Column="1" Width="360" Spacing="6">
-        <TextBlock Classes="hud" FontSize="22" HorizontalAlignment="Center" Text="{Binding TimeText}" />
-        <ProgressBar Value="{Binding TimeLeft}" Maximum="{Binding RoundLength}" MinHeight="8" Height="8" CornerRadius="4" />
-      </StackPanel>
+    <ItemsControl Classes="orbs" ItemsSource="{Binding Orbs}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <Canvas />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:OrbViewModel">
+          <!-- The orb takes the middle half of its square, its light the whole square -->
+          <Grid Width="{Binding Size}" Height="{Binding Size}" Opacity="{Binding Opacity}"
+                ColumnDefinitions="*,2*,*" RowDefinitions="*,2*,*"
+                Classes.bomb="{Binding IsBomb}" Classes.pop="{Binding IsPop}">
+            <Ellipse Classes="glow" Grid.ColumnSpan="3" Grid.RowSpan="3" Fill="{Binding Glow}" Opacity="{Binding GlowOpacity}"
+                     IsHitTestVisible="False" />
+            <Button Classes="orb" Grid.Row="1" Grid.Column="1" Background="{Binding Fill}" Command="{Binding PopCommand}" />
+            <Ellipse Classes="ring" Grid.ColumnSpan="3" Grid.RowSpan="3" Stroke="{Binding Fill}" StrokeThickness="3"
+                     IsHitTestVisible="False" />
+          </Grid>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
 
-      <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="20">
-        <ItemsControl ItemsSource="{Binding LifeSlots}" VerticalAlignment="Center">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <StackPanel Orientation="Horizontal" Spacing="8" />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:LifeSlot">
-              <Ellipse Classes="life" Classes.lost="{Binding IsLost}" />
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <Button Content="Pause" Command="{Binding PauseCommand}" Padding="16,6" />
-      </StackPanel>
+    <Grid RowDefinitions="Auto,*,Auto" Margin="28,18">
+      <Grid ColumnDefinitions="*,Auto,*">
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <TextBlock Classes="label" Text="SCORE" VerticalAlignment="Center" />
+          <TextBlock Classes="hud" Text="{Binding Score}" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Width="360" Spacing="6">
+          <TextBlock Classes="hud" FontSize="22" HorizontalAlignment="Center" Text="{Binding TimeText}" />
+          <ProgressBar Value="{Binding TimeLeft}" Maximum="{Binding RoundLength}" MinHeight="8" Height="8" CornerRadius="4" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="20">
+          <ItemsControl ItemsSource="{Binding LifeSlots}" VerticalAlignment="Center">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="8" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:LifeSlot">
+                <Ellipse Classes="life" Classes.lost="{Binding IsLost}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button Content="Pause" Command="{Binding PauseCommand}" Padding="16,6" />
+        </StackPanel>
+      </Grid>
+
+      <TextBlock Grid.Row="2" Classes="label" HorizontalAlignment="Center" FontSize="15"
+                 Text="Click the orbs before they fade · the small ones are worth more · avoid the red ones · Esc pauses" />
     </Grid>
-
-    <TextBlock Grid.Row="2" Classes="label" HorizontalAlignment="Center" FontSize="15"
-               Text="Click the orbs before they fade · the small ones are worth more · avoid the red ones · Esc pauses" />
-  </Grid>
+  </Panel>
 </UserControl>

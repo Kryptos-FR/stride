@@ -7,7 +7,7 @@ using Stride.Graphics;
 namespace OrbHunt.Gameplay;
 
 /// <summary>
-/// The white shapes the field is drawn with, tinted by the sprite batch: made in code, as the sample has no assets.
+/// The white shapes the orb field is drawn with, tinted by the sprite batch: made in code, so the field needs no texture.
 /// </summary>
 internal sealed class OrbTextures : IDisposable
 {

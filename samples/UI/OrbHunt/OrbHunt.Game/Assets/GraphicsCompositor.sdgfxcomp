@@ -2,18 +2,106 @@
 Id: 42174d59-a60f-44a1-8c4d-b0d9174231ec
 SerializedVersion: {Stride: 3.1.0.3}
 Tags: []
-Cameras: {}
-RenderStages: {}
-RenderFeatures: {}
-SharedRenderers: {}
+Cameras:
+    c6ccb7a19983463da9404c1e26d8ec8f:
+        Id: 92128f92-e45d-48c1-9949-6abc3c6c0ae6
+        Name: Main
+RenderStages:
+    6d50cdbb918345ee8187efa324911092:
+        Id: 89ad3228-2303-4a73-8f8d-1f40a3ea8680
+        Name: Opaque
+        EffectSlotName: Main
+        SortMode: !SortModeStateChange {}
+    bf5b336da2754c5cbb4f47973364351e:
+        Id: 21e2b312-f3cc-4266-b178-0e44cb5b6fb4
+        Name: Transparent
+        EffectSlotName: Main
+        SortMode: !BackToFrontSortMode {}
+RenderFeatures:
+    6f2547ce57ce4a94aaf01e2206428d13: !Stride.Rendering.MeshRenderFeature,Stride.Rendering
+        RenderStageSelectors:
+            da6a6ea19d894bdf8779d597e722121e: !Stride.Rendering.MeshTransparentRenderStageSelector,Stride.Rendering
+                OpaqueRenderStage: ref!! 89ad3228-2303-4a73-8f8d-1f40a3ea8680
+                TransparentRenderStage: ref!! 21e2b312-f3cc-4266-b178-0e44cb5b6fb4
+                EffectName: StrideForwardShadingEffect
+        PipelineProcessors:
+            85cf44a0bf734717bc4b53194eaf00e8: !Stride.Rendering.MeshPipelineProcessor,Stride.Rendering
+                TransparentRenderStage: ref!! 21e2b312-f3cc-4266-b178-0e44cb5b6fb4
+        RenderFeatures:
+            15034a5f315b49d0a981a26bb144521e: !Stride.Rendering.TransformRenderFeature,Stride.Rendering {}
+            9b287e99646c433e88867a2e43961dee: !Stride.Rendering.SkinningRenderFeature,Stride.Rendering {}
+            d728b82064e7422a9389cc6485ff1ae4: !Stride.Rendering.Materials.MaterialRenderFeature,Stride.Rendering {}
+            25409bb868fa452c9a6dd219b836c6df: !Stride.Rendering.Lights.ForwardLightingRenderFeature,Stride.Rendering
+                LightRenderers:
+                    fbbfe272ef3b445389792cb7c4195ba4: !Stride.Rendering.Lights.LightAmbientRenderer,Stride.Rendering {}
+                    123ad05013a0472b82894cf2689a5379: !Stride.Rendering.Lights.LightDirectionalGroupRenderer,Stride.Rendering {}
+                    8df48b2c226e4faf9144312df787e8af: !Stride.Rendering.Lights.LightSkyboxRenderer,Stride.Rendering {}
+                    caa341f6515149cdbf3ce313ad8ae219: !Stride.Rendering.Lights.LightPointGroupRenderer,Stride.Rendering {}
+                    6888d2b58b9c48a6a3df7febb1eb7e2a: !Stride.Rendering.Lights.LightSpotGroupRenderer,Stride.Rendering {}
+                ShadowMapRenderer: null
+            10f220d27c8248d4bf573bc868b6eb5d: !Stride.Rendering.InstancingRenderFeature,Stride.Rendering {}
+    cb8c31bcceb447f58c8ab9a04ae299af: !Stride.Rendering.Background.BackgroundRenderFeature,Stride.Rendering
+        RenderStageSelectors:
+            16039d6bcf3d45289138322e49339c05: !Stride.Rendering.SimpleGroupToRenderStageSelector,Stride.Rendering
+                RenderStage: ref!! 89ad3228-2303-4a73-8f8d-1f40a3ea8680
+                EffectName: Test
+SharedRenderers:
+    bb7f51edaf894c1da3969dbb1cfead5f: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine
+        Id: bc2334ea-1485-45df-9327-7cd18399e1f8
+        Clear:
+            Id: de4198b9-04ae-4a48-8171-06c4a8ca58f8
+            Color: {R: 0.1014, G: 0.1139, B: 0.1545, A: 1.0}
+        LightProbes: false
+        OpaqueRenderStage: ref!! 89ad3228-2303-4a73-8f8d-1f40a3ea8680
+        TransparentRenderStage: ref!! 21e2b312-f3cc-4266-b178-0e44cb5b6fb4
+        ShadowMapRenderStages: {}
+        GBufferRenderStage: null
+        PostEffects: !PostProcessingEffects ref!! 4f4097bc-acc1-4991-bf46-3b058b86dc14
+        LightShafts: null
+        VRSettings:
+            Enabled: false
+            RequiredApis: {}
+            Overlays: {}
+        MSAALevel: None
+        MSAAResolver: {}
+    7b3eb0a918c3496bbc40a5b831f062b0: !PostProcessingEffects
+        Id: 4f4097bc-acc1-4991-bf46-3b058b86dc14
+        AmbientOcclusion:
+            Enabled: false
+        LocalReflections:
+            Enabled: false
+        DepthOfField:
+            Enabled: false
+            DOFAreas: {X: 0.5, Y: 6.0, Z: 50.0, W: 200.0}
+        BrightFilter:
+            Color: {R: 1.0, G: 1.0, B: 1.0}
+        Bloom:
+            Distortion: {X: 1.0, Y: 1.0}
+            Afterimage:
+                Enabled: false
+        LightStreak:
+            Attenuation: 0.7
+        LensFlare: {}
+        ColorTransforms:
+            Transforms:
+                09ff15eea4c74c21a194448f1b2a8077: !ToneMap
+                    AutoExposure: false
+                    Operator: !ToneMapHejl2Operator {}
+                e6c01f729e3b4b8189f4323772293c5b: !FilmGrain
+                    Enabled: false
+                31eede1a2ebd4b268148029ffc248a5d: !Vignetting
+                    Enabled: false
+                    Color: {R: 0.0, G: 0.0, B: 0.0}
+        Antialiasing: !FXAAEffect {}
 Game: !Stride.Rendering.Compositing.SceneRendererCollection,Stride.Rendering
     Id: 92a6ed89-8d0c-4ad5-bbaa-1664fe55fdd1
     Children:
-        0279553ba9ea479bbb56d17615066824: !Stride.Rendering.Compositing.ClearRenderer,Stride.Rendering
-            Id: 17f09807-0d87-4e0d-b6ef-0bdfbe55379c
-            Color: {R: 0.03137255, G: 0.047058824, B: 0.101960786, A: 1.0}
+        26f8b9815e2a4c97809db37f8d5b57d8: !Stride.Rendering.Compositing.SceneCameraRenderer,Stride.Engine
+            Id: e479f313-dff1-4e50-a7d8-83f0446b9234
+            Camera: ref!! 92128f92-e45d-48c1-9949-6abc3c6c0ae6
+            Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! bc2334ea-1485-45df-9327-7cd18399e1f8
         fd47c8e96845478882eb30f5ba641fbd: !OrbFieldRenderer
             Id: f42edbac-fb03-4967-abec-1e24dd910ebb
-SingleView: null
-Editor: null
+SingleView: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! bc2334ea-1485-45df-9327-7cd18399e1f8
+Editor: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! bc2334ea-1485-45df-9327-7cd18399e1f8
 BlockPositions: {}

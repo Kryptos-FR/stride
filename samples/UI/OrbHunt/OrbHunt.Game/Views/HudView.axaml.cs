@@ -6,7 +6,7 @@ using Avalonia.Controls;
 namespace OrbHunt.Views;
 
 /// <summary>
-/// The HUD of a round: score, time left, lives and the pause button.
+/// The HUD of a round: score, time left, lives and the pause button, and the orbs in the planet scene.
 /// </summary>
 public sealed partial class HudView : UserControl
 {
