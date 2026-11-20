@@ -15,6 +15,7 @@ using Avalonia.Skia;
 using SkiaSharp;
 using Stride.AvaloniaUI.Platform;
 using Stride.AvaloniaUI.Rendering.Fallback;
+using Stride.AvaloniaUI.Tests;
 using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Engine;
