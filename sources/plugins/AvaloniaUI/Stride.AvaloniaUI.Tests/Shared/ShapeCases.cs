@@ -83,11 +83,11 @@ internal static class ShapeCases
     /// <summary>
     /// How many pixels of each case with text the native renderer draws more than 12 away from Skia on the CPU where Skia's
     /// glyphs aren't FreeType's (<see cref="EdgeAllowances.ForText(Stride.Graphics.GraphicsAdapter, int, int)"/>), as the
-    /// Windows game tests of CI measure them; none is measured yet.
+    /// Windows game tests of CI measure them (run 44621323042, Vulkan).
     /// </summary>
     public static readonly IReadOnlyDictionary<string, int> OtherGlyphsAllowance = new Dictionary<string, int>
     {
-        ["TextInRoundedClip"] = 0,
+        ["TextInRoundedClip"] = 749,
     };
 
     private static readonly Color Background = Color.FromRgb(240, 240, 240);

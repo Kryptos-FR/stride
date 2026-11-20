@@ -65,13 +65,13 @@ internal static class ReferenceViews
     /// <summary>
     /// How many pixels of each page with text the native renderer draws more than 12 away from Skia on the CPU where Skia's
     /// glyphs aren't FreeType's (<see cref="EdgeAllowances.ForText(Stride.Graphics.GraphicsAdapter, int, int)"/>), as the
-    /// Windows game tests of CI measure them; none is measured yet.
+    /// Windows game tests of CI measure them (run 44621323042, Vulkan).
     /// </summary>
     public static readonly IReadOnlyDictionary<string, int> OtherGlyphsAllowance = new Dictionary<string, int>
     {
-        ["Fluent"] = 0,
-        ["Text"] = 0,
-        ["Scripts"] = 0,
+        ["Fluent"] = 1825,
+        ["Text"] = 4833,
+        ["Scripts"] = 7901,
     };
 
     /// <summary>
