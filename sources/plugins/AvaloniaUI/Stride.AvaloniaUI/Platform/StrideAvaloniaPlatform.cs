@@ -57,6 +57,11 @@ public static class StrideAvaloniaPlatform
     internal static NativeGraphics? NativeGraphics => (backend as NativeRendererBackend)?.Graphics;
 
     /// <summary>
+    /// Gets the native renderer, or <c>null</c> with another renderer.
+    /// </summary>
+    internal static NativeRendererBackend? NativeBackend => backend as NativeRendererBackend;
+
+    /// <summary>
     /// Uses the Stride platform, with a renderer of the Avalonia views and HarfBuzz text shaping.
     /// </summary>
     /// <remarks>
@@ -78,8 +83,11 @@ public static class StrideAvaloniaPlatform
     /// <summary>
     /// Runs Avalonia's render loop: layout, composition and rendering of the changed surfaces (game thread, once per draw).
     /// </summary>
-    /// <param name="graphicsContext">The game's graphics context, which a renderer on the device records its commands in.</param>
-    internal static bool Render(GraphicsContext graphicsContext)
+    /// <param name="graphicsContext">
+    /// The game's graphics context, which a renderer on the device records its commands in, or <c>null</c> for a game
+    /// without a graphics device, whose views are drawn on the CPU.
+    /// </param>
+    internal static bool Render(GraphicsContext? graphicsContext)
     {
         if (renderTimer == null || backend == null)
             return false;

@@ -259,11 +259,13 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
     /// Gets a feature of the fallback, such as a lease of its canvas: the calls so far are drawn first, and the caller draws
     /// into a run that covers the scissor and ends at the next call.
     /// </summary>
-    /// <returns>The feature, or <c>null</c> when the fallback doesn't have it (and no run is made).</returns>
+    /// <returns>
+    /// The feature, or <c>null</c> when the fallback doesn't have it, or when the scissor has no pixels (and no run is made).
+    /// </returns>
     public object? GetFeature(Type t)
     {
         Next();
-        if (target == null)
+        if (target == null || scissor.Width <= 0 || scissor.Height <= 0)
             return null;
         channel.Count(DrawCallKind.Feature);
 

@@ -37,8 +37,10 @@ internal sealed class SkiaRendererBackend : RendererBackend
             StrideAvaloniaPlatform.RedrawTopLevels();
     }
 
-    // Skia submits its commands to the device's queue at various points of the rendering
-    public override void BeginRender(GraphicsContext graphicsContext) => queueScope = graphics.Current?.LockQueue() ?? default;
+    // Skia submits its commands to the device's queue at various points of the rendering; a game without a graphics
+    // context has no device whose queue Skia shares
+    public override void BeginRender(GraphicsContext? graphicsContext)
+        => queueScope = graphicsContext != null ? graphics.Current?.LockQueue() ?? default : default;
 
     public override void EndRender()
     {

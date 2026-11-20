@@ -94,7 +94,7 @@ internal sealed class HeadlessAvaloniaGame : IDisposable
         }
         StrideAvaloniaPlatform.Pump();
         // No graphics device: the renderer draws on the CPU, without the game's graphics context
-        StrideAvaloniaPlatform.Render(null!);
+        StrideAvaloniaPlatform.Render(null);
     }
 
     /// <summary>

@@ -229,8 +229,8 @@ internal sealed class AvaloniaUIView : IDisposable
         return gpuFrameView;
     }
 
-    // The native canvas draws into UNorm textures, which Direct3D can't view as sRGB: a copy of the frame, made when it
-    // changes, is sampled as sRGB instead
+    // The native canvas draws into UNorm textures, which no graphics API can view as sRGB unless they are made typeless or
+    // mutable: a copy of the frame, made when it changes, is sampled as sRGB instead
     private Texture GetSrgbCopy(GraphicsDevice device, CommandList commandList, Texture gpuFrame)
     {
         var stale = gpuFrameCopy == null || gpuFrameCopy.Width != gpuFrame.Width || gpuFrameCopy.Height != gpuFrame.Height;
