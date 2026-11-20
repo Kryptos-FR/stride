@@ -32,4 +32,9 @@ internal interface IRenderFallback
     /// Builds the outlines of the glyphs of a glyph run.
     /// </summary>
     IGeometryImpl BuildGlyphRunGeometry(GlyphRun glyphRun);
+
+    /// <summary>
+    /// Makes a canvas that draws command lists into premultiplied memory.
+    /// </summary>
+    IFallbackCanvas CreateCanvas(FallbackTarget target);
 }
