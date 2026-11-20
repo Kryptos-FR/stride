@@ -10,14 +10,22 @@ using Stride.Shaders.Compiler;
 namespace Stride.Shaders.Parsers.Tests;
 
 /// <summary>
-/// The effects whose bytecode is embedded in Stride.Graphics (SpriteBatch, UIEffect, the fonts...), listed in the
-/// <c>EmbeddedEffects.yaml</c> of their folder. Compiled with the shader compiler alone (the asset compiler needs Stride.Graphics).
+/// The effects whose bytecode is embedded in Stride.Graphics (SpriteBatch, UIEffect, the fonts...) and in plugins (the Avalonia
+/// canvas), listed in the <c>EmbeddedEffects.yaml</c> of their folder. Compiled with the shader compiler alone (the asset compiler
+/// needs Stride.Graphics).
 /// </summary>
 public class EmbeddedEffectTests
 {
-    static readonly string[] Folders = ["Shaders.Bytecodes", "Shaders093.Bytecodes"];
+    // Each list: the project, from the repository root, and its folder of bytecodes, which has the EmbeddedEffects.yaml
+    static readonly (string Project, string Folder)[] Lists =
+    [
+        ("sources/engine/Stride.Graphics", "Shaders.Bytecodes"),
+        ("sources/engine/Stride.Graphics", "Shaders093.Bytecodes"),
+        ("sources/plugins/AvaloniaUI/Stride.AvaloniaUI", "Shaders.Bytecodes"),
+    ];
 
-    static string GraphicsDirectory => Path.Combine(RepositoryRoot, "sources", "engine", "Stride.Graphics");
+    // The folders of the shaders the effects mix, from the repository root
+    static readonly string[] ShaderFolders = ["sources/engine/Stride.Graphics/Shaders", "sources/plugins/AvaloniaUI/Stride.AvaloniaUI/Shaders"];
 
     static string RepositoryRoot
     {
@@ -64,16 +72,17 @@ public class EmbeddedEffectTests
         var compiler = new EffectCompiler(null!);
         // Sources given as text with \n line breaks: their hashes, stored in the bytecode, are then the same on every checkout
         var sourceManager = compiler.GetFileShaderLoader().SourceManager;
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(GraphicsDirectory, "Shaders"), "*.sdsl"))
+        foreach (var file in ShaderFolders.SelectMany(folder => Directory.EnumerateFiles(Path.Combine(RepositoryRoot, folder), "*.sdsl")))
         {
             var relative = Path.GetRelativePath(RepositoryRoot, file).Replace('\\', '/');
             sourceManager.AddShaderSource(Path.GetFileNameWithoutExtension(file), File.ReadAllText(file).ReplaceLineEndings("\n"), relative);
         }
 
         var files = new Dictionary<string, string>();
-        foreach (var folder in Folders)
+        foreach (var (project, folder) in Lists)
         {
-            var list = ReadList(Path.Combine(GraphicsDirectory, folder, "EmbeddedEffects.yaml"));
+            var directory = Path.Combine(RepositoryRoot, project, folder);
+            var list = ReadList(Path.Combine(directory, "EmbeddedEffects.yaml"));
             foreach (var effect in list.Effects)
             {
                 foreach (var platform in Platforms)
@@ -96,7 +105,7 @@ public class EmbeddedEffectTests
 
                     var writer = new StringWriter();
                     EffectBytecodeSourceWriter.Write(effect.Name, parameters, result.Bytecode, writer, Generator);
-                    files[Path.Combine(GraphicsDirectory, folder, EffectBytecodeSourceWriter.GetFileName(effect.Name, parameters))] = writer.ToString();
+                    files[Path.Combine(directory, EffectBytecodeSourceWriter.GetFileName(effect.Name, parameters))] = writer.ToString();
                 }
             }
         }
@@ -113,8 +122,8 @@ public class EmbeddedEffectTests
     }
 
     /// <summary>
-    /// Rewrites the embedded effect files of Stride.Graphics. Stride.Graphics refuses to build with a stale bytecode header,
-    /// so build this project with <c>-p:StrideSkipPrecompiledBytecodeCheck=true</c> first.
+    /// Rewrites the embedded effect files. Stride.Graphics refuses to build with a stale bytecode header, so build this project
+    /// with <c>-p:StrideSkipPrecompiledBytecodeCheck=true</c> first.
     /// </summary>
     [Fact(Explicit = true)]
     public void UpdateEmbeddedEffects()
@@ -132,7 +141,7 @@ public class EmbeddedEffectTests
             .Select(x => Path.GetFileName(x.Key))
             .ToList();
         Assert.True(stale.Count == 0,
-            $"Embedded effects of Stride.Graphics are stale: {string.Join(", ", stale)}. Regenerate them with the explicit test {nameof(UpdateEmbeddedEffects)} " +
+            $"Embedded effects are stale: {string.Join(", ", stale)}. Regenerate them with the explicit test {nameof(UpdateEmbeddedEffects)} " +
             "(dotnet test sources/shaders/Stride.Shaders.Tests -p:StrideSkipPrecompiledBytecodeCheck=true " +
             "--filter \"FullyQualifiedName~EmbeddedEffectTests.UpdateEmbeddedEffects\" -- xUnit.Explicit=on)");
     }
