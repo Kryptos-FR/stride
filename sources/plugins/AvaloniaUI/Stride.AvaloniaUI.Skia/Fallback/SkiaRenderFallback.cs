@@ -17,12 +17,14 @@ namespace Stride.AvaloniaUI.Skia.Fallback;
 internal sealed class SkiaRenderFallback : IRenderFallback
 {
     private readonly SkiaGeometryConverter geometryConverter;
+    private readonly Lazy<IPlatformRenderInterfaceContext> cpuContext;
 
     public SkiaRenderFallback(IPlatformRenderInterface skia, IFontManagerImpl fontManager)
     {
         Skia = skia;
         FontManager = fontManager;
         geometryConverter = new SkiaGeometryConverter(this, skia);
+        cpuContext = new Lazy<IPlatformRenderInterfaceContext>(() => skia.CreateBackendContext(null));
     }
 
     /// <summary>
@@ -34,6 +36,11 @@ internal sealed class SkiaRenderFallback : IRenderFallback
     /// Gets Skia's font manager.
     /// </summary>
     public IFontManagerImpl FontManager { get; }
+
+    /// <summary>
+    /// Gets Skia's context that draws on the CPU, which makes the render targets of the canvases and the layers of scene brushes.
+    /// </summary>
+    internal IPlatformRenderInterfaceContext CpuContext => cpuContext.Value;
 
     public IGeometryImpl GetGeometry(StrideGeometry geometry)
     {
@@ -50,7 +57,13 @@ internal sealed class SkiaRenderFallback : IRenderFallback
     /// <summary>
     /// Gets Skia's copy of the pixels a bitmap of the core has now, or <c>null</c> when it has none (0×0).
     /// </summary>
-    internal IBitmapImpl? GetBitmap(StrideBitmap bitmap)
+    internal IBitmapImpl? GetBitmap(StrideBitmap bitmap) => GetBitmapReference(bitmap)?.SkiaBitmap;
+
+    /// <summary>
+    /// Gets Skia's copy of the pixels a bitmap of the core has now as the source of an image brush, or <c>null</c> when it has
+    /// none (0×0).
+    /// </summary>
+    internal SkiaBitmapReference? GetBitmapReference(StrideBitmap bitmap)
     {
         if (bitmap.FallbackObject is not SkiaBitmapCache cache)
         {
@@ -72,6 +85,13 @@ internal sealed class SkiaRenderFallback : IRenderFallback
 
     public IGeometryImpl BuildGlyphRunGeometry(GlyphRun glyphRun) => Skia.BuildGlyphRunGeometry(glyphRun);
 
+    /// <summary>
+    /// Makes a canvas that draws into the target's memory, or that draws nothing when the target has no pixels.
+    /// </summary>
     public IFallbackCanvas CreateCanvas(FallbackTarget target)
-        => throw new NotSupportedException("The Skia fallback has no canvas.");
+    {
+        if (target.Address == IntPtr.Zero || target.Size.Width <= 0 || target.Size.Height <= 0)
+            return new EmptyFallbackCanvas();
+        return new SkiaFallbackCanvas(this, target);
+    }
 }
