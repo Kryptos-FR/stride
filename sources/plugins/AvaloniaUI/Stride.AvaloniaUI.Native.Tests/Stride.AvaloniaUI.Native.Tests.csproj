@@ -17,6 +17,7 @@
   <ItemGroup>
     <!-- The Avalonia thread, shared with the tests of the whole-frame Skia renderer -->
     <Compile Include="..\Stride.AvaloniaUI.Tests\Shared\*.cs" Link="Shared\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\Stride.AvaloniaUI.Tests\Shared\Fonts\*.ttf;..\Stride.AvaloniaUI.Tests\Shared\Fonts\*.otf;..\Stride.AvaloniaUI.Tests\Shared\Fonts\*.ttc" Link="Shared\Fonts\%(Filename)%(Extension)" LogicalName="Fonts.%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\tests\Stride.XunitRunner\Stride.XunitRunner.csproj" />

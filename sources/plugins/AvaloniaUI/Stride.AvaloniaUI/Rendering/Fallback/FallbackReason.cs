@@ -53,4 +53,19 @@ internal enum FallbackReason
 
     /// <summary>A rectangle of an acrylic material.</summary>
     Acrylic,
+
+    /// <summary>A typeface with colour glyphs (COLR, CBDT, sbix or SVG tables): always drawn by the fallback for now.</summary>
+    ColorFont,
+
+    /// <summary>
+    /// A font the core can't draw from: its data can't be read, no face of its file is the typeface's, it is a variable
+    /// font, or FreeType fails on one of its glyphs (step 8).
+    /// </summary>
+    FontData,
+
+    /// <summary>
+    /// A typeface that simulates bold: Skia strokes the outline of each glyph and fills it with its own rasterizer, which
+    /// FreeType's doesn't match (step 8).
+    /// </summary>
+    TextSimulation,
 }

@@ -16,6 +16,7 @@ internal static class TestAvalonia
     public static void Run(Action action) => AvaloniaThread.Run(() =>
     {
         AvaloniaUISystem.EnsureAvalonia();
+        TestFonts.EnsureAdded();
         action();
     });
 }

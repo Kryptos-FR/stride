@@ -26,6 +26,7 @@ internal static class TestAvalonia
                 .WithInterFont()
                 .SetupWithoutStarting();
         }
+        TestFonts.EnsureAdded();
         action();
     });
 }
