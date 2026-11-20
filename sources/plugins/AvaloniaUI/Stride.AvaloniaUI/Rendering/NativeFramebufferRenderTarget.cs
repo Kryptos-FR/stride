@@ -33,7 +33,16 @@ internal sealed class NativeFramebufferRenderTarget(FallbackChannel channel, IFr
         }
 
         properties = new RenderTargetDrawingContextProperties { PreviousFrameIsRetained = lockProperties.PreviousFrameIsRetained };
-        var canvas = channel.Fallback.CreateCanvas(new FallbackTarget(locked.Address, locked.Size, locked.RowBytes, locked.Format, locked.Dpi, lockProperties.PreviousFrameIsRetained));
+        IFallbackCanvas canvas;
+        try
+        {
+            canvas = channel.Fallback.CreateCanvas(new FallbackTarget(locked.Address, locked.Size, locked.RowBytes, locked.Format, locked.Dpi, lockProperties.PreviousFrameIsRetained));
+        }
+        catch
+        {
+            locked.Dispose();
+            throw;
+        }
         return new RecordingDrawingContext(channel, canvas, locked.Dpi, locked.Dispose);
     }
 

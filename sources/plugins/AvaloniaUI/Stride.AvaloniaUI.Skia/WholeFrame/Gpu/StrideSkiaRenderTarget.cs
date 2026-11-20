@@ -97,7 +97,7 @@ internal sealed class StrideSkiaRenderTarget : ISkiaGpuRenderTarget
     {
         gpu.Submit();
         if (texture != null)
-            topLevel.OnGpuFrameRendered(texture);
+            topLevel.OnGpuFrameRendered(texture, canViewAsSrgb: true);
     }
 
     private sealed class Session(StrideSkiaRenderTarget renderTarget, GRContext grContext, SKSurface surface, double scaling) : ISkiaGpuRenderSession

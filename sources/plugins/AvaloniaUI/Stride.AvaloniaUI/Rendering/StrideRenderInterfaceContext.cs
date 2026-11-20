@@ -7,15 +7,18 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Platform;
 using Avalonia.Platform.Surfaces;
+using Stride.AvaloniaUI.Platform;
 using Stride.AvaloniaUI.Rendering.Bitmaps;
 using Stride.AvaloniaUI.Rendering.Fallback;
+using Stride.AvaloniaUI.Rendering.Native;
 
 namespace Stride.AvaloniaUI.Rendering;
 
 /// <summary>
 /// The render context of the native renderer, which makes its render targets.
 /// </summary>
-internal sealed class StrideRenderInterfaceContext(FallbackChannel channel) : IPlatformRenderInterfaceContext
+/// <param name="graphics">Gets what the native canvas keeps on the game's graphics device, or <c>null</c> to draw on the CPU.</param>
+internal sealed class StrideRenderInterfaceContext(FallbackChannel channel, Func<NativeGraphics?>? graphics = null) : IPlatformRenderInterfaceContext
 {
     public bool IsLost => false;
 
@@ -24,10 +27,14 @@ internal sealed class StrideRenderInterfaceContext(FallbackChannel channel) : IP
     public PixelSize? MaxOffscreenRenderTargetPixelSize => null;
 
     /// <summary>
-    /// Makes a render target over the first framebuffer surface, the memory of a top level.
+    /// Makes a render target for a top level: a texture on the game's graphics device when the canvas draws there, otherwise
+    /// the memory of the first framebuffer surface.
     /// </summary>
     public IRenderTarget CreateRenderTarget(IEnumerable<IPlatformRenderSurface> surfaces)
     {
+        if (graphics?.Invoke() is { IsDisposed: false } nativeGraphics && surfaces.OfType<StrideTopLevelImpl>().FirstOrDefault() is { } topLevel)
+            return new NativeTextureRenderTarget(nativeGraphics, channel, topLevel);
+
         var surface = surfaces.OfType<IFramebufferPlatformSurface>().FirstOrDefault()
             ?? throw new NotSupportedException("The native renderer of the Avalonia UI draws only into framebuffer surfaces.");
         return new NativeFramebufferRenderTarget(channel, surface.CreateFramebufferRenderTarget());
