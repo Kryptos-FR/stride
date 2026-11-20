@@ -228,7 +228,7 @@ public sealed class ScriptEditorTests
     /// <summary>
     /// Opens the editor of the script and types a text at its start.
     /// </summary>
-    private static async Task<(ScriptSourceFileEditorViewModel Editor, ScriptSourceFileEditorView View)> TypeAsync(ShellSessionFixture fixture, Window window, string text)
+    private static async Task<(ScriptSourceFileEditorViewModel Editor, SourceCodeEditorView View)> TypeAsync(ShellSessionFixture fixture, Window window, string text)
     {
         var (editor, view) = await OpenEditorAsync(fixture, window);
         var code = CodeEditor(view);
@@ -248,7 +248,7 @@ public sealed class ScriptEditorTests
     /// <summary>
     /// Opens the editor of the script of the session, the way a double-click in the asset view does.
     /// </summary>
-    private static async Task<(ScriptSourceFileEditorViewModel Editor, ScriptSourceFileEditorView View)> OpenEditorAsync(ShellSessionFixture fixture, Window window)
+    private static async Task<(ScriptSourceFileEditorViewModel Editor, SourceCodeEditorView View)> OpenEditorAsync(ShellSessionFixture fixture, Window window)
     {
         // A script is a source file of the project, which the session names after its path in the project
         var script = fixture.Session.AllAssets.OfType<ScriptSourceFileViewModel>().Single();
@@ -258,11 +258,11 @@ public sealed class ScriptEditorTests
         await WindowTestHelper.PumpAsync();
 
         var editor = Assert.IsType<ScriptSourceFileEditorViewModel>(fixture.Session.EditorCollection.ActiveEditor);
-        var view = window.GetVisualDescendants().OfType<ScriptSourceFileEditorView>().Single();
+        var view = window.GetVisualDescendants().OfType<SourceCodeEditorView>().Single();
         return (editor, view);
     }
 
-    private static CodeTextEditor CodeEditor(ScriptSourceFileEditorView view) => view.GetVisualDescendants().OfType<CodeTextEditor>().Single();
+    private static CodeTextEditor CodeEditor(SourceCodeEditorView view) => view.GetVisualDescendants().OfType<CodeTextEditor>().Single();
 
-    private static Button SaveButton(ScriptSourceFileEditorView view) => view.GetVisualDescendants().OfType<Button>().Single(x => x.Name == "SaveButton");
+    private static Button SaveButton(SourceCodeEditorView view) => view.GetVisualDescendants().OfType<Button>().Single(x => x.Name == "SaveButton");
 }

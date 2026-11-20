@@ -4,6 +4,7 @@
 using System.Text;
 using Stride.Assets.Editor.Tests.Helpers;
 using Stride.Assets.Editor.ViewModels;
+using Stride.Assets.Effect;
 using Stride.Assets.Presentation.ViewModels;
 using Stride.Assets.Scripts;
 using Stride.Assets.Sprite;
@@ -14,8 +15,9 @@ using Stride.Core.Presentation.Services;
 namespace Stride.Assets.Editor.Tests;
 
 /// <summary>
-/// The script editor (<see cref="ScriptSourceFileEditorViewModel"/>): the edits of its text, its save to the file, the
-/// changes that another program makes to the file, and its close, which never drops edits silently.
+/// The script editor (<see cref="ScriptSourceFileEditorViewModel"/>), which edits the other source code assets too: the edits of
+/// its text, its save to the file, the changes that another program makes to the file, and its close, which never drops edits
+/// silently.
 /// </summary>
 public sealed class ScriptSourceFileEditorTests
 {
@@ -302,6 +304,30 @@ public sealed class ScriptSourceFileEditorTests
         collection.OpenAssetEditor(script);
         Assert.IsType<ScriptSourceFileEditorViewModel>(Assert.Single(collection.Editors));
         Assert.True(await collection.CloseAllEditorsAsync(false));
+    }
+
+    [Fact]
+    public async Task AnotherSourceCodeAssetOpensInTheSameEditor()
+    {
+        const string shader = "shader Glow : ShaderBase\n{\n};\n";
+        await using var fixture = await AssetsSessionFixture.OpenAsync(initializeEditor: false, ("Glow", new EffectShaderAsset { Text = shader }));
+        Assert.False(fixture.Result.HasErrors, fixture.Log);
+        var plugins = fixture.ServiceProvider.Get<IAssetsPluginService>();
+        var asset = Assert.IsType<SourceCodeAssetViewModel>(fixture.Session.AllAssets.Single(x => x.Asset is EffectShaderAsset));
+
+        // A source code asset without an editor of its own takes the one of all source code assets, which has the view of the scripts
+        Assert.Equal(typeof(SourceCodeAssetEditorViewModel), plugins.GetEditorViewModelType(asset.GetType()));
+        var editor = new SourceCodeAssetEditorViewModel(asset);
+        Assert.Equal(shader, editor.Text);
+        Assert.Equal(".sdsl", editor.FileExtension);
+
+        editor.OnTextEdited("// Glows\n" + shader);
+        Assert.True(asset.IsDirty);
+        await editor.SaveAsync();
+
+        Assert.Equal("// Glows\n" + shader, File.ReadAllText(editor.Asset.AssetItem.FullPath.ToOSPath()));
+        Assert.Equal("// Glows\n" + shader, editor.Asset.Asset.Text);
+        Assert.False(asset.IsDirty);
     }
 
     [Fact]

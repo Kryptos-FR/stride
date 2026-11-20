@@ -202,7 +202,7 @@ public sealed class DockingTests
         {
             var script = fixture.Session.AllAssets.OfType<ScriptSourceFileViewModel>().Single();
             var editor = await OpenEditorAsync<ScriptSourceFileEditorViewModel>(fixture, script);
-            var code = window.GetVisualDescendants().OfType<ScriptSourceFileEditorView>().Single().GetVisualDescendants().OfType<Stride.Core.Presentation.Avalonia.Controls.CodeTextEditor>().Single();
+            var code = window.GetVisualDescendants().OfType<SourceCodeEditorView>().Single().GetVisualDescendants().OfType<Stride.Core.Presentation.Avalonia.Controls.CodeTextEditor>().Single();
             code.TextArea.Focus();
             code.CaretOffset = 0;
             window.KeyTextInput("// ");
