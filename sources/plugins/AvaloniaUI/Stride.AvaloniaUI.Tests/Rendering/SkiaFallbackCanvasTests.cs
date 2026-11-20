@@ -136,6 +136,89 @@ public class SkiaFallbackCanvasTests
         canvas.Draw(commands);
     });
 
+    [Fact]
+    public void RenderTargetBitmapDrawsAtItsDpiAsSkiaDoes() => TestAvalonia.Run(() =>
+    {
+        var channel = SkiaOracle.CreateChannel();
+        var size = new PixelSize(80, 60);
+        var dpi = new Vector(192, 192);
+
+        using var native = new StrideRenderInterface(channel).CreateRenderTargetBitmap(size, dpi);
+        using var skia = SkiaOracle.RenderInterface.CreateRenderTargetBitmap(size, dpi);
+        DrawShapes(native);
+        DrawShapes(skia);
+
+        var (skiaFormat, skiaPixels) = ReadPixels(skia);
+        var (nativeFormat, nativePixels) = ReadPixels(native);
+        Assert.Equal(skiaFormat, nativeFormat);
+        Assert.Contains(skiaPixels, value => value != 0);
+        Assert.Equal(skiaPixels, nativePixels);
+    });
+
+    [Fact]
+    public void OffscreenTargetWithoutTextAntialiasingDrawsGrayscaleTextAsSkiaDoes() => TestAvalonia.Run(() =>
+    {
+        var channel = SkiaOracle.CreateChannel();
+        var skia = SkiaOracle.RenderInterface;
+        var size = new PixelSize(160, 30);
+        var rect = new Rect(0, 0, size.Width, size.Height);
+        var memoryA = new Memory(size.Width, size.Height);
+        var memoryB = new Memory(size.Width, size.Height);
+        var (typeface, glyphs) = GlyphRunTests.Shape("Hamburgefonstiv", 14, FontWeight.Normal);
+
+        // A: the core's offscreen target, as a bitmap cache asks for it, drawn into memory by the fallback
+        using (var glyphRun = new StrideRenderInterface(channel).CreateGlyphRun(typeface, 14, glyphs, new Point(4, 20)))
+        using (var layer = new StrideRenderInterfaceContext(channel).CreateOffscreenRenderTarget(size, new Vector(1, 1), enableTextAntialiasing: false))
+        {
+            DrawText(layer, glyphRun);
+            var recording = new RecordingDrawingContext(channel, channel.Fallback.CreateCanvas(memoryA.Target), Dpi, null);
+            recording.DrawBitmap(layer, 1, rect, rect);
+            recording.Dispose();
+        }
+
+        // B: Skia's own offscreen target, drawn into memory by Skia
+        using (var glyphRun = skia.CreateGlyphRun(typeface, 14, glyphs, new Point(4, 20)))
+        using (var context = skia.CreateBackendContext(null))
+        using (var layer = context.CreateOffscreenRenderTarget(size, new Vector(1, 1), enableTextAntialiasing: false))
+        {
+            DrawText(layer, glyphRun);
+            using var renderTarget = context.CreateRenderTarget([new MemoryFramebufferSurface(memoryB.Target)]);
+            using var drawing = renderTarget.CreateDrawingContext(memoryB.SceneInfo, out _);
+            drawing.DrawBitmap(layer, 1, rect, rect);
+        }
+
+        Assert.Contains(memoryB.Pixels, value => value != 0);
+        Assert.Equal(memoryB.Pixels, memoryA.Pixels);
+    });
+
+    // Shapes in device-independent pixels, which a render target bitmap scales to its DPI
+    private static void DrawShapes(IRenderTargetBitmapImpl bitmap)
+    {
+        using var context = bitmap.CreateDrawingContext();
+        context.Clear(Colors.Transparent);
+        context.DrawRectangle(new ImmutableSolidColorBrush(Colors.SteelBlue), null, new RoundedRect(new Rect(4, 4, 20, 12)));
+        context.Transform = Matrix.CreateTranslation(10, 0);
+        context.DrawEllipse(new ImmutableSolidColorBrush(Colors.Crimson), null, new Rect(16, 14, 12, 12));
+    }
+
+    // Black text with the text options of a visual in a bitmap cache: none
+    private static void DrawText(IDrawingContextLayerImpl layer, IGlyphRunImpl glyphRun)
+    {
+        using var context = layer.CreateDrawingContext();
+        context.Clear(Colors.Transparent);
+        context.DrawGlyphRun(new ImmutableSolidColorBrush(Colors.Black), glyphRun);
+    }
+
+    private static (PixelFormat? Format, byte[] Pixels) ReadPixels(IReadableBitmapImpl bitmap)
+    {
+        using var locked = bitmap.Lock();
+        var rowBytes = locked.Size.Width * 4;
+        var pixels = new byte[rowBytes * locked.Size.Height];
+        for (var y = 0; y < locked.Size.Height; y++)
+            Marshal.Copy(locked.Address + y * locked.RowBytes, pixels, y * rowBytes, rowBytes);
+        return (locked.Format, pixels);
+    }
+
     private static void DrawScene(IDrawingContextImpl context, Scene scene)
     {
         var black = new ImmutableSolidColorBrush(Colors.Black);

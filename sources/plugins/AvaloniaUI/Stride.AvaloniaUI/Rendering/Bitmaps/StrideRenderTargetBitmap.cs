@@ -14,7 +14,9 @@ namespace Stride.AvaloniaUI.Rendering.Bitmaps;
 /// <remarks>
 /// Premultiplied Bgra8888; it keeps its pixels from a drawing to the next.
 /// </remarks>
-internal sealed class StrideRenderTargetBitmap(FallbackChannel channel, PixelSize size, Vector dpi)
+/// <param name="scaleDrawingToDpi">Whether drawings are in device-independent pixels, scaled to the DPI, as in a render target bitmap.</param>
+/// <param name="grayscaleText">Whether text is drawn without subpixel antialiasing, as in a bitmap cache.</param>
+internal sealed class StrideRenderTargetBitmap(FallbackChannel channel, PixelSize size, Vector dpi, bool scaleDrawingToDpi = false, bool grayscaleText = false)
     : StrideBitmap(size, dpi, PixelFormat.Bgra8888, AlphaFormat.Premul), IRenderTargetBitmapImpl, IDrawingContextLayerImpl
 {
     public bool CanBlit => true;
@@ -26,7 +28,7 @@ internal sealed class StrideRenderTargetBitmap(FallbackChannel channel, PixelSiz
     /// </summary>
     public IDrawingContextImpl CreateDrawingContext()
     {
-        var canvas = channel.Fallback.CreateCanvas(new FallbackTarget(Address, PixelSize, RowBytes, Format, Dpi, PreviousFrameRetained: true));
+        var canvas = channel.Fallback.CreateCanvas(new FallbackTarget(Address, PixelSize, RowBytes, Format, Dpi, PreviousFrameRetained: true, scaleDrawingToDpi, grayscaleText));
         return new RecordingDrawingContext(channel, canvas, Dpi, MarkChanged);
     }
 

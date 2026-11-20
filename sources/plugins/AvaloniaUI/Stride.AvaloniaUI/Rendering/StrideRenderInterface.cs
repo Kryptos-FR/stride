@@ -55,7 +55,7 @@ internal sealed class StrideRenderInterface(FallbackChannel channel) : IPlatform
         return new FallbackGeometry(Channel, Channel.Fallback.BuildGlyphRunGeometry(glyphRun));
     }
 
-    public IRenderTargetBitmapImpl CreateRenderTargetBitmap(PixelSize size, Vector dpi) => new StrideRenderTargetBitmap(Channel, size, dpi);
+    public IRenderTargetBitmapImpl CreateRenderTargetBitmap(PixelSize size, Vector dpi) => new StrideRenderTargetBitmap(Channel, size, dpi, scaleDrawingToDpi: true);
 
     public IWriteableBitmapImpl CreateWriteableBitmap(PixelSize size, Vector dpi, PixelFormat format, AlphaFormat alphaFormat)
         => new StrideBitmap(size, dpi, format, alphaFormat);

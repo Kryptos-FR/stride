@@ -38,8 +38,11 @@ internal sealed class StrideRenderInterfaceContext(FallbackChannel channel) : IP
     /// <summary>
     /// Makes a bitmap to draw into, such as the cache of a visual, at a DPI of 96 times the scaling.
     /// </summary>
+    /// <remarks>
+    /// Without <paramref name="enableTextAntialiasing"/>, text is drawn without subpixel antialiasing, as the bitmap is drawn over other content later.
+    /// </remarks>
     public IDrawingContextLayerImpl CreateOffscreenRenderTarget(PixelSize pixelSize, Vector scaling, bool enableTextAntialiasing)
-        => new StrideRenderTargetBitmap(channel, pixelSize, scaling * 96);
+        => new StrideRenderTargetBitmap(channel, pixelSize, scaling * 96, grayscaleText: !enableTextAntialiasing);
 
     public object? TryGetFeature(Type featureType) => null;
 
