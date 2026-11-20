@@ -21,21 +21,25 @@ game.Run();
 
 ## How it works
 
-- `Platform/`: an Avalonia platform with no native windows. Avalonia's dispatcher and render loop run on the game thread, driven by the game loop (`StrideDispatcherImpl`, `StrideRenderTimer`). Each view is an offscreen top level (`StrideTopLevelImpl`) that Skia renders on the CPU into memory that keeps the previous frame, so Avalonia redraws only what changed.
-- `AvaloniaUISystem` (a `[GameSystem]`): pumps Avalonia in the update, renders the views in the draw, uploads the frames that changed to textures and draws them over the back buffer after the scene.
+- `Platform/`: an Avalonia platform with no native windows. Avalonia's dispatcher and render loop run on the game thread, driven by the game loop (`StrideDispatcherImpl`, `StrideRenderTimer`). Each view is an offscreen top level (`StrideTopLevelImpl`).
+- `Platform/Gpu/`: Skia on the game's own Vulkan device. Skia renders each view into a texture of the device, with the device's queue, and the game draws that texture without a copy. Avalonia takes it as the GPU of its Skia backend (`StrideSkiaGpu`, given through `SkiaGpuProxy`); `Stride.Graphics` gives the Vulkan handles Skia needs (`VulkanInterop`). Where Skia can't share the device, it renders on the CPU into memory that keeps the previous frame, and the game uploads the frames that changed.
+- `AvaloniaUISystem` (a `[GameSystem]`): pumps Avalonia in the update, renders the views in the draw, and draws their frames over the back buffer after the scene. `RenderOnGpu` (on by default) chooses Skia on the device or on the CPU; a change takes effect at the next frame.
 - Input goes through the `InputManager`'s capture: a view captures the mouse (`Hover` priority) while it is over one of its controls or a button pressed on it is held, and the keyboard (`Focus` priority) while a text box has the focus, so scripts don't see what the UI takes. A click where no control is gives the focus back to the game, and a game drag that crosses the UI stays with the game.
 
 ## Status and limits
 
-This is the CPU foundation of the design in the analysis document; Skia on Stride's own Vulkan or Direct3D 12 device comes next, then a native Stride renderer as research.
+This is the design in the analysis document up to Skia on Stride's own Vulkan device; Skia on Direct3D 12 comes next, then a native Stride renderer as research.
 
+- Skia renders on the GPU with Vulkan only. With Direct3D 11 or 12 and OpenGL, it renders on the CPU and each changed frame is uploaded whole.
+- Avalonia has one GPU in a process: it follows the device of the last game that loaded its graphics content.
+- Avalonia's Skia GPU interface is internal: the platform implements it with runtime code generation, so where there is none (NativeAOT) Skia renders on the CPU.
+- Text is anti-aliased in grayscale, as the views are drawn over the game (subpixel text needs an opaque background).
 - Views are full screen overlays drawn after the scene; views in the 3D world (like `UIComponent`'s non full screen mode) are not done yet.
-- Each changed frame is uploaded whole.
 - Avalonia's colors are blended in sRGB and Stride's in linear: on an sRGB back buffer, anti-aliased edges can look slightly different from a desktop Avalonia app.
 - Touch and pens act as the left mouse button, first finger only. Text input takes committed text; IME compositions in progress are not shown.
 - Not yet: clipboard, cursors (the requested cursor type is in `StrideTopLevelImpl.Cursor` but the game's cursor doesn't follow it), editor support (the editor's scene view doesn't show the views). Popups (combo box lists, menus, tool tips) are not tested yet.
-- The platform uses Avalonia APIs marked private, so the package depends on the exact Avalonia version it was built with.
+- The platform uses Avalonia APIs marked private or internal, so the package depends on the exact Avalonia version it was built with.
 
 ## Tests
 
-`Stride.AvaloniaUI.Tests` runs a headless game with simulated input for the layout, rendering and input capture, and a game on the GPU (Lavapipe on CI) that checks the view is drawn over the scene and takes its clicks.
+`Stride.AvaloniaUI.Tests` runs a headless game with simulated input for the layout, rendering and input capture, and games on the GPU (Lavapipe on CI) that check the view is drawn over the scene and takes its clicks with Skia on the device and on the CPU, that both draw the same frame, and that the view is drawn again when it moves between them. With `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`, the Vulkan validation layer fails the GPU tests on any error.
