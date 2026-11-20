@@ -156,6 +156,8 @@ public sealed class AvaloniaUIGameTests : GameTestBase
         HorizontalAlignment = HorizontalAlignment.Center,
         VerticalAlignment = VerticalAlignment.Center,
         Background = new SolidColorBrush(Avalonia.Media.Color.FromRgb(ButtonColor.R, ButtonColor.G, ButtonColor.B)),
+        // The theme's press animation runs on the wall clock, which the frames of a test don't follow
+        Transitions = [],
     };
 
     /// <summary>
