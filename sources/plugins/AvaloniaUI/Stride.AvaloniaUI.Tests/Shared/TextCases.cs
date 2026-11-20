@@ -34,6 +34,7 @@ internal static class TextCases
     [
         "FractionalPositions", "Scaled4By3", "Scaled5By4", "ScaleTransform", "Colors", "HintingModes", "Aliased", "SubpixelRequested",
         "UnalignedBaseline", "Simulations", "TwoColorsSameGlyphs", "Rotated", "LargeText", "ColorEmoji", "GradientText", "Whitespace",
+        "CollectionFaces", "Size72",
     ];
 
     /// <summary>
@@ -63,6 +64,8 @@ internal static class TextCases
         ["ColorEmoji"] = 0,
         ["GradientText"] = 0,
         ["Whitespace"] = 0,
+        ["CollectionFaces"] = 0,
+        ["Size72"] = 0,
     };
 
     /// <summary>
@@ -88,6 +91,8 @@ internal static class TextCases
         ["ColorEmoji"] = 0,
         ["GradientText"] = 0,
         ["Whitespace"] = 6,
+        ["CollectionFaces"] = 0,
+        ["Size72"] = 0,
     };
 
     /// <summary>
@@ -111,6 +116,8 @@ internal static class TextCases
         ["ColorEmoji"] = [FallbackReason.ColorFont],
         ["GradientText"] = [FallbackReason.Brush],
         ["Whitespace"] = [],
+        ["CollectionFaces"] = [],
+        ["Size72"] = [],
     };
 
     private const string Line = "Quartz Жёлудь";
@@ -165,6 +172,10 @@ internal static class TextCases
             (Text("     "), 8, 8),
             (new TextBlock(), 8, 30),
             (new TextBlock { Text = "a b", Foreground = new SolidColorBrush(Colors.Black, 0.5) }, 8, 52)),
+        "CollectionFaces" => Page(
+            (new TextBlock { Text = "مرحبا بالعالم", FontFamily = new FontFamily("fonts:TestCollection#Noto Sans Arabic"), FontSize = 20 }, 8, 8),
+            (new TextBlock { Text = "日本語", FontFamily = new FontFamily("fonts:TestCollection#Noto Sans JP"), FontSize = 24 }, 8, 60)),
+        "Size72" => Page((new TextBlock { Text = "Ag Ж", FontSize = 72 }, 8, 8)),
         _ => throw new ArgumentOutOfRangeException(nameof(name), name, "No text case has this name."),
     };
 

@@ -202,6 +202,13 @@ public sealed class GlyphRasterizerTests : IDisposable
         return glyphs.ToArray();
     }
 
+    // The glyph of the space, when it is one of the glyphs
+    private static SortedSet<ushort> GetSpaces(GlyphTypeface typeface, ushort[] glyphs)
+    {
+        using var shaped = TextShaper.Current.ShapeText(" ", new TextShaperOptions(typeface, 12));
+        return glyphs.Contains(shaped[0].GlyphIndex) ? [shaped[0].GlyphIndex] : [];
+    }
+
     // Black, white, a semi-transparent red, and a gray in each of the 8 luminance tables
     private static IEnumerable<Color> GetColors()
     {
@@ -242,6 +249,7 @@ public sealed class GlyphRasterizerTests : IDisposable
         var skiaInkOutsideTheImage = 0;
         var glyphs = GetGlyphs(typeface, size);
         Assert.NotEmpty(glyphs);
+        var glyphsSkiaDrewNothingOf = new SortedSet<ushort>();
 
         foreach (var glyph in glyphs)
         {
@@ -260,6 +268,8 @@ public sealed class GlyphRasterizerTests : IDisposable
                     var x = aliased ? OriginX + 0.4f : OriginX + subpixel / 4f;
                     var mask = DrawGlyph(surface, skFont, glyph, x, color.A == 255 ? color : Color.FromRgb(color.R, color.G, color.B));
                     var translucent = color.A == 255 ? null : DrawGlyph(surface, skFont, glyph, x, color);
+                    if (!mask.AsSpan().ContainsAnyExcept((byte)0))
+                        glyphsSkiaDrewNothingOf.Add(glyph);
                     var ours = coverage.WrittenSpan;
                     for (var py = 0; py < SurfaceSize; py++)
                     {
@@ -305,6 +315,8 @@ public sealed class GlyphRasterizerTests : IDisposable
         Assert.True(failures.Count == 0, $"{face} at {size} px, {edging}:\n{string.Join("\n", failures)}");
         Assert.Equal(0, maxDifference);
         Assert.Equal(0, skiaInkOutsideTheImage);
+        // Skia drew each glyph but the space: masks of nothing match too, and prove nothing
+        Assert.Equal(GetSpaces(typeface, glyphs), glyphsSkiaDrewNothingOf);
     }
 
     // A typeface that counts the streams of its file it gives
