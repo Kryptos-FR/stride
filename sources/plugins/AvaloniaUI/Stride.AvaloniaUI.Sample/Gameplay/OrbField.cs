@@ -57,22 +57,27 @@ public sealed class OrbField : SyncScript
     /// Gets the state of the game the views bind to.
     /// </summary>
     [DataMemberIgnore]
-    public required GameViewModel ViewModel { get; init; }
+    public GameViewModel ViewModel { get; } = new();
 
     /// <summary>
-    /// Gets the HUD, shown during a round.
+    /// Gets or sets the HUD, shown during a round.
     /// </summary>
-    [DataMemberIgnore]
-    public required AvaloniaUIComponent Hud { get; init; }
+    /// <userdoc>The view of the HUD, shown during a round.</userdoc>
+    public AvaloniaUIComponent? Hud { get; set; }
 
     /// <summary>
-    /// Gets the menus, shown when no round is being played.
+    /// Gets or sets the menus, shown when no round is being played.
     /// </summary>
-    [DataMemberIgnore]
-    public required AvaloniaUIComponent Menus { get; init; }
+    /// <userdoc>The view of the menus, shown when no round is being played.</userdoc>
+    public AvaloniaUIComponent? Menus { get; set; }
 
     public override void Start()
     {
+        // The graphics compositor's orb field renderer finds the field here
+        Services.AddService(this);
+        Game.Window.Title = "Orb Hunt · Avalonia UI on Stride";
+        Game.Window.AllowUserResizing = true;
+
         spriteBatch = new SpriteBatch(GraphicsDevice);
         textures = new OrbTextures(GraphicsDevice);
         for (var i = 0; i < stars.Length; i++)
@@ -84,23 +89,32 @@ public sealed class OrbField : SyncScript
             pops.Clear();
             spawnTimer = 0;
         };
+        ViewModel.QuitRequested += ((Game)Game).Exit;
     }
 
     public override void Cancel()
     {
+        Services.RemoveService<OrbField>(this);
         spriteBatch?.Dispose();
         textures?.Dispose();
     }
 
     public override void Update()
     {
-        // The HUD is created from its view type, as a view of a scene asset is: give it the view model once it exists
-        if (Hud.Content is { DataContext: null } hud)
-            hud.DataContext = ViewModel;
-
-        // Each view is an entity component: the game shows and hides it
-        Hud.Enabled = ViewModel.State != GameState.MainMenu;
-        Menus.Enabled = ViewModel.State != GameState.Playing;
+        // The views are created from their view type when their entity enters the scene: give them the view model
+        // once they exist. Each view is an entity component, which the game shows and hides.
+        if (Hud != null)
+        {
+            if (Hud.Content is { DataContext: null } hud)
+                hud.DataContext = ViewModel;
+            Hud.Enabled = ViewModel.State != GameState.MainMenu;
+        }
+        if (Menus != null)
+        {
+            if (Menus.Content is { DataContext: null } menus)
+                menus.DataContext = ViewModel;
+            Menus.Enabled = ViewModel.State != GameState.Playing;
+        }
         ShowRenderer();
 
         var backBuffer = GraphicsDevice.Presenter.BackBuffer;
@@ -132,7 +146,7 @@ public sealed class OrbField : SyncScript
     }
 
     /// <summary>
-    /// Draws the field, before the views are drawn over it. The graphics compositor calls it.
+    /// Draws the field, before the views are drawn over it. The graphics compositor calls it (<see cref="OrbFieldRenderer"/>).
     /// </summary>
     public void Draw(RenderDrawContext context)
     {

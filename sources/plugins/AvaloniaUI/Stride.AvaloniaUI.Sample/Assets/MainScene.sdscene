@@ -1,0 +1,55 @@
+!SceneAsset
+Id: e9f28305-523e-4e37-8e33-095125681b2c
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 0.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! 41e2ea28-4cf0-46e9-a6ad-ca98b4341c93
+        - ref!! 20d17c70-9dca-46e0-8c80-703b720d0344
+        - ref!! 42c0ff86-6af8-41fe-a373-ad931d37b29a
+    Parts:
+        -   Entity:
+                Id: 20d17c70-9dca-46e0-8c80-703b720d0344
+                Name: HUD
+                Components:
+                    589294558544416e9dcd14cd8fe323b8: !TransformComponent
+                        Id: c0f1fa51-5773-4614-80cc-4b1ee783b2ea
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    c77fced224c847a583dec43a6acbe391: !AvaloniaUIComponent
+                        Id: 170eadda-d3e7-43d6-a473-92f49883e189
+                        ViewType: Stride.AvaloniaUI.Sample.Views.HudView, Stride.AvaloniaUI.Sample
+                        Resolution: {X: 1280.0, Y: 720.0}
+        -   Entity:
+                Id: 41e2ea28-4cf0-46e9-a6ad-ca98b4341c93
+                Name: Orb field
+                Components:
+                    51a17068ec0e4f0480eed1068cc44819: !TransformComponent
+                        Id: 77717fdb-c754-435e-bc77-2b51a3052331
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    990fe30bad7f45c7baf88e6079818c57: !Stride.AvaloniaUI.Sample.Gameplay.OrbField,Stride.AvaloniaUI.Sample
+                        Id: fc4c4f81-c36c-4c0b-81fa-b024f1128ec4
+                        Hud: ref!! 170eadda-d3e7-43d6-a473-92f49883e189
+                        Menus: ref!! 57b346ce-83d1-49c3-bcf7-cc8f57495991
+        -   Entity:
+                Id: 42c0ff86-6af8-41fe-a373-ad931d37b29a
+                Name: Menus
+                Components:
+                    10a7aadb8bca407fb9751057aa9383d5: !TransformComponent
+                        Id: 909e345a-57b9-4e1b-a921-b4ee5275a918
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    e78c2f06324b43b983a712e1e6dfdc97: !AvaloniaUIComponent
+                        Id: 57b346ce-83d1-49c3-bcf7-cc8f57495991
+                        ViewType: Stride.AvaloniaUI.Sample.Views.MenuView, Stride.AvaloniaUI.Sample
+                        Resolution: {X: 1280.0, Y: 720.0}
+                        DrawOrder: 1
