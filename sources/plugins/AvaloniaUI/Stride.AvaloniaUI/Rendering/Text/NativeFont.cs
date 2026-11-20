@@ -3,7 +3,6 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Runtime.InteropServices;
 using Avalonia.Media;
 using Avalonia.Media.Fonts;
@@ -13,7 +12,7 @@ using Stride.Graphics.Font;
 namespace Stride.AvaloniaUI.Rendering.Text;
 
 /// <summary>
-/// The FreeType face of a typeface, opened from the typeface's font data, which it keeps pinned for the face's life.
+/// The FreeType face of a typeface, opened from the typeface's font file.
 /// </summary>
 /// <remarks>
 /// The face is touched on the game thread only, which is Avalonia's UI and render thread.
@@ -25,13 +24,10 @@ internal sealed unsafe class NativeFont : IDisposable
     private static readonly uint HeadTable = Tag("head");
     private static readonly uint NameTable = Tag("name");
 
-    // The font file, on the pinned object heap: FreeType reads it for as long as the face lives
-    private readonly byte[] data;
-
-    private NativeFont(FT_FaceRec* face, byte[] data, string familyName, FontSimulations simulations)
+    private NativeFont(FT_FaceRec* face, FontFile file, string familyName, FontSimulations simulations)
     {
         Face = face;
-        this.data = data;
+        File = file;
         FamilyName = familyName;
         Simulations = simulations;
     }
@@ -45,6 +41,11 @@ internal sealed unsafe class NativeFont : IDisposable
     /// Gets the simulations of the typeface: oblique only, which skews its glyphs.
     /// </summary>
     public FontSimulations Simulations { get; }
+
+    /// <summary>
+    /// Gets the font file the face reads.
+    /// </summary>
+    internal FontFile File { get; }
 
     /// <summary>
     /// Gets the FreeType face, or <c>null</c> once disposed.
@@ -76,19 +77,17 @@ internal sealed unsafe class NativeFont : IDisposable
         }
 
         reason = FallbackReason.FontData;
-        if (!platformTypeface.TryGetStream(out var stream))
+        if (!FontFile.TryGet(platformTypeface, out var file))
             return false;
-        byte[] file;
-        using (stream)
-            file = ReadPinned(stream);
 
-        var index = FindFaceIndex(library, file, tag => platformTypeface.TryGetTable(tag, out var table) ? table : null);
+        var data = file.Data;
+        var index = FindFaceIndex(library, data, tag => platformTypeface.TryGetTable(tag, out var table) ? table : null);
         if (index < 0)
             return false;
         FT_FaceRec* face;
-        fixed (byte* address = file)
+        fixed (byte* address = data)
         {
-            if (FreeTypeNative.FT_New_Memory_Face(library, address, new CLong(file.Length), new CLong(index), out face) != 0)
+            if (FreeTypeNative.FT_New_Memory_Face(library, address, new CLong(data.Length), new CLong(index), out face) != 0)
                 return false;
         }
 
@@ -155,26 +154,10 @@ internal sealed unsafe class NativeFont : IDisposable
             return;
         FreeTypeNative.FT_Done_Face(Face);
         Face = null;
-        GC.KeepAlive(data);
+        GC.KeepAlive(File);
     }
 
     private static uint Tag(string tag) => OpenTypeTag.Parse(tag);
-
-    private static byte[] ReadPinned(Stream stream)
-    {
-        if (stream.CanSeek)
-        {
-            var bytes = GC.AllocateUninitializedArray<byte>(checked((int)(stream.Length - stream.Position)), pinned: true);
-            stream.ReadExactly(bytes);
-            return bytes;
-        }
-
-        using var memory = new MemoryStream();
-        stream.CopyTo(memory);
-        var copy = GC.AllocateUninitializedArray<byte>((int)memory.Length, pinned: true);
-        memory.GetBuffer().AsSpan(0, copy.Length).CopyTo(copy);
-        return copy;
-    }
 
     private static bool TableEquals(FT_FaceRec* face, uint tag, ReadOnlySpan<byte> expected)
     {
