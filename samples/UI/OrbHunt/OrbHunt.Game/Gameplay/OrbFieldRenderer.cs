@@ -8,7 +8,8 @@ using Stride.Rendering.Compositing;
 namespace OrbHunt.Gameplay;
 
 /// <summary>
-/// Draws the orb field of the scene, in the game's graphics compositor. The Avalonia views are drawn over it.
+/// Draws the orb field of the scene (<see cref="OrbField"/>), in the game's graphics compositor, after the view of the
+/// camera. A scene without a field, such as the planet scene, draws nothing here. The Avalonia views are drawn over it.
 /// </summary>
 [DataContract("OrbFieldRenderer")]
 [Display("Orb field")]

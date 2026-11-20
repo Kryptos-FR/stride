@@ -1,0 +1,7 @@
+!Texture
+Id: 5a4f324e-2f37-4be5-aa4a-c9c241ded27a
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../Resources/Stars.dds
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

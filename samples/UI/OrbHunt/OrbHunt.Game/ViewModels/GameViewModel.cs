@@ -32,7 +32,7 @@ public sealed record ScoreEntry(int Rank, string Name, int Score, bool IsLatest)
 public sealed record LifeSlot(bool IsLost);
 
 /// <summary>
-/// The state of the game that the XAML views bind to. The game (<see cref="Gameplay.OrbField"/>) plays the rounds and
+/// The state of the game that the XAML views bind to. The game (<see cref="Gameplay.OrbHuntScript"/>) plays the rounds and
 /// updates it; the views show it and change it through their controls and commands.
 /// </summary>
 public sealed class GameViewModel : ObservableObject
@@ -132,6 +132,17 @@ public sealed class GameViewModel : ObservableObject
     }
 
     public string TimeText => $"{Math.Ceiling(TimeLeft):0}";
+
+    /// <summary>
+    /// Gets or sets how red the screen flashes after a red orb: 1 when the orb pops, down to 0.
+    /// </summary>
+    public double Hurt { get; set => SetField(ref field, value); }
+
+    /// <summary>
+    /// Gets the orbs that the HUD draws, in a scene whose orbs are controls (<see cref="Gameplay.HudOrbs"/>). It stays
+    /// empty in a scene that draws its orbs otherwise.
+    /// </summary>
+    public ObservableCollection<OrbViewModel> Orbs { get; } = [];
 
     public string GameOverTitle { get; private set => SetField(ref field, value); } = string.Empty;
 
