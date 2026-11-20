@@ -1,0 +1,21 @@
+<Project>
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'Directory.Build.props'))/sdk/Stride.Build.Sdk.Editor/Sdk/Sdk.props" />
+  <PropertyGroup>
+    <TargetFramework>$(StrideXplatEditorTargetFramework)</TargetFramework>
+    <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
+    <StrideAssemblyProcessorOptions>--serialization --parameter-key</StrideAssemblyProcessorOptions>
+    <StridePackageKind>Assets</StridePackageKind>
+    <Nullable>enable</Nullable>
+    <!-- The views of a game (.axaml) are project assets: build/Stride.AvaloniaUI.targets of the runtime declares them for games -->
+    <StrideProjectAssetExtensions>$(StrideProjectAssetExtensions);.axaml</StrideProjectAssetExtensions>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\shared\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\assets\Stride.Core.Assets\Stride.Core.Assets.csproj" />
+  </ItemGroup>
+  <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk.Editor/Sdk/Sdk.targets" />
+</Project>

@@ -35,6 +35,13 @@
   <ItemGroup>
     <StridePrecompiledBytecode Include="Shaders.Bytecodes\*.bytecode*.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Makes the Avalonia XAML files of a game project assets -->
+    <None Include="build\**\*.targets" PackagePath="build/" Pack="true" />
+    <None Include="build\**\*.targets" PackagePath="buildTransitive/" Pack="true" />
+    <!-- Companion package: the Avalonia XAML asset, so that Game Studio lists the views of a game -->
+    <StrideCompanionProject Include="..\Stride.AvaloniaUI.Assets\Stride.AvaloniaUI.Assets.csproj" />
+  </ItemGroup>
   <Import Project="$(StrideRoot)sources\shaders\Stride.PrecompiledBytecodes.targets" />
   <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk/Sdk/Sdk.targets" />
 </Project>
