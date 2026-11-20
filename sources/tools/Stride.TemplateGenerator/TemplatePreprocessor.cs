@@ -76,6 +76,7 @@ Cache/
         ".cs", ".csproj", ".sln", ".slnx", ".targets", ".props", ".config",
         ".json", ".yaml", ".yml",
         ".xml", ".html", ".htm",
+        ".axaml", ".xaml",
         ".md", ".txt", ".gitignore", ".gitattributes", ".editorconfig",
     };
 
