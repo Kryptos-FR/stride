@@ -43,6 +43,7 @@ namespace Stride.Graphics.Font
         ForceAutohint = 0x20,
         CropBitmap = 0x40,
         Pedantic = 0x80,
+        IgnoreGlobalAdvanceWidth = 0x200,
         NoRecurse = 0x400,
         IgnoreTransform = 0x800,
         Monochrome = 0x1000,
@@ -72,6 +73,16 @@ namespace Stride.Graphics.Font
     {
         public CLong x;
         public CLong y;
+    }
+
+    // A 2×2 matrix of 16.16 fixed-point numbers: x' = xx * x + xy * y, y' = yx * x + yy * y
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct FT_Matrix
+    {
+        public CLong xx;
+        public CLong xy;
+        public CLong yx;
+        public CLong yy;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -226,5 +237,20 @@ namespace Stride.Graphics.Font
 
         [DllImport(FreetypeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern int FT_Render_Glyph(FT_GlyphSlotRec* slot, FreeTypeRenderMode render_mode);
+
+        [DllImport(FreetypeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void FT_Set_Transform(FT_FaceRec* face, FT_Matrix* matrix, FT_Vector* delta);
+
+        [DllImport(FreetypeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void FT_Outline_Translate(FT_Outline* outline, CLong xOffset, CLong yOffset);
+
+        [DllImport(FreetypeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void FT_Outline_Get_CBox(FT_Outline* outline, FT_BBox* cbox);
+
+        [DllImport(FreetypeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int FT_Outline_Get_Bitmap(nint library, FT_Outline* outline, FT_Bitmap* bitmap);
+
+        [DllImport(FreetypeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int FT_Load_Sfnt_Table(FT_FaceRec* face, CULong tag, CLong offset, byte* buffer, CULong* length);
     }
 }
