@@ -92,8 +92,10 @@ internal sealed class NativeRendererBackend : RendererBackend
     // Without a graphics context, a frame on the device draws nothing
     public override void BeginRender(GraphicsContext? graphicsContext)
     {
-        if (Graphics != null)
-            Graphics.Context = graphicsContext;
+        if (Graphics is not { } graphics)
+            return;
+        graphics.Context = graphicsContext;
+        graphics.BeginFrame();
     }
 
     public override void EndRender()

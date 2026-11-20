@@ -14,7 +14,7 @@ namespace Stride.AvaloniaUI.Rendering.Native;
 
 /// <summary>
 /// What a native canvas keeps on one graphics device: the device's shared resources of the canvas, the buffer of the quads,
-/// and the textures the fallback runs are uploaded to.
+/// the glyph atlas, and the textures the fallback runs are uploaded to.
 /// </summary>
 internal sealed class NativeGraphics : IDisposable
 {
@@ -64,6 +64,7 @@ internal sealed class NativeGraphics : IDisposable
     {
         Device = device;
         Resources = CanvasDeviceResources.Get(device);
+        GlyphAtlas = new GlyphAtlas(device);
     }
 
     public GraphicsDevice Device { get; }
@@ -74,11 +75,21 @@ internal sealed class NativeGraphics : IDisposable
     internal CanvasDeviceResources Resources { get; }
 
     /// <summary>
+    /// Gets the masks of the glyphs the canvas draws, shared by the views of the device.
+    /// </summary>
+    public GlyphAtlas GlyphAtlas { get; }
+
+    /// <summary>
     /// Gets or sets the game's graphics context, which the canvas records its commands in; set while Avalonia renders.
     /// </summary>
     public GraphicsContext? Context { get; set; }
 
     public bool IsDisposed { get; private set; }
+
+    /// <summary>
+    /// Starts a frame of the game, which the glyph atlas counts the use of its pages in.
+    /// </summary>
+    public void BeginFrame() => GlyphAtlas.BeginFrame();
 
     /// <summary>
     /// Draws quads into a texture, in order, with the scissor, the texture and the clip of each segment.
@@ -225,5 +236,6 @@ internal sealed class NativeGraphics : IDisposable
         freeTextures.Clear();
         instanceBuffer?.Dispose();
         instanceBuffer = null;
+        GlyphAtlas.Dispose();
     }
 }
