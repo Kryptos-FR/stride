@@ -103,6 +103,32 @@ public class TestLoadProjectAsset : TestBase
     }
 
     [Fact]
+    public void AFileOfAnotherItemTypeIsFoundOnceAStrideProjectAssetItemHoldsIt()
+    {
+        var (_, directory) = CreateProject(nameof(AFileOfAnotherItemTypeIsFoundOnceAStrideProjectAssetItemHoldsIt), null);
+        Directory.CreateDirectory(Path.Combine(directory, "Views"));
+        Directory.CreateDirectory(Path.Combine(directory, "Other"));
+        var view = WriteFile(directory, "Views/Foo.sdprojtest");
+        WriteFile(directory, "Other/Bar.sdprojtest");
+        var project = Path.Combine(directory, "MyGame.csproj");
+        File.WriteAllText(project,
+            $"""
+            <Project>
+              <ItemGroup>
+                <PluginView Include="Views\*.sdprojtest" />
+                <OtherView Include="Other\*.sdprojtest" />
+                <{Package.ProjectAssetItemType} Include="@(PluginView)" />
+              </ItemGroup>
+            </Project>
+            """);
+
+        var (filePath, link) = Assert.Single(Package.FindAssetsInProject(project, out _));
+
+        Assert.Equal(new UFile(view), filePath);
+        Assert.Null(link);
+    }
+
+    [Fact]
     public void AnotherFileWithTheSameLocationIsSkippedWithAWarning()
     {
         var (package, directory) = CreateProject(nameof(AnotherFileWithTheSameLocationIsSkippedWithAWarning), null);

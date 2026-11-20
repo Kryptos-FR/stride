@@ -1078,8 +1078,9 @@ public sealed partial class PackageSession : IDisposable, IAssetFinder
     /// The platform of an executable, as its <c>StridePlatform</c> property declares it; the load reads it for an executable only.
     /// </param>
     /// <param name="projectFiles">
-    /// The files the project lists (its <c>Compile</c>, <c>None</c> and <c>AdditionalFiles</c> items), relative to the project
-    /// or absolute: its project assets (.cs scripts, .sdsl, .sdfx) are the ones of a registered type, as when the load lists them.
+    /// The files the project lists (its <c>Compile</c>, <c>None</c>, <c>AdditionalFiles</c> and <c>StrideProjectAsset</c> items),
+    /// relative to the project or absolute: its project assets (.cs scripts, .sdsl, .sdfx) are the ones of a registered type, as
+    /// when the load lists them.
     /// </param>
     /// <exception cref="ArgumentException">The package does not exist, or has no project next to it.</exception>
     public static void LoadWithoutMSBuild(string packagePath, ProjectType projectType, PackageSessionResult sessionResult, PackageLoadParameters? loadParameters = null,
@@ -1540,7 +1541,7 @@ public sealed partial class PackageSession : IDisposable, IAssetFinder
                             project = VSProjectHelper.LoadProject(projectFullPath.ToOSPath());
                             vsProjs.Add(projectFullPath, project);
                         }
-                        var projectItem = project.Items.FirstOrDefault(x => (x.ItemType == "Compile" || x.ItemType == "None" || x.ItemType == "AdditionalFiles") && x.EvaluatedInclude == projectInclude);
+                        var projectItem = project.Items.FirstOrDefault(x => Package.IsProjectAssetItemType(x.ItemType) && x.EvaluatedInclude == projectInclude);
                         if (projectItem?.IsImported == false)
                         {
                             project.RemoveItem(projectItem);
@@ -1555,7 +1556,7 @@ public sealed partial class PackageSession : IDisposable, IAssetFinder
                             File.Delete(generatedAbsolutePath);
 
                             var generatedInclude = assetItem.GetGeneratedInclude();
-                            var generatedItem = project.Items.FirstOrDefault(x => (x.ItemType == "Compile" || x.ItemType == "None" || x.ItemType == "AdditionalFiles") && x.EvaluatedInclude == generatedInclude);
+                            var generatedItem = project.Items.FirstOrDefault(x => Package.IsProjectAssetItemType(x.ItemType) && x.EvaluatedInclude == generatedInclude);
                             if (generatedItem is not null)
                             {
                                 project.RemoveItem(generatedItem);

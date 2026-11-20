@@ -1595,7 +1595,7 @@ public sealed partial class Package : IFileSynchronizable, IAssetFinder
         if (nameSpace?.Length == 0)
             nameSpace = null;
 
-        var files = project.Items.Where(x => (x.ItemType == "Compile" || x.ItemType == "None" || x.ItemType == "AdditionalFiles") && string.IsNullOrEmpty(x.GetMetadataValue("AutoGen")))
+        var files = project.Items.Where(x => IsProjectAssetItemType(x.ItemType) && string.IsNullOrEmpty(x.GetMetadataValue("AutoGen")))
             // Build full path for Include and Link
             .Select(x => (FilePath: UPath.Combine(dir, new UFile(x.EvaluatedInclude)), Link: x.HasMetadata("Link") ? UPath.Combine(dir, new UFile(x.GetMetadataValue("Link"))) : null))
             // For items outside project, let's pretend they are link
