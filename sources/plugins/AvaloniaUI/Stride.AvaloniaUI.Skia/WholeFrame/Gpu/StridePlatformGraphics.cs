@@ -5,7 +5,7 @@ using System;
 using Avalonia.Platform;
 using Stride.Graphics;
 
-namespace Stride.AvaloniaUI.Platform.Gpu;
+namespace Stride.AvaloniaUI.Skia.WholeFrame;
 
 /// <summary>
 /// The graphics of the Stride platform: Skia on the graphics device of the game that runs, through one shared

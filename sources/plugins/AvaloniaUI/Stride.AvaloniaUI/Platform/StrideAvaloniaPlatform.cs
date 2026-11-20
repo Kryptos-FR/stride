@@ -11,21 +11,21 @@ using Avalonia.Platform;
 using Avalonia.Rendering;
 using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
-using Stride.AvaloniaUI.Platform.Gpu;
+using Stride.AvaloniaUI.Rendering;
+using Stride.Core.Reflection;
 using Stride.Graphics;
 
 namespace Stride.AvaloniaUI.Platform;
 
 /// <summary>
 /// The Avalonia platform of a Stride game: no native windows, a dispatcher and a render loop that the game loop drives,
-/// and offscreen top levels that the game draws. Skia renders them on the game's Vulkan device when it can, otherwise
-/// on the CPU.
+/// and offscreen top levels that the game draws with the renderer chosen when Avalonia is set up.
 /// </summary>
 public static class StrideAvaloniaPlatform
 {
     private static StrideDispatcherImpl? dispatcher;
     private static StrideRenderTimer? renderTimer;
-    private static StridePlatformGraphics? graphics;
+    private static RendererBackend? backend;
     private static Compositor? compositor;
 
     /// <summary>
@@ -39,14 +39,22 @@ public static class StrideAvaloniaPlatform
     public static bool IsUIThread => dispatcher?.CurrentThreadIsLoopThread ?? false;
 
     /// <summary>
-    /// Uses the Stride platform, with Skia rendering and HarfBuzz text shaping.
+    /// Gets the renderer of the Avalonia views, or <c>null</c> before Avalonia is set up on the Stride platform.
     /// </summary>
-    /// <remarks>Call <see cref="AppBuilder.SetupWithoutStarting"/> on the game thread, which becomes Avalonia's UI thread.</remarks>
-    public static AppBuilder UseStride(this AppBuilder builder)
+    public static AvaloniaUIRenderer? Renderer { get; private set; }
+
+    /// <summary>
+    /// Uses the Stride platform, with a renderer of the Avalonia views and HarfBuzz text shaping.
+    /// </summary>
+    /// <remarks>
+    /// Call <see cref="AppBuilder.SetupWithoutStarting"/> on the game thread, which becomes Avalonia's UI thread. Avalonia has one
+    /// renderer per process. The renderers need the Stride.AvaloniaUI.Skia package for now.
+    /// </remarks>
+    public static AppBuilder UseStride(this AppBuilder builder, AvaloniaUIRenderer renderer = AvaloniaUIRenderer.Skia)
         => builder
             .UseStandardRuntimePlatformSubsystem()
             .UseWindowingSubsystem(Initialize, "Stride")
-            .UseSkia()
+            .UseRenderingSubsystem(() => InitializeRenderer(renderer), "Skia")
             .UseHarfBuzz();
 
     /// <summary>
@@ -59,63 +67,66 @@ public static class StrideAvaloniaPlatform
     /// </summary>
     internal static bool Render()
     {
-        if (renderTimer == null)
+        if (renderTimer == null || backend == null)
             return false;
 
-        // Skia submits its commands to the device's queue at various points of the rendering
-        using var queueScope = graphics?.Current?.LockQueue() ?? default;
-        return renderTimer.Render();
+        backend.BeginRender();
+        try
+        {
+            return renderTimer.Render();
+        }
+        finally
+        {
+            backend.EndRender();
+        }
     }
 
     /// <summary>
-    /// Gets the compositor of the top levels, which renders with <see cref="StridePlatformGraphics"/>.
+    /// Gets the compositor of the top levels, which renders with the graphics of the renderer.
     /// </summary>
     internal static Compositor Compositor
-        => compositor ??= new Compositor(SkiaGpuProxy.IsSupported ? graphics : null);
+        => compositor ??= new Compositor(backend?.PlatformGraphics);
 
     /// <summary>
-    /// Makes Skia render the views on a game's graphics device from the next frame on, if it can share it (Vulkan).
+    /// Makes the renderer draw the views on a game's graphics device from the next frame on, if it can.
     /// </summary>
-    /// <returns><c>true</c> if Skia renders on the device, <c>false</c> if it renders on the CPU.</returns>
-    internal static bool AttachGraphicsDevice(GraphicsDevice device)
-    {
-        if (graphics == null || !SkiaGpuProxy.IsSupported)
-            return false;
-
-        var previous = graphics.Current;
-        var rendersOnDevice = graphics.Attach(device);
-        if (graphics.Current != previous)
-            RedrawTopLevels();
-        return rendersOnDevice;
-    }
+    /// <returns><c>true</c> if it draws on the device, <c>false</c> if it draws on the CPU.</returns>
+    internal static bool AttachGraphicsDevice(GraphicsDevice device) => backend?.AttachGraphicsDevice(device) ?? false;
 
     /// <summary>
-    /// Makes Skia render the views on the CPU from the next frame on, if it renders on a graphics device that goes.
+    /// Makes the renderer draw the views on the CPU from the next frame on, if it draws on a graphics device that goes.
     /// </summary>
     /// <remarks>
-    /// Skia releases what it has on the device now, while the device is still there.
+    /// The renderer releases what it has on the device now, while the device is still there.
     /// </remarks>
-    internal static void DetachGraphicsDevice(GraphicsDevice device)
-    {
-        if (graphics != null && graphics.Detach(device))
-            RedrawTopLevels();
-    }
+    internal static void DetachGraphicsDevice(GraphicsDevice device) => backend?.DetachGraphicsDevice(device);
 
     /// <summary>
-    /// Gets the GPU Skia renders the views with, if Avalonia was set up on the Stride platform.
+    /// Gets a function that says when a CPU render target created now is corrupted.
     /// </summary>
-    internal static StrideSkiaGpu? CurrentGpu => graphics?.Current;
+    internal static Func<bool> CaptureRenderTargetLoss() => backend?.CaptureRenderTargetLoss() ?? (static () => false);
 
-    // The render targets of the top levels are corrupted once their GPU is lost: the compositor creates them again on
-    // the current GPU and redraws the whole top levels when it renders, at the next frame
-    private static void RedrawTopLevels() => compositor?.RequestCommitAsync();
+    /// <summary>
+    /// Makes the compositor redraw the whole top levels at the next frame, on render targets it creates again.
+    /// </summary>
+    /// <remarks>
+    /// The renderer calls it when the render targets of the top levels are corrupted, such as when their GPU is lost.
+    /// </remarks>
+    internal static void RedrawTopLevels() => compositor?.RequestCommitAsync();
+
+    private static void InitializeRenderer(AvaloniaUIRenderer renderer)
+    {
+        // Given by UseSkiaFallback(), otherwise found among the plugins the game references
+        var skia = AvaloniaLocator.Current.GetService<IAvaloniaUISkia>() ?? SkiaPackageLocator.Find(AssemblyRegistry.FindAll());
+        backend = RendererBackend.Create(renderer, skia);
+        Renderer = renderer;
+    }
 
     private static void Initialize()
     {
         dispatcher = new StrideDispatcherImpl(Thread.CurrentThread);
         Dispatcher.InitializeUIThreadDispatcher(dispatcher);
         renderTimer = new StrideRenderTimer();
-        graphics = new StridePlatformGraphics();
 
         AvaloniaLocator.CurrentMutable
             .Bind<ICursorFactory>().ToConstant(new StrideCursorFactory())

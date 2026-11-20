@@ -20,8 +20,10 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Stride.VirtualReality" + Stride.PublicKeys.Default)]
 // ExportableTexture, which only the Avalonia editor uses for now
 [assembly: InternalsVisibleTo("Stride.Editor.Avalonia" + Stride.PublicKeys.Default)]
-// VulkanInterop, for Skia drawing the Avalonia UI of games on the device
+// Texture.ParentTexture, for the sRGB views of the Avalonia UI frames of games
 [assembly: InternalsVisibleTo("Stride.AvaloniaUI" + Stride.PublicKeys.Default)]
+// VulkanInterop, for Skia drawing the Avalonia UI of games on the device
+[assembly: InternalsVisibleTo("Stride.AvaloniaUI.Skia" + Stride.PublicKeys.Default)]
 
 #if !STRIDE_SIGNED
 [assembly: InternalsVisibleTo("Stride.Assets.Editor.Wpf")]

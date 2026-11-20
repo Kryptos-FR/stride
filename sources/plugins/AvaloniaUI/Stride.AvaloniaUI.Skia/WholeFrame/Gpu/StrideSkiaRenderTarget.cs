@@ -5,9 +5,10 @@ using System;
 using Avalonia.Platform;
 using Avalonia.Skia;
 using SkiaSharp;
+using Stride.AvaloniaUI.Platform;
 using Stride.Graphics;
 
-namespace Stride.AvaloniaUI.Platform.Gpu;
+namespace Stride.AvaloniaUI.Skia.WholeFrame;
 
 /// <summary>
 /// The render target of a top level on the game's graphics device: Skia draws its frames into a texture of the device,

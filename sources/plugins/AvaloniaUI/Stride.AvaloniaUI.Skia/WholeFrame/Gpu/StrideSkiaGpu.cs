@@ -8,10 +8,11 @@ using Avalonia.Platform;
 using Avalonia.Platform.Surfaces;
 using Avalonia.Skia;
 using SkiaSharp;
+using Stride.AvaloniaUI.Platform;
 using Stride.Core.Diagnostics;
 using Stride.Graphics;
 
-namespace Stride.AvaloniaUI.Platform.Gpu;
+namespace Stride.AvaloniaUI.Skia.WholeFrame;
 
 /// <summary>
 /// Skia on the Vulkan graphics device of a game: it renders the top levels into textures of the device, with the
