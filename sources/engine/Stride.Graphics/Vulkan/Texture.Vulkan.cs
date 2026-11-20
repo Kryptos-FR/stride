@@ -27,6 +27,12 @@ namespace Stride.Graphics
         ///   The size of the dedicated memory of an exportable image, which the importer needs.
         /// </summary>
         internal ulong ExportableMemorySize;
+
+        /// <summary>
+        ///   Whether the image can also be viewed in a format of the same size and class, such as the sRGB format of a
+        ///   UNorm one (<see cref="VulkanInterop.CreateRenderTarget"/>). Set before the Texture is initialized.
+        /// </summary>
+        internal bool IsFormatMutable;
         internal VkBuffer NativeBuffer;
         internal VkImageView NativeColorAttachmentView;
         internal VkImageView NativeDepthStencilView;
@@ -282,6 +288,32 @@ namespace Stride.Graphics
             }
         }
 
+        /// <summary>
+        ///   Gets the usage the image is created with.
+        /// </summary>
+        internal VkImageUsageFlags NativeImageUsage
+        {
+            get
+            {
+                // TODO VULKAN: Can we restrict more based on GraphicsResourceUsage?
+                var usage = VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst;
+
+                if (IsRenderTarget)
+                    usage |= VkImageUsageFlags.ColorAttachment;
+
+                if (IsDepthStencil)
+                    usage |= VkImageUsageFlags.DepthStencilAttachment;
+
+                if (IsShaderResource)
+                    usage |= VkImageUsageFlags.Sampled; // TODO VULKAN: Input attachments
+
+                if (IsUnorderedAccess)
+                    usage |= VkImageUsageFlags.Storage;
+
+                return usage;
+            }
+        }
+
         private unsafe void CreateImage()
         {
             // Create a new image
@@ -316,20 +348,9 @@ namespace Stride.Graphics
                     break;
             }
 
-            // TODO VULKAN: Can we restrict more based on GraphicsResourceUsage?
-            createInfo.usage |= VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst;
-
-            if (IsRenderTarget)
-                createInfo.usage |= VkImageUsageFlags.ColorAttachment;
-
-            if (IsDepthStencil)
-                createInfo.usage |= VkImageUsageFlags.DepthStencilAttachment;
-
-            if (IsShaderResource)
-                createInfo.usage |= VkImageUsageFlags.Sampled; // TODO VULKAN: Input attachments
-
-            if (IsUnorderedAccess)
-                createInfo.usage |= VkImageUsageFlags.Storage;
+            createInfo.usage = NativeImageUsage;
+            if (IsFormatMutable)
+                createInfo.flags |= VkImageCreateFlags.MutableFormat;
 
             var memoryProperties = VkMemoryPropertyFlags.DeviceLocal;
 
