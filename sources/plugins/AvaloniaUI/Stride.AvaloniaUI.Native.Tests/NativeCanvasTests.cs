@@ -107,12 +107,16 @@ public sealed class NativeCanvasTests : GameTestBase
 
         var (fallback, native, reasons) = RenderBothWays(ShapeCases.Create(name), ShapeCases.Width, ShapeCases.Height, ShapeCases.GetScaling(name));
 
-        if (name == "GradientRectangle")
-            Assert.Equal(new[] { FallbackReason.Brush }, reasons);
-        else if (name == "ShadowedRectangle")
-            Assert.Equal(new[] { FallbackReason.BoxShadow }, reasons);
-        else
-            Assert.Empty(reasons);
+        FallbackReason[] expectedReasons = name switch
+        {
+            "GradientRectangle" => [FallbackReason.Brush],
+            "ShadowedRectangle" => [FallbackReason.BoxShadow],
+            "TextInRoundedClip" => [FallbackReason.Text],
+            "TwoShaderClips" => [FallbackReason.ClipDepth],
+            "GeometryClipCase" => [FallbackReason.GeometryClip],
+            _ => [],
+        };
+        Assert.Equal(expectedReasons, reasons);
         using (fallback)
         using (native)
         {
@@ -319,6 +323,50 @@ public sealed class NativeCanvasTests : GameTestBase
             AssertColor(BackgroundColor, frame!, Width / 2, Height / 2);
             AssertColor(BackgroundColor, frame!, Width - 5, Height - 5);
         }
+    });
+
+    [SkippableFact]
+    public void ShaderClipLeavesWhatItDoesNotCover() => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        var blue = AvaloniaColor.FromRgb(0, 0, 255);
+        var red = AvaloniaColor.FromRgb(255, 0, 0);
+        var game = CreateGame(new Canvas());
+        Color[]? pixels = null;
+        game.FrameGameSystem.Draw(10, () =>
+        {
+            var graphics = StrideAvaloniaPlatform.NativeGraphics!;
+            using var texture = Texture.New2D(game.GraphicsDevice, 32, 32, PixelFormat.R8G8B8A8_UNorm, TextureFlags.RenderTarget | TextureFlags.ShaderResource);
+            graphics.Context = game.GraphicsContext;
+            try
+            {
+                using (var context = new NativeDrawingContext(graphics, StrideAvaloniaPlatform.NativeChannel!, texture, new Vector(96, 96), null))
+                {
+                    context.Clear(blue);
+
+                    // A clear under a rounded clip replaces what the clip covers, and leaves the corners
+                    context.PushClip(new RoundedRect(new Rect(0, 0, 32, 16), 8));
+                    context.Clear(red);
+                    context.PopClip();
+
+                    // A rounded clip of no width covers no pixel, not even half of one
+                    context.PushClip(new RoundedRect(new Rect(16.5, 16, 0, 16), 4));
+                    context.Clear(red);
+                    context.PopClip();
+                }
+                pixels = texture.GetData<Color>(game.GraphicsContext.CommandList);
+            }
+            finally
+            {
+                graphics.Context = null;
+            }
+        });
+        RunGameTest(game);
+
+        Assert.Equal(new Color(255, 0, 0, 255), pixels![8 * 32 + 16]);
+        Assert.Equal(new Color(0, 0, 255, 255), pixels[0]);
+        Assert.Equal(new Color(0, 0, 255, 255), pixels[24 * 32 + 16]);
     });
 
     [SkippableFact]

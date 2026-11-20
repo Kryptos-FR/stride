@@ -22,21 +22,26 @@ namespace Stride.AvaloniaUI.Rendering.Native;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The context keeps the transform, the clips, and the text and render options. A rectangle clip whose transform keeps the
-/// axes and whose pixel edges are whole is a scissor. Any other clip, and every other push, opens a group: the push,
-/// everything up to its matching pop, and the pop go to the current fallback run as they are.
+/// The context keeps the transform, the clips, and the text and render options. A clip whose transform keeps the axes is a
+/// scissor when it is a rectangle, its edges rounded to pixels as Skia rounds a rectangle clip, or a rounded rectangle
+/// without radii whose pixel edges are whole. Any other clip is drawn by the shader: a rounded rectangle in its own frame,
+/// with aliased edges for a rectangle as Skia has them, whose coverage multiplies every quad's while the scissor is cut to
+/// its pixels. There is one clip of the shader at a time. A clip pushed while there is one, or under a transform with
+/// perspective, and every other push, opens a group: the push, everything up to its matching pop, and the pop go to the
+/// current fallback run as they are.
 /// </para>
 /// <para>
 /// <see cref="Clear"/> and the shapes of <see cref="NativeShapes"/> are drawn natively. Every other call goes to the current
 /// fallback run, and is counted by kind; outside groups, each such call and each group is also counted by the reason it
-/// went to the fallback. A run ends at a native draw, at a change of the scissor, at <see cref="GetFeature"/> and at
-/// <see cref="Dispose"/>. When the context is disposed, the runs are uploaded and the frame is drawn into the texture, in
-/// order.
+/// went to the fallback. A run is drawn under the scissor and the clip of the shader it started with, so neither is in its
+/// own calls. It ends at a native draw, at a change of the scissor or of the clip of the shader, at <see cref="GetFeature"/>
+/// and at <see cref="Dispose"/>. When the context is disposed, the runs are uploaded and the frame is drawn into the
+/// texture, in order.
 /// </para>
 /// </remarks>
 internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawingContextImplWithEffects, IDrawingContextWithAcrylicLikeSupport
 {
-    // How far from a whole pixel a clip's edge may be and still make a scissor
+    // How far from a whole pixel the edge of a rounded rectangle clip without radii may be and still make a scissor
     private const double PixelTolerance = 1e-4;
 
     private readonly NativeGraphics graphics;
@@ -46,11 +51,13 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
     private readonly Action? ended;
     private readonly List<FrameItem> items = [];
     private readonly List<CanvasShape> shapes = [];
-    private readonly Stack<Rectangle> scissors = new();
+    private readonly Stack<(Rectangle Scissor, CanvasClip? Clip)> clips = new();
     private readonly Stack<RenderOptions> renderOptionsStack = new();
     private readonly Stack<TextOptions> textOptionsStack = new();
     private Matrix transform = Matrix.Identity;
     private Rectangle scissor;
+    private CanvasClip? shaderClip;
+    private CanvasClip? runClip;
     private RenderOptions renderOptions;
     private TextOptions textOptions;
     private int groupDepth;
@@ -108,7 +115,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
 
         EndRun();
         if (scissor.Width > 0 && scissor.Height > 0)
-            items.Add(new FrameItem(scissor, Premultiply(color), null, null));
+            items.Add(new FrameItem(scissor, Premultiply(color), null, null, shaderClip));
     }
 
     public void DrawBitmap(IBitmapImpl source, double opacity, Rect sourceRect, Rect destRect)
@@ -141,10 +148,12 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         Next();
         if (target == null)
             return;
-        if (groupDepth == 0 && TryGetScissor(clip, out var pixels))
-            PushScissor(pixels);
-        else
+        if (groupDepth > 0)
             PushGroup(new PushClipCommand(clip));
+        else if (TryGetScissor(clip, roundEdges: true, out var pixels))
+            PushClipState(Rectangle.Intersect(scissor, pixels), shaderClip);
+        else
+            PushShaderClip(new RoundedRect(clip), aliased: true, new PushClipCommand(clip));
     }
 
     public void PushClip(RoundedRect clip)
@@ -152,10 +161,12 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         Next();
         if (target == null)
             return;
-        if (groupDepth == 0 && !clip.IsRounded && TryGetScissor(clip.Rect, out var pixels))
-            PushScissor(pixels);
-        else
+        if (groupDepth > 0)
             PushGroup(new PushRoundedClipCommand(clip));
+        else if (!clip.IsRounded && TryGetScissor(clip.Rect, roundEdges: false, out var pixels))
+            PushClipState(Rectangle.Intersect(scissor, pixels), shaderClip);
+        else
+            PushShaderClip(NativeShapes.Normalize(clip), aliased: false, new PushRoundedClipCommand(clip));
     }
 
     public void PushClip(IPlatformRenderInterfaceRegion region)
@@ -168,8 +179,8 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
             return;
         if (groupDepth > 0)
             PopGroup(new PopClipCommand());
-        else if (scissors.Count > 0)
-            SetScissor(scissors.Pop());
+        else if (clips.Count > 0)
+            SetClipState(clips.Pop());
     }
 
     public void PushLayer(Rect bounds) => Push(new PushLayerCommand(bounds));
@@ -319,7 +330,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
 
         EndRun();
         foreach (var shape in shapes)
-            items.Add(new FrameItem(scissor, default, null, shape));
+            items.Add(new FrameItem(scissor, default, null, shape, shaderClip));
     }
 
     private void Push(DrawCommand push)
@@ -336,10 +347,11 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
             PopGroup(pop);
     }
 
-    private void PushGroup(DrawCommand push)
+    // A push that opens a group outside groups is counted by its reason, by default the push's own
+    private void PushGroup(DrawCommand push, FallbackReason? reason = null)
     {
         if (groupDepth == 0)
-            channel.Count(GetReason(push));
+            channel.Count(reason ?? GetReason(push));
         Record(push);
         groupDepth++;
     }
@@ -357,7 +369,15 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         EnsureRun().Add(command, transform);
     }
 
-    private FallbackRun EnsureRun() => run ??= new FallbackRun(scissor, transform, renderOptions, textOptions);
+    private FallbackRun EnsureRun()
+    {
+        if (run == null)
+        {
+            run = new FallbackRun(scissor, transform, renderOptions, textOptions);
+            runClip = shaderClip;
+        }
+        return run;
+    }
 
     // The run made for a feature ends at the next call
     private void Next()
@@ -388,7 +408,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         if (finished.Pixels == IntPtr.Zero)
             finished.Dispose();
         else
-            items.Add(new FrameItem(default, default, finished, null));
+            items.Add(new FrameItem(default, default, finished, null, runClip));
     }
 
     private void DropRun()
@@ -412,18 +432,52 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         }
     }
 
-    private void PushScissor(Rectangle pixels)
+    // A clip the scissor can't express: the shader draws it, unless it already draws one or the transform has perspective
+    private void PushShaderClip(RoundedRect outline, bool aliased, DrawCommand push)
     {
-        scissors.Push(scissor);
-        SetScissor(Rectangle.Intersect(scissor, pixels));
+        if (transform.ContainsPerspective())
+        {
+            PushGroup(push, FallbackReason.Perspective);
+            return;
+        }
+        if (shaderClip != null)
+        {
+            PushGroup(push, FallbackReason.ClipDepth);
+            return;
+        }
+
+        // A clip of no area covers no pixel
+        var rect = outline.Rect;
+        if (!(rect.Width > 0 && rect.Height > 0) || !transform.HasInverse)
+        {
+            PushClipState(new Rectangle(scissor.X, scissor.Y, 0, 0), shaderClip);
+            return;
+        }
+
+        // A pixel the clip covers has its center inside the clip's bounds, or less than half a pixel out of them
+        var bounds = rect.TransformToAABB(transform);
+        var left = Math.Max(Math.Floor(bounds.Left), scissor.Left);
+        var top = Math.Max(Math.Floor(bounds.Top), scissor.Top);
+        var right = Math.Min(Math.Ceiling(bounds.Right), scissor.Right);
+        var bottom = Math.Min(Math.Ceiling(bounds.Bottom), scissor.Bottom);
+        var pixels = left < right && top < bottom
+            ? new Rectangle((int)left, (int)top, (int)(right - left), (int)(bottom - top))
+            : new Rectangle(scissor.X, scissor.Y, 0, 0);
+        PushClipState(pixels, new CanvasClip(transform, outline, aliased));
     }
 
-    private void SetScissor(Rectangle value)
+    private void PushClipState(Rectangle newScissor, CanvasClip? newClip)
     {
-        if (value == scissor)
+        clips.Push((scissor, shaderClip));
+        SetClipState((newScissor, newClip));
+    }
+
+    private void SetClipState((Rectangle Scissor, CanvasClip? Clip) state)
+    {
+        if (state.Scissor == scissor && state.Clip == shaderClip)
             return;
         EndRun();
-        scissor = value;
+        (scissor, shaderClip) = state;
     }
 
     // The run's options are always the merged ones, so the fallback's stack holds one entry of each
@@ -445,26 +499,29 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         run.AddState(new PushTextOptionsCommand(value));
     }
 
-    // A clip is a scissor when the transform keeps the axes and the clip's pixel edges are whole
-    private bool TryGetScissor(Rect clip, out Rectangle pixels)
+    // A clip is a scissor when the transform keeps the axes, and its pixel edges are whole or are to be rounded; Skia
+    // rounds a pixel edge half up, so that a pixel is in a rectangle clip when its center is past the left or top edge and
+    // not past the right or bottom one
+    private bool TryGetScissor(Rect clip, bool roundEdges, out Rectangle pixels)
     {
         pixels = default;
         var m = transform;
-        if (m.M12 != 0 || m.M21 != 0 || m.M13 != 0 || m.M23 != 0 || m.M33 != 1)
+        if (!(m.M12 == 0 && m.M21 == 0 || m.M11 == 0 && m.M22 == 0) || m.ContainsPerspective())
             return false;
 
         var rect = clip.TransformToAABB(m);
-        if (!TryRound(rect.Left, out var left) || !TryRound(rect.Top, out var top) || !TryRound(rect.Right, out var right) || !TryRound(rect.Bottom, out var bottom))
+        if (!TryRound(rect.Left, roundEdges, out var left) || !TryRound(rect.Top, roundEdges, out var top)
+            || !TryRound(rect.Right, roundEdges, out var right) || !TryRound(rect.Bottom, roundEdges, out var bottom))
             return false;
         pixels = new Rectangle(left, top, Math.Max(0, right - left), Math.Max(0, bottom - top));
         return true;
 
-        static bool TryRound(double value, out int pixel)
+        static bool TryRound(double value, bool roundEdge, out int pixel)
         {
             // Beyond any target, a clip edge only needs to stay there
-            var rounded = Math.Round(Math.Clamp(value, -1e8, 1e8));
+            var rounded = Math.Floor(Math.Clamp(value, -1e8, 1e8) + 0.5);
             pixel = (int)rounded;
-            return Math.Abs(value - rounded) <= PixelTolerance || Math.Abs(value) >= 1e8;
+            return roundEdge || Math.Abs(value - rounded) <= PixelTolerance || Math.Abs(value) >= 1e8;
         }
     }
 
@@ -482,12 +539,12 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
             {
                 if (item.Shape is { } shape)
                 {
-                    batch.AddShape(shape, item.Rectangle);
+                    batch.AddShape(shape, item.Rectangle, item.Clip);
                     continue;
                 }
                 if (item.Run is not { } fallbackRun)
                 {
-                    batch.AddFill(item.Rectangle, item.Color);
+                    batch.AddFill(item.Rectangle, item.Color, item.Clip);
                     continue;
                 }
 
@@ -497,7 +554,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
                 var pixels = new ReadOnlySpan<byte>((void*)fallbackRun.Pixels, bounds.Width * bounds.Height * 4);
                 texture.SetData(commandList, pixels, 0, 0, new ResourceRegion(0, 0, 0, bounds.Width, bounds.Height, 1));
                 commandList.ResourceBarrierTransition(texture, BarrierLayout.ShaderResource);
-                batch.AddImage(bounds, texture, fallbackRun.Scissor);
+                batch.AddImage(bounds, texture, fallbackRun.Scissor, item.Clip);
             }
             batch.Draw(graphics, frame);
         }
@@ -513,7 +570,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         return new Color4(color.R / 255f * alpha, color.G / 255f * alpha, color.B / 255f * alpha, alpha);
     }
 
-    // Why a group goes to the fallback
+    // Why a push that always opens a group goes to the fallback
     private static FallbackReason GetReason(DrawCommand push) => push switch
     {
         PushOpacityCommand => FallbackReason.OpacityGroup,
@@ -521,10 +578,10 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         PushGeometryClipCommand => FallbackReason.GeometryClip,
         PushLayerCommand => FallbackReason.Layer,
         PushEffectCommand => FallbackReason.Effect,
-        PushClipCommand or PushRoundedClipCommand => FallbackReason.ClipShape,
-        _ => throw new ArgumentOutOfRangeException(nameof(push), push, "Not a push that opens a group."),
+        _ => throw new ArgumentOutOfRangeException(nameof(push), push, "Not a push that always opens a group."),
     };
 
-    // A rectangle replaced with a color, a shape under the scissor of its rectangle, or a run drawn in place
-    private readonly record struct FrameItem(Rectangle Rectangle, Color4 Color, FallbackRun? Run, CanvasShape? Shape);
+    // A rectangle replaced with a color, a shape under the scissor of its rectangle, or a run drawn in place; each under
+    // the clip of the shader it was drawn with
+    private readonly record struct FrameItem(Rectangle Rectangle, Color4 Color, FallbackRun? Run, CanvasShape? Shape, CanvasClip? Clip);
 }

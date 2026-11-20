@@ -34,7 +34,8 @@ internal static class ShapeCases
         "FilledRectangle", "FractionalRectangle", "ThinStroke", "RectangleStroke1", "RectangleStroke3", "RoundedPerCorner",
         "RoundedStroke", "RadiiTooLarge", "EllipseFill", "EllipseStroke", "CircleStroke", "DrawEllipseCall", "LineFlat",
         "LineSquare", "LineRound", "DiagonalLine", "RotatedRectangle", "ScaledView", "HalfOpaqueBrush", "AliasedEllipse",
-        "Degenerate", "HugeRectangle", "GradientRectangle", "ShadowedRectangle",
+        "Degenerate", "HugeRectangle", "GradientRectangle", "ShadowedRectangle", "ScissorClip", "FractionalClip", "RotatedClip",
+        "RoundedClip", "RotatedInScissor", "TextInRoundedClip", "TwoShaderClips", "GeometryClipCase",
     ];
 
     /// <summary>
@@ -67,6 +68,14 @@ internal static class ShapeCases
         ["HugeRectangle"] = 0,
         ["GradientRectangle"] = 0,
         ["ShadowedRectangle"] = 0,
+        ["ScissorClip"] = 0,
+        ["FractionalClip"] = 200,
+        ["RotatedClip"] = 124,
+        ["RoundedClip"] = 103,
+        ["RotatedInScissor"] = 35,
+        ["TextInRoundedClip"] = 144,
+        ["TwoShaderClips"] = 268,
+        ["GeometryClipCase"] = 6,
     };
 
     private static readonly Color Background = Color.FromRgb(240, 240, 240);
@@ -116,6 +125,22 @@ internal static class ShapeCases
             Fill = new LinearGradientBrush { GradientStops = { new GradientStop(Colors.SteelBlue, 0), new GradientStop(Colors.Gold, 1) } },
         }, 60, 44)),
         "ShadowedRectangle" => Page((new Border { Width = 120, Height = 72, Background = Brushes.White, BoxShadow = BoxShadows.Parse("6 6 12 0 #80000000") }, 60, 44)),
+        "ScissorClip" => Page((Clipped(new Canvas { Width = 150, Height = 100, ClipToBounds = true }), 45, 30)),
+        "FractionalClip" => Page((Clipped(new Canvas { Width = 150, Height = 100, ClipToBounds = true, UseLayoutRounding = false }), 10.5, 10.5)),
+        "RotatedClip" => Page((Clipped(new Canvas { Width = 150, Height = 90, ClipToBounds = true, RenderTransform = new RotateTransform(25) }), 45, 35)),
+        "RoundedClip" => Page((new Border { Width = 184, Height = 132, CornerRadius = new CornerRadius(32), ClipToBounds = true, Child = Stripes(184, 132) }, 28, 14)),
+        "RotatedInScissor" => Page((Clipped(new Canvas { Width = 184, Height = 132, ClipToBounds = true, Background = Brushes.LightGray }, Clipped(RotatedClip(-30)), 70, 60), 28, 14)),
+        "TextInRoundedClip" => Page((new Border
+        {
+            Width = 184,
+            Height = 132,
+            CornerRadius = new CornerRadius(32),
+            ClipToBounds = true,
+            Background = Brushes.Gold,
+            Child = new TextBlock { Text = "Text cut by a rounded clip", FontSize = 40, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Navy, Margin = new Thickness(-8) },
+        }, 28, 14)),
+        "TwoShaderClips" => Page((Clipped(RotatedClip(25), new Border { Width = 120, Height = 70, CornerRadius = new CornerRadius(24), ClipToBounds = true, Child = Stripes(120, 70) }, 15, 10), 45, 35)),
+        "GeometryClipCase" => Page((WithClip(Stripes(184, 132), Geometry.Parse("M 92,0 L 184,132 L 0,132 Z")), 28, 14)),
         _ => throw new ArgumentOutOfRangeException(nameof(name), name, "No shape case has this name."),
     };
 
@@ -130,6 +155,42 @@ internal static class ShapeCases
             page.Children.Add(control);
         }
         return page;
+    }
+
+    // A canvas of the size of the clip of RotatedClip, turned about its center
+    private static Canvas RotatedClip(double angle) => new() { Width = 150, Height = 90, ClipToBounds = true, RenderTransform = new RotateTransform(angle) };
+
+    // A clipping canvas over stripes that overflow it on every side
+    private static Canvas Clipped(Canvas clip) => Clipped(clip, Stripes(260, 200), -50, -50);
+
+    private static Canvas Clipped(Canvas clip, Control content, double left, double top)
+    {
+        clip.Children.Add(Placed(content, left, top));
+        return clip;
+    }
+
+    // Vertical bands of three colors under a horizontal one, whose edges show what a clip does
+    private static Canvas Stripes(double width, double height)
+    {
+        var colors = new[] { Brushes.Crimson, Brushes.Gold, Brushes.SteelBlue };
+        var stripes = new Canvas { Width = width, Height = height, Background = Brushes.White };
+        for (var i = 0; i * 20 < width; i++)
+            stripes.Children.Add(Placed(new Rectangle { Width = 12, Height = height, Fill = colors[i % colors.Length] }, i * 20, 0));
+        stripes.Children.Add(Placed(new Rectangle { Width = width, Height = 16, Fill = Brushes.Black }, 0, height / 2 - 8));
+        return stripes;
+    }
+
+    private static Control Placed(Control control, double left, double top)
+    {
+        Canvas.SetLeft(control, left);
+        Canvas.SetTop(control, top);
+        return control;
+    }
+
+    private static T WithClip<T>(T control, Geometry clip) where T : Visual
+    {
+        control.Clip = clip;
+        return control;
     }
 
     private static Line CreateLine(PenLineCap cap) => new()

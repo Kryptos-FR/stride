@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Stride.Core.Mathematics;
 using Stride.Graphics;
+using AvaloniaMatrix = Avalonia.Matrix;
+using AvaloniaPoint = Avalonia.Point;
 using AvaloniaRoundedRect = Avalonia.RoundedRect;
 
 namespace Stride.AvaloniaUI.Rendering.Native;
@@ -122,11 +124,20 @@ internal struct CanvasInstance
 }
 
 /// <summary>
-/// Consecutive instances drawn with one scissor, one texture and one blending.
+/// A clip the canvas shader draws: a rounded rectangle in its own frame, whose coverage of a pixel multiplies the quads'.
+/// </summary>
+/// <param name="Frame">The transform from the clip's frame to the pixels of the target, which has an inverse.</param>
+/// <param name="Outline">The clip in its frame, with its radii as Skia normalizes them.</param>
+/// <param name="Aliased">Whether a pixel is wholly in the clip when its center is, and wholly out otherwise.</param>
+internal readonly record struct CanvasClip(AvaloniaMatrix Frame, AvaloniaRoundedRect Outline, bool Aliased);
+
+/// <summary>
+/// Consecutive instances drawn with one scissor, one texture, one blending and one clip.
 /// </summary>
 /// <param name="Texture">The texture the instances sample, or <c>null</c> for none.</param>
 /// <param name="Opaque">Whether the instances replace the target's pixels rather than blend over them.</param>
-internal readonly record struct CanvasSegment(int Start, int Count, Rectangle Scissor, Texture? Texture, bool Opaque);
+/// <param name="Clip">The clip of the shader, or <c>null</c> for none.</param>
+internal readonly record struct CanvasSegment(int Start, int Count, Rectangle Scissor, Texture? Texture, bool Opaque, CanvasClip? Clip);
 
 /// <summary>
 /// The quads of a frame of the canvas, in the order they are drawn.
@@ -137,22 +148,24 @@ internal sealed class CanvasBatch
     private readonly List<CanvasSegment> segments = [];
 
     /// <summary>
-    /// Adds a quad of a premultiplied color that replaces the pixels of a rectangle.
+    /// Adds a quad of a premultiplied color that replaces the pixels of a rectangle; under a clip, the color is blended over
+    /// the target with the clip's coverage instead, which replaces the pixels the clip covers when the color is opaque.
     /// </summary>
-    public void AddFill(Rectangle rectangle, Color4 premultipliedColor)
-        => Add(new CanvasInstance { Rect = Edges(rectangle), Color = premultipliedColor.ToVector4(), Kind = new Vector4(0, 0, CanvasInstance.ColorKind, 0) }, rectangle, null, opaque: true);
+    public void AddFill(Rectangle rectangle, Color4 premultipliedColor, CanvasClip? clip)
+        => Add(new CanvasInstance { Rect = Edges(rectangle), Color = premultipliedColor.ToVector4(), Kind = new Vector4(0, 0, CanvasInstance.ColorKind, 0) }, rectangle, null, opaque: clip == null, clip);
 
     /// <summary>
     /// Adds a quad that draws a texture over a rectangle of the target, one texel to one pixel from the texture's top left
-    /// corner, blended over the target with premultiplied alpha, under a scissor.
+    /// corner, blended over the target with premultiplied alpha, under a scissor and a clip.
     /// </summary>
-    public void AddImage(Rectangle rectangle, Texture texture, Rectangle scissor)
-        => Add(new CanvasInstance { Rect = Edges(rectangle), Color = Vector4.One, Kind = new Vector4(0, 0, CanvasInstance.TextureKind, 0) }, scissor, texture, opaque: false);
+    public void AddImage(Rectangle rectangle, Texture texture, Rectangle scissor, CanvasClip? clip)
+        => Add(new CanvasInstance { Rect = Edges(rectangle), Color = Vector4.One, Kind = new Vector4(0, 0, CanvasInstance.TextureKind, 0) }, scissor, texture, opaque: false, clip);
 
     /// <summary>
-    /// Adds a shape blended over the target with premultiplied alpha, under a scissor; a shape whose frame is flat draws nothing.
+    /// Adds a shape blended over the target with premultiplied alpha, under a scissor and a clip; a shape whose frame is
+    /// flat draws nothing.
     /// </summary>
-    public void AddShape(in CanvasShape shape, Rectangle scissor)
+    public void AddShape(in CanvasShape shape, Rectangle scissor, CanvasClip? clip)
     {
         if (!shape.Frame.TryInvert(out var inverse))
             return;
@@ -175,15 +188,34 @@ internal sealed class CanvasBatch
             Rect = new Vector4((float)left, (float)top, (float)right, (float)bottom),
             Color = new Vector4(color.R / 255f * alpha, color.G / 255f * alpha, color.B / 255f * alpha, alpha),
             Kind = new Vector4(0, 0, CanvasInstance.ShapeKind, shape.Aliased ? 1 : 0),
-            ShapeX = new Vector4((float)inverse.M11, (float)inverse.M21, (float)(inverse.M31 - center.X), 0),
-            ShapeY = new Vector4((float)inverse.M12, (float)inverse.M22, (float)(inverse.M32 - center.Y), 0),
+            ShapeX = RowX(inverse, center, 0),
+            ShapeY = RowY(inverse, center),
             OuterRect = Edges(shape.Outer, center),
             OuterRadiiTop = RadiiTop(shape.Outer),
             OuterRadiiBottom = RadiiBottom(shape.Outer),
             InnerRect = shape.Inner is { } inner ? Edges(inner, center) : default,
             InnerRadiiTop = shape.Inner is { } innerTop ? RadiiTop(innerTop) : default,
             InnerRadiiBottom = shape.Inner is { } innerBottom ? RadiiBottom(innerBottom) : default,
-        }, scissor, null, opaque: false);
+        }, scissor, null, opaque: false, clip);
+    }
+
+    /// <summary>
+    /// Gets the constants of the canvas shader for a clip, or for none: the rows of the transform from the target's pixels
+    /// to the clip's frame, moved to the outline's center, with the kind of the clip in <c>X.W</c>; the outline and its radii.
+    /// </summary>
+    public static (Vector4 X, Vector4 Y, Vector4 Rect, Vector4 RadiiTop, Vector4 RadiiBottom) GetClipConstants(CanvasClip? clip)
+    {
+        if (clip is not { } value)
+            return default;
+
+        // A clip whose frame has no inverse covers no pixel: an empty outline
+        const float AliasedKind = 2;
+        if (!value.Frame.TryInvert(out var inverse))
+            return (new Vector4(0, 0, 0, AliasedKind), default, default, default, default);
+
+        var center = value.Outline.Rect.Center;
+        var kind = value.Aliased ? AliasedKind : 1;
+        return (RowX(inverse, center, kind), RowY(inverse, center), Edges(value.Outline, center), RadiiTop(value.Outline), RadiiBottom(value.Outline));
     }
 
     /// <summary>
@@ -196,18 +228,25 @@ internal sealed class CanvasBatch
         segments.Clear();
     }
 
-    private void Add(in CanvasInstance instance, Rectangle scissor, Texture? texture, bool opaque)
+    private void Add(in CanvasInstance instance, Rectangle scissor, Texture? texture, bool opaque, CanvasClip? clip)
     {
         instances.Add(instance);
-        if (segments.Count > 0 && segments[^1] is var last && last.Scissor == scissor && last.Texture == texture && last.Opaque == opaque)
+        if (segments.Count > 0 && segments[^1] is var last && last.Scissor == scissor && last.Texture == texture && last.Opaque == opaque && last.Clip == clip)
             segments[^1] = last with { Count = last.Count + 1 };
         else
-            segments.Add(new CanvasSegment(instances.Count - 1, 1, scissor, texture, opaque));
+            segments.Add(new CanvasSegment(instances.Count - 1, 1, scissor, texture, opaque, clip));
     }
+
+    // The rows of the transform from the target's pixels to a frame moved to a center: x = X.x * px + X.y * py + X.z
+    private static Vector4 RowX(AvaloniaMatrix inverse, AvaloniaPoint center, float w)
+        => new((float)inverse.M11, (float)inverse.M21, (float)(inverse.M31 - center.X), w);
+
+    private static Vector4 RowY(AvaloniaMatrix inverse, AvaloniaPoint center)
+        => new((float)inverse.M12, (float)inverse.M22, (float)(inverse.M32 - center.Y), 0);
 
     private static Vector4 Edges(Rectangle rectangle) => new(rectangle.Left, rectangle.Top, rectangle.Right, rectangle.Bottom);
 
-    private static Vector4 Edges(in AvaloniaRoundedRect rounded, Avalonia.Point center)
+    private static Vector4 Edges(in AvaloniaRoundedRect rounded, AvaloniaPoint center)
     {
         var rect = rounded.Rect;
         return new Vector4((float)(rect.Left - center.X), (float)(rect.Top - center.Y), (float)(rect.Right - center.X), (float)(rect.Bottom - center.Y));

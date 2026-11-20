@@ -5,13 +5,14 @@ namespace Stride.AvaloniaUI.Rendering.Native
 {
     /// <summary>
     /// Draws the instances of the native canvas of the Avalonia UI: quads in pixels of the target, each filled with a
-    /// premultiplied color, with a region of Texture0 sampled one texel to one pixel, or with a shape.
+    /// premultiplied color, with a region of Texture0 sampled one texel to one pixel, or with a shape, under the draw's clip.
     /// </summary>
     /// <remarks>
     /// A shape is a rounded rectangle in its own frame, filled, or the ring between it and an inner one. Its coverage of a
     /// pixel is saturate(0.5 - d), where d is the signed distance from the pixel's center to the outline in pixels: computed
     /// in the shape's frame and divided by the length of its gradient in pixels, so that a rotated or scaled shape keeps
-    /// edges one pixel wide. Along the straight edges, the coverages of the two axes multiply.
+    /// edges one pixel wide. Along the straight edges, the coverages of the two axes multiply. The clip is a rounded
+    /// rectangle in its own frame too, whose coverage multiplies every quad's.
     /// </remarks>
     shader AvaloniaCanvasShader : ShaderBase, Texturing
     {
@@ -19,6 +20,16 @@ namespace Stride.AvaloniaUI.Rendering.Native
         {
             // The size of the target, in pixels
             stage float2 TargetSize;
+
+            // The clip of the draw: the rows of the transform from the pixels of the target to the clip's frame (xyz), and in
+            // ClipX.w, 0 for no clip, 1 for a clip with anti-aliased edges and 2 for one with aliased edges
+            stage float4 ClipX;
+            stage float4 ClipY;
+
+            // The clip's outline in its frame and the radii of its corners, as a shape's
+            stage float4 ClipRect;
+            stage float4 ClipRadiiTop;
+            stage float4 ClipRadiiBottom;
         }
 
         // The vertex of the quad, a strip of four: its corner is (index & 1, index >> 1)
@@ -77,6 +88,12 @@ namespace Stride.AvaloniaUI.Rendering.Native
                 // The position is the pixel's center: its whole part is the pixel
                 int2 texel = int2(floor(streams.ShadingPosition.xy - streams.QuadRect.xy + streams.QuadKind.xy));
                 color *= Texture0.Load(int3(texel, 0));
+            }
+            if (ClipX.w > 0.5)
+            {
+                float3 pixel = float3(streams.ShadingPosition.xy, 1);
+                float2 position = float2(dot(ClipX.xyz, pixel), dot(ClipY.xyz, pixel));
+                color *= Coverage(position, ClipRect, ClipRadiiTop, ClipRadiiBottom, ClipX.xy, ClipY.xy, ClipX.w - 1);
             }
             streams.ColorTarget = color;
         }
