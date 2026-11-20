@@ -122,13 +122,13 @@ internal sealed unsafe class StrideTopLevelImpl : ITopLevelImpl, IFramebufferPla
     /// <summary>
     /// Gets the last frame the renderer drew on the CPU: premultiplied RGBA, 4 bytes a pixel, rows packed.
     /// </summary>
-    /// <returns><c>false</c> before the first frame, and when the last one was rendered on the GPU.</returns>
+    /// <returns><c>false</c> before the first frame, when the last one was rendered on the GPU, and when it has no pixels.</returns>
     public bool TryGetFrame(out IntPtr data, out PixelSize size, out int rowPitch)
     {
         data = (IntPtr)pixels;
         size = pixelSize;
         rowPitch = pixelSize.Width * 4;
-        return FrameVersion > 0 && pixels != null && GpuFrame == null;
+        return FrameVersion > 0 && pixels != null && GpuFrame == null && pixelSize.Width > 0 && pixelSize.Height > 0;
     }
 
     /// <summary>

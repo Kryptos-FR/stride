@@ -25,6 +25,7 @@ internal abstract class RendererBackend
         return renderer switch
         {
             AvaloniaUIRenderer.Skia => skia.CreateWholeFrameRenderer(),
+            AvaloniaUIRenderer.Native => new NativeRendererBackend(skia.CreateFallback()),
             _ => throw new ArgumentOutOfRangeException(nameof(renderer), renderer, "Unknown Avalonia UI renderer."),
         };
     }

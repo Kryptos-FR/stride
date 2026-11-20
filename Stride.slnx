@@ -225,6 +225,7 @@
     <Project Path="tests/enduser/Stride.Samples.Tests/Stride.Samples.Tests.csproj" />
   </Folder>
   <Folder Name="/80-Plugins/AvaloniaUI/">
+    <Project Path="sources/plugins/AvaloniaUI/Stride.AvaloniaUI.Native.Tests/Stride.AvaloniaUI.Native.Tests.csproj" />
     <Project Path="sources/plugins/AvaloniaUI/Stride.AvaloniaUI.Tests/Stride.AvaloniaUI.Tests.csproj" />
     <Project Path="sources/plugins/AvaloniaUI/Stride.AvaloniaUI.Skia/Stride.AvaloniaUI.Skia.csproj" />
     <Project Path="sources/plugins/AvaloniaUI/Stride.AvaloniaUI/Stride.AvaloniaUI.csproj" />
