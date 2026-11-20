@@ -15,4 +15,6 @@ OutputGroupDirectories: {}
 ExplicitFolders: []
 Bundles: []
 TemplateFolders: []
-RootAssets: []
+RootAssets:
+    - 08f88c51-dd35-4b7d-80d3-d07e132a4fdb:/OrbHunt.Game/PlanetScene
+    - e9f28305-523e-4e37-8e33-095125681b2c:/OrbHunt.Game/OrbFieldScene

@@ -6,7 +6,7 @@ Four NuGet packages ship Stride templates for the `dotnet new` engine:
 |---|---|---|
 | **`Stride.Templates.Games`** | `stride-game` (blank NewGame starter) | Bundled with GameStudio installer |
 | **`Stride.Templates.Games.Starters`** | `stride-fps`, `stride-platformer2d`, `stride-topdownrpg`, `stride-thirdpersonplatformer`, `stride-vrsandbox` | nuget.org (CLI install / future template store) |
-| **`Stride.Templates.Samples`** | 18 feature demos (tutorials, games, graphics, physics, UI, particles, input, audio) | nuget.org (CLI install / future template store) |
+| **`Stride.Templates.Samples`** | 20 feature demos (tutorials, games, graphics, physics, UI, particles, input, audio) | nuget.org (CLI install / future template store) |
 | **`Stride.Templates.AssetPacks`** | 4 asset packs as item templates: `stride-pack-buildingblocks`, `stride-pack-animatedmodels`, `stride-pack-materials`, `stride-pack-particles` | nuget.org (downloaded on demand by GameStudio's New Game dialog / the `stride` CLI) |
 
 GameStudio's "New Project" dialog and CLI `dotnet new` consume the same packages — there is one template flow, not two.
@@ -28,7 +28,7 @@ dotnet new install Stride.Templates.Games.Starters
 dotnet new stride-fps -n MyShooter
 cd MyShooter && dotnet run --project MyShooter.Windows
 
-# Feature demos / tutorials (18 templates: stride-csharp-beginner / -intermediate,
+# Feature demos / tutorials (20 templates: stride-csharp-beginner / -intermediate,
 # stride-jumpyjet, stride-spaceescape, stride-animatedmodel, stride-particles,
 # stride-bepuphysics, stride-physics, stride-ui-menu, ...)
 dotnet new install Stride.Templates.Samples

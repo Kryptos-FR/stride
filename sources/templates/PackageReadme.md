@@ -14,7 +14,7 @@ cd MyGame && dotnet run --project MyGame.Windows
 |---|---|---|
 | `Stride.Templates.Games` | `stride-game` | Blank starter; bundled with the GameStudio installer |
 | `Stride.Templates.Games.Starters` | `stride-fps`, `stride-platformer2d`, `stride-topdownrpg`, `stride-thirdpersonplatformer`, `stride-vrsandbox` | Opinionated genre starters |
-| `Stride.Templates.Samples` | 18 feature demos (tutorials, graphics, physics, UI, particles, input, audio…) | Self-contained samples |
+| `Stride.Templates.Samples` | 20 feature demos (tutorials, graphics, physics, UI, particles, input, audio…) | Self-contained samples |
 
 `dotnet new -l` after installing any of these lists every available `stride-*` short name.
 
