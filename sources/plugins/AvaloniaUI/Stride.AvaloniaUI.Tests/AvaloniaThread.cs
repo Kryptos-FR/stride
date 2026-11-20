@@ -3,8 +3,10 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using Stride.AvaloniaUI.Skia;
 
 namespace Stride.AvaloniaUI.Tests;
 
@@ -18,6 +20,10 @@ internal static class AvaloniaThread
 
     static AvaloniaThread()
     {
+        // A game registers the plugins it references before it creates its systems; the test runner loads them lazily
+        RuntimeHelpers.RunModuleConstructor(typeof(AvaloniaUISystem).Module.ModuleHandle);
+        RuntimeHelpers.RunModuleConstructor(typeof(SkiaPackage).Module.ModuleHandle);
+
         var thread = new Thread(() =>
         {
             foreach (var action in Queue.GetConsumingEnumerable())

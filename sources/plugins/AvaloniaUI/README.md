@@ -4,14 +4,14 @@
 
 ## Using it
 
-Reference `Stride.AvaloniaUI` from the game, then add an **Avalonia UI** component to an entity of the scene:
+Reference `Stride.AvaloniaUI` and `Stride.AvaloniaUI.Skia` from the game, then add an **Avalonia UI** component to an entity of the scene:
 
 - `ViewType`: the type of a control to show, such as a `UserControl` written in XAML (`MyGame.Views.MainMenu, MyGame`), or
 - `Content`: a control set from a script, which takes precedence.
 
 The placement properties keep the names and meaning of `UIComponent`'s: `Resolution` (virtual resolution, 1280x720 by default) and `ResolutionStretch`. `DrawOrder` orders several views: the higher one is drawn on top and gets the input first.
 
-A game that doesn't set up Avalonia gets the Fluent theme, dark, with the Inter font. To use its own application (resources, styles, theme), the game sets Avalonia up on the game thread before it runs:
+A game that doesn't set up Avalonia gets the Fluent theme, dark, with the Inter font, and the Skia renderer, found among the packages the game references. To use its own application (resources, styles, theme), the game sets Avalonia up on the game thread before it runs:
 
 ```csharp
 AppBuilder.Configure<MyApp>().UseStride().WithInterFont().SetupWithoutStarting();
@@ -21,8 +21,9 @@ game.Run();
 
 ## How it works
 
+- Two packages: `Stride.AvaloniaUI` (the platform, the component and the game system; no Skia) and `Stride.AvaloniaUI.Skia` (the Skia renderer). The renderer is chosen once per process when Avalonia is set up (`UseStride(renderer)`), as Avalonia has one render interface per process. The core finds the Skia package among the registered assemblies, through its `[AssemblyScan]` index, or gets it from `UseSkiaFallback()` on the `AppBuilder`.
 - `Platform/`: an Avalonia platform with no native windows. Avalonia's dispatcher and render loop run on the game thread, driven by the game loop (`StrideDispatcherImpl`, `StrideRenderTimer`). Each view is an offscreen top level (`StrideTopLevelImpl`).
-- `Platform/Gpu/`: Skia on the game's own Vulkan device. Skia renders each view into a texture of the device, with the device's queue, and the game draws that texture without a copy. Avalonia takes it as the GPU of its Skia backend (`StrideSkiaGpu`, given through `SkiaGpuProxy`); `Stride.Graphics` gives the Vulkan handles Skia needs (`VulkanInterop`). Where Skia can't share the device, it renders on the CPU into memory that keeps the previous frame, and the game uploads the frames that changed.
+- `Stride.AvaloniaUI.Skia/WholeFrame/`: Skia draws whole frames (`SkiaRendererBackend`), on the game's own Vulkan device. Skia renders each view into a texture of the device, with the device's queue, and the game draws that texture without a copy. Avalonia takes it as the GPU of its Skia backend (`StrideSkiaGpu`, given through `SkiaGpuProxy`); `Stride.Graphics` gives the Vulkan handles Skia needs (`VulkanInterop`). Where Skia can't share the device, it renders on the CPU into memory that keeps the previous frame, and the game uploads the frames that changed.
 - `AvaloniaUISystem` (a `[GameSystem]`): pumps Avalonia in the update, renders the views in the draw, and draws their frames over the back buffer after the scene. `RenderOnGpu` (on by default) chooses Skia on the device or on the CPU; a change takes effect at the next frame.
 - Input goes through the `InputManager`'s capture: a view captures the mouse (`Hover` priority) while it is over one of its controls or a button pressed on it is held, and the keyboard (`Focus` priority) while a text box has the focus, so scripts don't see what the UI takes. A click where no control is gives the focus back to the game, and a game drag that crosses the UI stays with the game.
 

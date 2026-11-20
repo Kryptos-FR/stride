@@ -108,8 +108,8 @@ public sealed class AvaloniaUISystem : GameSystemBase,
     }
 
     /// <summary>
-    /// Gets or sets whether Skia renders the views on the game's graphics device when it can share it (Vulkan), rather
-    /// than on the CPU. A change takes effect at the next frame.
+    /// Gets or sets whether the renderer draws the views on the game's graphics device when it can (Skia shares Vulkan
+    /// devices), rather than on the CPU. A change takes effect at the next frame.
     /// </summary>
     public bool RenderOnGpu
     {
@@ -126,7 +126,7 @@ public sealed class AvaloniaUISystem : GameSystemBase,
     }
 
     /// <summary>
-    /// Gets whether Skia renders the views on the game's graphics device.
+    /// Gets whether the renderer draws the views on the game's graphics device.
     /// </summary>
     public bool IsRenderingOnGpu => attachedDevice != null;
 
@@ -162,7 +162,7 @@ public sealed class AvaloniaUISystem : GameSystemBase,
         base.Destroy();
     }
 
-    // Skia renders the views on the game's device, or on the CPU, the way RenderOnGpu says
+    // The renderer draws the views on the game's device, or on the CPU, the way RenderOnGpu says
     private void UpdateGraphicsDevice()
     {
         if (renderOnGpu && attachedDevice == null)
@@ -181,7 +181,7 @@ public sealed class AvaloniaUISystem : GameSystemBase,
     {
         foreach (var view in views)
             view.ReleaseTexture();
-        // Skia releases what it has on the device while the device is still there
+        // The renderer releases what it has on the device while the device is still there
         if (attachedDevice != null)
             StrideAvaloniaPlatform.DetachGraphicsDevice(attachedDevice);
         attachedDevice = null;
@@ -228,8 +228,8 @@ public sealed class AvaloniaUISystem : GameSystemBase,
             view.Layout(backBuffer.Width, backBuffer.Height);
         }
 
-        // Layout and composition (dispatcher jobs), then rendering of the views that changed: on the GPU, Skia submits
-        // its commands now, ahead of the command list of this frame
+        // Layout and composition (dispatcher jobs), then rendering of the views that changed: on the GPU, the renderer
+        // submits its commands now, ahead of the command list of this frame
         StrideAvaloniaPlatform.Pump();
         StrideAvaloniaPlatform.Render();
 
