@@ -1,0 +1,14 @@
+{
+  "os": "Microsoft Windows 10.0.26100",
+  "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+  "cpuFeatures": "AVX2 FMA AVX-VNNI AVX512F AVX512VL AVX512DQ AVX512BW AVX512VBMI V512",
+  "gpu": "Microsoft Basic Render Driver",
+  "gpuVendorId": "0x1414",
+  "gpuDeviceId": "0x008C",
+  "vendorName": "Microsoft",
+  "driverId": "Microsoft",
+  "driverName": "Microsoft",
+  "driverVersion": "1.0.21.0",
+  "apiName": "Direct3D12",
+  "apiVersion": ""
+}
