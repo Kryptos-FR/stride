@@ -71,7 +71,8 @@ internal static class TextCases
     /// <summary>
     /// How many pixels of each case the native renderer draws more than 12 away from Skia on the CPU where Skia's
     /// glyphs aren't FreeType's (<see cref="EdgeAllowances.ForText(Stride.Graphics.GraphicsAdapter, int, int)"/>), as the
-    /// Windows game tests of CI measure them (run 44621323042, Vulkan).
+    /// Windows game tests of CI measure them (run 44621323042, Vulkan; CollectionFaces and Size72 in run 44771862294, the
+    /// same on the three graphics APIs).
     /// </summary>
     public static readonly IReadOnlyDictionary<string, int> OtherGlyphsAllowance = new Dictionary<string, int>
     {
@@ -91,8 +92,8 @@ internal static class TextCases
         ["ColorEmoji"] = 0,
         ["GradientText"] = 0,
         ["Whitespace"] = 6,
-        ["CollectionFaces"] = 0,
-        ["Size72"] = 0,
+        ["CollectionFaces"] = 551,
+        ["Size72"] = 255,
     };
 
     /// <summary>
