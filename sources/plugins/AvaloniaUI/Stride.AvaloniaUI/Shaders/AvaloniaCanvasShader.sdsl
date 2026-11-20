@@ -11,8 +11,9 @@ namespace Stride.AvaloniaUI.Rendering.Native
     /// A shape is a rounded rectangle in its own frame, filled, or the ring between it and an inner one. Its coverage of a
     /// pixel is saturate(0.5 - d), where d is the signed distance from the pixel's center to the outline in pixels: computed
     /// in the shape's frame and divided by the length of its gradient in pixels, so that a rotated or scaled shape keeps
-    /// edges one pixel wide. Along the straight edges, the coverages of the two axes multiply. The clip is a rounded
-    /// rectangle in its own frame too, whose coverage multiplies every quad's.
+    /// edges one pixel wide. Along the straight edges, each axis covers the part of the pixel between its two edges, so that a
+    /// shape thinner than a pixel covers as much of it as it is thick, and the coverages of the two axes multiply. The clip
+    /// is a rounded rectangle in its own frame too, whose coverage multiplies every quad's.
     /// </remarks>
     shader AvaloniaCanvasShader : ShaderBase, Texturing
     {
@@ -110,11 +111,11 @@ namespace Stride.AvaloniaUI.Rendering.Native
         // gradients of the frame's x and y in pixels
         float Coverage(float2 position, float4 rect, float4 radiiTop, float4 radiiBottom, float2 axisX, float2 axisY, float aliased)
         {
-            // The nearest edge on each axis
-            float2 center = (rect.xy + rect.zw) * 0.5;
-            float2 halfSize = (rect.zw - rect.xy) * 0.5;
-            float2 outside = abs(position - center) - halfSize;
-            float coverage = EdgeCoverage(outside.x / max(length(axisX), 1e-20), aliased) * EdgeCoverage(outside.y / max(length(axisY), 1e-20), aliased);
+            // The two edges of each axis, in pixels
+            float2 lengths = float2(max(length(axisX), 1e-20), max(length(axisY), 1e-20));
+            float2 offset = (position - (rect.xy + rect.zw) * 0.5) / lengths;
+            float2 halfSize = (rect.zw - rect.xy) * 0.5 / lengths;
+            float coverage = AxisCoverage(offset.x, halfSize.x, aliased) * AxisCoverage(offset.y, halfSize.y, aliased);
 
             // Each rounded corner whose box holds the position: top left, top right, bottom right, bottom left
             coverage = min(coverage, CornerCoverage(float2(rect.x + radiiTop.x, rect.y + radiiTop.y) - position, radiiTop.xy, float2(-1, -1), axisX, axisY, aliased));
@@ -122,6 +123,14 @@ namespace Stride.AvaloniaUI.Rendering.Native
             coverage = min(coverage, CornerCoverage(position - float2(rect.z - radiiBottom.x, rect.w - radiiBottom.y), radiiBottom.xy, float2(1, 1), axisX, axisY, aliased));
             coverage = min(coverage, CornerCoverage(float2(rect.x + radiiBottom.z - position.x, position.y - rect.w + radiiBottom.w), radiiBottom.zw, float2(-1, 1), axisX, axisY, aliased));
             return coverage;
+        }
+
+        // The coverage of a pixel by the band between two edges on an axis, from the pixel's offset from the band's middle and
+        // the band's half size, in pixels: the part of the pixel before the far edge, plus the part after the near edge, less
+        // the whole pixel
+        float AxisCoverage(float offset, float halfSize, float aliased)
+        {
+            return saturate(EdgeCoverage(offset - halfSize, aliased) + EdgeCoverage(-offset - halfSize, aliased) - 1);
         }
 
         // The coverage of a pixel by an elliptical corner, from the position's offset from the corner's center towards the

@@ -29,7 +29,10 @@ internal sealed class StrideGlyphRun : IGlyphRunImpl
         FontRenderingEmSize = fontRenderingEmSize;
         GlyphInfos = glyphInfos.ToArray();
         BaselineOrigin = baselineOrigin;
-        Bounds = GlyphInfos.Count == 0 ? default : MeasureInk(glyphTypeface, fontRenderingEmSize, GlyphInfos).Translate(baselineOrigin);
+        Bounds = GlyphInfos.Count == 0 ? default : MeasureInk(glyphTypeface, fontRenderingEmSize, GlyphInfos, withOffsets: false).Translate(baselineOrigin);
+        InkBounds = GlyphInfos.Any(glyph => glyph.GlyphOffset != default)
+            ? MeasureInk(glyphTypeface, fontRenderingEmSize, GlyphInfos, withOffsets: true).Translate(baselineOrigin)
+            : Bounds;
     }
 
     public GlyphTypeface GlyphTypeface { get; }
@@ -44,6 +47,11 @@ internal sealed class StrideGlyphRun : IGlyphRunImpl
     public Point BaselineOrigin { get; }
 
     public Rect Bounds { get; }
+
+    /// <summary>
+    /// Gets the union of the ink boxes of the glyphs where they are drawn, their offsets included, unlike <see cref="Bounds"/>.
+    /// </summary>
+    internal Rect InkBounds { get; }
 
     /// <summary>
     /// Gets what the fallback made from this glyph run, disposed with it when it is <see cref="IDisposable"/>.
@@ -63,8 +71,8 @@ internal sealed class StrideGlyphRun : IGlyphRunImpl
     }
 
     // The union of the ink boxes of the glyphs along their advances, relative to the baseline origin, as Skia measures them:
-    // each box rounded out to whole pixels, glyph offsets left out, and glyphs without ink taking no room
-    private static Rect MeasureInk(GlyphTypeface glyphTypeface, double emSize, IReadOnlyList<GlyphInfo> glyphInfos)
+    // each box rounded out to whole pixels, glyph offsets left out unless asked for, and glyphs without ink taking no room
+    private static Rect MeasureInk(GlyphTypeface glyphTypeface, double emSize, IReadOnlyList<GlyphInfo> glyphInfos, bool withOffsets)
     {
         var extents = GlyphInkExtents.Get(glyphTypeface);
         var scale = emSize / glyphTypeface.Metrics.DesignEmHeight;
@@ -81,7 +89,7 @@ internal sealed class StrideGlyphRun : IGlyphRunImpl
                 box = Simulate(box, emSize, simulations);
                 box = new Rect(new Point(Math.Floor(box.Left), Math.Floor(box.Top)), new Point(Math.Ceiling(box.Right), Math.Ceiling(box.Bottom)));
             }
-            bounds = bounds.Union(box.Translate(new Vector(advance, 0)));
+            bounds = bounds.Union(box.Translate(new Vector(advance, 0) + (withOffsets ? glyph.GlyphOffset : default)));
             advance += glyph.GlyphAdvance;
         }
         return bounds;
