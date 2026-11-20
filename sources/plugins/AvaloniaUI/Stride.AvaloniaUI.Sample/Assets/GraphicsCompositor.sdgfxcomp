@@ -1,0 +1,19 @@
+!GraphicsCompositorAsset
+Id: 42174d59-a60f-44a1-8c4d-b0d9174231ec
+SerializedVersion: {Stride: 3.1.0.3}
+Tags: []
+Cameras: {}
+RenderStages: {}
+RenderFeatures: {}
+SharedRenderers: {}
+Game: !Stride.Rendering.Compositing.SceneRendererCollection,Stride.Rendering
+    Id: 92a6ed89-8d0c-4ad5-bbaa-1664fe55fdd1
+    Children:
+        0279553ba9ea479bbb56d17615066824: !Stride.Rendering.Compositing.ClearRenderer,Stride.Rendering
+            Id: 17f09807-0d87-4e0d-b6ef-0bdfbe55379c
+            Color: {R: 0.03137255, G: 0.047058824, B: 0.101960786, A: 1.0}
+        fd47c8e96845478882eb30f5ba641fbd: !OrbFieldRenderer
+            Id: f42edbac-fb03-4967-abec-1e24dd910ebb
+SingleView: null
+Editor: null
+BlockPositions: {}

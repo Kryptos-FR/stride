@@ -1,0 +1,16 @@
+!GameSettingsAsset
+Id: 1a37e783-3618-4e21-a201-bed0d7585604
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+DefaultScene: e9f28305-523e-4e37-8e33-095125681b2c:MainScene
+GraphicsCompositor: 42174d59-a60f-44a1-8c4d-b0d9174231ec:GraphicsCompositor
+Defaults:
+    - !Stride.Graphics.RenderingSettings,Stride.Graphics
+        DefaultBackBufferWidth: 1280
+        DefaultBackBufferHeight: 720
+        AdaptBackBufferToScreen: false
+        DefaultGraphicsProfile: Level_10_0
+        ColorSpace: Linear
+        DisplayOrientation: Default
+SplashScreenTexture: null
+SplashScreenColor: {R: 0, G: 0, B: 0, A: 255}
