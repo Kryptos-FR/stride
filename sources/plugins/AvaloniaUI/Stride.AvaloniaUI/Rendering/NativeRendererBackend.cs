@@ -20,6 +20,8 @@ internal sealed class NativeRendererBackend : RendererBackend
 {
     private static readonly Logger Log = GlobalLogger.GetLogger("AvaloniaUI");
 
+    private bool declineLogged;
+
     /// <summary>
     /// Creates the renderer and binds the core's render interface, and the fallback's font manager.
     /// </summary>
@@ -42,14 +44,27 @@ internal sealed class NativeRendererBackend : RendererBackend
     public NativeGraphics? Graphics { get; private set; }
 
     /// <summary>
-    /// Draws the views on a device from the next frame on, when the canvas can draw on it (<see cref="NativeGraphics.CanDraw(GraphicsDevice)"/>).
+    /// Draws the views on a device from the next frame on, when the canvas can draw on it (<see cref="NativeGraphics.GetReasonNotToDraw(GraphicsDevice)"/>).
     /// </summary>
-    public override bool AttachGraphicsDevice(GraphicsDevice device)
+    public override bool AttachGraphicsDevice(GraphicsDevice device) => AttachGraphicsDevice(device, NativeGraphics.GetReasonNotToDraw(device));
+
+    /// <summary>
+    /// Draws the views on a device from the next frame on, unless there is a reason not to, which is logged once.
+    /// </summary>
+    /// <param name="reasonNotToDraw">Why the canvas can't draw on the device, or <c>null</c> when it can.</param>
+    internal bool AttachGraphicsDevice(GraphicsDevice device, string? reasonNotToDraw)
     {
         if (Graphics is { } current)
             return current.Device == device;
-        if (!NativeGraphics.CanDraw(device))
+        if (reasonNotToDraw != null)
+        {
+            if (!declineLogged)
+            {
+                declineLogged = true;
+                Log.Info($"The native canvas of the Avalonia UI can't draw on the graphics device ({reasonNotToDraw}); the views are drawn on the CPU.");
+            }
             return false;
+        }
 
         try
         {
@@ -74,7 +89,8 @@ internal sealed class NativeRendererBackend : RendererBackend
         StrideAvaloniaPlatform.RedrawTopLevels();
     }
 
-    public override void BeginRender(GraphicsContext graphicsContext)
+    // Without a graphics context, a frame on the device draws nothing
+    public override void BeginRender(GraphicsContext? graphicsContext)
     {
         if (Graphics != null)
             Graphics.Context = graphicsContext;

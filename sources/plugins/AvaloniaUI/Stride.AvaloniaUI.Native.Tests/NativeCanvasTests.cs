@@ -13,6 +13,7 @@ using Avalonia.Media.Immutable;
 using Avalonia.Platform;
 using Avalonia.Platform.Surfaces;
 using Avalonia.Rendering.Composition;
+using Avalonia.Skia;
 using Stride.AvaloniaUI.Platform;
 using Stride.AvaloniaUI.Rendering;
 using Stride.AvaloniaUI.Rendering.Drawing;
@@ -22,6 +23,7 @@ using Stride.AvaloniaUI.Rendering.Native;
 using Stride.AvaloniaUI.Rendering.Text;
 using Stride.AvaloniaUI.Tests;
 using Stride.Core;
+using Stride.Core.Diagnostics;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
@@ -85,6 +87,208 @@ public sealed class NativeCanvasTests : GameTestBase
         Assert.False(NativeGraphics.CanDraw(GraphicsProfile.Level_11_0, hasBytecode: false));
         Assert.True(NativeGraphics.CanDraw(GraphicsProfile.Level_10_0, hasBytecode: true));
     }
+
+    [Fact]
+    public void ReasonNotToDrawNamesWhatIsMissing()
+    {
+        Assert.Contains("Level_10_0", NativeGraphics.GetReasonNotToDraw(GraphicsProfile.Level_9_3, hasBytecode: true));
+        Assert.Contains("bytecode", NativeGraphics.GetReasonNotToDraw(GraphicsProfile.Level_11_0, hasBytecode: false));
+        Assert.Null(NativeGraphics.GetReasonNotToDraw(GraphicsProfile.Level_10_0, hasBytecode: true));
+    }
+
+    [SkippableFact]
+    public void NativeGraphicsOfOneDeviceSharesItsPipelines() => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        var game = CreateGame(new Canvas());
+        (PipelineState Blended, PipelineState Opaque)? first = null;
+        (PipelineState Blended, PipelineState Opaque)? second = null;
+        game.FrameGameSystem.Draw(10, () =>
+        {
+            // One after the other on the game's device, as each move between the GPU and the CPU makes one
+            using (var graphics = new NativeGraphics(game.GraphicsDevice))
+                first = (graphics.Resources.Blended, graphics.Resources.Opaque);
+            using (var graphics = new NativeGraphics(game.GraphicsDevice))
+                second = (graphics.Resources.Blended, graphics.Resources.Opaque);
+        });
+        RunGameTest(game);
+
+        Assert.Same(first!.Value.Blended, second!.Value.Blended);
+        Assert.Same(first.Value.Opaque, second.Value.Opaque);
+    });
+
+    [SkippableFact]
+    public void DeclinedDeviceIsLoggedOnceWithItsReason() => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        var backend = StrideAvaloniaPlatform.NativeBackend!;
+        var game = CreateGame(new Canvas());
+        game.Services.GetSafeServiceAs<AvaloniaUISystem>().RenderOnGpu = false;
+        var messages = new List<ILogMessage>();
+        var attached = new List<bool>();
+        NativeGraphics? graphics = null;
+        game.FrameGameSystem.Draw(10, () =>
+        {
+            using (CollectMessages(messages))
+            {
+                attached.Add(backend.AttachGraphicsDevice(game.GraphicsDevice, "the test declines it"));
+                attached.Add(backend.AttachGraphicsDevice(game.GraphicsDevice, "the test declines it"));
+            }
+            graphics = backend.Graphics;
+        });
+        RunGameTest(game);
+
+        Assert.Equal(new[] { false, false }, attached);
+        var message = Assert.Single(messages);
+        Assert.Equal(LogMessageType.Info, message.Type);
+        Assert.Contains("the test declines it", message.Text);
+        Assert.Contains("CPU", message.Text);
+        Assert.Null(graphics);
+    });
+
+    [SkippableFact]
+    public void FeatureUnderAnEmptyScissorIsNullAndLogsNothing() => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        // Avalonia leaves out custom drawing under an empty clip of its own, so the frames' contexts are driven directly:
+        // custom drawing that asks for Skia's canvas under a clip of no width, a scissor of no pixels, for 10 frames
+        var game = CreateGame(new Canvas());
+        var channel = new FallbackChannel(StrideAvaloniaPlatform.NativeChannel!.Fallback);
+        var messages = new List<ILogMessage>();
+        var leasesGranted = 0;
+        var asked = 0;
+        for (var frame = 10; frame < 20; frame++)
+        {
+            game.FrameGameSystem.Draw(frame, () =>
+            {
+                var graphics = StrideAvaloniaPlatform.NativeGraphics!;
+                using var texture = Texture.New2D(game.GraphicsDevice, 32, 32, PixelFormat.R8G8B8A8_UNorm, TextureFlags.RenderTarget | TextureFlags.ShaderResource);
+                graphics.Context = game.GraphicsContext;
+                try
+                {
+                    using (CollectMessages(messages))
+                    using (var context = new NativeDrawingContext(graphics, channel, texture, new Vector(96, 96), null))
+                    {
+                        context.PushClip(new Rect(10, 10, 0, 40));
+                        asked++;
+                        if (context.GetFeature(typeof(ISkiaSharpApiLeaseFeature)) is ISkiaSharpApiLeaseFeature feature)
+                        {
+                            leasesGranted++;
+                            using var lease = feature.Lease();
+                        }
+                        context.PopClip();
+                    }
+                }
+                finally
+                {
+                    graphics.Context = null;
+                }
+            });
+        }
+        RunGameTest(game);
+
+        Assert.Equal(10, asked);
+        Assert.Equal(0, leasesGranted);
+        // Nothing is counted, and no run is made
+        Assert.Equal(0, channel.GetCount(DrawCallKind.Feature));
+        Assert.Empty(channel.GetReasons());
+        Assert.DoesNotContain(messages, message => message.Type >= LogMessageType.Warning);
+    });
+
+    [SkippableFact]
+    public void TwoViewsInOneFrameMatchTheFallback() => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        // Black text on white, and the Fluent page's text, white on dark included, drawn in the same frames
+        string[] pages = ["Text", "Fluent"];
+        var resolution = new Vector2(ReferenceViews.Width, ReferenceViews.Height);
+        var game = CreateGame(ReferenceViews.Create(pages[0]), resolution, ReferenceViews.Width, ReferenceViews.Height);
+        var components = new[]
+        {
+            game.SceneSystem.SceneInstance.RootScene.Entities[0].Get<AvaloniaUIComponent>(),
+            new AvaloniaUIComponent { Content = ReferenceViews.Create(pages[1]), Resolution = resolution, DrawOrder = 1 },
+        };
+        game.SceneSystem.SceneInstance.RootScene.Entities.Add(new Entity("UI 2") { components[1] });
+        var system = game.Services.GetSafeServiceAs<AvaloniaUISystem>();
+        system.RenderOnGpu = false;
+        var fallback = new Image?[2];
+        var native = new Image?[2];
+        GraphicsAdapter? adapter = null;
+        bool? onGpu = null;
+
+        game.FrameGameSystem
+            .Draw(30, () =>
+            {
+                for (var i = 0; i < 2; i++)
+                    fallback[i] = ReadView(game, components[i]);
+            })
+            .Update(31, () => system.RenderOnGpu = true)
+            .Draw(45, () =>
+            {
+                onGpu = system.IsRenderingOnGpu;
+                for (var i = 0; i < 2; i++)
+                    native[i] = ReadView(game, components[i]);
+                adapter = game.GraphicsDevice.Adapter;
+            });
+        RunGameTest(game);
+
+        try
+        {
+            Assert.True(onGpu, "The views aren't drawn on the GPU.");
+            for (var i = 0; i < 2; i++)
+                AssertWithinAllowance(fallback[i]!, native[i]!, EdgeAllowances.On(adapter!, ReferenceViews.EdgeAllowance[pages[i]]), $"TwoViews.{pages[i]}");
+        }
+        finally
+        {
+            foreach (var image in fallback.Concat(native))
+                image?.Dispose();
+        }
+    });
+
+    [SkippableFact]
+    public void SmallChangeRedrawsOnlyItsDirtyRectangle() => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        var magenta = new Color(255, 0, 255, 255);
+        var newBorderColor = new Color(178, 34, 34, 255);
+        var border = new Border { Width = 16, Height = 16, Background = Brushes.SteelBlue };
+        Canvas.SetLeft(border, 300);
+        Canvas.SetTop(border, 200);
+        var text = new TextBlock { Text = "Text elsewhere", FontSize = 18, Foreground = Brushes.Black };
+        Canvas.SetLeft(text, 40);
+        Canvas.SetTop(text, 60);
+        var game = CreateGame(new Canvas { Background = Brushes.White, Children = { border, text } });
+        var component = game.SceneSystem.SceneInstance.RootScene.Entities[0].Get<AvaloniaUIComponent>();
+        Color[]? pixels = null;
+        var width = 0;
+
+        game.FrameGameSystem
+            .Draw(10, () =>
+            {
+                // A marker far from the border, written into the texture the view keeps between frames
+                var frame = GetTopLevelImpl(component).GpuFrame!;
+                var marker = Enumerable.Repeat(magenta, 8 * 8).ToArray();
+                frame.SetData<Color>(game.GraphicsContext.CommandList, marker, 0, 0, new ResourceRegion(8, 8, 0, 16, 16, 1));
+                game.GraphicsContext.CommandList.ResourceBarrierTransition(frame, BarrierLayout.ShaderResource);
+            })
+            .Update(11, () => border.Background = new SolidColorBrush(AvaloniaColor.FromRgb(newBorderColor.R, newBorderColor.G, newBorderColor.B)))
+            .Draw(12, () =>
+            {
+                var frame = GetTopLevelImpl(component).GpuFrame!;
+                width = frame.Width;
+                pixels = frame.GetData<Color>(game.GraphicsContext.CommandList);
+            });
+        RunGameTest(game);
+
+        // Outside the dirty rectangle, not drawn again; the change, drawn
+        Assert.Equal(magenta, pixels![12 * width + 12]);
+        Assert.Equal(newBorderColor, pixels[208 * width + 308]);
+    });
 
     [SkippableTheory]
     [MemberData(nameof(PageNames))]
@@ -542,6 +746,40 @@ public sealed class NativeCanvasTests : GameTestBase
         Background = new SolidColorBrush(AvaloniaColor.FromRgb(ButtonColor.R, ButtonColor.G, ButtonColor.B)),
         Transitions = [],
     };
+
+    private static StrideTopLevelImpl GetTopLevelImpl(AvaloniaUIComponent component)
+        => (StrideTopLevelImpl)component.TopLevel!.PlatformImpl!;
+
+    // The last frame of a view: its texture on the GPU, or its memory on the CPU; premultiplied RGBA either way
+    private static unsafe Image ReadView(NativeCanvasTests game, AvaloniaUIComponent component)
+    {
+        var impl = GetTopLevelImpl(component);
+        if (impl.GpuFrame is { } texture)
+            return texture.GetDataAsImage(game.GraphicsContext.CommandList);
+
+        Assert.True(impl.TryGetFrame(out var data, out var size, out var rowPitch), "The view has no frame.");
+        var image = Image.New2D(size.Width, size.Height, 1, PixelFormat.R8G8B8A8_UNorm);
+        var buffer = image.PixelBuffer[0];
+        for (var y = 0; y < size.Height; y++)
+            System.Buffer.MemoryCopy((byte*)data + y * rowPitch, (byte*)buffer.DataPointer + y * buffer.RowStride, buffer.RowStride, size.Width * 4);
+        return image;
+    }
+
+    // Collects the messages of the Avalonia UI's logger until disposed
+    private static IDisposable CollectMessages(List<ILogMessage> messages)
+    {
+        void Collect(ILogMessage message)
+        {
+            if (message.Module == "AvaloniaUI")
+            {
+                lock (messages)
+                    messages.Add(message);
+            }
+        }
+
+        GlobalLogger.GlobalMessageLogged += Collect;
+        return new AnonymousDisposable(() => GlobalLogger.GlobalMessageLogged -= Collect);
+    }
 
     private static Image ReadBackBuffer(NativeCanvasTests game)
         => game.GraphicsDevice.Presenter.BackBuffer.GetDataAsImage(game.GraphicsContext.CommandList);
