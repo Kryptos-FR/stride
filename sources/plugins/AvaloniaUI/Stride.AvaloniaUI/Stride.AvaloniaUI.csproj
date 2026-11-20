@@ -1,0 +1,35 @@
+<Project>
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'Directory.Build.props'))/sdk/Stride.Build.Sdk/Sdk/Sdk.props" />
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TargetFrameworks>$(StrideRuntimeTargetFrameworks)</TargetFrameworks>
+    <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
+    <!-- The Avalonia UI component is written in scene assets -->
+    <StrideContainsAssetTypes>true</StrideContainsAssetTypes>
+    <Nullable>enable</Nullable>
+    <!--
+      The Stride platform for Avalonia implements Avalonia's platform interfaces (dispatcher, render timer, top levels, raw input),
+      which Avalonia marks as private APIs. The package must then depend on the exact Avalonia version it was built against.
+    -->
+    <AvaloniaAccessUnstablePrivateApis>true</AvaloniaAccessUnstablePrivateApis>
+    <Avalonia_I_Want_To_Use_Private_Apis_In_Nuget_Package_And_Promise_To_Pin_The_Exact_Avalonia_Version_In_Package_Dependency>true</Avalonia_I_Want_To_Use_Private_Apis_In_Nuget_Package_And_Promise_To_Pin_The_Exact_Avalonia_Version_In_Package_Dependency>
+    <NoWarn>$(NoWarn);AVA3001</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\shared\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\engine\Stride.Engine\Stride.Engine.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Exact versions: the private APIs can change in any Avalonia release -->
+    <PackageReference Include="Avalonia" VersionOverride="[$(AvaloniaVersion)]" />
+    <PackageReference Include="Avalonia.Skia" VersionOverride="[$(AvaloniaVersion)]" />
+    <PackageReference Include="Avalonia.HarfBuzz" VersionOverride="[$(AvaloniaVersion)]" />
+    <PackageReference Include="Avalonia.Themes.Fluent" VersionOverride="[$(AvaloniaVersion)]" />
+    <PackageReference Include="Avalonia.Fonts.Inter" VersionOverride="[$(AvaloniaVersion)]" />
+  </ItemGroup>
+  <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk/Sdk/Sdk.targets" />
+</Project>
