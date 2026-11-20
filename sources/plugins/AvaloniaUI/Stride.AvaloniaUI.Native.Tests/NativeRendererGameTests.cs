@@ -34,6 +34,7 @@ using Color = Stride.Core.Mathematics.Color;
 using Image = Stride.Graphics.Image;
 using PixelFormat = Stride.Graphics.PixelFormat;
 using Rect = Avalonia.Rect;
+using Rectangle = Stride.Core.Mathematics.Rectangle;
 
 namespace Stride.AvaloniaUI.Native.Tests;
 
@@ -87,6 +88,9 @@ public sealed class NativeRendererGameTests : GameTestBase
         AssertColor(BackgroundColor, frame, 5, 5);
         AssertColor(BackgroundColor, frame, Width - 5, Height - 5);
         AssertColor(ButtonColor, frame, Width / 2 - 60, Height / 2);
+        // The button's text is drawn in its middle: a view without text would pass the counts of the fallback below too
+        var textPixels = CountPixelsApart(ButtonColor, frame, new Rectangle(Width / 2 - 40, Height / 2 - 16, 80, 32));
+        Assert.True(textPixels >= 150, $"The button's text has {textPixels} pixels apart from the button's color, not at least 150.");
         if (renderOnGpu)
         {
             // The button's rectangles and text are drawn natively
@@ -371,6 +375,22 @@ public sealed class NativeRendererGameTests : GameTestBase
         return image.Description.Format is PixelFormat.B8G8R8A8_UNorm or PixelFormat.B8G8R8A8_UNorm_SRgb
             ? new Color(pixel.B, pixel.G, pixel.R, pixel.A)
             : pixel;
+    }
+
+    // The pixels of a rectangle whose red, green or blue is more than 96 away from a color's
+    private static int CountPixelsApart(Color color, Image image, Rectangle rectangle)
+    {
+        var count = 0;
+        for (var y = rectangle.Top; y < rectangle.Bottom; y++)
+        {
+            for (var x = rectangle.Left; x < rectangle.Right; x++)
+            {
+                var pixel = GetPixel(image, x, y);
+                if (Math.Max(Math.Abs(color.R - pixel.R), Math.Max(Math.Abs(color.G - pixel.G), Math.Abs(color.B - pixel.B))) > 96)
+                    count++;
+            }
+        }
+        return count;
     }
 
     private static void AssertColor(Color expected, Image image, int x, int y)
