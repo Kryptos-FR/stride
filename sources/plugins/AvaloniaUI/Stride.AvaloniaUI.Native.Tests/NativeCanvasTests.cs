@@ -63,6 +63,11 @@ public sealed class NativeCanvasTests : GameTestBase
     /// </summary>
     public static IEnumerable<object[]> PageNames => ReferenceViews.Pages.Select(page => new object[] { page });
 
+    /// <summary>
+    /// Gets the names of the shape cases, one test case each.
+    /// </summary>
+    public static IEnumerable<object[]> ShapeCaseNames => ShapeCases.Names.Select(name => new object[] { name });
+
     [SkippableFact]
     public void CanvasShaderIsEmbeddedForTheDevice() => TestAvalonia.Run(() =>
     {
@@ -87,13 +92,35 @@ public sealed class NativeCanvasTests : GameTestBase
     {
         SkipWithoutBytecode();
 
-        var (fallback, native) = RenderBothWays(ReferenceViews.Create(page), ReferenceViews.Width, ReferenceViews.Height);
+        var (fallback, native, _) = RenderBothWays(ReferenceViews.Create(page), ReferenceViews.Width, ReferenceViews.Height);
 
-        // Skia draws the anti-aliased edge of a path clip a little differently when it is moved, as a run is to its own
-        // origin: a few of those pixels differ by up to about 10. A misplaced, cut or misblended run differs on many more.
         using (fallback)
         using (native)
-            AssertClose(fallback, native, 3, page, outliers: 16, outlierTolerance: 12);
+            AssertWithinAllowance(fallback, native, ReferenceViews.EdgeAllowance[page], page);
+    });
+
+    [SkippableTheory]
+    [MemberData(nameof(ShapeCaseNames))]
+    public void ShapeMatchesTheFallback(string name) => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        var (fallback, native, reasons) = RenderBothWays(ShapeCases.Create(name), ShapeCases.Width, ShapeCases.Height, ShapeCases.GetScaling(name));
+
+        if (name == "GradientRectangle")
+            Assert.Equal(new[] { FallbackReason.Brush }, reasons);
+        else if (name == "ShadowedRectangle")
+            Assert.Equal(new[] { FallbackReason.BoxShadow }, reasons);
+        else
+            Assert.Empty(reasons);
+        using (fallback)
+        using (native)
+        {
+            // Skia strokes an ellipse geometry along quadratic curves that follow its offset outlines to within about 0.15
+            // pixels, on the CPU and on the GPU alike; the native ring is the exact one
+            Skip.If(name == "EllipseStroke", "Skia's stroke of an ellipse geometry is a little off the exact ring: 398 pixels differ by more than 12, and Skia on the GPU differs on 258.");
+            AssertWithinAllowance(fallback, native, ShapeCases.EdgeAllowance[name], name);
+        }
     });
 
     [SkippableFact]
@@ -302,6 +329,8 @@ public sealed class NativeCanvasTests : GameTestBase
         var fallback = new ThrowingFallback(StrideAvaloniaPlatform.NativeChannel!.Fallback);
         var channel = new FallbackChannel(fallback);
         var red = Brushes.Red.ToImmutable();
+        // A gradient goes to the fallback, a solid color doesn't
+        var redGradient = new LinearGradientBrush { GradientStops = { new GradientStop(Colors.Red, 0), new GradientStop(Colors.Red, 1) } }.ToImmutable();
         var blue = AvaloniaColor.FromRgb(0, 0, 255);
 
         // On the GPU: the run whose canvas throws is lost, not the frame, and the next frame draws
@@ -320,13 +349,13 @@ public sealed class NativeCanvasTests : GameTestBase
                 using (var context = new NativeDrawingContext(graphics, channel, texture, new Vector(96, 96), () => ended++))
                 {
                     context.Clear(blue);
-                    context.DrawRectangle(red, null, new RoundedRect(new Rect(8, 8, 16, 16)));
+                    context.DrawRectangle(redGradient, null, new RoundedRect(new Rect(8, 8, 16, 16)));
                 }
                 lostRun = texture.GetData<Color>(game.GraphicsContext.CommandList);
 
                 fallback.Throws = false;
                 using (var context = new NativeDrawingContext(graphics, channel, texture, new Vector(96, 96), () => ended++))
-                    context.DrawRectangle(red, null, new RoundedRect(new Rect(8, 8, 16, 16)));
+                    context.DrawRectangle(redGradient, null, new RoundedRect(new Rect(8, 8, 16, 16)));
                 nextFrame = texture.GetData<Color>(game.GraphicsContext.CommandList);
             }
             finally
@@ -382,13 +411,15 @@ public sealed class NativeCanvasTests : GameTestBase
     /// Draws a view on the CPU through the fallback, then on the GPU, in one game.
     /// </summary>
     /// <returns>The frame on the CPU, read at draw 30, and the frame on the GPU, read at draw 45 after the full redraw the move causes.</returns>
-    private static (Image Fallback, Image Native) RenderBothWays(Control content, int width, int height)
+    private static (Image Fallback, Image Native, IReadOnlyList<FallbackReason> Reasons) RenderBothWays(Control content, int width, int height, double scaling = 1)
     {
-        var game = CreateGame(content, new Vector2(width, height), width, height);
+        var game = CreateGame(content, new Vector2((float)(width / scaling), (float)(height / scaling)), width, height);
         var system = game.Services.GetSafeServiceAs<AvaloniaUISystem>();
+        var channel = StrideAvaloniaPlatform.NativeChannel!;
         system.RenderOnGpu = false;
         Image? fallback = null;
         Image? native = null;
+        IReadOnlyList<FallbackReason>? reasons = null;
         bool? onGpu = null;
 
         game.FrameGameSystem
@@ -396,17 +427,18 @@ public sealed class NativeCanvasTests : GameTestBase
             .Update(31, () =>
             {
                 system.RenderOnGpu = true;
-                StrideAvaloniaPlatform.NativeChannel!.ResetCounts();
+                channel.ResetCounts();
             })
             .Draw(45, () =>
             {
                 onGpu = system.IsRenderingOnGpu;
                 native = ReadBackBuffer(game);
+                reasons = channel.GetReasons();
             });
         RunGameTest(game);
 
         Assert.True(onGpu, "The view isn't drawn on the GPU.");
-        return (fallback!, native!);
+        return (fallback!, native!, reasons!);
     }
 
     /// <summary>
@@ -467,13 +499,31 @@ public sealed class NativeCanvasTests : GameTestBase
 
     // Two frames no channel of which differs by more than a tolerance, but for a few outliers within a larger one; both
     // are saved to the temporary folder when they differ more
-    private static void AssertClose(Image expected, Image actual, int tolerance, string name, int outliers = 0, int outlierTolerance = 0)
+    // The native frame may differ from the fallback's by more than 12 on as many pixels as Skia on the GPU does
+    private static void AssertWithinAllowance(Image fallback, Image native, int allowance, string name)
     {
-        var difference = FrameComparison.MaxDifference(expected, actual);
-        var beyond = FrameComparison.CountBeyond(expected, actual, tolerance);
-        if (difference <= Math.Max(tolerance, outlierTolerance) && beyond <= outliers)
+        const int Tolerance = 12;
+        var beyond = FrameComparison.CountBeyond(fallback, native, Tolerance);
+        if (beyond <= allowance)
             return;
 
+        var folder = SaveFrames(fallback, native, name);
+        Assert.Fail($"{name}: {beyond} pixels differ from the fallback by more than {Tolerance}, and the allowance is {allowance}; the frames are in {folder}.");
+    }
+
+    private static void AssertClose(Image expected, Image actual, int tolerance, string name)
+    {
+        var difference = FrameComparison.MaxDifference(expected, actual);
+        if (difference <= tolerance)
+            return;
+
+        var folder = SaveFrames(expected, actual, name);
+        Assert.Fail($"{name}: a channel differs by {difference}, more than {tolerance}; the frames are in {folder}.");
+    }
+
+    // Saves the expected and the actual frame as PNG files, and gives their folder
+    private static string SaveFrames(Image expected, Image actual, string name)
+    {
         var folder = Path.Combine(Path.GetTempPath(), "Stride.AvaloniaUI.Native.Tests");
         Directory.CreateDirectory(folder);
         foreach (var (image, suffix) in new[] { (expected, "expected"), (actual, "actual") })
@@ -481,7 +531,7 @@ public sealed class NativeCanvasTests : GameTestBase
             using var stream = File.Create(Path.Combine(folder, $"{name}.{suffix}.png"));
             image.Save(stream, ImageFileType.Png);
         }
-        Assert.Fail($"{name}: a channel differs by {difference}, and {beyond} pixels by more than {tolerance} ({outliers} may, by up to {outlierTolerance}); the frames are in {folder}.");
+        return folder;
     }
 
     // The fallback of the game, whose canvases throw when asked to

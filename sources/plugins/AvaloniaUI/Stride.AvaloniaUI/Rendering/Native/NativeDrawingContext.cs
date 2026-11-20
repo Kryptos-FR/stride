@@ -27,9 +27,11 @@ namespace Stride.AvaloniaUI.Rendering.Native;
 /// everything up to its matching pop, and the pop go to the current fallback run as they are.
 /// </para>
 /// <para>
-/// <see cref="Clear"/> is drawn natively. Every other call goes to the current fallback run, and is counted by kind; a run
-/// ends at a native draw, at a change of the scissor, at <see cref="GetFeature"/> and at <see cref="Dispose"/>. When the
-/// context is disposed, the runs are uploaded and the frame is drawn into the texture, in order.
+/// <see cref="Clear"/> and the shapes of <see cref="NativeShapes"/> are drawn natively. Every other call goes to the current
+/// fallback run, and is counted by kind; outside groups, each such call and each group is also counted by the reason it
+/// went to the fallback. A run ends at a native draw, at a change of the scissor, at <see cref="GetFeature"/> and at
+/// <see cref="Dispose"/>. When the context is disposed, the runs are uploaded and the frame is drawn into the texture, in
+/// order.
 /// </para>
 /// </remarks>
 internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawingContextImplWithEffects, IDrawingContextWithAcrylicLikeSupport
@@ -43,6 +45,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
     private readonly Vector dpi;
     private readonly Action? ended;
     private readonly List<FrameItem> items = [];
+    private readonly List<CanvasShape> shapes = [];
     private readonly Stack<Rectangle> scissors = new();
     private readonly Stack<RenderOptions> renderOptionsStack = new();
     private readonly Stack<TextOptions> textOptionsStack = new();
@@ -105,7 +108,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
 
         EndRun();
         if (scissor.Width > 0 && scissor.Height > 0)
-            items.Add(new FrameItem(scissor, Premultiply(color), null));
+            items.Add(new FrameItem(scissor, Premultiply(color), null, null));
     }
 
     public void DrawBitmap(IBitmapImpl source, double opacity, Rect sourceRect, Rect destRect)
@@ -257,6 +260,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         if (groupDepth > 0)
             return GetRunFeature(EnsureRun(), t);
 
+        channel.Count(FallbackReason.CustomDrawing);
         EndRun();
         var feature = GetRunFeature(EnsureRun(), t);
         if (feature == null)
@@ -291,11 +295,31 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         }
     }
 
+    // Outside groups, a call is drawn natively when it can be; a native call that draws nothing leaves the run open
     private void Draw(DrawCommand command)
     {
         Next();
-        if (target != null)
+        if (target == null)
+            return;
+        if (groupDepth > 0)
+        {
             Record(command);
+            return;
+        }
+
+        shapes.Clear();
+        if (NativeShapes.TryGet(command, transform, renderOptions, shapes) is { } reason)
+        {
+            channel.Count(reason);
+            Record(command);
+            return;
+        }
+        if (shapes.Count == 0)
+            return;
+
+        EndRun();
+        foreach (var shape in shapes)
+            items.Add(new FrameItem(scissor, default, null, shape));
     }
 
     private void Push(DrawCommand push)
@@ -314,6 +338,8 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
 
     private void PushGroup(DrawCommand push)
     {
+        if (groupDepth == 0)
+            channel.Count(GetReason(push));
         Record(push);
         groupDepth++;
     }
@@ -362,7 +388,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         if (finished.Pixels == IntPtr.Zero)
             finished.Dispose();
         else
-            items.Add(new FrameItem(default, default, finished));
+            items.Add(new FrameItem(default, default, finished, null));
     }
 
     private void DropRun()
@@ -454,6 +480,11 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         {
             foreach (var item in items)
             {
+                if (item.Shape is { } shape)
+                {
+                    batch.AddShape(shape, item.Rectangle);
+                    continue;
+                }
                 if (item.Run is not { } fallbackRun)
                 {
                     batch.AddFill(item.Rectangle, item.Color);
@@ -482,6 +513,18 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         return new Color4(color.R / 255f * alpha, color.G / 255f * alpha, color.B / 255f * alpha, alpha);
     }
 
-    // A rectangle replaced with a color, or a run drawn in place
-    private readonly record struct FrameItem(Rectangle Rectangle, Color4 Color, FallbackRun? Run);
+    // Why a group goes to the fallback
+    private static FallbackReason GetReason(DrawCommand push) => push switch
+    {
+        PushOpacityCommand => FallbackReason.OpacityGroup,
+        PushOpacityMaskCommand => FallbackReason.OpacityMask,
+        PushGeometryClipCommand => FallbackReason.GeometryClip,
+        PushLayerCommand => FallbackReason.Layer,
+        PushEffectCommand => FallbackReason.Effect,
+        PushClipCommand or PushRoundedClipCommand => FallbackReason.ClipShape,
+        _ => throw new ArgumentOutOfRangeException(nameof(push), push, "Not a push that opens a group."),
+    };
+
+    // A rectangle replaced with a color, a shape under the scissor of its rectangle, or a run drawn in place
+    private readonly record struct FrameItem(Rectangle Rectangle, Color4 Color, FallbackRun? Run, CanvasShape? Shape);
 }

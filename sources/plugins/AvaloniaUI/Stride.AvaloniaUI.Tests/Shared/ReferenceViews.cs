@@ -2,6 +2,7 @@
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Avalonia;
 using Avalonia.Collections;
@@ -40,6 +41,23 @@ internal static class ReferenceViews
     /// The names of the pages.
     /// </summary>
     public static readonly string[] Pages = ["Fluent", "Shapes", "Text", "Gradients", "Images", "Paths", "Clips", "Opacity", "Effects"];
+
+    /// <summary>
+    /// How many pixels of each page Skia on the GPU (Vulkan, Lavapipe) draws more than 12 away from Skia on the CPU, as
+    /// <c>SkiaEdgeAllowanceTests</c> measures them: a renderer may differ from Skia on the CPU on as many.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, int> EdgeAllowance = new Dictionary<string, int>
+    {
+        ["Fluent"] = 586,
+        ["Shapes"] = 1142,
+        ["Text"] = 0,
+        ["Gradients"] = 812,
+        ["Images"] = 992,
+        ["Paths"] = 3846,
+        ["Clips"] = 499,
+        ["Opacity"] = 349,
+        ["Effects"] = 790,
+    };
 
     // The icons of the Fluent theme's templates: the drop-down chevron, the close cross, the back arrow, the refresh arrow,
     // the folder, the expander caret, the check mark and the information sign (the last two are strokes)
