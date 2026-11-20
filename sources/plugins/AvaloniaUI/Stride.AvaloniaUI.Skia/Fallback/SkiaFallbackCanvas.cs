@@ -22,7 +22,7 @@ internal sealed class SkiaFallbackCanvas : IFallbackCanvas
     {
         renderTarget = fallback.CpuContext.CreateRenderTarget([new MemoryFramebufferSurface(target)]);
         var sceneInfo = new IRenderTarget.RenderTargetSceneInfo(target.Size, target.Dpi.X / 96, CompositionTransparencyLevel.None);
-        context = new ConvertingDrawingContext(fallback, renderTarget.CreateDrawingContext(sceneInfo, out _), target.Dpi);
+        context = new ConvertingDrawingContext(fallback, renderTarget.CreateDrawingContext(sceneInfo, out _), target.Dpi, target.ScaleDrawingToDpi, target.GrayscaleText);
     }
 
     /// <summary>

@@ -28,25 +28,28 @@ internal sealed class ConvertingDrawingContext : IDrawingContextImpl, IDrawingCo
     private readonly IDrawingContextImpl skia;
     private readonly Vector dpi;
     private readonly Matrix? scale;
+    private readonly bool grayscaleText;
     private readonly Stack<RenderOptions> renderOptionsStack = new();
+    private readonly Stack<TextOptions> textOptionsStack = new();
     private readonly List<IDisposable> temporaries = [];
     private RenderOptions currentRenderOptions;
+    private TextOptions currentTextOptions;
     private Matrix transform = Matrix.Identity;
 
     /// <param name="fallback">The fallback that converts the objects of the core.</param>
     /// <param name="skia">Skia's drawing context, which this context disposes.</param>
     /// <param name="dpi">The DPI of what Skia's drawing context draws into.</param>
-    public ConvertingDrawingContext(SkiaRenderFallback fallback, IDrawingContextImpl skia, Vector dpi)
-        : this(fallback, skia, dpi, scaleToDpi: false)
-    {
-    }
-
-    // With scaleToDpi, drawings are in device-independent pixels and Skia's context draws in pixels, as Skia's layers of scene brushes
-    private ConvertingDrawingContext(SkiaRenderFallback fallback, IDrawingContextImpl skia, Vector dpi, bool scaleToDpi)
+    /// <param name="scaleToDpi">
+    /// Whether drawings are in device-independent pixels while Skia's context draws in pixels, as in Skia's render target bitmaps
+    /// and layers of scene brushes.
+    /// </param>
+    /// <param name="grayscaleText">Whether text is drawn without subpixel antialiasing, as in Skia's bitmap caches.</param>
+    public ConvertingDrawingContext(SkiaRenderFallback fallback, IDrawingContextImpl skia, Vector dpi, bool scaleToDpi = false, bool grayscaleText = false)
     {
         this.fallback = fallback;
         this.skia = skia;
         this.dpi = dpi;
+        this.grayscaleText = grayscaleText;
         if (scaleToDpi && !dpi.NearlyEquals(new Vector(96, 96)))
         {
             scale = Matrix.CreateScale(dpi.X / 96, dpi.Y / 96);
@@ -156,14 +159,22 @@ internal sealed class ConvertingDrawingContext : IDrawingContextImpl, IDrawingCo
         }
     }
 
+    // The text options reach Skia's context with each glyph run, as a whole: they can then be changed for the run, where pushing
+    // more options can't change what an outer push set
     public void DrawGlyphRun(IBrush? foreground, IGlyphRunImpl glyphRun)
     {
+        var textOptions = grayscaleText ? WithoutSubpixelText(currentTextOptions) : currentTextOptions;
+        var pushed = textOptions != default;
+        if (pushed)
+            skia.PushTextOptions(textOptions);
         try
         {
             skia.DrawGlyphRun(Convert(foreground), glyphRun is StrideGlyphRun core ? fallback.GetGlyphRun(core) : glyphRun);
         }
         finally
         {
+            if (pushed)
+                skia.PopTextOptions();
             ReleaseTemporaries();
         }
     }
@@ -217,9 +228,13 @@ internal sealed class ConvertingDrawingContext : IDrawingContextImpl, IDrawingCo
         skia.PopRenderOptions();
     }
 
-    public void PushTextOptions(TextOptions textOptions) => skia.PushTextOptions(textOptions);
+    public void PushTextOptions(TextOptions textOptions)
+    {
+        textOptionsStack.Push(currentTextOptions);
+        currentTextOptions = currentTextOptions.MergeWith(textOptions);
+    }
 
-    public void PopTextOptions() => skia.PopTextOptions();
+    public void PopTextOptions() => currentTextOptions = textOptionsStack.Pop();
 
     public void PushEffect(Rect? clipRect, IEffect effect) => ((IDrawingContextImplWithEffects)skia).PushEffect(clipRect, effect);
 
@@ -291,6 +306,17 @@ internal sealed class ConvertingDrawingContext : IDrawingContextImpl, IDrawingCo
             context.PopRenderOptions();
         }
         return new SkiaImageBrush(content.Brush, reference);
+    }
+
+    // As Skia's contexts without subpixel text (DrawingContextImpl.DrawGlyphRun in Avalonia.Skia 12.1.1): subpixel text, and text
+    // of no mode whose edges aren't aliased, is drawn in grayscale
+    private TextOptions WithoutSubpixelText(TextOptions options)
+    {
+        var mode = options.TextRenderingMode;
+        var edges = currentRenderOptions.EdgeMode;
+        return mode == TextRenderingMode.SubpixelAntialias || (mode == TextRenderingMode.Unspecified && edges is EdgeMode.Unspecified or EdgeMode.Antialias)
+            ? options with { TextRenderingMode = TextRenderingMode.Antialias }
+            : options;
     }
 
     private void ReleaseTemporaries()
