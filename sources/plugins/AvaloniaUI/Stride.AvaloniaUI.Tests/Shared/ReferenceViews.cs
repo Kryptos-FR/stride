@@ -41,7 +41,7 @@ internal static class ReferenceViews
     /// <summary>
     /// The names of the pages.
     /// </summary>
-    public static readonly string[] Pages = ["Fluent", "Shapes", "Text", "Gradients", "Images", "Paths", "Clips", "Opacity", "Effects"];
+    public static readonly string[] Pages = ["Fluent", "Shapes", "Text", "Gradients", "Images", "Paths", "Clips", "Opacity", "Effects", "Scripts"];
 
     /// <summary>
     /// How many pixels of each page Skia on the GPU (Linux, Vulkan, Lavapipe) draws more than 12 away from Skia on the CPU,
@@ -59,6 +59,19 @@ internal static class ReferenceViews
         ["Clips"] = 499,
         ["Opacity"] = 349,
         ["Effects"] = 790,
+        ["Scripts"] = 0,
+    };
+
+    /// <summary>
+    /// How many pixels of each page with text the native renderer draws more than 12 away from Skia on the CPU where Skia's
+    /// glyphs aren't FreeType's (<see cref="EdgeAllowances.ForText(Stride.Graphics.GraphicsAdapter, int, int)"/>), as the
+    /// Windows game tests of CI measure them; none is measured yet.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, int> OtherGlyphsAllowance = new Dictionary<string, int>
+    {
+        ["Fluent"] = 0,
+        ["Text"] = 0,
+        ["Scripts"] = 0,
     };
 
     /// <summary>
@@ -75,6 +88,7 @@ internal static class ReferenceViews
         ["Clips"] = [FallbackReason.Brush, FallbackReason.GeometryClip],
         ["Opacity"] = [FallbackReason.OpacityGroup, FallbackReason.OpacityMask, FallbackReason.Bitmap],
         ["Effects"] = [FallbackReason.Effect, FallbackReason.Path],
+        ["Scripts"] = [],
     };
 
     // The icons of the Fluent theme's templates: the drop-down chevron, the close cross, the back arrow, the refresh arrow,
@@ -114,6 +128,7 @@ internal static class ReferenceViews
         "Clips" => CreateClips(),
         "Opacity" => CreateOpacity(),
         "Effects" => CreateEffects(),
+        "Scripts" => CreateScripts(),
         _ => throw new ArgumentOutOfRangeException(nameof(page), page, "No reference view has this name."),
     };
 
@@ -245,6 +260,46 @@ internal static class ReferenceViews
             new TextBlock { Text = text, FontSize = size, FontWeight = FontWeight.Bold },
         },
     };
+
+    // Arabic at 14, 24 and 36 pixels, with and without marks, a line from right to left with Latin letters and digits,
+    // Japanese at 12, 18 and 32 pixels (its 18 characters are wider than the page at 36), and Inter at 18 pixels in each
+    // of its weights
+    private static Control CreateScripts()
+    {
+        const string Arabic = "fonts:Test#Noto Sans Arabic, fonts:Inter#Inter";
+        var arabic = new StackPanel { Spacing = 2, FlowDirection = FlowDirection.RightToLeft, [TextElement.FontFamilyProperty] = new FontFamily(Arabic) };
+        foreach (var size in new[] { 14, 24 })
+            arabic.Children.Add(CreateTextRow(size, "مرحبا بالعالم", "النص العربي مع التشكيل: بِسْمِ"));
+        arabic.Children.Add(new TextBlock { Text = "مرحبا بالعالم", FontSize = 36 });
+        arabic.Children.Add(new TextBlock { Text = "النص العربي مع التشكيل: بِسْمِ", FontSize = 36 });
+        arabic.Children.Add(new TextBlock { Text = "Avalonia مرحبا 2026", FontSize = 18 });
+
+        var japanese = new StackPanel { Spacing = 2, [TextElement.FontFamilyProperty] = new FontFamily("fonts:Test#Noto Sans JP") };
+        foreach (var size in new[] { 12, 18, 32 })
+            japanese.Children.Add(new TextBlock { Text = "日本語のテキスト、ひらがなとカタカナ", FontSize = size });
+
+        var weights = new WrapPanel { ItemSpacing = 24, LineSpacing = 2 };
+        foreach (var weight in new[] { FontWeight.Thin, FontWeight.Light, FontWeight.Regular, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold })
+            weights.Children.Add(new TextBlock { Text = "Quartz Жёлудь", FontSize = 18, FontWeight = weight });
+
+        return new Border
+        {
+            Width = Width,
+            Height = Height,
+            Background = Brushes.White,
+            Child = new StackPanel { Spacing = 8, Margin = new Thickness(12, 8), Children = { arabic, japanese, weights } },
+            [TextElement.FontFamilyProperty] = new FontFamily("fonts:Inter#Inter"),
+            [TextElement.ForegroundProperty] = Brushes.Black,
+        };
+    }
+
+    private static StackPanel CreateTextRow(double size, params string[] texts)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 24 };
+        foreach (var text in texts)
+            row.Children.Add(new TextBlock { Text = text, FontSize = size });
+        return row;
+    }
 
     // Linear, radial and conic gradients, with each spread method
     private static Control CreateGradients()

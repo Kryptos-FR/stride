@@ -27,4 +27,21 @@ public sealed class EdgeAllowancesTests
         Assert.Equal(5, EdgeAllowances.On(platform, driverId, 4));
         Assert.Equal(0, EdgeAllowances.On(platform, driverId, 0));
     }
+
+    [Theory]
+    [InlineData(PlatformType.Linux, "MesaLLVMPipe", 144)]
+    [InlineData(PlatformType.Linux, null, 159)]
+    [InlineData(PlatformType.Android, "MesaLLVMPipe", 159)]
+    public void TextWhereSkiaUsesFreeTypeGetsTheEdgeAllowance(PlatformType platform, string? driverId, int expected)
+        => Assert.Equal(expected, EdgeAllowances.ForText(platform, driverId, 144, 900));
+
+    [Theory]
+    [InlineData(PlatformType.Windows, "MesaLLVMPipe")]
+    [InlineData(PlatformType.Windows, "Microsoft")]
+    [InlineData(PlatformType.macOS, "MoltenVK")]
+    public void TextWhereSkiaUsesOtherGlyphsGetsTheirCountAndATenthMore(PlatformType platform, string? driverId)
+    {
+        Assert.Equal(990, EdgeAllowances.ForText(platform, driverId, 144, 900));
+        Assert.Equal(0, EdgeAllowances.ForText(platform, driverId, 144, 0));
+    }
 }

@@ -245,7 +245,7 @@ public sealed class NativeCanvasTests : GameTestBase
         {
             Assert.True(onGpu, "The views aren't drawn on the GPU.");
             for (var i = 0; i < 2; i++)
-                AssertWithinAllowance(fallback[i]!, native[i]!, EdgeAllowances.On(adapter!, ReferenceViews.EdgeAllowance[pages[i]]), $"TwoViews.{pages[i]}");
+                AssertWithinAllowance(fallback[i]!, native[i]!, PageAllowance(adapter!, pages[i]), $"TwoViews.{pages[i]}");
         }
         finally
         {
@@ -305,7 +305,11 @@ public sealed class NativeCanvasTests : GameTestBase
 
         using (fallback)
         using (native)
-            AssertWithinAllowance(fallback, native, EdgeAllowances.On(adapter, ReferenceViews.EdgeAllowance[page]), page);
+        {
+            if (ReferenceViews.OtherGlyphsAllowance.ContainsKey(page))
+                SaveTextFrames(fallback, native, page);
+            AssertWithinAllowance(fallback, native, PageAllowance(adapter, page), page);
+        }
     });
 
     [SkippableTheory]
@@ -343,7 +347,11 @@ public sealed class NativeCanvasTests : GameTestBase
             // Skia strokes an ellipse geometry along quadratic curves that follow its offset outlines to within about 0.15
             // pixels, on the CPU and on the GPU alike; the native ring is the exact one
             Skip.If(name == "EllipseStroke", "Skia's stroke of an ellipse geometry is a little off the exact ring: 398 pixels differ by more than 12, and Skia on the GPU differs on 258.");
-            AssertWithinAllowance(fallback, native, EdgeAllowances.On(adapter, ShapeCases.EdgeAllowance[name]), name);
+            var measured = ShapeCases.EdgeAllowance[name];
+            var allowance = ShapeCases.OtherGlyphsAllowance.TryGetValue(name, out var otherGlyphs)
+                ? EdgeAllowances.ForText(adapter, measured, otherGlyphs)
+                : EdgeAllowances.On(adapter, measured);
+            AssertWithinAllowance(fallback, native, allowance, name);
         }
     });
 
@@ -688,16 +696,17 @@ public sealed class NativeCanvasTests : GameTestBase
     {
         SkipWithoutBytecode();
 
-        var (fallback, native, reasons, _) = RenderBothWays(TextCases.Create(name), TextCases.Width, TextCases.Height, TextCases.GetScaling(name));
+        var (fallback, native, reasons, adapter) = RenderBothWays(TextCases.Create(name), TextCases.Width, TextCases.Height, TextCases.GetScaling(name));
 
         Assert.Equal(TextCases.ExpectedReasons[name], reasons);
         using (fallback)
         using (native)
         {
             Assert.True(CountColors(fallback) > 2, $"{name} shows no text.");
-            // Native glyphs are the CPU's masks, and a run that falls back is drawn on the CPU: what Skia on the GPU draws
-            // apart (TextCases.EdgeAllowance) isn't allowed here
-            AssertWithinAllowance(fallback, native, 0, name);
+            SaveTextFrames(fallback, native, name);
+            // Native glyphs are the CPU's masks where Skia's glyphs are FreeType's, and a run that falls back is drawn on
+            // the CPU: what Skia on the GPU draws apart (TextCases.EdgeAllowance) isn't allowed here
+            AssertWithinAllowance(fallback, native, EdgeAllowances.ForText(adapter, 0, TextCases.OtherGlyphsAllowance[name]), name);
         }
     });
 
@@ -737,7 +746,7 @@ public sealed class NativeCanvasTests : GameTestBase
         Assert.True(before.IsDisposed);
         using (fallback)
         using (native)
-            AssertWithinAllowance(fallback!, native!, EdgeAllowances.On(adapter!, ReferenceViews.EdgeAllowance["Text"]), "TextAfterTheMove");
+            AssertWithinAllowance(fallback!, native!, PageAllowance(adapter!, "Text"), "TextAfterTheMove");
     });
 
     [SkippableFact]
@@ -943,6 +952,28 @@ public sealed class NativeCanvasTests : GameTestBase
     // Two frames no channel of which differs by more than a tolerance, but for a few outliers within a larger one; both
     // are saved to the temporary folder when they differ more
     // The native frame may differ from the fallback's by more than 12 on as many pixels as Skia on the GPU does
+    // The allowance of a page on an adapter: with native text, as EdgeAllowances.ForText gives it
+    private static int PageAllowance(GraphicsAdapter adapter, string page)
+        => ReferenceViews.OtherGlyphsAllowance.TryGetValue(page, out var otherGlyphs)
+            ? EdgeAllowances.ForText(adapter, ReferenceViews.EdgeAllowance[page], otherGlyphs)
+            : EdgeAllowances.On(adapter, ReferenceViews.EdgeAllowance[page]);
+
+    // Where Skia's glyphs aren't FreeType's, saves both frames of a comparison with native text with the renders CI uploads,
+    // for a look by eye: two folders deeper than the renders CompareGold promotes to golds
+    private static void SaveTextFrames(Image fallback, Image native, string name)
+    {
+        if (EdgeAllowances.UsesFreeType(Stride.Core.Platform.Type) || TestsFolder.Find() is not { } tests)
+            return;
+
+        var folder = Path.Combine(tests, "local", "Stride.AvaloniaUI.Native.Tests", "TextFrames", $"{Stride.Core.Platform.Type}.{GraphicsDevice.Platform}", name);
+        Directory.CreateDirectory(folder);
+        foreach (var (image, file) in new[] { (fallback, "fallback.png"), (native, "native.png") })
+        {
+            using var stream = File.Create(Path.Combine(folder, file));
+            image.Save(stream, ImageFileType.Png);
+        }
+    }
+
     private static void AssertWithinAllowance(Image fallback, Image native, int allowance, string name)
     {
         const int Tolerance = 12;
