@@ -28,12 +28,18 @@ internal sealed unsafe class NativeFont : IDisposable
     // The font file, on the pinned object heap: FreeType reads it for as long as the face lives
     private readonly byte[] data;
 
-    private NativeFont(FT_FaceRec* face, byte[] data, FontSimulations simulations)
+    private NativeFont(FT_FaceRec* face, byte[] data, string familyName, FontSimulations simulations)
     {
         Face = face;
         this.data = data;
+        FamilyName = familyName;
         Simulations = simulations;
     }
+
+    /// <summary>
+    /// Gets the family name of the typeface.
+    /// </summary>
+    public string FamilyName { get; }
 
     /// <summary>
     /// Gets the simulations of the typeface: oblique only, which skews its glyphs.
@@ -86,7 +92,7 @@ internal sealed unsafe class NativeFont : IDisposable
                 return false;
         }
 
-        font = new NativeFont(face, file, typeface.FontSimulations);
+        font = new NativeFont(face, file, typeface.FamilyName, typeface.FontSimulations);
         reason = default;
         return true;
     }

@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using Avalonia.Media;
 using Stride.AvaloniaUI.Rendering.Fallback;
 using Stride.AvaloniaUI.Rendering.Text;
+using Stride.Core.Diagnostics;
 using Stride.Core.Mathematics;
 using Stride.Graphics;
 
@@ -30,6 +31,9 @@ internal readonly record struct AtlasGlyph(Texture? Page, Int2 Texel, GlyphImage
 /// When a glyph has no room, the atlas adds a page while it has fewer than its most, else empties the page used least
 /// recently, if that was before the current frame; else the glyph is refused.
 /// </para>
+/// <para>
+/// A typeface FreeType can't open, or the first glyph of a typeface FreeType fails on, is logged once as a warning.
+/// </para>
 /// </remarks>
 internal sealed class GlyphAtlas : IDisposable
 {
@@ -43,6 +47,8 @@ internal sealed class GlyphAtlas : IDisposable
     /// </summary>
     public const int DefaultMaxPages = 8;
 
+    private static readonly Logger Log = GlobalLogger.GetLogger("AvaloniaUI");
+
     private readonly GraphicsDevice device;
     private readonly int pageSize;
     private readonly int maxPages;
@@ -50,6 +56,7 @@ internal sealed class GlyphAtlas : IDisposable
     private readonly List<Page> pages = [];
     private readonly Dictionary<GlyphKey, (Page? Page, Int2 Texel, GlyphImage Image)> glyphs = [];
     private readonly Dictionary<GlyphTypeface, (NativeFont? Font, FallbackReason Reason)> fonts = [];
+    private readonly HashSet<NativeFont> fontsFailedOn = [];
     private readonly ArrayBufferWriter<byte> coverage = new();
     private byte[] upload = [];
     private int frame;
@@ -84,6 +91,8 @@ internal sealed class GlyphAtlas : IDisposable
             NativeFont.TryOpen(Library, typeface, out var opened, out var openReason);
             entry = (opened, openReason);
             fonts.Add(typeface, entry);
+            if (openReason == FallbackReason.FontData)
+                Log.Warning($"FreeType can't open the font {typeface.FamilyName}, or it is a variable font; the Avalonia UI draws its text on the CPU.");
         }
         font = entry.Font;
         reason = entry.Reason;
@@ -117,6 +126,8 @@ internal sealed class GlyphAtlas : IDisposable
         coverage.Clear();
         if (!GlyphRasterizer.TryRasterize(Library, key, coverage, out var image))
         {
+            if (fontsFailedOn.Add(key.Font))
+                Log.Warning($"FreeType can't rasterize glyph {key.Glyph} of the font {key.Font.FamilyName}; the Avalonia UI draws the runs with such glyphs on the CPU, and logs no other glyph of this font.");
             reason = FallbackReason.FontData;
             return false;
         }
@@ -176,6 +187,7 @@ internal sealed class GlyphAtlas : IDisposable
             page.Texture.Dispose();
         pages.Clear();
         glyphs.Clear();
+        fontsFailedOn.Clear();
         foreach (var (font, _) in fonts.Values)
             font?.Dispose();
         fonts.Clear();
