@@ -2,6 +2,7 @@
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
 using Avalonia.Platform;
+using Stride.AvaloniaUI.Rendering.Bitmaps;
 using Stride.AvaloniaUI.Rendering.Fallback;
 using Stride.AvaloniaUI.Rendering.Geometry;
 
@@ -41,5 +42,18 @@ internal sealed class SkiaRenderFallback : IRenderFallback
         converted = geometryConverter.Convert(geometry);
         geometry.FallbackObject = converted;
         return converted;
+    }
+
+    /// <summary>
+    /// Gets Skia's copy of the pixels a bitmap of the core has now, or <c>null</c> when it has none (0×0).
+    /// </summary>
+    internal IBitmapImpl? GetBitmap(StrideBitmap bitmap)
+    {
+        if (bitmap.FallbackObject is not SkiaBitmapCache cache)
+        {
+            cache = new SkiaBitmapCache();
+            bitmap.FallbackObject = cache;
+        }
+        return cache.Get(Skia, bitmap);
     }
 }
