@@ -68,4 +68,7 @@ internal enum FallbackReason
     /// FreeType's doesn't match (step 8).
     /// </summary>
     TextSimulation,
+
+    /// <summary>A glyph run with more glyphs in a frame than the glyph atlas holds, or a glyph larger than its pages.</summary>
+    GlyphAtlasFull,
 }
