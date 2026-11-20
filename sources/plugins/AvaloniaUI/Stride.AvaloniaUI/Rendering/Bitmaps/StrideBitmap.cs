@@ -105,6 +105,15 @@ internal class StrideBitmap : IWriteableBitmapImpl
     }
 
     /// <summary>
+    /// Grows the version, after the pixels were changed other than through <see cref="Lock"/>.
+    /// </summary>
+    internal void MarkChanged()
+    {
+        using (sync.EnterScope())
+            Version++;
+    }
+
+    /// <summary>
     /// Keeps the pixels from changing until the scope is disposed.
     /// </summary>
     internal Lock.Scope EnterReadScope() => sync.EnterScope();

@@ -55,8 +55,7 @@ internal sealed class StrideRenderInterface(FallbackChannel channel) : IPlatform
         return new FallbackGeometry(Channel, Channel.Fallback.BuildGlyphRunGeometry(glyphRun));
     }
 
-    public IRenderTargetBitmapImpl CreateRenderTargetBitmap(PixelSize size, Vector dpi)
-        => throw new NotSupportedException("The native renderer of the Avalonia UI has no render target bitmaps.");
+    public IRenderTargetBitmapImpl CreateRenderTargetBitmap(PixelSize size, Vector dpi) => new StrideRenderTargetBitmap(Channel, size, dpi);
 
     public IWriteableBitmapImpl CreateWriteableBitmap(PixelSize size, Vector dpi, PixelFormat format, AlphaFormat alphaFormat)
         => new StrideBitmap(size, dpi, format, alphaFormat);
@@ -105,7 +104,7 @@ internal sealed class StrideRenderInterface(FallbackChannel channel) : IPlatform
         => new StrideGlyphRun(Channel, glyphTypeface, fontRenderingEmSize, glyphInfos, baselineOrigin);
 
     // Any graphics context: the native renderer draws on the CPU, through the fallback
-    public IPlatformRenderInterfaceContext CreateBackendContext(IPlatformGraphicsContext? graphicsApiContext) => new StrideRenderInterfaceContext();
+    public IPlatformRenderInterfaceContext CreateBackendContext(IPlatformGraphicsContext? graphicsApiContext) => new StrideRenderInterfaceContext(Channel);
 
     public bool IsSupportedBitmapPixelFormat(PixelFormat format) => format == PixelFormat.Bgra8888 || format == PixelFormat.Rgba8888;
 
