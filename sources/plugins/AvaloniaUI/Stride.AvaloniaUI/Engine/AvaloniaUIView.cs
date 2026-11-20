@@ -28,10 +28,12 @@ internal sealed class AvaloniaUIView : IDisposable
 
     private readonly StrideTopLevelImpl impl = new();
     private readonly EmbeddableControlRoot root;
-    // The texture the CPU frames are uploaded to, and the sRGB view of the texture of the GPU frames
+    // The texture the CPU frames are uploaded to, and the sRGB view or copy of the texture of the GPU frames
     private Texture? uploadTexture;
     private Texture? gpuFrameView;
+    private Texture? gpuFrameCopy;
     private int uploadedVersion;
+    private int copiedVersion;
     private string? failedViewType;
     private bool disposed;
 
@@ -56,12 +58,12 @@ internal sealed class AvaloniaUIView : IDisposable
     public StrideTopLevelImpl Impl => impl;
 
     /// <summary>
-    /// Gets the texture of the last frame of the view, once Skia rendered it on the GPU or it was uploaded.
+    /// Gets the texture of the last frame of the view, once the renderer drew it on the GPU or it was uploaded.
     /// </summary>
     public Texture? Texture { get; private set; }
 
     /// <summary>
-    /// Gets whether Skia rendered the last frame on the game's graphics device rather than on the CPU.
+    /// Gets whether the renderer drew the last frame on the game's graphics device rather than on the CPU.
     /// </summary>
     public bool IsRenderedOnGpu => impl.GpuFrame != null;
 
@@ -152,8 +154,9 @@ internal sealed class AvaloniaUIView : IDisposable
     public void RaiseLeave(RawInputModifiers modifiers) => impl.RaisePointer(RawPointerEventType.LeaveWindow, new Point(-1, -1), modifiers);
 
     /// <summary>
-    /// Gets the last frame ready for the draw (game thread, during the draw): a frame Skia rendered on the GPU is moved
-    /// to the shader resource layout, one it rendered on the CPU is uploaded if it changed since the last upload.
+    /// Gets the last frame ready for the draw (game thread, during the draw): a frame rendered on the GPU is moved to the
+    /// shader resource layout, or copied to be sampled as sRGB when it can't be viewed so; one rendered on the CPU is
+    /// uploaded if it changed since the last upload.
     /// </summary>
     /// <param name="srgb">Whether the frame is sampled as sRGB, as the colors of a linear back buffer.</param>
     public unsafe void PrepareFrame(GraphicsDevice device, CommandList commandList, bool srgb)
@@ -161,12 +164,21 @@ internal sealed class AvaloniaUIView : IDisposable
         if (impl.GpuFrame is { } gpuFrame)
         {
             ReleaseUploadTexture();
+            if (srgb && !impl.GpuFrameCanViewAsSrgb)
+            {
+                ReleaseGpuFrameView();
+                Texture = GetSrgbCopy(device, commandList, gpuFrame);
+                return;
+            }
+
+            ReleaseGpuFrameCopy();
             commandList.ResourceBarrierTransition(gpuFrame, BarrierLayout.ShaderResource);
             Texture = srgb ? GetSrgbView(gpuFrame) : gpuFrame;
             return;
         }
 
         ReleaseGpuFrameView();
+        ReleaseGpuFrameCopy();
         if (!impl.TryGetFrame(out var data, out var size, out var rowPitch))
         {
             Texture = null;
@@ -197,6 +209,7 @@ internal sealed class AvaloniaUIView : IDisposable
     {
         ReleaseUploadTexture();
         ReleaseGpuFrameView();
+        ReleaseGpuFrameCopy();
         Texture = null;
     }
 
@@ -214,6 +227,34 @@ internal sealed class AvaloniaUIView : IDisposable
             });
         }
         return gpuFrameView;
+    }
+
+    // The native canvas draws into UNorm textures, which Direct3D can't view as sRGB: a copy of the frame, made when it
+    // changes, is sampled as sRGB instead
+    private Texture GetSrgbCopy(GraphicsDevice device, CommandList commandList, Texture gpuFrame)
+    {
+        var stale = gpuFrameCopy == null || gpuFrameCopy.Width != gpuFrame.Width || gpuFrameCopy.Height != gpuFrame.Height;
+        if (stale)
+        {
+            ReleaseGpuFrameCopy();
+            gpuFrameCopy = Texture.New2D(device, gpuFrame.Width, gpuFrame.Height, PixelFormat.R8G8B8A8_UNorm_SRgb);
+        }
+
+        if (stale || impl.FrameVersion != copiedVersion)
+        {
+            commandList.ResourceBarrierTransition(gpuFrame, BarrierLayout.CopySource);
+            commandList.ResourceBarrierTransition(gpuFrameCopy!, BarrierLayout.CopyDest);
+            commandList.Copy(gpuFrame, gpuFrameCopy!);
+            commandList.ResourceBarrierTransition(gpuFrameCopy!, BarrierLayout.ShaderResource);
+            copiedVersion = impl.FrameVersion;
+        }
+        return gpuFrameCopy!;
+    }
+
+    private void ReleaseGpuFrameCopy()
+    {
+        gpuFrameCopy?.Dispose();
+        gpuFrameCopy = null;
     }
 
     private void ReleaseUploadTexture()

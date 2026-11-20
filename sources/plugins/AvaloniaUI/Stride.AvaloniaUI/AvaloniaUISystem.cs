@@ -108,11 +108,14 @@ public sealed class AvaloniaUISystem : GameSystemBase,
     }
 
     /// <summary>
-    /// Gets or sets whether the renderer draws the views on the game's graphics device when it can (Skia shares Vulkan
-    /// devices), rather than on the CPU. A change takes effect at the next frame.
+    /// Gets or sets whether the renderer draws the views on the game's graphics device when it can, rather than on the CPU.
+    /// A change takes effect at the next frame.
     /// </summary>
     /// <remarks>
-    /// The native renderer (<see cref="AvaloniaUIRenderer.Native"/>) draws on the CPU whatever this says.
+    /// The native renderer (<see cref="AvaloniaUIRenderer.Native"/>) draws on devices of Direct3D 10 features or more whose
+    /// graphics API has the bytecode of its canvas shader, and hands what it can't draw itself to the Skia fallback, in
+    /// place; on another device, or with <c>false</c>, the fallback draws whole frames on the CPU. The Skia renderer
+    /// (<see cref="AvaloniaUIRenderer.Skia"/>) draws on Vulkan devices, whose device Skia shares.
     /// </remarks>
     public bool RenderOnGpu
     {
@@ -231,12 +234,12 @@ public sealed class AvaloniaUISystem : GameSystemBase,
             view.Layout(backBuffer.Width, backBuffer.Height);
         }
 
-        // Layout and composition (dispatcher jobs), then rendering of the views that changed: on the GPU, the renderer
-        // submits its commands now, ahead of the command list of this frame
+        // Layout and composition (dispatcher jobs), then rendering of the views that changed: on the GPU, Skia submits its
+        // commands now, ahead of the command list of this frame, and the native canvas records its own in that list
         StrideAvaloniaPlatform.Pump();
-        StrideAvaloniaPlatform.Render();
-
         var graphicsContext = Game.GraphicsContext;
+        StrideAvaloniaPlatform.Render(graphicsContext);
+
         var commandList = graphicsContext.CommandList;
 
         // Avalonia renders sRGB colors: sampled as sRGB, they stay right on an sRGB back buffer (linear color space)

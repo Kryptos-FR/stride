@@ -49,9 +49,9 @@ internal abstract class RendererBackend
     }
 
     /// <summary>
-    /// Called before Avalonia renders the views of a frame.
+    /// Called before Avalonia renders the views of a frame, with the game's graphics context the frame is drawn in.
     /// </summary>
-    public virtual void BeginRender()
+    public virtual void BeginRender(GraphicsContext graphicsContext)
     {
     }
 

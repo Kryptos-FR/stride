@@ -15,11 +15,13 @@ using Avalonia.Skia;
 using SkiaSharp;
 using Stride.AvaloniaUI.Platform;
 using Stride.AvaloniaUI.Rendering.Fallback;
+using Stride.AvaloniaUI.Rendering.Native;
 using Stride.AvaloniaUI.Tests;
 using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Games;
+using Stride.Graphics;
 using Stride.Graphics.Regression;
 using Stride.Input;
 using Stride.Rendering.Compositing;
@@ -36,7 +38,7 @@ using Rect = Avalonia.Rect;
 namespace Stride.AvaloniaUI.Native.Tests;
 
 /// <summary>
-/// Runs games with Avalonia views drawn by the native renderer, which draws through the Skia fallback on the CPU.
+/// Runs games with Avalonia views drawn by the native renderer, on the game's graphics device or on the CPU.
 /// </summary>
 public sealed class NativeRendererGameTests : GameTestBase
 {
@@ -53,13 +55,16 @@ public sealed class NativeRendererGameTests : GameTestBase
     {
         GraphicsDeviceManager.PreferredBackBufferWidth = Width;
         GraphicsDeviceManager.PreferredBackBufferHeight = Height;
+        // The native canvas needs the features of Direct3D 10
+        GraphicsDeviceManager.PreferredGraphicsProfile = [GraphicsProfile.Level_11_0];
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(true)]
     [InlineData(false)]
     public void ViewIsDrawnOverTheSceneAndTakesItsClicks(bool renderOnGpu) => TestAvalonia.Run(() =>
     {
+        SkipWithoutBytecode(renderOnGpu);
         var channel = StrideAvaloniaPlatform.NativeChannel;
         Assert.NotNull(channel);
         channel.ResetCounts();
@@ -77,8 +82,7 @@ public sealed class NativeRendererGameTests : GameTestBase
             .Draw(14, () => onGpu = game.Services.GetSafeServiceAs<AvaloniaUISystem>().IsRenderingOnGpu), readAt: 14);
 
         Assert.Equal(AvaloniaUIRenderer.Native, StrideAvaloniaPlatform.Renderer);
-        // The native renderer draws on the CPU in this step, whatever RenderOnGpu says
-        Assert.False(onGpu);
+        Assert.Equal(renderOnGpu, onGpu);
         Assert.Equal(1, clicks);
         AssertColor(BackgroundColor, frame, 5, 5);
         AssertColor(BackgroundColor, frame, Width - 5, Height - 5);
@@ -87,9 +91,12 @@ public sealed class NativeRendererGameTests : GameTestBase
         Assert.True(channel.GetCount(DrawCallKind.DrawGlyphRun) > 0);
     });
 
-    [Fact]
-    public void CustomSkiaDrawingIsDrawnInPlace() => TestAvalonia.Run(() =>
+    [SkippableTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CustomSkiaDrawingIsDrawnInPlace(bool renderOnGpu) => TestAvalonia.Run(() =>
     {
+        SkipWithoutBytecode(renderOnGpu);
         var drawn = new SkiaDrawnControl { Width = 100, Height = 80 };
         Canvas.SetLeft(drawn, 100);
         Canvas.SetTop(drawn, 80);
@@ -103,7 +110,7 @@ public sealed class NativeRendererGameTests : GameTestBase
             Child = new Canvas { Children = { drawn } },
         };
 
-        using var frame = RenderView(border);
+        using var frame = RenderView(border, renderOnGpu: renderOnGpu);
 
         // The control covers (100, 80) to (200, 160), and the border clips it at (150, 120)
         AssertColor(Red, frame, 102, 82);
@@ -160,9 +167,12 @@ public sealed class NativeRendererGameTests : GameTestBase
         AssertColor(Green, frame, 60, 60);
     });
 
-    [Fact]
-    public void UnpremultipliedBgraBitmapShowsItsColor() => TestAvalonia.Run(() =>
+    [SkippableTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void UnpremultipliedBgraBitmapShowsItsColor(bool renderOnGpu) => TestAvalonia.Run(() =>
     {
+        SkipWithoutBytecode(renderOnGpu);
         // Red at half alpha, its color not multiplied by the alpha
         const byte Alpha = 128;
         var pixels = new uint[20 * 20];
@@ -182,25 +192,37 @@ public sealed class NativeRendererGameTests : GameTestBase
         {
             var image = CreateImage(bitmap);
             (int R, int G, int B, int A)? drawn = null;
+            bool? onGpu = null;
 
             // The view's own frame, premultiplied RGBA: the game then blends it over the scene the same way whatever the renderer
-            using var frame = RenderView(image, steps: (game, frames) => frames.Draw(10, () =>
+            using var frame = RenderView(image, renderOnGpu: renderOnGpu, steps: (game, frames) => frames.Draw(10, () =>
             {
                 var impl = (StrideTopLevelImpl)TopLevel.GetTopLevel(image)!.PlatformImpl!;
+                onGpu = impl.GpuFrame != null;
+                if (impl.GpuFrame is { } texture)
+                {
+                    var pixel = texture.GetData<Color>(game.GraphicsContext.CommandList)[60 * texture.Width + 60];
+                    drawn = (pixel.R, pixel.G, pixel.B, pixel.A);
+                    return;
+                }
                 Assert.True(impl.TryGetFrame(out var data, out _, out var rowPitch));
-                var pixel = data + 60 * rowPitch + 60 * 4;
-                drawn = (Marshal.ReadByte(pixel), Marshal.ReadByte(pixel, 1), Marshal.ReadByte(pixel, 2), Marshal.ReadByte(pixel, 3));
+                var address = data + 60 * rowPitch + 60 * 4;
+                drawn = (Marshal.ReadByte(address), Marshal.ReadByte(address, 1), Marshal.ReadByte(address, 2), Marshal.ReadByte(address, 3));
             }));
 
+            Assert.Equal(renderOnGpu, onGpu);
             Assert.NotNull(drawn);
             var (r, g, b, a) = drawn.Value;
             Assert.True(Math.Abs(r - Alpha) <= 3 && g <= 3 && b <= 3 && Math.Abs(a - Alpha) <= 3, $"Expected ({Alpha}, 0, 0, {Alpha}), got {drawn}.");
         }
     });
 
-    [Fact]
-    public void ScaledViewDrawsAtItsPixelScale() => TestAvalonia.Run(() =>
+    [SkippableTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ScaledViewDrawsAtItsPixelScale(bool renderOnGpu) => TestAvalonia.Run(() =>
     {
+        SkipWithoutBytecode(renderOnGpu);
         // 20×20 DIPs each, at x = 10, 50 and 90 DIPs, y = 10 DIPs; the brush and the cached control are lime on their left half
         var drawn = new SkiaDrawnControl { Width = 20, Height = 20 };
         Canvas.SetLeft(drawn, 10);
@@ -214,7 +236,7 @@ public sealed class NativeRendererGameTests : GameTestBase
         var content = new Canvas { Children = { drawn, brushed, cached } };
 
         // The view's resolution is half the back buffer's: it draws at a scaling of 2
-        using var frame = RenderView(content, resolution: new Vector2(Width / 2, Height / 2));
+        using var frame = RenderView(content, resolution: new Vector2(Width / 2, Height / 2), renderOnGpu: renderOnGpu);
 
         // The custom drawing covers (20, 20) to (60, 60) in the back buffer
         AssertColor(Red, frame, 21, 21);
@@ -254,6 +276,11 @@ public sealed class NativeRendererGameTests : GameTestBase
         AssertColor(BackgroundColor, frame, 15, 25);
         AssertColor(BackgroundColor, frame, Width / 2, Height / 2);
     });
+
+    // Direct3D has no bytecode of the canvas shader until it is generated on Windows
+    private static void SkipWithoutBytecode(bool renderOnGpu)
+        => Skip.If(renderOnGpu && AvaloniaCanvasEffect.Bytecode == null && GraphicsDevice.Platform != GraphicsPlatform.Vulkan,
+            $"The canvas shader has no {GraphicsDevice.Platform} bytecode yet.");
 
     private static Button CreateButton() => new()
     {

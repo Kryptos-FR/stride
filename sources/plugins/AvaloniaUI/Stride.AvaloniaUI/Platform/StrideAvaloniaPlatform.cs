@@ -13,6 +13,7 @@ using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
 using Stride.AvaloniaUI.Rendering;
 using Stride.AvaloniaUI.Rendering.Fallback;
+using Stride.AvaloniaUI.Rendering.Native;
 using Stride.Core.Reflection;
 using Stride.Graphics;
 
@@ -50,6 +51,12 @@ public static class StrideAvaloniaPlatform
     internal static FallbackChannel? NativeChannel => (backend as NativeRendererBackend)?.Channel;
 
     /// <summary>
+    /// Gets what the native renderer keeps on the graphics device it draws on, or <c>null</c> when it draws on the CPU or
+    /// with another renderer.
+    /// </summary>
+    internal static NativeGraphics? NativeGraphics => (backend as NativeRendererBackend)?.Graphics;
+
+    /// <summary>
     /// Uses the Stride platform, with a renderer of the Avalonia views and HarfBuzz text shaping.
     /// </summary>
     /// <remarks>
@@ -71,12 +78,13 @@ public static class StrideAvaloniaPlatform
     /// <summary>
     /// Runs Avalonia's render loop: layout, composition and rendering of the changed surfaces (game thread, once per draw).
     /// </summary>
-    internal static bool Render()
+    /// <param name="graphicsContext">The game's graphics context, which a renderer on the device records its commands in.</param>
+    internal static bool Render(GraphicsContext graphicsContext)
     {
         if (renderTimer == null || backend == null)
             return false;
 
-        backend.BeginRender();
+        backend.BeginRender(graphicsContext);
         try
         {
             return renderTimer.Render();
