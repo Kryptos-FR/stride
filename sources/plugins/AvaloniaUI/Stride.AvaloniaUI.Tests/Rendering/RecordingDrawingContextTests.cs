@@ -234,7 +234,7 @@ public class RecordingDrawingContextTests
     }
 
     [Fact]
-    public void FrameMemoryAndRetentionGoToTheCanvas()
+    public void FrameMemoryRetentionAndGrayscaleTextGoToTheCanvas()
     {
         var fallback = new LoggingFallback();
         var framebuffer = new FakeFramebuffer();
@@ -246,7 +246,7 @@ public class RecordingDrawingContextTests
         var context = target.CreateDrawingContext(new IRenderTarget.RenderTargetSceneInfo(framebuffer.Size, 1.5, CompositionTransparencyLevel.None), out var properties);
 
         Assert.True(properties.PreviousFrameIsRetained);
-        Assert.Equal(new FallbackTarget(framebuffer.Address, framebuffer.Size, framebuffer.RowBytes, PixelFormat.Rgba8888, framebuffer.Dpi, true), Assert.Single(fallback.Targets));
+        Assert.Equal(new FallbackTarget(framebuffer.Address, framebuffer.Size, framebuffer.RowBytes, PixelFormat.Rgba8888, framebuffer.Dpi, true, GrayscaleText: true), Assert.Single(fallback.Targets));
         Assert.False(framebuffer.Released);
         context.Dispose();
         Assert.True(framebuffer.Released);

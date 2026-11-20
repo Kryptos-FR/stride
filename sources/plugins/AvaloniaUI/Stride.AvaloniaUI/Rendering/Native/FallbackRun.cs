@@ -167,8 +167,9 @@ internal sealed unsafe class FallbackRun : IDisposable
         }
     }
 
+    // Grayscale text, as the native canvas draws it
     private FallbackTarget CreateTarget(Vector dpi)
-        => new((IntPtr)pixels, new PixelSize(Bounds.Width, Bounds.Height), Bounds.Width * 4, PixelFormat.Rgba8888, dpi, PreviousFrameRetained: false);
+        => new((IntPtr)pixels, new PixelSize(Bounds.Width, Bounds.Height), Bounds.Width * 4, PixelFormat.Rgba8888, dpi, PreviousFrameRetained: false, GrayscaleText: true);
 
     // The calls, their transforms moved to the run's pixels; first the frame's state when the run started
     private DrawCommandList Moved(bool withPrologue)

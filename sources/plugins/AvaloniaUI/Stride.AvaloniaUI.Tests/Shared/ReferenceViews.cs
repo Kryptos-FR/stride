@@ -66,9 +66,9 @@ internal static class ReferenceViews
     /// </summary>
     public static readonly IReadOnlyDictionary<string, FallbackReason[]> AllowedFallbacks = new Dictionary<string, FallbackReason[]>
     {
-        ["Fluent"] = [FallbackReason.Text, FallbackReason.Path, FallbackReason.Brush, FallbackReason.BoxShadow, FallbackReason.OpacityGroup],
+        ["Fluent"] = [FallbackReason.Path, FallbackReason.Brush, FallbackReason.BoxShadow, FallbackReason.OpacityGroup],
         ["Shapes"] = [FallbackReason.Path, FallbackReason.BoxShadow],
-        ["Text"] = [FallbackReason.Text],
+        ["Text"] = [],
         ["Gradients"] = [FallbackReason.Brush],
         ["Images"] = [FallbackReason.Bitmap, FallbackReason.Brush],
         ["Paths"] = [FallbackReason.Path, FallbackReason.Stroke],

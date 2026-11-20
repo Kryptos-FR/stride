@@ -36,7 +36,8 @@ internal sealed class NativeFramebufferRenderTarget(FallbackChannel channel, IFr
         IFallbackCanvas canvas;
         try
         {
-            canvas = channel.Fallback.CreateCanvas(new FallbackTarget(locked.Address, locked.Size, locked.RowBytes, locked.Format, locked.Dpi, lockProperties.PreviousFrameIsRetained));
+            // Grayscale text, as the native canvas draws it on the GPU
+            canvas = channel.Fallback.CreateCanvas(new FallbackTarget(locked.Address, locked.Size, locked.RowBytes, locked.Format, locked.Dpi, lockProperties.PreviousFrameIsRetained, GrayscaleText: true));
         }
         catch
         {

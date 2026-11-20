@@ -9,9 +9,6 @@ namespace Stride.AvaloniaUI.Rendering.Fallback;
 /// </summary>
 internal enum FallbackReason
 {
-    /// <summary>Glyph runs (step 3).</summary>
-    Text,
-
     /// <summary>A brush or a pen's brush that isn't a solid color (step 4; scene brushes, step 6).</summary>
     Brush,
 
@@ -68,6 +65,12 @@ internal enum FallbackReason
     /// FreeType's doesn't match (step 8).
     /// </summary>
     TextSimulation,
+
+    /// <summary>A glyph run under a transform other than a translation and a uniform positive scale (step 7).</summary>
+    TextTransform,
+
+    /// <summary>Glyphs larger than 256 pixels, which Skia draws as paths (step 7).</summary>
+    LargeText,
 
     /// <summary>A glyph run with more glyphs in a frame than the glyph atlas holds, or a glyph larger than its pages.</summary>
     GlyphAtlasFull,
