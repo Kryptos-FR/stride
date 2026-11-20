@@ -20,7 +20,7 @@ public sealed class EditorViewTests
 
         Assert.Equal(typeof(SpriteSheetEditorView), views[typeof(SpriteSheetEditorViewModel)]);
         Assert.Equal(typeof(GraphicsCompositorEditorView), views[typeof(GraphicsCompositorEditorViewModel)]);
-        Assert.Equal(typeof(ScriptSourceFileEditorView), views[typeof(ScriptSourceFileEditorViewModel)]);
+        Assert.Equal(typeof(SourceCodeEditorView), views[typeof(SourceCodeEditorViewModel)]);
         Assert.Equal(typeof(VisualScriptEditorView), views[typeof(VisualScriptEditorViewModel)]);
         Assert.Equal(typeof(EntityHierarchyEditorView), views[typeof(EntityHierarchyEditorViewModel)]);
         Assert.All(views.Values, x => Assert.True(typeof(IAssetEditorView).IsAssignableFrom(x)));
@@ -29,7 +29,7 @@ public sealed class EditorViewTests
     [AvaloniaTheory]
     [InlineData(typeof(SpriteSheetEditorView))]
     [InlineData(typeof(GraphicsCompositorEditorView))]
-    [InlineData(typeof(ScriptSourceFileEditorView))]
+    [InlineData(typeof(SourceCodeEditorView))]
     [InlineData(typeof(VisualScriptEditorView))]
     [InlineData(typeof(EntityHierarchyEditorView))]
     public void TheEditorViewsLoadTheirMarkup(Type viewType)

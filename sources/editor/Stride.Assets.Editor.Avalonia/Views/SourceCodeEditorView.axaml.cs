@@ -12,17 +12,18 @@ using Stride.Core.Assets.Editor.Editors;
 namespace Stride.Assets.Editor.Avalonia.Views;
 
 /// <summary>
-/// The view of the script editor: a code editor that shows the text of the view model and reports the edits of the user to it,
-/// and reloads the file when another program changed it (checked when the view shows, when the editor gets the focus, and when
-/// the window is activated again: coming back from another program leaves the focus where it was).
+/// The view of the editor of a source code asset, such as a script: a code editor that highlights the text of the view model by
+/// the extension of its file and reports the edits of the user to it, and reloads the file when another program changed it
+/// (checked when the view shows, when the editor gets the focus, and when the window is activated again: coming back from
+/// another program leaves the focus where it was).
 /// </summary>
-[AssetEditorView<ScriptSourceFileEditorViewModel>]
-public sealed partial class ScriptSourceFileEditorView : UserControl, IAssetEditorView
+[AssetEditorView<SourceCodeEditorViewModel>]
+public sealed partial class SourceCodeEditorView : UserControl, IAssetEditorView
 {
-    private ScriptSourceFileEditorViewModel? viewModel;
+    private SourceCodeEditorViewModel? viewModel;
     private WindowBase? window;
 
-    public ScriptSourceFileEditorView()
+    public SourceCodeEditorView()
     {
         InitializeComponent();
         Editor.TextEdited += OnEditorTextEdited;
@@ -40,7 +41,7 @@ public sealed partial class ScriptSourceFileEditorView : UserControl, IAssetEdit
         if (viewModel is not null)
             viewModel.TextReloaded -= OnTextReloaded;
 
-        viewModel = DataContext as ScriptSourceFileEditorViewModel;
+        viewModel = DataContext as SourceCodeEditorViewModel;
         Editor.LoadText(viewModel?.Text);
 
         if (viewModel is not null)

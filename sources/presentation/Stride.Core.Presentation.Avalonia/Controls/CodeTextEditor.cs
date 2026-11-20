@@ -12,8 +12,8 @@ using TextMateSharp.Grammars;
 namespace Stride.Core.Presentation.Avalonia.Controls;
 
 /// <summary>
-/// A code editor: AvaloniaEdit's <see cref="TextEditor"/> with line numbers and the C# highlighting of the TextMate grammars,
-/// in the colors of the theme variant of the application (Dark+ or Light+).
+/// A code editor: AvaloniaEdit's <see cref="TextEditor"/> with line numbers and the highlighting of the TextMate grammars for
+/// the language of <see cref="FileExtension"/>, in the colors of the theme variant of the application (Dark+ or Light+).
 /// </summary>
 /// <remarks>
 /// The application includes AvaloniaEdit's theme (<c>avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml</c>), which
@@ -21,6 +21,12 @@ namespace Stride.Core.Presentation.Avalonia.Controls;
 /// </remarks>
 public sealed class CodeTextEditor : TextEditor, IEditCommandHandler
 {
+    /// <summary>
+    /// Defines the <see cref="FileExtension"/> property.
+    /// </summary>
+    public static readonly StyledProperty<string?> FileExtensionProperty =
+        AvaloniaProperty.Register<CodeTextEditor, string?>(nameof(FileExtension), ".cs");
+
     private readonly RegistryOptions registryOptions;
     private readonly TextMate.Installation textMate;
     private bool isLoadingText;
@@ -31,9 +37,24 @@ public sealed class CodeTextEditor : TextEditor, IEditCommandHandler
         WordWrap = false;
         registryOptions = new RegistryOptions(HighlightingTheme);
         textMate = this.InstallTextMate(registryOptions);
-        textMate.SetGrammar(registryOptions.GetScopeByLanguageId(registryOptions.GetLanguageByExtension(".cs").Id));
+        ApplyFileExtension(FileExtension);
         TextChanged += OnTextChanged;
     }
+
+    /// <summary>
+    /// Gets or sets the extension of the file whose text the editor shows (<c>.cs</c>, <c>.axaml</c>...), which picks the
+    /// highlighting; a language without a grammar is shown without highlighting.
+    /// </summary>
+    public string? FileExtension
+    {
+        get => GetValue(FileExtensionProperty);
+        set => SetValue(FileExtensionProperty, value);
+    }
+
+    /// <summary>
+    /// Gets the TextMate scope of the grammar that highlights the text, or <c>null</c> when the language has none.
+    /// </summary>
+    public string? GrammarScope { get; private set; }
 
     /// <summary>
     /// Occurs when the user edits the text, with the new text; <see cref="LoadText"/> does not raise it.
@@ -127,6 +148,15 @@ public sealed class CodeTextEditor : TextEditor, IEditCommandHandler
         base.OnPropertyChanged(change);
         if (change.Property == ThemeVariantScope.ActualThemeVariantProperty)
             ApplyThemeVariant(ActualThemeVariant);
+        else if (change.Property == FileExtensionProperty)
+            ApplyFileExtension(change.GetNewValue<string?>());
+    }
+
+    private void ApplyFileExtension(string? extension)
+    {
+        var language = string.IsNullOrEmpty(extension) ? null : registryOptions.GetLanguageByExtension(extension);
+        GrammarScope = language is null ? null : registryOptions.GetScopeByLanguageId(language.Id);
+        textMate.SetGrammar(GrammarScope);
     }
 
     private void ApplyThemeVariant(ThemeVariant variant)

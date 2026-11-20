@@ -81,6 +81,46 @@ public sealed class CodeTextEditorTests
     }
 
     [AvaloniaFact]
+    public void TheEditorHighlightsCSharpByDefault()
+    {
+        var (_, editor) = Show(new CodeTextEditor());
+
+        Assert.Equal(".cs", editor.FileExtension);
+        Assert.Equal("source.cs", editor.GrammarScope);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(".axaml", "text.xml")]
+    [InlineData(".xml", "text.xml")]
+    [InlineData(".cs", "source.cs")]
+    public void TheFileExtensionPicksTheGrammar(string extension, string scope)
+    {
+        var (_, editor) = Show(new CodeTextEditor());
+
+        editor.FileExtension = extension;
+        editor.LoadText("<UserControl />");
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(scope, editor.GrammarScope);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(".sdunknown")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void AFileWithoutAGrammarIsShownWithoutHighlighting(string? extension)
+    {
+        var (_, editor) = Show(new CodeTextEditor());
+
+        editor.FileExtension = extension;
+        editor.LoadText(Script);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Null(editor.GrammarScope);
+        Assert.Equal(Script, editor.Text);
+    }
+
+    [AvaloniaFact]
     public void TheHighlightingFollowsTheThemeVariant()
     {
         var (window, editor) = Show(new CodeTextEditor());
