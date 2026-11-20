@@ -35,7 +35,7 @@ internal static class ShapeCases
         "RoundedStroke", "RadiiTooLarge", "EllipseFill", "EllipseStroke", "CircleStroke", "DrawEllipseCall", "LineFlat",
         "LineSquare", "LineRound", "DiagonalLine", "RotatedRectangle", "ScaledView", "HalfOpaqueBrush", "AliasedEllipse",
         "Degenerate", "HugeRectangle", "GradientRectangle", "ShadowedRectangle", "ScissorClip", "FractionalClip", "RotatedClip",
-        "RoundedClip", "RotatedInScissor", "TextInRoundedClip", "TwoShaderClips", "GeometryClipCase",
+        "RoundedClip", "RotatedInScissor", "TextInRoundedClip", "TwoShaderClips", "GeometryClipCase", "ThinFills",
     ];
 
     /// <summary>
@@ -76,6 +76,7 @@ internal static class ShapeCases
         ["TextInRoundedClip"] = 144,
         ["TwoShaderClips"] = 268,
         ["GeometryClipCase"] = 6,
+        ["ThinFills"] = 0,
     };
 
     private static readonly Color Background = Color.FromRgb(240, 240, 240);
@@ -140,6 +141,11 @@ internal static class ShapeCases
             Child = new TextBlock { Text = "Text cut by a rounded clip", FontSize = 40, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Navy, Margin = new Thickness(-8) },
         }, 28, 14)),
         "TwoShaderClips" => Page((Clipped(RotatedClip(25), new Border { Width = 120, Height = 70, CornerRadius = new CornerRadius(24), ClipToBounds = true, Child = Stripes(120, 70) }, 15, 10), 45, 35)),
+        "ThinFills" => Page(
+            (Thin(new Rectangle { Width = 120, Height = 0.5, Fill = Brushes.Black }), 60, 40.25),
+            (Thin(new Rectangle { Width = 120, Height = 0.25, Fill = Brushes.Black }), 60, 60.5),
+            (Thin(new Rectangle { Width = 0.5, Height = 60, Fill = Brushes.Black }), 100.25, 80),
+            (Thin(new Rectangle { Width = 0.75, Height = 60, Fill = Brushes.Black }), 140.5, 80)),
         "GeometryClipCase" => Page((WithClip(Stripes(184, 132), Geometry.Parse("M 92,0 L 184,132 L 0,132 Z")), 28, 14)),
         _ => throw new ArgumentOutOfRangeException(nameof(name), name, "No shape case has this name."),
     };
@@ -184,6 +190,13 @@ internal static class ShapeCases
     {
         Canvas.SetLeft(control, left);
         Canvas.SetTop(control, top);
+        return control;
+    }
+
+    // A control placed and sized at fractional pixels
+    private static T Thin<T>(T control) where T : Control
+    {
+        control.UseLayoutRounding = false;
         return control;
     }
 

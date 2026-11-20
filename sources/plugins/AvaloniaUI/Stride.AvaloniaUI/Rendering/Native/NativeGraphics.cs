@@ -84,6 +84,9 @@ internal sealed class NativeGraphics : IDisposable
             instanceBuffer = Buffer.Vertex.New<CanvasInstance>(Device, Math.Max(instances.Length, 64) * 2, GraphicsResourceUsage.Default);
         }
         instanceBuffer.SetData<CanvasInstance>(commandList, instances);
+        // The copy leaves the buffer as a copy's destination on Direct3D 12: the draws read it only after this barrier, and
+        // the next view's copy into it waits for them
+        commandList.ResourceBarrierTransition(instanceBuffer, BarrierLayout.Common);
 
         // The game's targets come back once the canvas has drawn
         var depthStencil = commandList.DepthStencilBuffer;

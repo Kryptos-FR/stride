@@ -5,9 +5,11 @@ using System;
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Stride.AvaloniaUI.Rendering.Drawing;
 using Stride.AvaloniaUI.Rendering.Fallback;
 using Stride.AvaloniaUI.Rendering.Geometry;
+using Stride.AvaloniaUI.Rendering.Text;
 
 namespace Stride.AvaloniaUI.Rendering.Native;
 
@@ -29,7 +31,7 @@ internal static class CommandBounds
         DrawEllipseCommand ellipse => ellipse.Rect.Inflate(GetThickness(ellipse.Pen) / 2).TransformToAABB(transform),
         DrawLineCommand line => GetLine(line).TransformToAABB(transform),
         DrawGeometryCommand geometry => GetGeometry(geometry, transform),
-        DrawGlyphRunCommand glyphRun => glyphRun.GlyphRun.Bounds.TransformToAABB(transform).Inflate(2),
+        DrawGlyphRunCommand glyphRun => GetInk(glyphRun.GlyphRun).TransformToAABB(transform).Inflate(2),
         DrawBitmapCommand bitmap => bitmap.DestRect.TransformToAABB(transform),
         DrawBitmapWithOpacityMaskCommand bitmap => bitmap.DestRect.TransformToAABB(transform),
         DrawAcrylicRectangleCommand acrylic => acrylic.Rect.Rect.TransformToAABB(transform),
@@ -75,6 +77,9 @@ internal static class CommandBounds
     };
 
     // The rectangle with its stroke and its outer shadows; the inset shadows are inside it
+    // The core's glyph runs know where their glyphs' offsets put the ink, which the bounds Avalonia measures leave out
+    private static Rect GetInk(IGlyphRunImpl glyphRun) => glyphRun is StrideGlyphRun core ? core.InkBounds : glyphRun.Bounds;
+
     private static Rect GetRectangle(DrawRectangleCommand command)
     {
         var bounds = command.Rect.Rect.Inflate(GetThickness(command.Pen) / 2);
