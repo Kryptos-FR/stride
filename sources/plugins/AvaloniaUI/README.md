@@ -49,6 +49,10 @@ This is the design in the analysis document up to Skia on Stride's own Vulkan de
 - Not yet: clipboard, cursors (the requested cursor type is in `StrideTopLevelImpl.Cursor` but the game's cursor doesn't follow it), editor support (the editor's scene view doesn't show the views). Popups (combo box lists, menus, tool tips) are not tested yet.
 - The platform uses Avalonia APIs marked private or internal, so the package depends on the exact Avalonia version it was built with.
 
+## Sample
+
+`Stride.AvaloniaUI.Sample` is a small game, Orb Hunt, whose menus and HUD are XAML views: the game's own Avalonia application with its styles, a view named by type and a view set from code, bindings to a view model, and the input shared between the game and the UI. It builds its scene in code, so it needs no assets. See its [README](Stride.AvaloniaUI.Sample/README.md).
+
 ## Tests
 
 `Stride.AvaloniaUI.Tests` runs a headless game with simulated input for the layout, rendering and input capture, and games on the GPU (Lavapipe on CI) that check the view is drawn over the scene and takes its clicks with Skia on the device and on the CPU, that both draw the same frame, and that the view is drawn again when it moves between them. `Stride.AvaloniaUI.Native.Tests` runs games with the native renderer, as Avalonia has one renderer per process. With `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`, the Vulkan validation layer fails the GPU tests on any error.

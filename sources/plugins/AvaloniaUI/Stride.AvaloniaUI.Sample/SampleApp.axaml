@@ -1,0 +1,67 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Stride.AvaloniaUI.Sample.SampleApp"
+             RequestedThemeVariant="Dark">
+
+  <!-- The game's look: the Fluent theme, with the colors and styles every view of the game shares -->
+  <Application.Resources>
+    <Color x:Key="SystemAccentColor">#FF22D3EE</Color>
+    <SolidColorBrush x:Key="PanelBrush" Color="#E6101827" />
+    <SolidColorBrush x:Key="PanelBorderBrush" Color="#4022D3EE" />
+    <SolidColorBrush x:Key="BackdropBrush" Color="#99050A14" />
+    <SolidColorBrush x:Key="MutedBrush" Color="#FF94A3B8" />
+    <SolidColorBrush x:Key="HighlightBrush" Color="#FF22D3EE" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#FFF43F5E" />
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+
+    <!-- A card that holds a menu -->
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="Padding" Value="40,32" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="BoxShadow" Value="0 12 40 0 #80000000" />
+    </Style>
+
+    <Style Selector="TextBlock.title">
+      <Setter Property="FontSize" Value="56" />
+      <Setter Property="FontWeight" Value="Black" />
+      <Setter Property="Foreground" Value="{StaticResource HighlightBrush}" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.heading">
+      <Setter Property="FontSize" Value="36" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    </Style>
+
+    <!-- The menu buttons: wide, and the main one in the accent color -->
+    <Style Selector="Button.menu">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="Padding" Value="0,10" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+
+    <!-- The HUD reads over the game: bold numbers with a shadow -->
+    <Style Selector="TextBlock.hud">
+      <Setter Property="FontSize" Value="28" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Effect" Value="drop-shadow(0 2 6 #C0000000)" />
+    </Style>
+  </Application.Styles>
+</Application>

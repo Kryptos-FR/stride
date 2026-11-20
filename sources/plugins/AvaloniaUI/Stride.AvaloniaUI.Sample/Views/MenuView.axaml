@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Stride.AvaloniaUI.Sample.ViewModels"
+             x:Class="Stride.AvaloniaUI.Sample.Views.MenuView"
+             x:DataType="vm:GameViewModel">
+
+  <!--
+    The menus: main menu, pause and game over, one card at a time. The game shows this view over the HUD (a higher
+    draw order) whenever no round is being played; its backdrop covers the screen, so the game gets no click meanwhile.
+  -->
+  <UserControl.Styles>
+    <Style Selector="Grid.score TextBlock">
+      <Setter Property="FontSize" Value="17" />
+    </Style>
+    <Style Selector="Grid.score.latest TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource HighlightBrush}" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Background="{StaticResource BackdropBrush}">
+
+    <!-- Main menu -->
+    <Border Classes="card" Width="440" IsVisible="{Binding IsMainMenu}">
+      <StackPanel Spacing="20">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="title" Text="ORB HUNT" />
+          <TextBlock Classes="label" HorizontalAlignment="Center" Text="A game with an Avalonia UI, drawn by Stride" />
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+          <TextBlock Classes="label" Text="Your name" />
+          <TextBox Text="{Binding PlayerName}" PlaceholderText="Who is hunting?" MaxLength="16" />
+        </StackPanel>
+
+        <StackPanel Spacing="2">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="label" Text="Orb speed" />
+            <TextBlock Grid.Column="1" Classes="label" Text="{Binding OrbSpeed, StringFormat={}{0:0.00}x}" />
+          </Grid>
+          <Slider Minimum="0.5" Maximum="2" TickFrequency="0.25" IsSnapToTickEnabled="True" Value="{Binding OrbSpeed}" />
+        </StackPanel>
+
+        <ToggleSwitch IsChecked="{Binding BombsEnabled}" Content="Red orbs" OnContent="On: they cost a life" OffContent="Off" />
+
+        <StackPanel Spacing="10">
+          <Button Classes="menu accent" Content="Play" Command="{Binding PlayCommand}" />
+          <Button Classes="menu" Content="Quit" Command="{Binding QuitCommand}" />
+        </StackPanel>
+
+        <TextBlock Classes="label" HorizontalAlignment="Center" FontSize="12" Text="{Binding RendererName}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Pause -->
+    <Border Classes="card" Width="360" IsVisible="{Binding IsPaused}">
+      <StackPanel Spacing="14">
+        <TextBlock Classes="heading" Text="Paused" Margin="0,0,0,8" />
+        <Button Classes="menu accent" Content="Resume" Command="{Binding ResumeCommand}" />
+        <Button Classes="menu" Content="Main menu" Command="{Binding MenuCommand}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Game over -->
+    <Border Classes="card" Width="420" IsVisible="{Binding IsGameOver}">
+      <StackPanel Spacing="14">
+        <TextBlock Classes="heading" FontSize="28" Text="{Binding GameOverTitle}" />
+        <TextBlock HorizontalAlignment="Center" FontSize="72" FontWeight="Black" Foreground="{StaticResource HighlightBrush}"
+                   Text="{Binding Score}" />
+
+        <TextBlock Classes="label" Text="BEST SCORES" />
+        <ItemsControl ItemsSource="{Binding BestScores}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ScoreEntry">
+              <Grid Classes="score" Classes.latest="{Binding IsLatest}" ColumnDefinitions="36,*,Auto" Margin="0,3">
+                <TextBlock Text="{Binding Rank}" Opacity="0.6" />
+                <TextBlock Grid.Column="1" Text="{Binding Name}" />
+                <TextBlock Grid.Column="2" Text="{Binding Score}" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <StackPanel Spacing="10" Margin="0,8,0,0">
+          <Button Classes="menu accent" Content="Play again" Command="{Binding PlayCommand}" />
+          <Button Classes="menu" Content="Main menu" Command="{Binding MenuCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

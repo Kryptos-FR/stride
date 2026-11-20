@@ -1,0 +1,30 @@
+<Project>
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'Directory.Build.props'))/sdk/Stride.Build.Sdk/Sdk/Sdk.props" />
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <OutputType Condition="'$(Configuration)' == 'Debug'">Exe</OutputType>
+    <TargetFramework>$(StrideFramework)</TargetFramework>
+    <AssemblyName>Stride.AvaloniaUI.Sample</AssemblyName>
+    <RootNamespace>Stride.AvaloniaUI.Sample</RootNamespace>
+    <StartupObject>Stride.AvaloniaUI.Sample.Program</StartupObject>
+    <Nullable>enable</Nullable>
+    <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
+    <!-- The game builds its scene in code: no assets to compile -->
+    <StrideCompileAssets>false</StrideCompileAssets>
+    <StrideSkipAutoPack>true</StrideSkipAutoPack>
+    <IsPackable>false</IsPackable>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\engine\Stride.Engine\Stride.Engine.csproj" />
+    <ProjectReference Include="..\Stride.AvaloniaUI\Stride.AvaloniaUI.csproj" />
+    <ProjectReference Include="..\Stride.AvaloniaUI.Skia\Stride.AvaloniaUI.Skia.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The XAML compiler; the plugin pins Avalonia to the exact version it was built with -->
+    <PackageReference Include="Avalonia" VersionOverride="[$(AvaloniaVersion)]" />
+    <PackageReference Include="Avalonia.Themes.Fluent" VersionOverride="[$(AvaloniaVersion)]" />
+    <PackageReference Include="Avalonia.Fonts.Inter" VersionOverride="[$(AvaloniaVersion)]" />
+  </ItemGroup>
+  <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk/Sdk/Sdk.targets" />
+</Project>
