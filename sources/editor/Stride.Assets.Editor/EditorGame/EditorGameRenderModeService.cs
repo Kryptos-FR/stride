@@ -62,7 +62,7 @@ namespace Stride.Assets.Editor.EditorGame
             materialFilterRenderFeature = null;
 
             // Meshes
-            var meshRenderFeature = game.SceneSystem.GraphicsCompositor.RenderFeatures.OfType<MeshRenderFeature>().First();
+            var meshRenderFeature = game.SceneSystem.GraphicsCompositor.RenderFeatures.OfType<MeshRenderFeature>().FirstOrDefault();
             if (meshRenderFeature != null)
             {
                 // Add material filtering
@@ -105,11 +105,14 @@ namespace Stride.Assets.Editor.EditorGame
                         isPreviewMode = gameTopLevel.EnablePreviewGame;
                     }
 
-                    // Setup material filter
-                    materialFilterRenderFeature.MaterialFilter =
-                        renderMode.Mode == SceneRenderMode.SingleStream
-                        ? renderMode.StreamDescriptor.Filter
-                        : null;
+                    // Setup material filter (a graphics compositor without meshes has none)
+                    if (materialFilterRenderFeature != null)
+                    {
+                        materialFilterRenderFeature.MaterialFilter =
+                            renderMode.Mode == SceneRenderMode.SingleStream
+                            ? renderMode.StreamDescriptor.Filter
+                            : null;
+                    }
 
                     // Disable mouse services while we are in game preview, and reenable them after
                     // TODO: A more robust mechanism for filtering or redirecting input?
