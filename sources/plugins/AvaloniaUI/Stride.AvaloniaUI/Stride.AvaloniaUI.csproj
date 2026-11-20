@@ -3,6 +3,8 @@
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetFrameworks>$(StrideRuntimeTargetFrameworks)</TargetFrameworks>
+    <!-- The canvas shader is embedded once per graphics API -->
+    <StrideGraphicsApiDependent>true</StrideGraphicsApiDependent>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
     <!-- The Avalonia UI component is written in scene assets -->
     <StrideContainsAssetTypes>true</StrideContainsAssetTypes>
@@ -30,5 +32,9 @@
     <PackageReference Include="Avalonia.Themes.Fluent" VersionOverride="[$(AvaloniaVersion)]" />
     <PackageReference Include="Avalonia.Fonts.Inter" VersionOverride="[$(AvaloniaVersion)]" />
   </ItemGroup>
+  <ItemGroup>
+    <StridePrecompiledBytecode Include="Shaders.Bytecodes\*.bytecode*.cs" />
+  </ItemGroup>
+  <Import Project="$(StrideRoot)sources\shaders\Stride.PrecompiledBytecodes.targets" />
   <Import Project="$(StrideRoot)sources/sdk/Stride.Build.Sdk/Sdk/Sdk.targets" />
 </Project>

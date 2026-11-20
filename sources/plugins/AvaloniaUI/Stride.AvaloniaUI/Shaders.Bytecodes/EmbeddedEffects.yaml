@@ -1,0 +1,7 @@
+# Effects whose bytecode is embedded in Stride.AvaloniaUI, as the C# files of this folder.
+# Compiled by Stride.Shaders.Tests: EmbeddedEffectTests.EmbeddedEffectsAreCurrent checks them, UpdateEmbeddedEffects rewrites them.
+Profile: Level_10_0
+Namespace: Stride.AvaloniaUI.Rendering.Native
+Effects:
+    - Name: AvaloniaCanvasEffect
+      Shader: AvaloniaCanvasShader

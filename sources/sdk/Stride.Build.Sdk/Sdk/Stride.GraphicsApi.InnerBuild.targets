@@ -137,6 +137,7 @@
     <_StrideGraphicsApiDependentProjectList>$(_StrideGraphicsApiDependentProjectList)Stride.Input;</_StrideGraphicsApiDependentProjectList>
     <_StrideGraphicsApiDependentProjectList>$(_StrideGraphicsApiDependentProjectList)Stride.VirtualReality;</_StrideGraphicsApiDependentProjectList>
     <_StrideGraphicsApiDependentProjectList>$(_StrideGraphicsApiDependentProjectList)Stride.Video;</_StrideGraphicsApiDependentProjectList>
+    <_StrideGraphicsApiDependentProjectList>$(_StrideGraphicsApiDependentProjectList)Stride.AvaloniaUI;</_StrideGraphicsApiDependentProjectList>
     <_StrideGraphicsApiDependentProjectList>$(_StrideGraphicsApiDependentProjectList)Stride.Graphics.Regression;</_StrideGraphicsApiDependentProjectList>
     <_StrideGraphicsApiDependentProjectList>$(_StrideGraphicsApiDependentProjectList)Stride.Graphics.RenderDocPlugin;</_StrideGraphicsApiDependentProjectList>
     <_StrideGraphicsApiDependentProjectList>$(_StrideGraphicsApiDependentProjectList)Stride.Games.AutoTesting;</_StrideGraphicsApiDependentProjectList>
