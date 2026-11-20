@@ -51,7 +51,7 @@ This is the design in the analysis document up to Skia on Stride's own Vulkan de
 
 ## Sample
 
-`Stride.AvaloniaUI.Sample` is a small game, Orb Hunt, whose menus and HUD are XAML views: the game's own Avalonia application with its styles, a view named by type and a view set from code, bindings to a view model, and the input shared between the game and the UI. It is a game package with its own solution, so it opens in Game Studio. See its [README](Stride.AvaloniaUI.Sample/README.md).
+Orb Hunt (`samples/UI/OrbHunt`) is a small game whose menus and HUD are XAML views: the game's own Avalonia application with its styles, views named by type in a scene, bindings to a view model, and the input shared between the game and the UI. It is laid out as Game Studio makes a game and uses the plugin as packages, so it opens in Game Studio. See its [README](../../../samples/UI/OrbHunt/README.md).
 
 ## Tests
 

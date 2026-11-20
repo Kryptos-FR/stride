@@ -4,7 +4,7 @@
 using System;
 using System.Windows.Input;
 
-namespace Stride.AvaloniaUI.Sample.ViewModels;
+namespace OrbHunt.ViewModels;
 
 /// <summary>
 /// A command that runs an action, for the buttons of the views.

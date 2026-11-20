@@ -1,6 +1,6 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="Stride.AvaloniaUI.Sample.SampleApp"
+             x:Class="OrbHunt.OrbHuntApp"
              RequestedThemeVariant="Dark">
 
   <!-- The game's look: the Fluent theme, with the colors and styles every view of the game shares -->

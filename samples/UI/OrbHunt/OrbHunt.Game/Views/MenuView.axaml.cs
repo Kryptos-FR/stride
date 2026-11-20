@@ -3,7 +3,7 @@
 
 using Avalonia.Controls;
 
-namespace Stride.AvaloniaUI.Sample.Views;
+namespace OrbHunt.Views;
 
 /// <summary>
 /// The menus of the game: main menu, pause and game over.

@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Stride.AvaloniaUI.Sample.ViewModels"
-             x:Class="Stride.AvaloniaUI.Sample.Views.HudView"
+             xmlns:vm="using:OrbHunt.ViewModels"
+             x:Class="OrbHunt.Views.HudView"
              x:DataType="vm:GameViewModel">
 
   <!--

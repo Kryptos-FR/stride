@@ -4,7 +4,7 @@
 using System;
 using Stride.Graphics;
 
-namespace Stride.AvaloniaUI.Sample.Gameplay;
+namespace OrbHunt.Gameplay;
 
 /// <summary>
 /// The white shapes the field is drawn with, tinted by the sprite batch: made in code, as the sample has no assets.

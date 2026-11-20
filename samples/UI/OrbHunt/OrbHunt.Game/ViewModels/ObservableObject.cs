@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace Stride.AvaloniaUI.Sample.ViewModels;
+namespace OrbHunt.ViewModels;
 
 /// <summary>
 /// A view model that tells the views bound to it when a property changes.

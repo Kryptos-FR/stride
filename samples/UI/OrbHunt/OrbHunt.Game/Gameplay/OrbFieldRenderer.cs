@@ -5,7 +5,7 @@ using Stride.Core;
 using Stride.Rendering;
 using Stride.Rendering.Compositing;
 
-namespace Stride.AvaloniaUI.Sample.Gameplay;
+namespace OrbHunt.Gameplay;
 
 /// <summary>
 /// Draws the orb field of the scene, in the game's graphics compositor. The Avalonia views are drawn over it.

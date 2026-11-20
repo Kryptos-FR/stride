@@ -7,7 +7,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 
-namespace Stride.AvaloniaUI.Sample.ViewModels;
+namespace OrbHunt.ViewModels;
 
 /// <summary>
 /// Where the game is: what the views show and which input the game takes.

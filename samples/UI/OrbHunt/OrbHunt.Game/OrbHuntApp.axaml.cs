@@ -4,12 +4,12 @@
 using Avalonia;
 using Avalonia.Markup.Xaml;
 
-namespace Stride.AvaloniaUI.Sample;
+namespace OrbHunt;
 
 /// <summary>
-/// The game's Avalonia application: its theme, colors and shared styles, in <c>SampleApp.axaml</c>.
+/// The game's Avalonia application: its theme, colors and shared styles, in <c>OrbHuntApp.axaml</c>.
 /// </summary>
-public sealed class SampleApp : Application
+public sealed class OrbHuntApp : Application
 {
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 }
