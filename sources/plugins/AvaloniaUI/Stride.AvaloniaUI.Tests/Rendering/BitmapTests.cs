@@ -190,7 +190,7 @@ public class BitmapTests
     }
 
     // A PNG made with Stride: opaque red, 50% green and transparent blue in the first row, a 16-step alpha ramp of white in the second
-    private static byte[] MakePng()
+    internal static byte[] MakePng()
     {
         using var image = Image.New2D(16, 2, 1, StridePixelFormat.R8G8B8A8_UNorm);
         var pixels = image.PixelBuffer[0];
