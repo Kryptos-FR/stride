@@ -5,9 +5,8 @@ using System;
 using Avalonia;
 using Stride.AvaloniaUI.Platform;
 using Stride.AvaloniaUI.Skia;
-using Stride.AvaloniaUI.Tests;
 
-namespace Stride.AvaloniaUI.Native.Tests;
+namespace Stride.AvaloniaUI.Tests;
 
 /// <summary>
 /// The Avalonia thread of these tests, with Avalonia set up with the native renderer before any game sets it up.
