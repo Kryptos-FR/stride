@@ -19,6 +19,8 @@ using var game = new Game();
 game.Run();
 ```
 
+In Game Studio, the game's XAML files (`.axaml`, the game's `AvaloniaXaml` items) are listed next to their code-behind as **Avalonia XAML** assets, and open in the code editor. The plugin's build targets add them to the project assets (`StrideProjectAsset` items), and its asset package, `Stride.AvaloniaUI.Assets`, a companion that Game Studio loads, defines the asset.
+
 The native renderer, Stride's own, is opt-in: such a game sets Avalonia up with `UseStride(AvaloniaUIRenderer.Native)`. It draws rectangles, rounded rectangles, borders of even thickness, ellipses and lines with solid colors, and text in a solid color, under rectangle and rounded rectangle clips, on the game's device with Direct3D 11, Direct3D 12 and Vulkan at graphics profile `Level_10_0` or above. It hands everything else to the Skia package, which draws it on the CPU, in place, so the game still needs that package. With `RenderOnGpu` false, or on another device, the Skia package draws whole frames on the CPU.
 
 ## How it works
