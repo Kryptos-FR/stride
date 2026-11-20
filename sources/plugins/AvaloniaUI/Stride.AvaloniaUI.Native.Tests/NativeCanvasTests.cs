@@ -902,7 +902,7 @@ public sealed class NativeCanvasTests : GameTestBase
     }
 
     // Collects the messages of the Avalonia UI's logger until disposed
-    private static IDisposable CollectMessages(List<ILogMessage> messages)
+    internal static IDisposable CollectMessages(List<ILogMessage> messages)
     {
         void Collect(ILogMessage message)
         {

@@ -3,13 +3,18 @@
 
 using System;
 using System.Buffers;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Runtime.ExceptionServices;
 using Avalonia.Media;
+using Avalonia.Media.Fonts;
 using Avalonia.Media.TextFormatting;
 using Stride.AvaloniaUI.Rendering.Fallback;
 using Stride.AvaloniaUI.Rendering.Native;
 using Stride.AvaloniaUI.Rendering.Text;
 using Stride.AvaloniaUI.Tests;
+using Stride.Core.Diagnostics;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
@@ -118,6 +123,41 @@ public sealed class GlyphAtlasTests : GameTestBase
     });
 
     [Fact]
+    public void FontFreeTypeCantOpenIsLoggedOnce() => RunWithAtlas(64, 1, (atlas, commandList) =>
+    {
+        var messages = new List<ILogMessage>();
+        using (NativeCanvasTests.CollectMessages(messages))
+        {
+            var typeface = new GlyphTypeface(new TypefaceWithoutFile(GetInter().PlatformTypeface), FontSimulations.None);
+            Assert.False(atlas.TryGetFont(typeface, out _, out var first));
+            Assert.False(atlas.TryGetFont(typeface, out _, out var second));
+            Assert.Equal(FallbackReason.FontData, first);
+            Assert.Equal(FallbackReason.FontData, second);
+        }
+
+        var warning = Assert.Single(messages, m => m.Type == LogMessageType.Warning);
+        Assert.Contains("Inter", warning.Text);
+    });
+
+    [Fact]
+    public void GlyphFreeTypeFailsOnIsLoggedOncePerFont() => RunWithAtlas(64, 1, (atlas, commandList) =>
+    {
+        var messages = new List<ILogMessage>();
+        using (NativeCanvasTests.CollectMessages(messages))
+        {
+            // Inter has no glyph 60000 or 60001
+            var key = GetKey(atlas, "A", 24) with { Glyph = 60000 };
+            Assert.False(atlas.TryGet(key, out _, out var reason));
+            Assert.Equal(FallbackReason.FontData, reason);
+            Assert.False(atlas.TryGet(key, out _, out _));
+            Assert.False(atlas.TryGet(key with { Glyph = 60001 }, out _, out _));
+        }
+
+        var warning = Assert.Single(messages, m => m.Type == LogMessageType.Warning);
+        Assert.Contains("Inter", warning.Text);
+    });
+
+    [Fact]
     public void UploadedGlyphsAreInThePage() => RunWithAtlas(128, 1, (atlas, commandList) =>
     {
         // A first glyph uploaded alone, then a second one: the second upload sends only what changed after the first
@@ -148,6 +188,32 @@ public sealed class GlyphAtlasTests : GameTestBase
                 var texel = page[(glyph.Texel.Y + y) * pageSize + glyph.Texel.X + x];
                 Assert.True(expected[y * image.Width + x] == texel, $"Glyph {key.Glyph}: texel ({x}, {y}) is {texel}, not {expected[y * image.Width + x]}.");
             }
+        }
+    }
+
+    // A typeface whose tables are a real one's, without a font file to give FreeType
+    private sealed class TypefaceWithoutFile(IPlatformTypeface typeface) : IPlatformTypeface
+    {
+        public string FamilyName => typeface.FamilyName;
+
+        public FontWeight Weight => typeface.Weight;
+
+        public FontStyle Style => typeface.Style;
+
+        public FontStretch Stretch => typeface.Stretch;
+
+        public FontSimulations FontSimulations => typeface.FontSimulations;
+
+        public bool TryGetStream([NotNullWhen(true)] out Stream? stream)
+        {
+            stream = null;
+            return false;
+        }
+
+        public bool TryGetTable(OpenTypeTag tag, out ReadOnlyMemory<byte> table) => typeface.TryGetTable(tag, out table);
+
+        public void Dispose()
+        {
         }
     }
 
