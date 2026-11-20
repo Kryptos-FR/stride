@@ -66,6 +66,31 @@ internal static class TextCases
     };
 
     /// <summary>
+    /// How many pixels of each case the native renderer draws more than 12 away from Skia on the CPU where Skia's
+    /// glyphs aren't FreeType's (<see cref="EdgeAllowances.ForText(Stride.Graphics.GraphicsAdapter, int, int)"/>), as the
+    /// Windows game tests of CI measure them; none is measured yet.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, int> OtherGlyphsAllowance = new Dictionary<string, int>
+    {
+        ["FractionalPositions"] = 0,
+        ["Scaled4By3"] = 0,
+        ["Scaled5By4"] = 0,
+        ["ScaleTransform"] = 0,
+        ["Colors"] = 0,
+        ["HintingModes"] = 0,
+        ["Aliased"] = 0,
+        ["SubpixelRequested"] = 0,
+        ["UnalignedBaseline"] = 0,
+        ["Simulations"] = 0,
+        ["TwoColorsSameGlyphs"] = 0,
+        ["Rotated"] = 0,
+        ["LargeText"] = 0,
+        ["ColorEmoji"] = 0,
+        ["GradientText"] = 0,
+        ["Whitespace"] = 0,
+    };
+
+    /// <summary>
     /// The reasons the native renderer hands each case's calls to the fallback for.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, FallbackReason[]> ExpectedReasons = new Dictionary<string, FallbackReason[]>

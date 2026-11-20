@@ -43,15 +43,5 @@ public sealed class GoldTests
 
     // The baselines folder of the repository the tests run from, or null when the tests run elsewhere (on a device)
     private static string? FindBaselines()
-    {
-        for (var folder = new DirectoryInfo(AppContext.BaseDirectory); folder != null; folder = folder.Parent)
-        {
-            if (File.Exists(Path.Combine(folder.FullName, "Stride.slnx")))
-            {
-                var baselines = Path.Combine(folder.FullName, "tests", "baselines");
-                return Directory.Exists(baselines) ? baselines : null;
-            }
-        }
-        return null;
-    }
+        => TestsFolder.Find() is { } tests && Path.Combine(tests, "baselines") is var baselines && Directory.Exists(baselines) ? baselines : null;
 }
