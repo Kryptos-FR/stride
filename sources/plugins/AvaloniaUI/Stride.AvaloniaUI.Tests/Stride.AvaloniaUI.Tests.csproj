@@ -15,6 +15,10 @@
     <NoWarn>$(NoWarn);AVA3001</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <!-- The test fonts (Arabic, Japanese, colour emoji and a collection), read by TestFonts -->
+    <EmbeddedResource Include="Shared\Fonts\*.ttf;Shared\Fonts\*.otf;Shared\Fonts\*.ttc" LogicalName="Fonts.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\..\tests\Stride.XunitRunner\Stride.XunitRunner.csproj" />
     <ProjectReference Include="..\..\..\engine\Stride.Engine\Stride.Engine.csproj" />
     <ProjectReference Include="..\..\..\engine\Stride.Graphics.Regression\Stride.Graphics.Regression.csproj" />
