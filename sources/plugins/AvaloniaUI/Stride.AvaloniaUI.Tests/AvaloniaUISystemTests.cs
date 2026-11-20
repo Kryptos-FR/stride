@@ -6,6 +6,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Platform;
+using Avalonia.Platform.Surfaces;
+using Avalonia.Rendering.Composition;
+using Stride.AvaloniaUI.Platform;
 using Stride.Input;
 using Stride.Rendering;
 using Xunit;
@@ -38,6 +42,21 @@ public sealed class AvaloniaUISystemTests
             Assert.Equal(new PixelSize(game.Width, game.Height), size);
             Assert.Equal(0, AlphaAt(data, rowPitch, 2, 2));
             Assert.NotEqual(0, AlphaAt(data, rowPitch, game.Width / 2, game.Height / 2));
+        });
+    }
+
+    [Fact]
+    public void FrameOfNoPixelsIsNotShown()
+    {
+        TestAvalonia.Run(() =>
+        {
+            using var impl = new StrideTopLevelImpl();
+            var target = ((IFramebufferPlatformSurface)impl).CreateFramebufferRenderTarget();
+
+            // A renderer that draws nothing still releases the frame it locked
+            target.Lock(new IRenderTarget.RenderTargetSceneInfo(new PixelSize(0, 0), 1, CompositionTransparencyLevel.None), out _).Dispose();
+
+            Assert.False(impl.TryGetFrame(out _, out _, out _));
         });
     }
 

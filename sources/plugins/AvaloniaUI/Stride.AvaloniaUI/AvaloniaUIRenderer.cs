@@ -12,4 +12,9 @@ public enum AvaloniaUIRenderer
     /// Skia draws whole frames, on the game's Vulkan device when it can share it, otherwise on the CPU (the Stride.AvaloniaUI.Skia package).
     /// </summary>
     Skia,
+
+    /// <summary>
+    /// Stride's own renderer, which draws through the Skia package on the CPU for now.
+    /// </summary>
+    Native,
 }
