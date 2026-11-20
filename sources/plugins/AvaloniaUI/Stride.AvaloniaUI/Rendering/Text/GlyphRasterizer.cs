@@ -25,10 +25,13 @@ internal enum GlyphRendering
 /// A glyph of a face at a pixel size, as Skia's FreeType scaler makes it.
 /// </summary>
 /// <param name="Size26Dot6">The size of the em in pixels, in 26.6 fixed point (<see cref="GlyphRasterizer.ToSize26Dot6"/>).</param>
-/// <param name="SubpixelX">The quarter of a pixel the glyph's origin is past its whole pixel, 0 to 3; 0 when aliased.</param>
+/// <param name="SubpixelX">The quarter of a pixel the glyph's origin is right of its whole pixel, 0 to 3; 0 when aliased.</param>
 /// <param name="Luminance">The luminance table of the text color, 0 to 7 (<see cref="TextGamma.GetLuminance"/>); 0 when aliased.</param>
+/// <param name="SubpixelY">
+/// The quarter of a pixel the glyph's origin is below its whole pixel, 0 to 3: 0 unless the baseline isn't snapped to pixels.
+/// </param>
 internal readonly record struct GlyphKey(NativeFont Font, ushort Glyph, int Size26Dot6, GlyphRendering Rendering,
-    TextHintingMode Hinting, byte SubpixelX, byte Luminance);
+    TextHintingMode Hinting, byte SubpixelX, byte Luminance, byte SubpixelY = 0);
 
 /// <summary>
 /// The bitmap of a glyph: its top left pixel from the glyph's origin, y down, and its size; no ink when the width or the
@@ -85,9 +88,9 @@ internal static unsafe class GlyphRasterizer
             return false;
         var outline = &slot->outline;
 
-        // The subpixel position moves the outline, then its box is rounded out to whole pixels
-        var subpixel = key.Rendering == GlyphRendering.Antialias ? key.SubpixelX * 16 : 0;
-        FreeTypeNative.FT_Outline_Translate(outline, new CLong(subpixel), new CLong(0));
+        // The subpixel position moves the outline (FreeType's y is up), then its box is rounded out to whole pixels
+        if (key.Rendering == GlyphRendering.Antialias)
+            FreeTypeNative.FT_Outline_Translate(outline, new CLong(key.SubpixelX * 16), new CLong(-key.SubpixelY * 16));
         FT_BBox box;
         FreeTypeNative.FT_Outline_Get_CBox(outline, &box);
         var xMin = (long)box.xMin.Value & ~63L;

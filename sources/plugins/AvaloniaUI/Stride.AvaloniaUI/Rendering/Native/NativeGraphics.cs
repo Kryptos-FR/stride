@@ -59,12 +59,15 @@ internal sealed class NativeGraphics : IDisposable
     /// </summary>
     public static bool CanDraw(GraphicsProfile profile, bool hasBytecode) => GetReasonNotToDraw(profile, hasBytecode) == null;
 
+    /// <param name="device">The device the canvas draws on.</param>
+    /// <param name="atlasPageSize">The width and height of a page of the glyph atlas, in texels.</param>
+    /// <param name="atlasMaxPages">The most pages of the glyph atlas.</param>
     /// <exception cref="InvalidOperationException">The device's graphics API has no bytecode of the canvas shader.</exception>
-    public NativeGraphics(GraphicsDevice device)
+    public NativeGraphics(GraphicsDevice device, int atlasPageSize = GlyphAtlas.DefaultPageSize, int atlasMaxPages = GlyphAtlas.DefaultMaxPages)
     {
         Device = device;
         Resources = CanvasDeviceResources.Get(device);
-        GlyphAtlas = new GlyphAtlas(device);
+        GlyphAtlas = new GlyphAtlas(device, atlasPageSize, atlasMaxPages);
     }
 
     public GraphicsDevice Device { get; }

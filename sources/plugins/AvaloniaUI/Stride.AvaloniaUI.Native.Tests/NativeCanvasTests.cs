@@ -70,6 +70,11 @@ public sealed class NativeCanvasTests : GameTestBase
     /// </summary>
     public static IEnumerable<object[]> ShapeCaseNames => ShapeCases.Names.Select(name => new object[] { name });
 
+    /// <summary>
+    /// Gets the names of the text cases, one test case each.
+    /// </summary>
+    public static IEnumerable<object[]> TextCaseNames => TextCases.Names.Select(name => new object[] { name });
+
     [SkippableFact]
     public void CanvasShaderIsEmbeddedForTheDevice() => TestAvalonia.Run(() =>
     {
@@ -327,7 +332,6 @@ public sealed class NativeCanvasTests : GameTestBase
         {
             "GradientRectangle" => [FallbackReason.Brush],
             "ShadowedRectangle" => [FallbackReason.BoxShadow],
-            "TextInRoundedClip" => [FallbackReason.Text],
             "TwoShaderClips" => [FallbackReason.ClipDepth],
             "GeometryClipCase" => [FallbackReason.GeometryClip],
             _ => [],
@@ -678,6 +682,129 @@ public sealed class NativeCanvasTests : GameTestBase
     /// The frame on the CPU, read at draw 30, the frame on the GPU, read at draw 45 after the full redraw the move causes, the
     /// reasons of the fallbacks on the GPU, and the adapter the game ran on.
     /// </returns>
+    [SkippableTheory]
+    [MemberData(nameof(TextCaseNames))]
+    public void TextMatchesTheFallback(string name) => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        var (fallback, native, reasons, _) = RenderBothWays(TextCases.Create(name), TextCases.Width, TextCases.Height, TextCases.GetScaling(name));
+
+        Assert.Equal(TextCases.ExpectedReasons[name], reasons);
+        using (fallback)
+        using (native)
+        {
+            Assert.True(CountColors(fallback) > 2, $"{name} shows no text.");
+            // Native glyphs are the CPU's masks, and a run that falls back is drawn on the CPU: what Skia on the GPU draws
+            // apart (TextCases.EdgeAllowance) isn't allowed here
+            AssertWithinAllowance(fallback, native, 0, name);
+        }
+    });
+
+    [SkippableFact]
+    public void TextIsRedrawnAfterAMoveBetweenGpuAndCpu() => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        var backend = StrideAvaloniaPlatform.NativeBackend!;
+        var game = CreateGame(ReferenceViews.Create("Text"), new Vector2(ReferenceViews.Width, ReferenceViews.Height), ReferenceViews.Width, ReferenceViews.Height);
+        var system = game.Services.GetSafeServiceAs<AvaloniaUISystem>();
+        NativeGraphics? before = null;
+        NativeGraphics? after = null;
+        Image? fallback = null;
+        Image? native = null;
+        GraphicsAdapter? adapter = null;
+        bool? onGpu = null;
+
+        game.FrameGameSystem
+            .Draw(15, () => before = backend.Graphics)
+            .Update(16, () => system.RenderOnGpu = false)
+            .Draw(30, () => fallback = ReadBackBuffer(game))
+            .Update(31, () => system.RenderOnGpu = true)
+            .Draw(46, () =>
+            {
+                onGpu = system.IsRenderingOnGpu;
+                after = backend.Graphics;
+                native = ReadBackBuffer(game);
+                adapter = game.GraphicsDevice.Adapter;
+            });
+        RunGameTest(game);
+
+        Assert.True(onGpu, "The view isn't drawn on the GPU after the move back.");
+        Assert.NotNull(before);
+        Assert.NotNull(after);
+        Assert.NotSame(before, after);
+        Assert.True(before.IsDisposed);
+        using (fallback)
+        using (native)
+            AssertWithinAllowance(fallback!, native!, EdgeAllowances.On(adapter!, ReferenceViews.EdgeAllowance["Text"]), "TextAfterTheMove");
+    });
+
+    [SkippableFact]
+    public void FullAtlasFallsBackForTheFrameOnly() => TestAvalonia.Run(() =>
+    {
+        SkipWithoutBytecode();
+
+        // One page of 64 pixels can't hold "Quartz" at 48 pixels, and holds it at 12
+        var backend = StrideAvaloniaPlatform.NativeBackend!;
+        backend.AtlasPageSize = 64;
+        backend.AtlasMaxPages = 1;
+        try
+        {
+            var text = new TextBlock { Text = "Quartz", FontSize = 48, Foreground = Brushes.Black };
+            var game = CreateGame(new Canvas { Background = Brushes.White, Children = { text } }, new Vector2(240, 160), 240, 160);
+            var system = game.Services.GetSafeServiceAs<AvaloniaUISystem>();
+            var channel = StrideAvaloniaPlatform.NativeChannel!;
+            system.RenderOnGpu = false;
+            Image? fallback = null;
+            Image? full = null;
+            Image? small = null;
+            IReadOnlyList<FallbackReason>? fullReasons = null;
+            IReadOnlyList<FallbackReason>? smallReasons = null;
+            GraphicsAdapter? adapter = null;
+
+            game.FrameGameSystem
+                .Draw(30, () => fallback = ReadBackBuffer(game))
+                .Update(31, () =>
+                {
+                    system.RenderOnGpu = true;
+                    channel.ResetCounts();
+                })
+                .Draw(45, () =>
+                {
+                    full = ReadBackBuffer(game);
+                    fullReasons = channel.GetReasons();
+                    adapter = game.GraphicsDevice.Adapter;
+                })
+                .Update(46, () =>
+                {
+                    text.FontSize = 12;
+                    channel.ResetCounts();
+                })
+                .Draw(60, () =>
+                {
+                    small = ReadBackBuffer(game);
+                    smallReasons = channel.GetReasons();
+                });
+            RunGameTest(game);
+
+            Assert.Equal([FallbackReason.GlyphAtlasFull], fullReasons);
+            Assert.Empty(smallReasons!);
+            using (fallback)
+            using (full)
+            using (small)
+            {
+                AssertWithinAllowance(fallback!, full!, EdgeAllowances.On(adapter!, 0), "FullAtlas");
+                Assert.True(FrameComparison.CountBeyond(full!, small!, 0) > 0, "The text at 12 pixels isn't drawn.");
+            }
+        }
+        finally
+        {
+            backend.AtlasPageSize = GlyphAtlas.DefaultPageSize;
+            backend.AtlasMaxPages = GlyphAtlas.DefaultMaxPages;
+        }
+    });
+
     private static (Image Fallback, Image Native, IReadOnlyList<FallbackReason> Reasons, GraphicsAdapter Adapter) RenderBothWays(Control content, int width, int height, double scaling = 1)
     {
         var game = CreateGame(content, new Vector2((float)(width / scaling), (float)(height / scaling)), width, height);
@@ -783,6 +910,19 @@ public sealed class NativeCanvasTests : GameTestBase
 
     private static Image ReadBackBuffer(NativeCanvasTests game)
         => game.GraphicsDevice.Presenter.BackBuffer.GetDataAsImage(game.GraphicsContext.CommandList);
+
+    // The number of colors of a frame: two at most for a plain page with a band, more with antialiased text
+    private static int CountColors(Image image)
+    {
+        var colors = new HashSet<Color>();
+        var size = image.Description;
+        for (var y = 0; y < size.Height; y++)
+        {
+            for (var x = 0; x < size.Width; x++)
+                colors.Add(GetPixel(image, x, y));
+        }
+        return colors.Count;
+    }
 
     private static Color GetPixel(Image image, int x, int y)
     {

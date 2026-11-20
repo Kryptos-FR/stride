@@ -39,6 +39,11 @@ internal struct CanvasInstance
     public const float ShapeKind = 2;
 
     /// <summary>
+    /// The kind of a quad that draws a glyph: its color times the coverage of a texture's red channel, one texel to one pixel.
+    /// </summary>
+    public const float GlyphKind = 3;
+
+    /// <summary>
     /// The per-instance streams of the canvas shader, all in the buffer of slot 0.
     /// </summary>
     public static readonly InputElementDescription[] InputElements =
@@ -132,9 +137,15 @@ internal struct CanvasInstance
 internal readonly record struct CanvasClip(AvaloniaMatrix Frame, AvaloniaRoundedRect Outline, bool Aliased);
 
 /// <summary>
+/// A glyph of the native canvas: the pixels of the target it covers, the atlas page and the texel its mask starts at there,
+/// and its premultiplied color.
+/// </summary>
+internal readonly record struct CanvasGlyph(Rectangle Pixels, Texture Page, Int2 Texel, Color4 Color);
+
+/// <summary>
 /// Consecutive instances drawn with one scissor, one texture, one blending and one clip.
 /// </summary>
-/// <param name="Texture">The texture the instances sample, or <c>null</c> for none.</param>
+/// <param name="Texture">The texture the instances that sample read, or <c>null</c> when none samples.</param>
 /// <param name="Opaque">Whether the instances replace the target's pixels rather than blend over them.</param>
 /// <param name="Clip">The clip of the shader, or <c>null</c> for none.</param>
 internal readonly record struct CanvasSegment(int Start, int Count, Rectangle Scissor, Texture? Texture, bool Opaque, CanvasClip? Clip);
@@ -142,10 +153,19 @@ internal readonly record struct CanvasSegment(int Start, int Count, Rectangle Sc
 /// <summary>
 /// The quads of a frame of the canvas, in the order they are drawn.
 /// </summary>
+/// <remarks>
+/// A quad that doesn't sample (a color or a shape) joins the current segment whatever its texture, and a segment takes the
+/// texture of its first quad that samples: text and shapes on one atlas page are one draw.
+/// </remarks>
 internal sealed class CanvasBatch
 {
     private readonly List<CanvasInstance> instances = [];
     private readonly List<CanvasSegment> segments = [];
+
+    /// <summary>
+    /// Gets the segments of the quads added since the last draw.
+    /// </summary>
+    internal IReadOnlyList<CanvasSegment> Segments => segments;
 
     /// <summary>
     /// Adds a quad of a premultiplied color that replaces the pixels of a rectangle; under a clip, the color is blended over
@@ -153,6 +173,18 @@ internal sealed class CanvasBatch
     /// </summary>
     public void AddFill(Rectangle rectangle, Color4 premultipliedColor, CanvasClip? clip)
         => Add(new CanvasInstance { Rect = Edges(rectangle), Color = premultipliedColor.ToVector4(), Kind = new Vector4(0, 0, CanvasInstance.ColorKind, 0) }, rectangle, null, opaque: clip == null, clip);
+
+    /// <summary>
+    /// Adds a glyph blended over the target with premultiplied alpha, under a scissor and a clip: its color times the
+    /// coverage of its mask in the atlas page.
+    /// </summary>
+    public void AddGlyph(in CanvasGlyph glyph, Rectangle scissor, CanvasClip? clip)
+        => Add(new CanvasInstance
+        {
+            Rect = Edges(glyph.Pixels),
+            Color = glyph.Color.ToVector4(),
+            Kind = new Vector4(glyph.Texel.X, glyph.Texel.Y, CanvasInstance.GlyphKind, 0),
+        }, scissor, glyph.Page, opaque: false, clip);
 
     /// <summary>
     /// Adds a quad that draws a texture over a rectangle of the target, one texel to one pixel from the texture's top left
@@ -228,11 +260,13 @@ internal sealed class CanvasBatch
         segments.Clear();
     }
 
+    // A quad that samples has a texture; one that doesn't joins a segment whatever its texture
     private void Add(in CanvasInstance instance, Rectangle scissor, Texture? texture, bool opaque, CanvasClip? clip)
     {
         instances.Add(instance);
-        if (segments.Count > 0 && segments[^1] is var last && last.Scissor == scissor && last.Texture == texture && last.Opaque == opaque && last.Clip == clip)
-            segments[^1] = last with { Count = last.Count + 1 };
+        if (segments.Count > 0 && segments[^1] is var last && last.Scissor == scissor && last.Opaque == opaque && last.Clip == clip
+            && (texture == null || last.Texture == null || last.Texture == texture))
+            segments[^1] = last with { Count = last.Count + 1, Texture = last.Texture ?? texture };
         else
             segments.Add(new CanvasSegment(instances.Count - 1, 1, scissor, texture, opaque, clip));
     }

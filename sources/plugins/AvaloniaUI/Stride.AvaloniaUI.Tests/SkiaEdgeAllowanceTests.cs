@@ -18,13 +18,13 @@ using Image = Stride.Graphics.Image;
 namespace Stride.AvaloniaUI.Tests;
 
 /// <summary>
-/// Measures how many pixels of each shape case and reference view Skia draws on the GPU more than 12 away from what it draws
-/// on the CPU: the allowance the native renderer's edges get against the fallback.
+/// Measures how many pixels of each shape case, text case and reference view Skia draws on the GPU more than 12 away from
+/// what it draws on the CPU: the allowance the native renderer's edges get against the fallback.
 /// </summary>
 /// <remarks>
-/// The counts are written into <see cref="ShapeCases.EdgeAllowance"/> and <see cref="ReferenceViews.EdgeAllowance"/> from a
-/// run on Linux with Lavapipe; a failure gives the count measured. Other devices get the headroom of
-/// <see cref="EdgeAllowances"/>.
+/// The counts are written into <see cref="ShapeCases.EdgeAllowance"/>, <see cref="TextCases.EdgeAllowance"/> and
+/// <see cref="ReferenceViews.EdgeAllowance"/> from a run on Linux with Lavapipe; a failure gives the count measured. Other
+/// devices get the headroom of <see cref="EdgeAllowances"/>.
 /// </remarks>
 public sealed class SkiaEdgeAllowanceTests : GameTestBase
 {
@@ -35,9 +35,9 @@ public sealed class SkiaEdgeAllowanceTests : GameTestBase
     static SkiaEdgeAllowanceTests() => RuntimeHelpers.RunModuleConstructor(typeof(AvaloniaUISystem).Module.ModuleHandle);
 
     /// <summary>
-    /// Gets the names of the shape cases and of the pages, one test case each.
+    /// Gets the names of the shape cases, of the text cases and of the pages, one test case each.
     /// </summary>
-    public static IEnumerable<object[]> CasesAndPages => ShapeCases.Names.Concat(ReferenceViews.Pages).Select(name => new object[] { name });
+    public static IEnumerable<object[]> CasesAndPages => ShapeCases.Names.Concat(TextCases.Names).Concat(ReferenceViews.Pages).Select(name => new object[] { name });
 
     [SkippableTheory]
     [MemberData(nameof(CasesAndPages))]
@@ -47,11 +47,13 @@ public sealed class SkiaEdgeAllowanceTests : GameTestBase
         MacOS.SkipSkiaOnTheGpu();
         TestAvalonia.Run(() =>
         {
-            var isPage = ReferenceViews.Pages.Contains(name);
-            var (cpu, gpu, adapter) = isPage
-                ? RenderBothWays(ReferenceViews.Create(name), ReferenceViews.Width, ReferenceViews.Height, 1)
+            var (cpu, gpu, adapter) = ReferenceViews.Pages.Contains(name) ? RenderBothWays(ReferenceViews.Create(name), ReferenceViews.Width, ReferenceViews.Height, 1)
+                : TextCases.Names.Contains(name) ? RenderBothWays(TextCases.Create(name), TextCases.Width, TextCases.Height, TextCases.GetScaling(name))
                 : RenderBothWays(ShapeCases.Create(name), ShapeCases.Width, ShapeCases.Height, ShapeCases.GetScaling(name));
-            var allowance = EdgeAllowances.On(adapter, isPage ? ReferenceViews.EdgeAllowance[name] : ShapeCases.EdgeAllowance[name]);
+            var measured = ReferenceViews.EdgeAllowance.TryGetValue(name, out var page) ? page
+                : TextCases.EdgeAllowance.TryGetValue(name, out var text) ? text
+                : ShapeCases.EdgeAllowance[name];
+            var allowance = EdgeAllowances.On(adapter, measured);
 
             using (cpu)
             using (gpu)

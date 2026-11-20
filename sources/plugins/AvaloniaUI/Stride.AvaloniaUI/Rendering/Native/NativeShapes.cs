@@ -46,8 +46,6 @@ internal static class NativeShapes
     {
         switch (command)
         {
-            case DrawGlyphRunCommand:
-                return FallbackReason.Text;
             case DrawBitmapCommand or DrawBitmapWithOpacityMaskCommand:
                 return FallbackReason.Bitmap;
             case DrawAcrylicRectangleCommand:

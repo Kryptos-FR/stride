@@ -31,7 +31,8 @@ namespace Stride.AvaloniaUI.Rendering.Native;
 /// current fallback run as they are.
 /// </para>
 /// <para>
-/// <see cref="Clear"/> and the shapes of <see cref="NativeShapes"/> are drawn natively. Every other call goes to the current
+/// <see cref="Clear"/>, the shapes of <see cref="NativeShapes"/> and the glyphs of <see cref="NativeText"/> are drawn
+/// natively, the glyphs from the atlas uploaded before the frame draws. Every other call goes to the current
 /// fallback run, and is counted by kind; outside groups, each such call and each group is also counted by the reason it
 /// went to the fallback. A run is drawn under the scissor and the clip of the shader it started with, so neither is in its
 /// own calls. It ends at a native draw, at a change of the scissor or of the clip of the shader, at <see cref="GetFeature"/>
@@ -51,6 +52,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
     private readonly Action? ended;
     private readonly List<FrameItem> items = [];
     private readonly List<CanvasShape> shapes = [];
+    private readonly List<CanvasGlyph> glyphs = [];
     private readonly Stack<(Rectangle Scissor, CanvasClip? Clip)> clips = new();
     private readonly Stack<RenderOptions> renderOptionsStack = new();
     private readonly Stack<TextOptions> textOptionsStack = new();
@@ -115,7 +117,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
 
         EndRun();
         if (scissor.Width > 0 && scissor.Height > 0)
-            items.Add(new FrameItem(scissor, Premultiply(color), null, null, shaderClip));
+            items.Add(new FrameItem(scissor, Premultiply(color), null, null, null, shaderClip));
     }
 
     public void DrawBitmap(IBitmapImpl source, double opacity, Rect sourceRect, Rect destRect)
@@ -320,6 +322,12 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
             return;
         }
 
+        if (command is DrawGlyphRunCommand glyphRun)
+        {
+            DrawGlyphRun(glyphRun);
+            return;
+        }
+
         shapes.Clear();
         if (NativeShapes.TryGet(command, transform, renderOptions, shapes) is { } reason)
         {
@@ -332,7 +340,24 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
 
         EndRun();
         foreach (var shape in shapes)
-            items.Add(new FrameItem(scissor, default, null, shape, shaderClip));
+            items.Add(new FrameItem(scissor, default, null, shape, null, shaderClip));
+    }
+
+    private void DrawGlyphRun(DrawGlyphRunCommand command)
+    {
+        glyphs.Clear();
+        if (NativeText.TryGet(command, transform, renderOptions, textOptions, graphics.GlyphAtlas, glyphs) is { } reason)
+        {
+            channel.Count(reason);
+            Record(command);
+            return;
+        }
+        if (glyphs.Count == 0)
+            return;
+
+        EndRun();
+        foreach (var glyph in glyphs)
+            items.Add(new FrameItem(scissor, default, null, null, glyph, shaderClip));
     }
 
     private void Push(DrawCommand push)
@@ -410,7 +435,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         if (finished.Pixels == IntPtr.Zero)
             finished.Dispose();
         else
-            items.Add(new FrameItem(default, default, finished, null, runClip));
+            items.Add(new FrameItem(default, default, finished, null, null, runClip));
     }
 
     private void DropRun()
@@ -537,11 +562,17 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         var rented = new List<Texture>();
         try
         {
+            graphics.GlyphAtlas.Upload(commandList);
             foreach (var item in items)
             {
                 if (item.Shape is { } shape)
                 {
                     batch.AddShape(shape, item.Rectangle, item.Clip);
+                    continue;
+                }
+                if (item.Glyph is { } glyph)
+                {
+                    batch.AddGlyph(glyph, item.Rectangle, item.Clip);
                     continue;
                 }
                 if (item.Run is not { } fallbackRun)
@@ -583,7 +614,7 @@ internal sealed unsafe class NativeDrawingContext : IDrawingContextImpl, IDrawin
         _ => throw new ArgumentOutOfRangeException(nameof(push), push, "Not a push that always opens a group."),
     };
 
-    // A rectangle replaced with a color, a shape under the scissor of its rectangle, or a run drawn in place; each under
-    // the clip of the shader it was drawn with
-    private readonly record struct FrameItem(Rectangle Rectangle, Color4 Color, FallbackRun? Run, CanvasShape? Shape, CanvasClip? Clip);
+    // A rectangle replaced with a color, a shape or a glyph under the scissor of its rectangle, or a run drawn in place;
+    // each under the clip of the shader it was drawn with
+    private readonly record struct FrameItem(Rectangle Rectangle, Color4 Color, FallbackRun? Run, CanvasShape? Shape, CanvasGlyph? Glyph, CanvasClip? Clip);
 }

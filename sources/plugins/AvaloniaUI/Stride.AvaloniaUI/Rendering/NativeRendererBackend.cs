@@ -44,6 +44,16 @@ internal sealed class NativeRendererBackend : RendererBackend
     public NativeGraphics? Graphics { get; private set; }
 
     /// <summary>
+    /// Gets or sets the width and height of a page of the glyph atlas of the next device attached.
+    /// </summary>
+    internal int AtlasPageSize { get; set; } = GlyphAtlas.DefaultPageSize;
+
+    /// <summary>
+    /// Gets or sets the most pages of the glyph atlas of the next device attached.
+    /// </summary>
+    internal int AtlasMaxPages { get; set; } = GlyphAtlas.DefaultMaxPages;
+
+    /// <summary>
     /// Draws the views on a device from the next frame on, when the canvas can draw on it (<see cref="NativeGraphics.GetReasonNotToDraw(GraphicsDevice)"/>).
     /// </summary>
     public override bool AttachGraphicsDevice(GraphicsDevice device) => AttachGraphicsDevice(device, NativeGraphics.GetReasonNotToDraw(device));
@@ -68,7 +78,7 @@ internal sealed class NativeRendererBackend : RendererBackend
 
         try
         {
-            Graphics = new NativeGraphics(device);
+            Graphics = new NativeGraphics(device, AtlasPageSize, AtlasMaxPages);
         }
         catch (Exception exception)
         {

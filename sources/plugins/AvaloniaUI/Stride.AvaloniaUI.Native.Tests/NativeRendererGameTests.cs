@@ -89,9 +89,9 @@ public sealed class NativeRendererGameTests : GameTestBase
         AssertColor(ButtonColor, frame, Width / 2 - 60, Height / 2);
         if (renderOnGpu)
         {
-            // The button's rectangles are drawn natively, its text by the fallback
+            // The button's rectangles and text are drawn natively
             Assert.True(channel.GetCount(DrawCallKind.DrawRectangle) == 0, $"Rectangles went to the fallback, for: {string.Join(", ", channel.GetReasons())}.");
-            Assert.True(channel.GetCount(FallbackReason.Text) > 0);
+            Assert.True(channel.GetCount(DrawCallKind.DrawGlyphRun) == 0, $"Text went to the fallback, for: {string.Join(", ", channel.GetReasons())}.");
         }
         else
         {
