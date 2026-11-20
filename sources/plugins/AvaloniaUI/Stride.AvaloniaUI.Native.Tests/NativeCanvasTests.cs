@@ -92,11 +92,11 @@ public sealed class NativeCanvasTests : GameTestBase
     {
         SkipWithoutBytecode();
 
-        var (fallback, native, _) = RenderBothWays(ReferenceViews.Create(page), ReferenceViews.Width, ReferenceViews.Height);
+        var (fallback, native, _, adapter) = RenderBothWays(ReferenceViews.Create(page), ReferenceViews.Width, ReferenceViews.Height);
 
         using (fallback)
         using (native)
-            AssertWithinAllowance(fallback, native, ReferenceViews.EdgeAllowance[page], page);
+            AssertWithinAllowance(fallback, native, EdgeAllowances.On(adapter, ReferenceViews.EdgeAllowance[page]), page);
     });
 
     [SkippableTheory]
@@ -105,7 +105,7 @@ public sealed class NativeCanvasTests : GameTestBase
     {
         SkipWithoutBytecode();
 
-        var (fallback, native, reasons) = RenderBothWays(ReferenceViews.Create(page), ReferenceViews.Width, ReferenceViews.Height);
+        var (fallback, native, reasons, _) = RenderBothWays(ReferenceViews.Create(page), ReferenceViews.Width, ReferenceViews.Height);
         fallback.Dispose();
         native.Dispose();
         Assert.Empty(reasons.Except(ReferenceViews.AllowedFallbacks[page]));
@@ -117,7 +117,7 @@ public sealed class NativeCanvasTests : GameTestBase
     {
         SkipWithoutBytecode();
 
-        var (fallback, native, reasons) = RenderBothWays(ShapeCases.Create(name), ShapeCases.Width, ShapeCases.Height, ShapeCases.GetScaling(name));
+        var (fallback, native, reasons, adapter) = RenderBothWays(ShapeCases.Create(name), ShapeCases.Width, ShapeCases.Height, ShapeCases.GetScaling(name));
 
         FallbackReason[] expectedReasons = name switch
         {
@@ -135,7 +135,7 @@ public sealed class NativeCanvasTests : GameTestBase
             // Skia strokes an ellipse geometry along quadratic curves that follow its offset outlines to within about 0.15
             // pixels, on the CPU and on the GPU alike; the native ring is the exact one
             Skip.If(name == "EllipseStroke", "Skia's stroke of an ellipse geometry is a little off the exact ring: 398 pixels differ by more than 12, and Skia on the GPU differs on 258.");
-            AssertWithinAllowance(fallback, native, ShapeCases.EdgeAllowance[name], name);
+            AssertWithinAllowance(fallback, native, EdgeAllowances.On(adapter, ShapeCases.EdgeAllowance[name]), name);
         }
     });
 
@@ -470,8 +470,11 @@ public sealed class NativeCanvasTests : GameTestBase
     /// <summary>
     /// Draws a view on the CPU through the fallback, then on the GPU, in one game.
     /// </summary>
-    /// <returns>The frame on the CPU, read at draw 30, and the frame on the GPU, read at draw 45 after the full redraw the move causes.</returns>
-    private static (Image Fallback, Image Native, IReadOnlyList<FallbackReason> Reasons) RenderBothWays(Control content, int width, int height, double scaling = 1)
+    /// <returns>
+    /// The frame on the CPU, read at draw 30, the frame on the GPU, read at draw 45 after the full redraw the move causes, the
+    /// reasons of the fallbacks on the GPU, and the adapter the game ran on.
+    /// </returns>
+    private static (Image Fallback, Image Native, IReadOnlyList<FallbackReason> Reasons, GraphicsAdapter Adapter) RenderBothWays(Control content, int width, int height, double scaling = 1)
     {
         var game = CreateGame(content, new Vector2((float)(width / scaling), (float)(height / scaling)), width, height);
         var system = game.Services.GetSafeServiceAs<AvaloniaUISystem>();
@@ -480,6 +483,7 @@ public sealed class NativeCanvasTests : GameTestBase
         Image? fallback = null;
         Image? native = null;
         IReadOnlyList<FallbackReason>? reasons = null;
+        GraphicsAdapter? adapter = null;
         bool? onGpu = null;
 
         game.FrameGameSystem
@@ -494,11 +498,12 @@ public sealed class NativeCanvasTests : GameTestBase
                 onGpu = system.IsRenderingOnGpu;
                 native = ReadBackBuffer(game);
                 reasons = channel.GetReasons();
+                adapter = game.GraphicsDevice.Adapter;
             });
         RunGameTest(game);
 
         Assert.True(onGpu, "The view isn't drawn on the GPU.");
-        return (fallback!, native!, reasons!);
+        return (fallback!, native!, reasons!, adapter!);
     }
 
     /// <summary>

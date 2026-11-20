@@ -44,8 +44,9 @@ internal static class ReferenceViews
     public static readonly string[] Pages = ["Fluent", "Shapes", "Text", "Gradients", "Images", "Paths", "Clips", "Opacity", "Effects"];
 
     /// <summary>
-    /// How many pixels of each page Skia on the GPU (Vulkan, Lavapipe) draws more than 12 away from Skia on the CPU, as
-    /// <c>SkiaEdgeAllowanceTests</c> measures them: a renderer may differ from Skia on the CPU on as many.
+    /// How many pixels of each page Skia on the GPU (Linux, Vulkan, Lavapipe) draws more than 12 away from Skia on the CPU,
+    /// as <c>SkiaEdgeAllowanceTests</c> measures them: a renderer may differ from Skia on the CPU on as many there, and on
+    /// the few more that <see cref="EdgeAllowances"/> gives other devices.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, int> EdgeAllowance = new Dictionary<string, int>
     {
