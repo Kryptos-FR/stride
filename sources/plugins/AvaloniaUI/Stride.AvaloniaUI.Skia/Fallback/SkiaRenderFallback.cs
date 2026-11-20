@@ -1,10 +1,12 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using Avalonia.Media;
 using Avalonia.Platform;
 using Stride.AvaloniaUI.Rendering.Bitmaps;
 using Stride.AvaloniaUI.Rendering.Fallback;
 using Stride.AvaloniaUI.Rendering.Geometry;
+using Stride.AvaloniaUI.Rendering.Text;
 
 namespace Stride.AvaloniaUI.Skia.Fallback;
 
@@ -56,4 +58,16 @@ internal sealed class SkiaRenderFallback : IRenderFallback
         }
         return cache.Get(Skia, bitmap);
     }
+
+    public IGlyphRunImpl GetGlyphRun(StrideGlyphRun glyphRun)
+    {
+        if (glyphRun.FallbackObject is IGlyphRunImpl converted)
+            return converted;
+
+        converted = Skia.CreateGlyphRun(glyphRun.GlyphTypeface, glyphRun.FontRenderingEmSize, glyphRun.GlyphInfos, glyphRun.BaselineOrigin);
+        glyphRun.FallbackObject = converted;
+        return converted;
+    }
+
+    public IGeometryImpl BuildGlyphRunGeometry(GlyphRun glyphRun) => Skia.BuildGlyphRunGeometry(glyphRun);
 }
