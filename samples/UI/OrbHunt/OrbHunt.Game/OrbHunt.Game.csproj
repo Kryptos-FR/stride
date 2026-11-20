@@ -6,10 +6,10 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Stride.Engine" Version="4.5.4-dev" />
-    <PackageReference Include="Stride.AvaloniaUI" Version="4.5.4-dev" />
-    <PackageReference Include="Stride.AvaloniaUI.Skia" Version="4.5.4-dev" />
-    <PackageReference Include="Stride.AssetCompiler" Version="4.5.4-dev" IncludeAssets="build;buildTransitive" />
+    <PackageReference Include="Stride.Engine" Version="4.5.4-beta" />
+    <PackageReference Include="Stride.AvaloniaUI" Version="4.5.4-beta" />
+    <PackageReference Include="Stride.AvaloniaUI.Skia" Version="4.5.4-beta" />
+    <PackageReference Include="Stride.AssetCompiler" Version="4.5.4-beta" IncludeAssets="build;buildTransitive" />
   </ItemGroup>
   <ItemGroup>
     <!-- The XAML compiler and the theme: Stride.AvaloniaUI is built against this exact Avalonia version -->

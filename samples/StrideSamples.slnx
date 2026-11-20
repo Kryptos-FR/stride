@@ -99,6 +99,10 @@
     <Project Path="UI/GameMenu/GameMenu.Game/GameMenu.Game.csproj" />
     <Project Path="UI/GameMenu/GameMenu.Windows/GameMenu.Windows.csproj" />
   </Folder>
+  <Folder Name="/UI/OrbHunt/">
+    <Project Path="UI/OrbHunt/OrbHunt.Game/OrbHunt.Game.csproj" />
+    <Project Path="UI/OrbHunt/OrbHunt.Windows/OrbHunt.Windows.csproj" />
+  </Folder>
   <Folder Name="/UI/UIElementLink/">
     <Project Path="UI/UIElementLink/UIElementLink.Game/UIElementLink.Game.csproj" />
     <Project Path="UI/UIElementLink/UIElementLink.Windows/UIElementLink.Windows.csproj" />

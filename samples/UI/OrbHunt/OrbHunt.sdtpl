@@ -1,0 +1,14 @@
+!TemplateSample
+Id: c0b30782-6e74-4b70-a1bc-b209272c8251
+Name: "Sample: Avalonia UI game"
+Scope: Session
+Description: Demonstrates how to make the UI of a game with Avalonia and XAML
+FullDescription: |
+    Orb Hunt, a small game whose menus and HUD are Avalonia views written in XAML, drawn by Stride over the game. It shows how to set Avalonia up with the game's own application, place views in a scene, bind them to view models, share the input between the game and the UI, and draw the UI over a 3D scene or over a 2D game drawn by the graphics compositor.
+Group: Samples/UI
+Icon: .sdtpl/Icon.png
+DefaultOutputName: OrbHunt
+Screenshots:
+    - .sdtpl/screenshot1_small.jpg
+    - .sdtpl/screenshot2_small.jpg
+    - .sdtpl/screenshot3_small.jpg

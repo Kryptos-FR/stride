@@ -49,7 +49,7 @@ dotnet new stride-game -n MyGame
 cd MyGame && dotnet run --project MyGame.Windows
 ```
 
-See [`sources/templates/README.md`](sources/templates/README.md) for the full template catalog (genre starters, 18 feature demos, tutorials) and the local-development workflow.
+See [`sources/templates/README.md`](sources/templates/README.md) for the full template catalog (genre starters, 20 feature demos, tutorials) and the local-development workflow.
 
 ## 🤝 Contributing
 
