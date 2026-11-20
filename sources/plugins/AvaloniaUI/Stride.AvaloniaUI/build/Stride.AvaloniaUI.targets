@@ -1,0 +1,10 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- The Avalonia XAML files of a game (AvaloniaXaml items, from Avalonia's targets) are project assets, which Game Studio lists
+       next to their code-behind (AvaloniaXamlAsset, in Stride.AvaloniaUI.Assets) -->
+  <ItemGroup>
+    <StrideProjectAsset Include="@(AvaloniaXaml)" />
+  </ItemGroup>
+  <PropertyGroup>
+    <StrideProjectAssetExtensions>$(StrideProjectAssetExtensions);.axaml</StrideProjectAssetExtensions>
+  </PropertyGroup>
+</Project>
