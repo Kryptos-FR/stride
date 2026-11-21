@@ -151,9 +151,10 @@ public sealed class GlyphRasterizerTests : IDisposable
     [Fact]
     public void VariableFontsFallBack() => Assert.Equal(FallbackReason.FontData, NativeFont.Classify(tag => tag == Tag("fvar")));
 
-    [Fact]
+    [SkippableFact]
     public void EmojiTypefaceIsAColourFont() => TestAvalonia.Run(() =>
     {
+        TestFonts.SkipWithoutColorEmoji();
         Assert.False(NativeFont.TryOpen(library.Handle, new Typeface("fonts:Test#Noto Color Emoji").GlyphTypeface, out _, out var reason));
         Assert.Equal(FallbackReason.ColorFont, reason);
     });

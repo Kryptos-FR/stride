@@ -15,7 +15,8 @@ namespace Stride.AvaloniaUI.Tests;
 /// font collection <c>fonts:Test</c>, and a collection file of the first two, whose faces are in <c>fonts:TestCollection</c>.
 /// </summary>
 /// <remarks>
-/// The families are <c>fonts:Test#Noto Sans Arabic</c>, <c>fonts:Test#Noto Sans JP</c>, <c>fonts:Test#Noto Color Emoji</c>,
+/// The families are <c>fonts:Test#Noto Sans Arabic</c>, <c>fonts:Test#Noto Sans JP</c>, <c>fonts:Test#Noto Color Emoji</c>
+/// (not on macOS: see <see cref="HasColorEmoji"/>),
 /// <c>fonts:TestCollection#Noto Sans Arabic</c> (face 0 of the collection file) and <c>fonts:TestCollection#Noto Sans JP</c>
 /// (face 1, not on macOS: see <see cref="HasEveryCollectionFace"/>).
 /// </remarks>
@@ -38,6 +39,12 @@ internal sealed class TestFonts : FontCollectionBase
     /// (CoreText) makes typefaces of only the first face of a collection's data, so there it has the Arabic face alone.
     /// </summary>
     public static bool HasEveryCollectionFace { get; } = !OperatingSystem.IsMacOS();
+
+    /// <summary>
+    /// Gets whether <c>fonts:Test</c> has the colour emoji font. Skia's font manager on macOS (CoreText) makes no typeface of
+    /// it, whose glyphs are CBDT bitmaps.
+    /// </summary>
+    public static bool HasColorEmoji { get; } = !OperatingSystem.IsMacOS();
 
     private TestFonts(Uri key) => Key = key;
 
@@ -70,6 +77,12 @@ internal sealed class TestFonts : FontCollectionBase
     /// </summary>
     public static void SkipWithoutEveryCollectionFace()
         => Skip.IfNot(HasEveryCollectionFace, "Skia's font manager on macOS (CoreText) makes typefaces of only the first face of a font collection's data.");
+
+    /// <summary>
+    /// Skips a test that needs the colour emoji font where Skia can't make it (<see cref="HasColorEmoji"/>).
+    /// </summary>
+    public static void SkipWithoutColorEmoji()
+        => Skip.IfNot(HasColorEmoji, "Skia's font manager on macOS (CoreText) makes no typeface of the test's colour emoji font, whose glyphs are CBDT bitmaps.");
 
     /// <summary>
     /// Reads the bytes of a font file of this folder.
