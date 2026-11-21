@@ -96,9 +96,10 @@ public sealed class GlyphRasterizerTests : IDisposable
         Assert.Equal(255, TextGamma.GetTable(3)[255]);
     }
 
-    [Fact]
+    [SkippableFact]
     public void FaceOfACollectionIsFoundByItsTables()
     {
+        TestFonts.SkipWithoutEveryCollectionFace();
         // The tables of each face as Skia's typefaces of the collection give them, and those of a font not in it
         var collection = TestFonts.Read(TestFonts.CollectionFile);
         using var arabic = SKTypeface.FromData(SKData.CreateCopy(collection), 0);
@@ -127,9 +128,10 @@ public sealed class GlyphRasterizerTests : IDisposable
         }
     });
 
-    [Fact]
+    [SkippableFact]
     public void FacesOfACollectionShareItsFile() => TestAvalonia.Run(() =>
     {
+        TestFonts.SkipWithoutEveryCollectionFace();
         Assert.True(NativeFont.TryOpen(library.Handle, GetTypeface("Collection Arabic"), out var arabic, out var reason), $"Face 0 of the collection can't be opened: {reason}.");
         using var arabicFont = arabic;
         Assert.True(NativeFont.TryOpen(library.Handle, GetTypeface("Collection Japanese"), out var japanese, out reason), $"Face 1 of the collection can't be opened: {reason}.");

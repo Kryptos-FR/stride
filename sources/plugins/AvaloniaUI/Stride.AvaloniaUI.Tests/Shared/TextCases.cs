@@ -136,6 +136,16 @@ internal static class TextCases
     };
 
     /// <summary>
+    /// Skips a test of a case whose fonts Skia can't make on this system: <c>CollectionFaces</c> needs both faces of the test
+    /// collection (<see cref="TestFonts.HasEveryCollectionFace"/>). Other names, of cases or not, don't skip.
+    /// </summary>
+    public static void SkipWithoutItsFonts(string name)
+    {
+        if (name == "CollectionFaces")
+            TestFonts.SkipWithoutEveryCollectionFace();
+    }
+
+    /// <summary>
     /// Creates the case of a name.
     /// </summary>
     public static Control Create(string name) => name switch

@@ -6,6 +6,7 @@ using System.IO;
 using Avalonia.Media;
 using Avalonia.Media.Fonts;
 using SkiaSharp;
+using Xunit;
 
 namespace Stride.AvaloniaUI.Tests;
 
@@ -16,7 +17,7 @@ namespace Stride.AvaloniaUI.Tests;
 /// <remarks>
 /// The families are <c>fonts:Test#Noto Sans Arabic</c>, <c>fonts:Test#Noto Sans JP</c>, <c>fonts:Test#Noto Color Emoji</c>,
 /// <c>fonts:TestCollection#Noto Sans Arabic</c> (face 0 of the collection file) and <c>fonts:TestCollection#Noto Sans JP</c>
-/// (face 1).
+/// (face 1, not on macOS: see <see cref="HasEveryCollectionFace"/>).
 /// </remarks>
 internal sealed class TestFonts : FontCollectionBase
 {
@@ -31,6 +32,12 @@ internal sealed class TestFonts : FontCollectionBase
     public const string CollectionFile = "TestCollection.ttc";
 
     private static bool added;
+
+    /// <summary>
+    /// Gets whether <c>fonts:TestCollection</c> has both faces of the collection file. Skia's font manager on macOS
+    /// (CoreText) makes typefaces of only the first face of a collection's data, so there it has the Arabic face alone.
+    /// </summary>
+    public static bool HasEveryCollectionFace { get; } = !OperatingSystem.IsMacOS();
 
     private TestFonts(Uri key) => Key = key;
 
@@ -52,11 +59,17 @@ internal sealed class TestFonts : FontCollectionBase
 
         var collection = new TestFonts(new Uri("fonts:TestCollection"));
         var data = Read(CollectionFile);
-        for (var index = 0; index < 2; index++)
+        for (var index = 0; index < (HasEveryCollectionFace ? 2 : 1); index++)
             collection.TryAddGlyphTypeface(CreateFace(data, index));
         FontManager.Current.AddFontCollection(collection);
         added = true;
     }
+
+    /// <summary>
+    /// Skips a test that needs the second face of the collection file where Skia can't make it (<see cref="HasEveryCollectionFace"/>).
+    /// </summary>
+    public static void SkipWithoutEveryCollectionFace()
+        => Skip.IfNot(HasEveryCollectionFace, "Skia's font manager on macOS (CoreText) makes typefaces of only the first face of a font collection's data.");
 
     /// <summary>
     /// Reads the bytes of a font file of this folder.

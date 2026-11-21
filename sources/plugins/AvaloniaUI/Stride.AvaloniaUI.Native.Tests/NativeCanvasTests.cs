@@ -695,6 +695,7 @@ public sealed class NativeCanvasTests : GameTestBase
     public void TextMatchesTheFallback(string name) => TestAvalonia.Run(() =>
     {
         SkipWithoutBytecode();
+        TextCases.SkipWithoutItsFonts(name);
 
         var (fallback, native, reasons, adapter) = RenderBothWays(TextCases.Create(name), TextCases.Width, TextCases.Height, TextCases.GetScaling(name));
 
