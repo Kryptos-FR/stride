@@ -28,18 +28,20 @@ internal static class EdgeAllowances
         => platform == PlatformType.Linux && driverId == "MesaLLVMPipe" ? measured : WithATenthMore(measured);
 
     /// <summary>
-    /// Gets the allowance of a frame with native text on the adapter a game ran on (<see cref="ForText(PlatformType, string?, int, int)"/>).
+    /// Gets the allowance of a frame with native text on the adapter a game ran on (<see cref="ForText(PlatformType, string?, int, OtherGlyphs)"/>).
     /// </summary>
-    public static int ForText(GraphicsAdapter adapter, int measured, int measuredWithOtherGlyphs)
-        => ForText(Stride.Core.Platform.Type, adapter.DriverInfo?.DriverId, measured, measuredWithOtherGlyphs);
+    public static int ForText(GraphicsAdapter adapter, int measured, OtherGlyphs otherGlyphs)
+        => ForText(Stride.Core.Platform.Type, adapter.DriverInfo?.DriverId, measured, otherGlyphs);
 
     /// <summary>
     /// Gets the allowance of a frame with native text on a system and a driver: where Skia rasterizes glyphs with FreeType,
     /// as the native renderer does (Linux, Android), the edge allowance (<see cref="On(PlatformType, string?, int)"/>);
-    /// elsewhere, the count measured there with Skia's own glyphs, and a tenth more.
+    /// elsewhere, the count measured with Skia's own glyphs there, CoreText's on macOS and iOS and DirectWrite's otherwise,
+    /// and a tenth more.
     /// </summary>
-    public static int ForText(PlatformType platform, string? driverId, int measured, int measuredWithOtherGlyphs)
-        => UsesFreeType(platform) ? On(platform, driverId, measured) : WithATenthMore(measuredWithOtherGlyphs);
+    public static int ForText(PlatformType platform, string? driverId, int measured, OtherGlyphs otherGlyphs)
+        => UsesFreeType(platform) ? On(platform, driverId, measured)
+            : WithATenthMore(platform is PlatformType.macOS or PlatformType.iOS ? otherGlyphs.CoreText : otherGlyphs.DirectWrite);
 
     /// <summary>
     /// Gets whether Skia rasterizes glyphs with FreeType on a system, as the native renderer does everywhere.
@@ -48,3 +50,11 @@ internal static class EdgeAllowances
 
     private static int WithATenthMore(int count) => count + (count + 9) / 10;
 }
+
+/// <summary>
+/// How many pixels of a page or case with text the native renderer draws more than 12 away from Skia on the CPU where Skia's
+/// glyphs aren't FreeType's: with DirectWrite's (Windows) and with CoreText's (macOS).
+/// </summary>
+/// <param name="DirectWrite">The count with DirectWrite's glyphs.</param>
+/// <param name="CoreText">The count with CoreText's glyphs.</param>
+internal readonly record struct OtherGlyphs(int DirectWrite, int CoreText);

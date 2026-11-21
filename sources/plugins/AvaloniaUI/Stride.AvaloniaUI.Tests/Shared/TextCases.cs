@@ -70,30 +70,31 @@ internal static class TextCases
 
     /// <summary>
     /// How many pixels of each case the native renderer draws more than 12 away from Skia on the CPU where Skia's
-    /// glyphs aren't FreeType's (<see cref="EdgeAllowances.ForText(Stride.Graphics.GraphicsAdapter, int, int)"/>), as the
-    /// Windows game tests of CI measure them (run 44621323042, Vulkan; CollectionFaces and Size72 in run 44771862294, the
-    /// same on the three graphics APIs).
+    /// glyphs aren't FreeType's (<see cref="EdgeAllowances.ForText(Stride.Graphics.GraphicsAdapter, int, OtherGlyphs)"/>),
+    /// as the Windows game tests of CI measure them with DirectWrite's (run 44621323042, Vulkan; CollectionFaces and Size72
+    /// in run 44771862294, the same on the three graphics APIs), and the macOS ones with CoreText's (run 44949248022;
+    /// CollectionFaces and ColorEmoji skip there).
     /// </summary>
-    public static readonly IReadOnlyDictionary<string, int> OtherGlyphsAllowance = new Dictionary<string, int>
+    public static readonly IReadOnlyDictionary<string, OtherGlyphs> OtherGlyphsAllowance = new Dictionary<string, OtherGlyphs>
     {
-        ["FractionalPositions"] = 740,
-        ["Scaled4By3"] = 478,
-        ["Scaled5By4"] = 528,
-        ["ScaleTransform"] = 155,
-        ["Colors"] = 470,
-        ["HintingModes"] = 784,
-        ["Aliased"] = 404,
-        ["SubpixelRequested"] = 200,
-        ["UnalignedBaseline"] = 418,
-        ["Simulations"] = 247,
-        ["TwoColorsSameGlyphs"] = 68,
-        ["Rotated"] = 0,
-        ["LargeText"] = 0,
-        ["ColorEmoji"] = 0,
-        ["GradientText"] = 0,
-        ["Whitespace"] = 6,
-        ["CollectionFaces"] = 551,
-        ["Size72"] = 255,
+        ["FractionalPositions"] = new(740, 1718),
+        ["Scaled4By3"] = new(478, 1300),
+        ["Scaled5By4"] = new(528, 1198),
+        ["ScaleTransform"] = new(155, 356),
+        ["Colors"] = new(470, 1398),
+        ["HintingModes"] = new(784, 1055),
+        ["Aliased"] = new(404, 1024),
+        ["SubpixelRequested"] = new(200, 510),
+        ["UnalignedBaseline"] = new(418, 1052),
+        ["Simulations"] = new(247, 829),
+        ["TwoColorsSameGlyphs"] = new(68, 263),
+        ["Rotated"] = new(0, 0),
+        ["LargeText"] = new(0, 0),
+        ["ColorEmoji"] = new(0, 0),
+        ["GradientText"] = new(0, 0),
+        ["Whitespace"] = new(6, 71),
+        ["CollectionFaces"] = new(551, 0),
+        ["Size72"] = new(255, 1181),
     };
 
     /// <summary>
