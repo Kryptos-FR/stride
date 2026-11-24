@@ -515,7 +515,7 @@ public sealed class TileSet
 
 The content attributes of `TileSet` come in Task 11.
 
-- [ ] **Step 1: Write the failing tests.** They need a texture, so they are in the collection `Graphics` and make it inside a harness run. The tests of the later tasks that need no texture make their tiles with `new Tile { Id = ... }` and no texture.
+- [x] **Step 1: Write the failing tests.** They need a texture, so they are in the collection `Graphics` and make it inside a harness run. The tests of the later tasks that need no texture make their tiles with `new Tile { Id = ... }` and no texture.
 
 ```csharp
 [Fact]
@@ -539,10 +539,10 @@ public void FromTexture_refuses_a_tile_size_that_is_not_positive(int w, int h)
     => Assert.Throws<ArgumentOutOfRangeException>(() => TileSet.FromTexture(texture, new Int2(w, h)));
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileSetTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the four types.**
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): tile sets and tiles at runtime`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileSetTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the four types.**
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): tile sets and tiles at runtime`
 
 ### Task 6: Chunks, layers and maps at runtime
 
