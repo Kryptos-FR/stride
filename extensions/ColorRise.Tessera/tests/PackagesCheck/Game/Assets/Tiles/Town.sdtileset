@@ -1,0 +1,17 @@
+!TileSetAsset
+Id: 7c2e5b19-4d8a-4e36-b1f0-2a9c6d3e8f41
+SerializedVersion: {ColorRise.Tessera: 1.0.0.0}
+Tags: []
+TileSize: {X: 4, Y: 4}
+PixelsPerUnit: 4.0
+ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+Sources:
+    4f6b2a8e1c9d4e7fa3b05c2d8e1f6a90: !GridTileSetSource
+        Id: 1
+        Name: Town
+        Image: !file town.png
+        TileSize: {X: 0, Y: 0}
+        Margin: {X: 0, Y: 0}
+        Spacing: {X: 0, Y: 0}
+Tiles: {}
+LastSourceId: 1

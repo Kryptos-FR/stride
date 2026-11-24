@@ -88,7 +88,7 @@ public sealed class TileSetCompilerTests
         build.Add("Tiles/Town", RedAndBlue(build));
         Assert.True(build.Build().Succeeded);
 
-        build.WriteFile("tiles.png", Png(32, 16, (x, _) => x < 16 ? Green : Blue));
+        build.WriteFile("tiles.png", TestImages.Png(32, 16, (x, _) => x < 16 ? Green : Blue));
         var changed = build.Build();
 
         Assert.Contains(changed.Commands, command => command.Url == "Tiles/Town" && command.Status == ResultStatus.Successful);
@@ -195,7 +195,7 @@ public sealed class TileSetCompilerTests
     // "tiles.png", 32 by 16, a red tile and a blue tile, in a grid source "Town" of a tile set of 8 pixels per unit
     private static TileSetAsset RedAndBlue(AssetBuild build)
     {
-        var path = build.WriteFile("tiles.png", Png(32, 16, (x, _) => x < 16 ? Red : Blue));
+        var path = build.WriteFile("tiles.png", TestImages.Png(32, 16, (x, _) => x < 16 ? Red : Blue));
         var asset = new TileSetAsset { Id = AssetId.New(), PixelsPerUnit = 8 };
         asset.AddSource<GridTileSetSource>("Town").Image = new UFile(path);
         return asset;
@@ -205,7 +205,7 @@ public sealed class TileSetCompilerTests
     // set whose source 2, "Props", binds the given names. The sheet packs its sprites and has its own pixels per unit.
     private static (TileSetAsset Asset, SpriteSheetAsset Sheet) Props(AssetBuild build, string[] sprites, string[] bound)
     {
-        var path = new UFile(build.WriteFile("props.png", Png(32, 16, (x, _) => x < 16 ? Red : Blue)));
+        var path = new UFile(build.WriteFile("props.png", TestImages.Png(32, 16, (x, _) => x < 16 ? Red : Blue)));
         var sheet = new SpriteSheetAsset { Id = AssetId.New() };
         sheet.Packing.Enabled = true;
         sheet.Sprites.Add(new SpriteInfo { Name = sprites[0], Source = path, TextureRegion = new Rectangle(0, 0, 16, 16), PixelsPerUnit = 100 });
@@ -224,20 +224,5 @@ public sealed class TileSetCompilerTests
     {
         using var image = build.LoadImage(build.UrlOf(tile.Texture!));
         return image.PixelBuffer[0].GetPixel<Color>(tile.Region.Center.X, tile.Region.Center.Y);
-    }
-
-    private static byte[] Png(int width, int height, Func<int, int, Color> pixel)
-    {
-        using var image = Image.New2D(width, height, 1, PixelFormat.R8G8B8A8_UNorm);
-        for (var y = 0; y < height; y++)
-        {
-            for (var x = 0; x < width; x++)
-            {
-                image.PixelBuffer[0].SetPixel(x, y, pixel(x, y));
-            }
-        }
-        using var stream = new MemoryStream();
-        image.Save(stream, ImageFileType.Png);
-        return stream.ToArray();
     }
 }

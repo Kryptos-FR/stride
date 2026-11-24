@@ -256,7 +256,8 @@ internal sealed class HarnessGame : Game
         return new Frame(buffer.Width, buffer.Height, pixels);
     }
 
-    // A forward renderer without post effects that draws sprites, or the test's own drawing in place of the scene.
+    // A forward renderer without post effects that draws sprites, a renderer of its own when multisampled, or the test's own
+    // drawing in place of the scene.
     private GraphicsCompositor CreateCompositor(SceneCameraSlot slot)
     {
         var opaque = new RenderStage("Opaque", "Main") { SortMode = new StateChangeSortMode() };
@@ -268,12 +269,19 @@ internal sealed class HarnessGame : Game
                 new ClearRenderer { Color = options.Background },
                 new DelegateSceneRenderer(context => customDraw(context, context.RenderContext.RenderView.ViewProjection)),
             }
+            : options.Msaa > 1
+            ? new MultisampleRenderer
+            {
+                Background = options.Background,
+                OpaqueStage = opaque,
+                TransparentStage = transparent,
+                Samples = (MultisampleCount)options.Msaa,
+            }
             : new ForwardRenderer
             {
                 Clear = { Color = options.Background },
                 OpaqueRenderStage = opaque,
                 TransparentRenderStage = transparent,
-                MSAALevel = (MultisampleCount)options.Msaa,
             };
 
         return new GraphicsCompositor

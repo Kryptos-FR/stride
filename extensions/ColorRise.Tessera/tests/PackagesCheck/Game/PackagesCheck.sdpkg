@@ -1,0 +1,14 @@
+!Package
+SerializedVersion: {Assets: 3.1.0.0}
+Meta:
+    Name: PackagesCheck
+    Version: 1.0.0
+    Authors: []
+    Owners: []
+    Dependencies: null
+AssetFolders:
+    -   Path: !dir Assets
+ResourceFolders:
+    - !dir Resources
+RootAssets:
+    - 3a9d6c21-5b7e-4f10-8c42-9e6d1f0a7b35:Maps/Town

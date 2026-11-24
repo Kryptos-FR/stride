@@ -158,6 +158,17 @@ internal sealed class AssetBuild : IDisposable
         => Content.Load<T>(url, new ContentManagerLoaderSettings { ContentFilter = (_, ref load) => load = false });
 
     /// <summary>
+    /// A content manager of the build's database for a game, which reads textures with the game's graphics device.
+    /// </summary>
+    public ContentManager ContentFor(IServiceRegistry game)
+    {
+        var services = new ServiceRegistry();
+        services.AddService<IDatabaseFileProviderService>(Files);
+        services.AddService(game.GetSafeServiceAs<IGraphicsDeviceService>());
+        return new ContentManager(services);
+    }
+
+    /// <summary>
     /// The URL of content that <see cref="Content"/> read.
     /// </summary>
     public string UrlOf(object content) => Content.TryGetAssetUrl(content, out var url) ? url : throw new ArgumentException("The content manager did not read this object.", nameof(content));

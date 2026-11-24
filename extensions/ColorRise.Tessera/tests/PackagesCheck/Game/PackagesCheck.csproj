@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    A game outside Tessera's folder, as a person's game is: Tessera and Stride come from packages only. run.sh copies it to a
+    new folder and writes beside it a Directory.Build.props, with the versions, and a nuget.config, with the feeds.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PackagesCheck</RootNamespace>
+    <!-- Without it, Stride picks Direct3D11 on every host -->
+    <StrideGraphicsApi Condition="'$(StrideGraphicsApi)' == '' And !$([MSBuild]::IsOSPlatform('Windows'))">Vulkan</StrideGraphicsApi>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ColorRise.Tessera" Version="$(TesseraVersion)" />
+    <PackageReference Include="Stride.Engine" Version="$(StrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(StrideVersion)" IncludeAssets="build;buildTransitive" />
+    <!-- The software Vulkan driver of Stride's own graphics tests: the check draws without a GPU and without a window -->
+    <PackageReference Include="Stride.Dependencies.Lavapipe" Version="2026.10.12" />
+  </ItemGroup>
+</Project>
