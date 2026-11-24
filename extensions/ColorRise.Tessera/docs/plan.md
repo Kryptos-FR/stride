@@ -414,7 +414,7 @@ public sealed class TileBatch : BatchBase<TileBatch.DrawInfo>
 
 Model: `sources/engine/Stride.Graphics/Sprite3DBatch.cs` and `BatchBase.cs`. The two bytecodes given to `BatchBase` are both `SpriteEffect.Bytecode` (public). The colour is the effect's `Color` parameter, turned to linear when the device's colour space is linear. The vertex layout is the batch's own: position and texture coordinate. `SpriteBatch.Bytecode` is internal: do not reach it.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 [Collection(GraphicsCollection.Name)]
@@ -461,15 +461,15 @@ public sealed class TileBatchTests
 }
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Run: `dotnet test extensions/ColorRise.Tessera/tests/ColorRise.Tessera.Tests --filter "FullyQualifiedName~TileBatchTests"`. Expected: FAIL to compile.
+- [x] **Step 2: Run them to see them fail.** Run: `dotnet test extensions/ColorRise.Tessera/tests/ColorRise.Tessera.Tests --filter "FullyQualifiedName~TileBatchTests"`. Expected: FAIL to compile.
 
-- [ ] **Step 3: Write `TileQuad` and `TileBatch`.** A vertex position is the corner given, unchanged: the batch computes nothing from a centre and a size.
+- [x] **Step 3: Write `TileQuad` and `TileBatch`.** A vertex position is the corner given, unchanged: the batch computes nothing from a centre and a size.
 
-- [ ] **Step 4: Run the tests.** Expected: PASS. Save the frames of the gap test at `unitsHigh` 9.37 (`Frame.Save`) and look at one.
+- [x] **Step 4: Run the tests.** Expected: PASS. Save the frames of the gap test at `unitsHigh` 9.37 (`Frame.Save`) and look at one.
 
-- [ ] **Step 5: Gate.** If `BatchBase<T>` cannot be derived from outside the engine with the public bytecode, write the finding, then try the first fallback of R3: a shader of the extension's own. If that needs a step from the game that uses Tessera, it still keeps every goal: go on, and write what a game must do. If only `Sprite3DBatch` works, the goal "no cracks at any camera position" is lost: stop and ask Nicolas.
+- [x] **Step 5: Gate.** If `BatchBase<T>` cannot be derived from outside the engine with the public bytecode, write the finding, then try the first fallback of R3: a shader of the extension's own. If that needs a step from the game that uses Tessera, it still keeps every goal: go on, and write what a game must do. If only `Sprite3DBatch` works, the goal "no cracks at any camera position" is lost: stop and ask Nicolas.
 
-- [ ] **Step 6: Commit and push**: `feat(tessera): a batch of quads given by their corners`
+- [x] **Step 6: Commit and push**: `feat(tessera): a batch of quads given by their corners`
 
 ### Task 5: Tile sets at runtime
 
