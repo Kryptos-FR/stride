@@ -716,7 +716,7 @@ public sealed class TileLayerAsset
 
 A cell's token is in "Two decisions" at the top. `TileIdYamlSerializer` writes a `TileId` member as its text (`1:3,4`): model, a scalar serializer of Stride's own asset YAML *(check: find how `Stride.Assets` registers one for a type of its own, such as its serializer of `UFile` or of a colour)*. If a third party cannot register one, give the asset classes a `string` member with the text and a typed property the YAML ignores, and write the finding.
 
-- [ ] **Step 1: Write the failing tests of the text**
+- [x] **Step 1: Write the failing tests of the text**
 
 ```csharp
 private const string EmptyLine = ". . . . . . . . . . . . . . . .";
@@ -758,9 +758,9 @@ public void A_bad_line_is_refused_and_named(int index, string expectedInMessage,
 [Fact] public void Windows_line_ends_are_read()   // "\r\n" in place of "\n" decodes the same
 ```
 
-- [ ] **Step 2: Run, see them fail, write `TileChunkText`, run again.** Filter: `FullyQualifiedName~TileChunkTextTests`. Expected: FAIL to compile, then PASS.
+- [x] **Step 2: Run, see them fail, write `TileChunkText`, run again.** Filter: `FullyQualifiedName~TileChunkTextTests`. Expected: FAIL to compile, then PASS.
 
-- [ ] **Step 3: Write the failing tests of the file**
+- [x] **Step 3: Write the failing tests of the file**
 
 ```csharp
 // The map of the golden file: CellSize (1, 1), Size (0, 0), a slot 1 without a tile set, two layers "Ground" and "Details".
@@ -783,9 +783,9 @@ public void A_bad_chunk_is_reported_and_the_others_load()
 
 Write the golden file by running the test once, read it as a person would in a diff, then commit it. If the saved file has an id per chunk that changes from run to run, the test compares after loading the golden file's ids.
 
-- [ ] **Step 4: Write the asset classes.** Try `Chunks` first as a plain list without item ids *(check: the attribute that makes a collection's items non-identifiable in Stride's assets)*: the file is then a plain YAML sequence. Keep that only if the graph tests of step 5 pass with it. `ToTileMap` sorts nothing and `FromTileMap` calls `SortChunks`.
+- [x] **Step 4: Write the asset classes.** Try `Chunks` first as a plain list without item ids *(check: the attribute that makes a collection's items non-identifiable in Stride's assets)*: the file is then a plain YAML sequence. Keep that only if the graph tests of step 5 pass with it. `ToTileMap` sorts nothing and `FromTileMap` calls `SortChunks`.
 
-- [ ] **Step 5: Write the failing tests of the asset graph**, in the editor tests, on a kit session with a `TileMapAsset` of one layer and 1000 chunks
+- [x] **Step 5: Write the failing tests of the asset graph**, in the editor tests, on a kit session with a `TileMapAsset` of one layer and 1000 chunks
 
 ```csharp
 [Fact]
@@ -801,9 +801,9 @@ public async Task The_text_of_a_chunk_is_replaced_through_its_node_and_undone()
 
 Model for nodes and transactions: `docs/editor/custom-editor.md` ("Manual transaction wrapping"), `docs/quantum/asset-graph.md`, and Skein's editor tests.
 
-- [ ] **Step 6: Run them, make them pass, and gate.** If the graph cannot hold the chunks this way (too slow, or no undo of an item), use R1's fallback: the chunks stay out of the graph and the undo steps are written by hand, with an operation that still marks the asset dirty. That keeps every goal: go on, and write the finding. The file format does not change.
+- [x] **Step 6: Run them, make them pass, and gate.** If the graph cannot hold the chunks this way (too slow, or no undo of an item), use R1's fallback: the chunks stay out of the graph and the undo steps are written by hand, with an operation that still marks the asset dirty. That keeps every goal: go on, and write the finding. The file format does not change.
 
-- [ ] **Step 7: Commit and push**: `feat(tessera): the tile map asset and the text of its chunks`
+- [x] **Step 7: Commit and push**: `feat(tessera): the tile map asset and the text of its chunks`
 
 ### Task 8: The tile map component
 
