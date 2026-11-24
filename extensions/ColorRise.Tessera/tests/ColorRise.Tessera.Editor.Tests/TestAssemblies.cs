@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using ColorRise.Tessera.Assets;
 using ColorRise.Tessera.Editor;
 using Stride.Core.Reflection;
 
@@ -19,6 +20,8 @@ internal static class TestAssemblies
 #pragma warning restore CA2255
     internal static void Register()
     {
+        AssemblyRegistry.Register(typeof(TileMap).Assembly, AssemblyCommonCategories.Assets);
+        AssemblyRegistry.Register(typeof(TileMapAsset).Assembly, AssemblyCommonCategories.Assets);
         AssemblyRegistry.Register(typeof(TesseraEditorPlugin).Assembly, AssemblyCommonCategories.Assets);
     }
 }
