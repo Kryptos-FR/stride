@@ -55,12 +55,12 @@ Inputs the design implies and that will reach this code, most likely first. Each
 **Interfaces:**
 - Produces: `dotnet` 10 on the `PATH`, the worktree `/home/user/stride-master` on the branch `feature/colorrise-tessera`, and Stride's packages at `4.5.4-dev` in `/home/user/stride-master/bin/packages`.
 
-- [ ] **Step 1: Install the .NET 10 SDK** in `~/.dotnet` with Microsoft's `dotnet-install.sh` (`--channel 10.0`), and export `PATH=$HOME/.dotnet:$PATH` and `DOTNET_ROOT=$HOME/.dotnet`.
+- [x] **Step 1: Install the .NET 10 SDK** in `~/.dotnet` with Microsoft's `dotnet-install.sh` (`--channel 10.0`), and export `PATH=$HOME/.dotnet:$PATH` and `DOTNET_ROOT=$HOME/.dotnet`.
 
 Run: `dotnet --version`
 Expected: `10.0.1xx`, at least the version in the repository's `global.json`.
 
-- [ ] **Step 2: Make the branch** in the worktree, and set the author.
+- [x] **Step 2: Make the branch** in the worktree, and set the author.
 
 ```bash
 cd /home/user/stride-master
@@ -69,7 +69,7 @@ git config user.name "Nicolas Musset" && git config user.email "musset.nicolas@g
 git lfs pull
 ```
 
-- [ ] **Step 3: Build the engine, the editor and the asset compiler**, as Skein's README says. This is a long run: start it in the background and write its output to a log file in the scratch folder. Check the free disk space first (`df -h /home/user`).
+- [x] **Step 3: Build the engine, the editor and the asset compiler**, as Skein's README says. This is a long run: start it in the background and write its output to a log file in the scratch folder. Check the free disk space first (`df -h /home/user`).
 
 ```bash
 dotnet build sources/Stride.Editor.Avalonia.slnf
@@ -80,7 +80,7 @@ If the build asks for a platform, add `-p:StridePlatforms=Linux -p:StrideGraphic
 
 Expected: both builds succeed, and `ls bin/packages` lists at `4.5.4-dev`: `Stride.Engine`, `Stride.Assets`, `Stride.Core.Assets`, `Stride.AssetCompiler`, `Stride.Assets.Editor`, `Stride.Assets.Editor.Avalonia`, `Stride.Assets.Editor.Testing`. If the test kit's package is missing, build its project by name and write it in the findings.
 
-- [ ] **Step 4: Gate.** If the engine cannot be built in the container, stop and tell Nicolas what failed, with the end of the log.
+- [x] **Step 4: Gate.** If the engine cannot be built in the container, stop and tell Nicolas what failed, with the end of the log.
 
 ### Task 1: Scaffold the extension
 
@@ -99,7 +99,7 @@ Expected: both builds succeed, and `ls bin/packages` lists at `4.5.4-dev`: `Stri
 - Consumes: Task 0.
 - Produces: the seven projects in one solution; MSBuild properties `TesseraStrideVersion` (`4.5.4-dev`) and `TesseraAvaloniaVersion` (`12.1.1`); `public sealed class TesseraEditorPlugin : StrideAssetsPlugin` in `ColorRise.Tessera.Editor`; `internal static class TesseraTest` in the editor tests, which opens a kit session with the plugin (the shape of Skein's `SkeinTest`); `InternalsVisibleTo` from each `src/` project to the test project that tests it.
 
-- [ ] **Step 1: Copy Skein's build files and project files** and rename. The source of each file is `git show origin/feature/colorrise-skein:extensions/ColorRise.Skein/<path>`.
+- [x] **Step 1: Copy Skein's build files and project files** and rename. The source of each file is `git show origin/feature/colorrise-skein:extensions/ColorRise.Skein/<path>`.
   - Replace `Skein` by `Tessera` in names and properties. Remove what is Yarn's, AvaloniaEdit's, and the `UI` and `Audio` projects.
   - `Directory.Build.props`, `Directory.Build.targets`, `nuget.config`, `global.json`, `.gitignore`: otherwise as they are, comments included where they still hold.
   - The runtime project references `Stride.Engine` and declares the `Assets` and `Editor` projects with `StrideCompanionProject`. `PackageTags`: `stride-plugin;tilemap;tileset;2d`.
@@ -109,7 +109,7 @@ Expected: both builds succeed, and `ls bin/packages` lists at `4.5.4-dev`: `Stri
   - `README.md`: what Tessera is, the package table, "Try it" (Skein's three steps with Tessera's paths), "What works today" (empty for now), "Tied to the fork", licence. `LICENSE`: MIT, Color-Rise. `THIRD-PARTY-NOTICES.md`: says there is none yet.
   - `docs/plugin-findings.md`: Skein's two tables with their headers and no row, "Tied to the fork" with T1 to T3 reworded for Tessera, and a third table "Skein's findings, met again" with the columns: Skein's number, where Tessera met it, holds or not.
 
-- [ ] **Step 2: Write the failing test** in `tests/ColorRise.Tessera.Editor.Tests/PluginTests.cs`. `AssemblyInfo.cs` has `[assembly: CollectionBehavior(DisableTestParallelization = true)]` (Skein's finding 5).
+- [x] **Step 2: Write the failing test** in `tests/ColorRise.Tessera.Editor.Tests/PluginTests.cs`. `AssemblyInfo.cs` has `[assembly: CollectionBehavior(DisableTestParallelization = true)]` (Skein's finding 5).
 
 ```csharp
 [Fact]
@@ -123,19 +123,19 @@ public async Task A_session_loads_the_plugin_without_an_error()
 
 `TesseraTest.OpenAsync` and the two members the test reads are written after `tests/ColorRise.Skein.Editor.Tests/SkeinTest.cs` on Skein's branch: use the kit's own names for "the plugins of the session" and "what the session logged as an error".
 
-- [ ] **Step 3: Run it to see it fail**
+- [x] **Step 3: Run it to see it fail**
 
 Run: `dotnet test extensions/ColorRise.Tessera/tests/ColorRise.Tessera.Editor.Tests`
 Expected: FAIL to compile, `TesseraEditorPlugin` does not exist.
 
-- [ ] **Step 4: Write `TesseraEditorPlugin`**, empty, as the template's `samples/Plugin/Plugin/MyTemplate.Editor/MyTemplateEditorPlugin.cs` without its resource helper.
+- [x] **Step 4: Write `TesseraEditorPlugin`**, empty, as the template's `samples/Plugin/Plugin/MyTemplate.Editor/MyTemplateEditorPlugin.cs` without its resource helper.
 
-- [ ] **Step 5: Build, test and pack**
+- [x] **Step 5: Build, test and pack**
 
 Run: `dotnet build extensions/ColorRise.Tessera/ColorRise.Tessera.slnx && dotnet test extensions/ColorRise.Tessera/ColorRise.Tessera.slnx && dotnet pack extensions/ColorRise.Tessera/ColorRise.Tessera.slnx`
 Expected: the test passes, and `extensions/ColorRise.Tessera/bin/packages` holds four packages at `0.1.0-dev`: `ColorRise.Tessera`, `.Assets`, `.Editor`, `.Editor.Avalonia`. A warning that Skein already wrote about goes in the third table of the findings.
 
-- [ ] **Step 6: Commit and push**
+- [x] **Step 6: Commit and push**
 
 ```bash
 git add extensions/ColorRise.Tessera

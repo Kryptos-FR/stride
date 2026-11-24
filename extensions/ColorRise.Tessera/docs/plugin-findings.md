@@ -10,6 +10,7 @@ Built on Stride's `master` at `659bb239e` (2026-11-24).
 
 | # | Plugin point | What Tessera tried | What happened | Workaround in Tessera | Suggested change |
 |---|---|---|---|---|---|
+| 1 | Graphics tests: the package `Stride.Dependencies.Lavapipe` (2026.10.12), the software Vulkan driver Stride's own graphics tests use | Reference it from `ColorRise.Tessera.Tests`, so that the tests draw without a GPU and without a window | It works: four tests draw and read their frames on Linux with `DISPLAY` unset. But every build of a project that references it warns NETSDK1206, because the package puts a second Linux driver under a made-up runtime identifier, `linux-x64-nodmabuf` | None: the warning is left visible | Put the second driver in a folder under `runtimes/linux-x64/native/` instead of under a runtime identifier of its own |
 
 ## Tied to the fork
 

@@ -8,6 +8,9 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- A software Vulkan driver, so that the graphics tests draw without a GPU and without a window (the version the engine's
+         own tests use) -->
+    <PackageReference Include="Stride.Dependencies.Lavapipe" Version="2026.10.12" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ColorRise.Tessera\ColorRise.Tessera.csproj" />
