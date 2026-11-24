@@ -143,6 +143,8 @@ git commit -m "feat(tessera): scaffold the ColorRise.Tessera extension"
 git push -u origin feature/colorrise-tessera
 ```
 
+**Done differently.** The plugin test checks that a session of the editor test kit opens with the plugin, without an error: the kit has no list of the plugins it loaded.
+
 ### Task 2: A game without a window for the graphics tests (R10)
 
 **Files:**
@@ -262,6 +264,8 @@ git add extensions/ColorRise.Tessera
 git commit -m "test(tessera): a game without a window whose frames the tests read"
 git push
 ```
+
+**Done differently.** `Frame.Save` returns the path of the PNG. A run fails with a `TimeoutException` after 600 frames whose actions are not done, instead of hanging. Before `SetView`, the view is centred on the origin, 4 units high.
 
 ### Task 3: Tile ids, flips and cells
 
@@ -383,6 +387,8 @@ Expected: FAIL to compile.
 
 - [x] **Step 5: Commit and push**: `feat(tessera): tile ids, flips and the cell of a map`
 
+**Done differently.** A cell made with slot 0 is the empty cell, whatever tile and flips it is given, so that "empty" has one value.
+
 ### Task 4: The batch (R3)
 
 **Files:**
@@ -470,6 +476,8 @@ public sealed class TileBatchTests
 - [x] **Step 5: Gate.** If `BatchBase<T>` cannot be derived from outside the engine with the public bytecode, write the finding, then try the first fallback of R3: a shader of the extension's own. If that needs a step from the game that uses Tessera, it still keeps every goal: go on, and write what a game must do. If only `Sprite3DBatch` works, the goal "no cracks at any camera position" is lost: stop and ask Nicolas.
 
 - [x] **Step 6: Commit and push**: `feat(tessera): a batch of quads given by their corners`
+
+**Done differently.** `Begin` takes a colour whose alpha is not premultiplied and blends for premultiplied alpha, as Stride's textures are by default. The runtime project allows unsafe code (`BatchBase` hands the vertex buffer as a pointer). Each gap test is one game whose 128 frames are the 128 views.
 
 ### Task 5: Tile sets at runtime
 
@@ -658,6 +666,8 @@ public void A_cell_size_that_is_not_positive_is_refused(float x, float y)   // A
 - [x] **Step 4: Run the tests.** Expected: PASS.
 - [x] **Step 5: Commit and push**: `feat(tessera): chunks, layers and maps at runtime`
 
+**Done differently.** `TileChunk` is not a data contract: Task 11 writes the chunks through the layer. A layer takes cell values without a map, and `Insert` refuses a layer that is already in a map.
+
 ### Task 7: The text of a chunk, the tile map asset, and the asset graph (R1)
 
 **Files:**
@@ -805,6 +815,8 @@ Model for nodes and transactions: `docs/editor/custom-editor.md` ("Manual transa
 
 - [x] **Step 7: Commit and push**: `feat(tessera): the tile map asset and the text of its chunks`
 
+**Done differently.** The work is in three commits: the text of a chunk, the asset and its file, the graph. `ToTileMap` without a list of errors throws the first one. The reader of a chunk's text takes the flips in any order, extra spaces and CRLF.
+
 ### Task 8: The tile map component
 
 **Files:**
@@ -875,6 +887,8 @@ public void Overlap_finds_a_solid_cell_under_a_rectangle()
 - [x] **Step 3: Write the component.**
 - [x] **Step 4: Run the tests.** Expected: PASS.
 - [x] **Step 5: Commit and push**: `feat(tessera): the tile map component, cells and solid queries`
+
+**Done differently.** `OverlapsSolid` takes the box around the rectangle's corners in the map's space, which is exact for an entity that is not turned.
 
 ### Task 9: Drawing a map (R2)
 
@@ -1016,6 +1030,8 @@ public void A_sprite_goes_between_two_layers_by_its_z()
 - [x] **Step 6: Gate (R2).** If layers, sprites and maps do not order by depth in the transparent stage, try the fallback: a render stage of the extension's own that a game adds to its compositor. It keeps the order between layers, but a `SpriteComponent` can then no longer go between two layers, which the design promises: stop and ask Nicolas before taking it.
 - [x] **Step 7: Commit and push**: `feat(tessera): draw tile maps in the transparent stage`
 
+**Done differently.** `TileBatch.Begin` takes an optional rasterizer, for multisampled outputs. One test was added: a layer inserted under the others in a later frame is drawn under them. A chunk's bounding box covers the whole chunk and how far the largest tile reaches, so that every layer of a chunk has the same centre and a tilted camera keeps their order.
+
 ### Task 10: Animated tiles
 
 **Files:**
@@ -1047,6 +1063,8 @@ public void The_frame_at_a_time_loops(double time, string expected)
 
 - [x] **Step 2: Run, see them fail, write the code, run again.** Filter: `FullyQualifiedName~TileAnimation`.
 - [x] **Step 3: Commit and push**: `feat(tessera): animated tiles`
+
+**Done differently.** The clock runs in the processor's update, on game time, and only for enabled components.
 
 ### Task 11: The content types and the tile map compiler
 
@@ -1119,6 +1137,8 @@ public void A_cell_of_a_slot_the_map_does_not_have_is_kept()
 - [x] **Step 3: Write `AssetBuild`, the content attributes and serializers, and the compiler.** If Stride's serializer cannot write a `Dictionary<string, object>` of the five property types, write a data serializer for `Tile` and keep the public shape.
 - [x] **Step 4: Run the tests.** Expected: PASS.
 - [x] **Step 5: Commit and push**: `feat(tessera): tile maps and tile sets as content, and the tile map compiler`
+
+**Done differently.** `TileMap` has a serializer of its own, which writes only the cells that are not empty. `Reloaded` is raised at the end of the map's own read, before the content manager loads tile sets the map did not have before. The test project references `Microsoft.Build.Framework` 17.11.48 without its runtime (finding 2).
 
 ### Task 12: The tile set asset and its tiles
 
@@ -1258,6 +1278,8 @@ public void A_renamed_sprite_is_missing_and_a_new_one_is_unbound()
 - [x] **Step 4: Run the tests, write the golden file as in Task 7, read it, run again.** Expected: PASS.
 - [x] **Step 5: Commit and push**: `feat(tessera): the tile set asset and the tiles of its sources`
 
+**Done differently.** Tile properties are typed values (`TileProperty`), not `object`: Stride's YAML reads a float back as a double and `"3"` as an int (finding 3). The color key compares all four channels, as Stride's texture build does.
+
 ### Task 13: The tile set compiler and its atlas
 
 **Files:**
@@ -1335,6 +1357,8 @@ public void An_image_that_is_missing_fails_the_build_and_is_named()
 - [x] **Step 4: Run the tests.** Expected: PASS. If the packing classes cannot be used from a third party's `Assets` package (a missing native library, an internal type in a public signature), write the finding and pack with code of the extension's own: tiles in rows, with the same border.
 - [x] **Step 5: Commit and push**: `feat(tessera): the tile set compiler and its padded atlas`
 
+**Done differently.** The packer runs one heuristic, `BestShortSideFit`, instead of `Best`, which packs once with each of its five (1000 tiles of 16 pixels take 183 ms). Textures are at most 2048 pixels, not the largest the profile allows. The command does not hash Stride's texture format version, which is internal (finding 4).
+
 ### Task 14: From assets to a frame, from packages, and the write-up
 
 **Files:**
@@ -1346,7 +1370,7 @@ public void An_image_that_is_missing_fails_the_build_and_is_named()
 - Consumes: everything above.
 - Produces: `tests/PackagesCheck/run.sh`, which prints `TESSERA-PACKAGES-CHECK OK` and exits with 0, or says what failed and exits with 1.
 
-- [ ] **Step 1: Write the failing end-to-end tests**
+- [x] **Step 1: Write the failing end-to-end tests**
 
 ```csharp
 [Collection(GraphicsCollection.Name)]
@@ -1373,20 +1397,22 @@ public sealed class BleedingTests
 }
 ```
 
-- [ ] **Step 2: Run them, and fix what they find.** Filter: `FullyQualifiedName~EndToEndTests|FullyQualifiedName~BleedingTests`. Expected: PASS. If a neighbour shows (R8), first make the border larger, then inset the texture coordinates by a fraction of a texel, and write which was needed.
+- [x] **Step 2: Run them, and fix what they find.** Filter: `FullyQualifiedName~EndToEndTests|FullyQualifiedName~BleedingTests`. Expected: PASS. If a neighbour shows (R8), first make the border larger, then inset the texture coordinates by a fraction of a texel, and write which was needed.
 
-- [ ] **Step 3: Write the packages check.** `run.sh` packs the solution, copies `tests/PackagesCheck/Game` to a new folder outside the checkout, builds it there with only `<PackageReference Include="ColorRise.Tessera" Version="0.1.0-dev" />` and Stride's packages, and runs it. The game loads its map, draws one frame without a window, checks four pixels and prints the line. Its `nuget.config` names nuget.org and the two local feeds by their full paths, which `run.sh` writes in.
+- [x] **Step 3: Write the packages check.** `run.sh` packs the solution, copies `tests/PackagesCheck/Game` to a new folder outside the checkout, builds it there with only `<PackageReference Include="ColorRise.Tessera" Version="0.1.0-dev" />` and Stride's packages, and runs it. The game loads its map, draws one frame without a window, checks four pixels and prints the line. Its `nuget.config` names nuget.org and the two local feeds by their full paths, which `run.sh` writes in.
 
 Run: `extensions/ColorRise.Tessera/tests/PackagesCheck/run.sh`
 Expected: `TESSERA-PACKAGES-CHECK OK`. If the asset compiler's restore of the companion fails on the signatures of this sandbox, use Skein's workaround (its finding 21) inside `run.sh`, and say in the third table of the findings that it still holds.
 
-- [ ] **Step 4: Run every test once**
+- [x] **Step 4: Run every test once**
 
 Run: `dotnet test extensions/ColorRise.Tessera/ColorRise.Tessera.slnx`
 Expected: PASS, no test skipped. Keep the output for the report.
 
-- [ ] **Step 5: Write up.** `README.md`: "What works today" says what a person can try at this commit, in Skein's manner, and "Not yet" lists the editors, the flipbooks, the sample, Windows and the WPF Game Studio. `docs/plugin-findings.md`: a row for each gap met, the three tables complete. `docs/plan.md`: the boxes ticked, and a short note under a task where what was done differs from the plan.
+- [x] **Step 5: Write up.** `README.md`: "What works today" says what a person can try at this commit, in Skein's manner, and "Not yet" lists the editors, the flipbooks, the sample, Windows and the WPF Game Studio. `docs/plugin-findings.md`: a row for each gap met, the three tables complete. `docs/plan.md`: the boxes ticked, and a short note under a task where what was done differs from the plan.
 
-- [ ] **Step 6: Commit and push**: `test(tessera): maps from assets to a frame, and from packages`, then `docs(tessera): what step 1 gives, and what it found in the plugin model`
+- [x] **Step 6: Commit and push**: `test(tessera): maps from assets to a frame, and from packages`, then `docs(tessera): what step 1 gives, and what it found in the plugin model`
 
-- [ ] **Step 7: Report to Nicolas.** The branch, the test count, the result of each of R1, R2, R3, R8, R9 and R10 in a line, the findings, and three frames saved in `/mnt/project-files/tilemap/`: the three-layer test, the gap test and the end-to-end map. Then the plan of step 2.
+- [x] **Step 7: Report to Nicolas.** The branch, the test count, the result of each of R1, R2, R3, R8, R9 and R10 in a line, the findings, and three frames saved in `/mnt/project-files/tilemap/`: the three-layer test, the gap test and the end-to-end map. Then the plan of step 2.
+
+**Done differently.** The border of 2 pixels was enough: no inset of the texture coordinates. The test harness draws MSAA with a renderer of its own (finding 7). The game of the packages check needs an opaque stage beside the transparent one (finding 6). Skein's finding 21 was not met, so `run.sh` has no workaround.

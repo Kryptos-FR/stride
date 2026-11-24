@@ -43,14 +43,25 @@ To build against another Stride version, copy `Directory.Build.local.props.examp
 
 ### What works today
 
-This section follows the work: it says what can be tried at the current commit.
+This section follows the work: it says what can be tried at the current commit. Step 1 of the design is done: the runtime, the assets and their compilers. There is no editor yet, so asset files are written by hand. The game of the packages check, `tests/PackagesCheck/Game`, has a tile set, a map and the code that draws them.
 
-- The four packages build and pack. Game Studio's test session loads the editor plugin. Nothing else yet.
+- **Tile sets from images.** A tile set asset (`.sdtileset`) cuts images into tiles. A grid source cuts an image by tile size, margin and spacing. A sprite sheet source takes the sprites of a sprite sheet asset and binds each, by name, to a tile. The build packs the tiles into textures of 2048 by 2048 pixels at most, with a border of 2 pixels around each tile that repeats its edge. It leaves out empty tiles and makes a color key transparent. Each tile keeps its collision, its kind, its properties and its animation. The build warns about sprites that are missing or not bound, and about animation frames that name a tile the set does not have.
+- **Tile maps.** A tile map asset (`.sdtilemap`) has tile sets in numbered slots and layers of chunks of 16 by 16 cells. Each row of a chunk is one line of text (`1/1:2,0 1/1:3,0 ...`, with `h`, `v` and `d` for flips), so a change of one cell changes one line of the file and a merge stays readable. The build checks the chunks and names the layer and the chunk of an error.
+- **Maps in a game.** `Content.Load<TileMap>("Maps/Town")` reads a built map with its tile sets. A map can also be made in code: `TileSet.FromTexture(texture, tileSize)`, then `map.Layers.Add("Ground").SetCell(cell, tileSet, tileId)`. A cell changed at run time shows in the next frame. `Content.Reload` replaces a map in place and raises `TileMap.Reloaded`.
+- **Drawing.** `TileMapComponent` draws the layers of a map in Stride's transparent stage, each layer at a depth of its own. A sprite or another map with a depth between two layers is drawn between them, with a camera that looks straight at the map or a tilted one. Each layer has a tint, an opacity, an offset and can be hidden. Each cell can be flipped. Point sampling (the default, for pixel art) or linear. Only the chunks in view are drawn. Tiles meet without a gap, and no pixel of a neighbouring tile shows, at any zoom and position, with or without MSAA.
+- **Animated tiles**, such as water or torches: frames with their durations, played by the clock of the component, whose speed can be changed.
+- **Questions a game asks the map.** `WorldToCell`, `CellToWorld`, `GetLayerZ`, `IsSolid(cell)`, and `OverlapsSolid(rectangle)` for simple collisions against tiles marked solid.
+- **The compositor.** A game adds `TileRenderFeature` to its graphics compositor, with a `TileTransparentRenderStageSelector` on its transparent stage, as `Compositor` in `tests/PackagesCheck/Game/Program.cs` does. In Game Studio, add them in the compositor editor, under render features. The forward renderer needs an opaque stage too, even when it draws nothing. For pixel art, leave out the post effects: tone mapping and the others change the colours of everything drawn before them.
+- **From packages only.** `extensions/ColorRise.Tessera/tests/PackagesCheck/run.sh` packs Tessera, copies a small game to a new folder outside the checkout, builds it with only Tessera's and Stride's packages (the asset compiler builds its tile set and its map), draws one frame without a window and checks four pixels. It prints `TESSERA-PACKAGES-CHECK OK`. Set `STRIDE_FEED` to use other Stride packages than those of the local engine build.
 
 ### Not yet
 
-- Everything of the design: tile sets, tile maps, their drawing, the editors, flipbooks and the sample game.
-- A check on Windows: everything here is built and run on Linux. The WPF Game Studio gets none of Tessera's views.
+- The editors in Game Studio: the tile set editor, the map editor with its brushes, and the flipbook editor. Templates to create the assets from Game Studio.
+- The render feature given by the plugin, so that a compositor created in Game Studio gets it without a step by hand.
+- Flipbooks: characters and objects animated from the tiles of a tile set, with their component.
+- The sample game with Kenney's art.
+- A check on Windows: everything here is built and run on Linux, with a software Vulkan driver.
+- The WPF Game Studio, which gets none of Tessera's views.
 
 ## Tied to the fork
 
