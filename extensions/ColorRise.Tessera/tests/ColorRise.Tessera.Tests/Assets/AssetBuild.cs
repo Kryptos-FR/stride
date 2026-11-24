@@ -1,11 +1,14 @@
+using Stride.Assets;
 using Stride.Core;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Compiler;
 using Stride.Core.BuildEngine;
 using Stride.Core.Diagnostics;
 using Stride.Core.IO;
+using Stride.Core.Serialization;
 using Stride.Core.Serialization.Contents;
 using Stride.Core.Storage;
+using Stride.Graphics;
 
 namespace ColorRise.Tessera.Tests.Assets;
 
@@ -70,13 +73,17 @@ internal sealed class AssetBuild : IDisposable
     }
 
     /// <summary>
-    /// Adds an asset at a URL, such as <c>Maps/Town</c>, as a root asset of the package: the build compiles it.
+    /// Adds an asset at a URL, such as <c>Maps/Town</c>: a root asset of the package, which the build compiles, or an asset
+    /// that other assets use.
     /// </summary>
-    public AssetItem Add(string url, Asset asset)
+    public AssetItem Add(string url, Asset asset, bool root = true)
     {
         var item = new AssetItem(url, asset);
         package.Assets.Add(item);
-        package.RootAssets.Add(new AssetReference(item.Id, item.Location));
+        if (root)
+        {
+            package.RootAssets.Add(new AssetReference(item.Id, item.Location));
+        }
         return item;
     }
 
@@ -98,7 +105,14 @@ internal sealed class AssetBuild : IDisposable
     public BuildResult Build()
     {
         CloseContent();
-        var prepared = new PackageCompiler(new RootPackageAssetEnumerator(package)).Prepare(new AssetCompilerContext { CompilationContext = typeof(AssetCompilationContext) });
+        // As the asset compiler and Game Studio do: the platform of the build, and the game's settings
+        var context = new AssetCompilerContext
+        {
+            CompilationContext = typeof(AssetCompilationContext),
+            Platform = OperatingSystem.IsWindows() ? PlatformType.Windows : OperatingSystem.IsMacOS() ? PlatformType.macOS : PlatformType.Linux,
+        };
+        context.SetGameSettingsAsset(GameSettingsFactory.Create());
+        var prepared = new PackageCompiler(new RootPackageAssetEnumerator(package)).Prepare(context);
         var log = new LoggerResult();
         try
         {
@@ -135,6 +149,35 @@ internal sealed class AssetBuild : IDisposable
     /// Reads content through a content manager of its own: a new object each time, read from the database.
     /// </summary>
     public T Load<T>(string url) where T : class => new ContentManager(Files).Load<T>(url);
+
+    /// <summary>
+    /// Reads content through <see cref="Content"/> without the content it references, such as textures, which need a graphics
+    /// device: each reference is an empty object, whose URL <see cref="UrlOf"/> gives.
+    /// </summary>
+    public T LoadAlone<T>(string url) where T : class
+        => Content.Load<T>(url, new ContentManagerLoaderSettings { ContentFilter = (_, ref load) => load = false });
+
+    /// <summary>
+    /// The URL of content that <see cref="Content"/> read.
+    /// </summary>
+    public string UrlOf(object content) => Content.TryGetAssetUrl(content, out var url) ? url : throw new ArgumentException("The content manager did not read this object.", nameof(content));
+
+    /// <summary>
+    /// Reads the pixels of a texture the build wrote, without a graphics device.
+    /// </summary>
+    public Image LoadImage(string url)
+    {
+        // The texture's chunk: a header, whether the texture streams (never, for these), then the image in Stride's format
+        using var stream = Files.FileProvider.OpenStream(url, VirtualFileMode.Open, VirtualFileAccess.Read);
+        var reader = new BinarySerializationReader(stream);
+        var header = ChunkHeader.Read(reader) ?? throw new InvalidDataException($"{url} is not content.");
+        stream.Position = header.OffsetToObject;
+        if (reader.ReadBoolean())
+        {
+            throw new InvalidDataException($"The texture {url} streams.");
+        }
+        return Image.Load(stream);
+    }
 
     public void Dispose()
     {

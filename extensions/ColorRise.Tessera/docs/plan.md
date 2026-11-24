@@ -1291,7 +1291,7 @@ The compiler reads each sheet source's sprite sheet **asset** in `Prepare` (its 
 
 Build messages: an image that cannot be read is an error with the file and the source's name. A source without a tile, sprites that are bound and missing, sprites that are not bound, a sprite name used twice, and an animation frame that names a tile the set does not have are warnings, each with the count and the names.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // TileAtlasBuilderTests: images made in the test
@@ -1330,10 +1330,10 @@ public void An_image_that_is_missing_fails_the_build_and_is_named()
 [Fact] public void An_animation_frame_of_a_tile_that_is_gone_is_a_warning()
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileAtlasBuilderTests|FullyQualifiedName~TileSetCompilerTests`.
-- [ ] **Step 3: Write the atlas builder, then the compiler and its command.** The command runs inside Stride's asset compiler, which has the texture tools' native libraries.
-- [ ] **Step 4: Run the tests.** Expected: PASS. If the packing classes cannot be used from a third party's `Assets` package (a missing native library, an internal type in a public signature), write the finding and pack with code of the extension's own: tiles in rows, with the same border.
-- [ ] **Step 5: Commit and push**: `feat(tessera): the tile set compiler and its padded atlas`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileAtlasBuilderTests|FullyQualifiedName~TileSetCompilerTests`.
+- [x] **Step 3: Write the atlas builder, then the compiler and its command.** The command runs inside Stride's asset compiler, which has the texture tools' native libraries.
+- [x] **Step 4: Run the tests.** Expected: PASS. If the packing classes cannot be used from a third party's `Assets` package (a missing native library, an internal type in a public signature), write the finding and pack with code of the extension's own: tiles in rows, with the same border.
+- [x] **Step 5: Commit and push**: `feat(tessera): the tile set compiler and its padded atlas`
 
 ### Task 14: From assets to a frame, from packages, and the write-up
 
