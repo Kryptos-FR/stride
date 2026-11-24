@@ -612,7 +612,7 @@ public sealed class TileMap
 }
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // TileLayerTests
@@ -653,10 +653,10 @@ public void A_cell_set_is_the_cell_got()
 public void A_cell_size_that_is_not_positive_is_refused(float x, float y)   // ArgumentOutOfRangeException
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileLayerTests|FullyQualifiedName~TileMapTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the types.** A layer keeps its chunks in a dictionary by chunk position.
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): chunks, layers and maps at runtime`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileLayerTests|FullyQualifiedName~TileMapTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the types.** A layer keeps its chunks in a dictionary by chunk position.
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): chunks, layers and maps at runtime`
 
 ### Task 7: The text of a chunk, the tile map asset, and the asset graph (R1)
 
