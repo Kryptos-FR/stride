@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Tessera</RootNamespace>
+    <PackageTags>stride-plugin;tilemap;tileset;2d</PackageTags>
+    <Description>Tessera: tile sets, tile maps and flipbooks for Stride games. The runtime: tile sets, maps, their components and their drawing.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The companions a host loads on behalf of this package: the asset compiler takes the Assets one, Game Studio both.
+         A game references this project (or its package) only. -->
+    <StrideCompanionProject Include="..\ColorRise.Tessera.Assets\ColorRise.Tessera.Assets.csproj" />
+    <StrideCompanionProject Include="..\ColorRise.Tessera.Editor\ColorRise.Tessera.Editor.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ColorRise.Tessera.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Engine" Version="$(TesseraStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(TesseraStrideVersion)" IncludeAssets="build;buildTransitive" />
+  </ItemGroup>
+</Project>

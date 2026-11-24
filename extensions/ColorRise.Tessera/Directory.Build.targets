@@ -1,0 +1,29 @@
+<Project>
+  <!-- Tessera's own, so that MSBuild does not look for one above this folder. -->
+
+  <!--
+    Tied to the fork (Skein's finding 1, and T2 of docs/plugin-findings.md). Against a local engine build, Stride's dev package stubs point
+    at the engine's build output in the configuration the engine was built in ($(StrideDevConfiguration)), but the asset
+    compiler's targets look for the compiler in this project's $(Configuration): a Release build or pack (the default of dotnet
+    pack) after a Debug engine build fails with "Stride AssetCompiler could not be found". Take the compiler from the engine's
+    configuration. Every property here comes from the dev stubs; with published Stride packages none is set and this does nothing.
+  -->
+  <PropertyGroup Condition="'$(StrideCompileAssetCommand)' == '' And '$(StrideDevRedirect)' == 'true' And '$(StrideDevConfiguration)' != '' And '$(StrideRoot)' != ''">
+    <StrideCompileAssetCommand>$(StrideRoot)sources/assets/Stride.AssetCompiler/bin/$(StrideDevConfiguration)/net10.0/Stride.AssetCompiler.dll</StrideCompileAssetCommand>
+  </PropertyGroup>
+
+  <!--
+    The descriptions of the properties, which Game Studio shows: Stride.Core's targets write the <userdoc> tags of a project to
+    a .usrdoc file beside its assembly, and this puts that file in the package, beside the assembly too
+    (Skein's finding 22).
+  -->
+  <PropertyGroup>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.usrdoc</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);_TesseraUserDocumentationInPackage</TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+  <Target Name="_TesseraUserDocumentationInPackage">
+    <ItemGroup Condition="Exists('$(OutputPath)$(AssemblyName).usrdoc')">
+      <BuildOutputInPackage Include="$(OutputPath)$(AssemblyName).usrdoc" />
+    </ItemGroup>
+  </Target>
+</Project>

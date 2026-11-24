@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Tessera.Editor.Avalonia</RootNamespace>
+    <Description>Tessera's views for the cross-platform Game Studio.</Description>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- The views of the cross-platform Game Studio; ColorRise.Tessera.Editor (toolkit-neutral) declares this package as its
+         companion. The toolkit (Avalonia) is inferred from the Avalonia references. -->
+    <StridePackageKind>Editor</StridePackageKind>
+    <!-- Experimental plugin API: panels and views (STREXP001), commands (STREXP003), services (STREXP006) -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ColorRise.Tessera.Editor.Avalonia.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="$(TesseraAvaloniaVersion)" />
+    <PackageReference Include="Stride.Assets.Editor.Avalonia" Version="$(TesseraStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(TesseraStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <ProjectReference Include="..\ColorRise.Tessera.Editor\ColorRise.Tessera.Editor.csproj" />
+  </ItemGroup>
+</Project>

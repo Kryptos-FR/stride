@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Tessera.Editor.Avalonia.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- Avalonia's headless tests run on xunit.v3, whose test projects are programs -->
+    <OutputType>Exe</OutputType>
+    <!-- A program that is not a game: Stride's asset compiler, which the editor packages bring, has no assets to build for it
+         (Skein's finding 13) -->
+    <StrideCompilerSkipBuild>true</StrideCompilerSkipBuild>
+    <!-- The editor's experimental plugin API, as in the editor packages, and its test kit (STREXP011) -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006;STREXP011</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="$(TesseraAvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="$(TesseraAvaloniaVersion)" />
+    <!-- Stride's test kit for the view models of editor plugins: the views of these tests show the editors of its session -->
+    <PackageReference Include="Stride.Assets.Editor.Testing" Version="$(TesseraStrideVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ColorRise.Tessera.Editor.Avalonia\ColorRise.Tessera.Editor.Avalonia.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The session of the view model tests, with Tessera's plugin -->
+    <Compile Include="..\ColorRise.Tessera.Editor.Tests\TesseraTest.cs" Link="TesseraTest.cs" />
+    <Compile Include="..\ColorRise.Tessera.Editor.Tests\TestAssemblies.cs" Link="TestAssemblies.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

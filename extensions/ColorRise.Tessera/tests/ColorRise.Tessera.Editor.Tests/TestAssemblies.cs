@@ -1,0 +1,24 @@
+using System.Runtime.CompilerServices;
+using ColorRise.Tessera.Editor;
+using Stride.Core.Reflection;
+
+// The sessions of the editor test kit share one dispatcher and process-wide registries: two test classes that run at the same
+// time block each other (Skein's finding 5)
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
+namespace ColorRise.Tessera.Editor.Tests;
+
+internal static class TestAssemblies
+{
+    /// <summary>
+    /// The session of a test loads its package without an MSBuild evaluation, so nothing registers the assemblies of Tessera's
+    /// assets for it: the tests do, before any of them runs.
+    /// </summary>
+#pragma warning disable CA2255 // A module initializer in a test assembly
+    [ModuleInitializer]
+#pragma warning restore CA2255
+    internal static void Register()
+    {
+        AssemblyRegistry.Register(typeof(TesseraEditorPlugin).Assembly, AssemblyCommonCategories.Assets);
+    }
+}

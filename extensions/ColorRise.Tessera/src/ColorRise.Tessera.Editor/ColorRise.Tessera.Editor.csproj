@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Tessera.Editor</RootNamespace>
+    <Description>Tessera's Game Studio extensions: the editors of tile sets, tile maps and flipbooks (toolkit-neutral).</Description>
+    <!-- What this companion carries: Game Studio extensions; only Game Studio loads it -->
+    <StridePackageKind>Editor</StridePackageKind>
+    <!-- Experimental plugin API: panels and views (STREXP001), commands (STREXP003), services (STREXP006) -->
+    <NoWarn>$(NoWarn);STREXP001;STREXP003;STREXP006</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The views of the cross-platform Game Studio -->
+    <StrideCompanionProject Include="..\ColorRise.Tessera.Editor.Avalonia\ColorRise.Tessera.Editor.Avalonia.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ColorRise.Tessera.Editor.Tests" />
+    <InternalsVisibleTo Include="ColorRise.Tessera.Editor.Avalonia.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Assets.Editor" Version="$(TesseraStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(TesseraStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <ProjectReference Include="..\ColorRise.Tessera\ColorRise.Tessera.csproj" />
+    <ProjectReference Include="..\ColorRise.Tessera.Assets\ColorRise.Tessera.Assets.csproj" />
+  </ItemGroup>
+</Project>

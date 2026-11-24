@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>ColorRise.Tessera.Assets</RootNamespace>
+    <Description>Tessera's asset types, asset compilers and templates.</Description>
+    <!-- What this companion carries: asset types, compilers, templates and icons, loaded by the asset compiler and Game Studio -->
+    <StridePackageKind>Assets</StridePackageKind>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ColorRise.Tessera.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Core.Assets" Version="$(TesseraStrideVersion)" />
+    <!-- Sprite sheets, whose sprites a tile set takes as tiles, and the texture packer of its atlas -->
+    <PackageReference Include="Stride.Assets" Version="$(TesseraStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(TesseraStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <ProjectReference Include="..\ColorRise.Tessera\ColorRise.Tessera.csproj" />
+  </ItemGroup>
+</Project>

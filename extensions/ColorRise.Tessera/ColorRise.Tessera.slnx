@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ColorRise.Tessera/ColorRise.Tessera.csproj" />
+    <Project Path="src/ColorRise.Tessera.Assets/ColorRise.Tessera.Assets.csproj" />
+    <Project Path="src/ColorRise.Tessera.Editor/ColorRise.Tessera.Editor.csproj" />
+    <Project Path="src/ColorRise.Tessera.Editor.Avalonia/ColorRise.Tessera.Editor.Avalonia.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ColorRise.Tessera.Tests/ColorRise.Tessera.Tests.csproj" />
+    <Project Path="tests/ColorRise.Tessera.Editor.Tests/ColorRise.Tessera.Editor.Tests.csproj" />
+    <Project Path="tests/ColorRise.Tessera.Editor.Avalonia.Tests/ColorRise.Tessera.Editor.Avalonia.Tests.csproj" />
+  </Folder>
+</Solution>

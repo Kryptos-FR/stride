@@ -1,0 +1,6 @@
+<Project>
+  <!-- Copy to Directory.Build.local.props (git-ignored) to build against another Stride version -->
+  <PropertyGroup>
+    <TesseraStrideVersion>4.5.3-dev</TesseraStrideVersion>
+  </PropertyGroup>
+</Project>
