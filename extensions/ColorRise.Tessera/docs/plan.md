@@ -1030,7 +1030,7 @@ public void A_sprite_goes_between_two_layers_by_its_z()
 - [x] **Step 6: Gate (R2).** If layers, sprites and maps do not order by depth in the transparent stage, try the fallback: a render stage of the extension's own that a game adds to its compositor. It keeps the order between layers, but a `SpriteComponent` can then no longer go between two layers, which the design promises: stop and ask Nicolas before taking it.
 - [x] **Step 7: Commit and push**: `feat(tessera): draw tile maps in the transparent stage`
 
-**Done differently.** `TileBatch.Begin` takes an optional rasterizer, for multisampled outputs. One test was added: a layer inserted under the others in a later frame is drawn under them. A chunk's bounding box covers the whole chunk and how far the largest tile reaches, so that every layer of a chunk has the same centre and a tilted camera keeps their order.
+**Done differently.** `TileBatch.Begin` takes an optional rasterizer, for multisampled outputs. One test was added: a layer inserted under the others in a later frame is drawn under them. A chunk's bounding box covers the whole chunk and how far the largest tile reaches, so that every layer of a chunk has the same centre and a tilted camera keeps their order. The tilted case was tested with layers only: the final review found that a sprite between two layers does not keep its place under a tilted camera (finding 8).
 
 ### Task 10: Animated tiles
 

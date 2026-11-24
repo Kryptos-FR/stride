@@ -1,7 +1,9 @@
+using System.ComponentModel;
 using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization;
 using Stride.Core.Serialization.Contents;
+using Stride.Engine.Design;
 using Stride.Graphics;
 
 namespace ColorRise.Tessera;
@@ -12,6 +14,7 @@ namespace ColorRise.Tessera;
 [DataContract]
 [ContentSerializer(typeof(DataContentSerializer<TileSet>))]
 [ReferenceSerializer, DataSerializerGlobal(typeof(ReferenceSerializer<TileSet>), Profile = "Content")]
+[DataSerializerGlobal(typeof(CloneSerializer<TileSet>), Profile = "Clone")]
 public sealed class TileSet
 {
     /// <summary>
@@ -23,6 +26,12 @@ public sealed class TileSet
     /// The size of a tile, in pixels.
     /// </summary>
     public Int2 TileSize { get; set; } = new(16, 16);
+
+    /// <summary>
+    /// Whether the colours of the tiles' textures are multiplied by their alpha, as Stride's textures are by default.
+    /// </summary>
+    [DefaultValue(true)]
+    public bool PremultipliedAlpha { get; set; } = true;
 
     public Dictionary<TileId, Tile> Tiles { get; } = [];
 

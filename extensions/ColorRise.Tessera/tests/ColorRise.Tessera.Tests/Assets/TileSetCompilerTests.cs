@@ -192,6 +192,71 @@ public sealed class TileSetCompilerTests
         Assert.Contains(result.Warnings, warning => warning.Contains("1:5,0", StringComparison.Ordinal) && warning.Contains("1 animation frame", StringComparison.Ordinal));
     }
 
+    // As definitions written at the end of the file by hand, or moved by a merge
+    [Fact]
+    public void Tile_data_in_any_order_is_kept()
+    {
+        using var build = new AssetBuild();
+        var asset = RedAndBlue(build);
+        asset.Tiles.Add(new TileDefinition { Tile = TileId.FromGrid(1, 1, 0), Kind = "water", Collision = TileCollision.Solid });
+        asset.Tiles.Add(new TileDefinition { Tile = TileId.FromGrid(1, 0, 0), Kind = "lava", Collision = TileCollision.Solid });
+        build.Add("Tiles/Town", asset);
+
+        var result = build.Build();
+
+        Assert.True(result.Succeeded, string.Join("\n", result.Errors));
+        var set = build.LoadAlone<TileSet>("Tiles/Town");
+        Assert.Equal(("lava", true), (set.GetTile(TileId.FromGrid(1, 0, 0))!.Kind, set.GetTile(TileId.FromGrid(1, 0, 0))!.IsSolid));
+        Assert.Equal(("water", true), (set.GetTile(TileId.FromGrid(1, 1, 0))!.Kind, set.GetTile(TileId.FromGrid(1, 1, 0))!.IsSolid));
+    }
+
+    [Fact]
+    public void A_tile_given_data_twice_keeps_the_first_and_is_a_warning()
+    {
+        using var build = new AssetBuild();
+        var asset = RedAndBlue(build);
+        asset.Tiles.Add(new TileDefinition { Tile = TileId.FromGrid(1, 1, 0), Kind = "water" });
+        asset.Tiles.Add(new TileDefinition { Tile = TileId.FromGrid(1, 1, 0), Kind = "lava" });
+        build.Add("Tiles/Town", asset);
+
+        var result = build.Build();
+
+        Assert.True(result.Succeeded, string.Join("\n", result.Errors));
+        Assert.Equal("water", build.LoadAlone<TileSet>("Tiles/Town").GetTile(TileId.FromGrid(1, 1, 0))!.Kind);
+        Assert.Contains(result.Warnings, warning => warning.Contains("1:1,0", StringComparison.Ordinal) && warning.Contains("twice", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Data_of_a_tile_the_set_does_not_have_is_a_warning()
+    {
+        using var build = new AssetBuild();
+        var asset = RedAndBlue(build);
+        asset.GetOrAddDefinition(TileId.FromGrid(1, 5, 0)).Collision = TileCollision.Solid;
+        asset.GetOrAddDefinition(TileId.FromGrid(1, 6, 0));
+        build.Add("Tiles/Town", asset);
+
+        var result = build.Build();
+
+        Assert.True(result.Succeeded, string.Join("\n", result.Errors));
+        var warning = Assert.Single(result.Warnings, warning => warning.Contains("does not have", StringComparison.Ordinal) && warning.Contains("data", StringComparison.Ordinal));
+        Assert.Contains("1:5,0", warning, StringComparison.Ordinal);
+        Assert.DoesNotContain("1:6,0", warning, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_tile_set_whose_alpha_is_not_premultiplied_says_so()
+    {
+        using var build = new AssetBuild();
+        var asset = RedAndBlue(build);
+        asset.PremultiplyAlpha = false;
+        build.Add("Tiles/Town", asset);
+
+        var result = build.Build();
+
+        Assert.True(result.Succeeded, string.Join("\n", result.Errors));
+        Assert.False(build.LoadAlone<TileSet>("Tiles/Town").PremultipliedAlpha);
+    }
+
     // "tiles.png", 32 by 16, a red tile and a blue tile, in a grid source "Town" of a tile set of 8 pixels per unit
     private static TileSetAsset RedAndBlue(AssetBuild build)
     {

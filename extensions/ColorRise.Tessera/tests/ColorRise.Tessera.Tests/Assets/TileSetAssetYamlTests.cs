@@ -111,6 +111,19 @@ public sealed class TileSetAssetYamlTests
         Assert.Null(asset.GetDefinition(TileId.FromGrid(1, 4, 0)));
     }
 
+    // As a definition added at the end of the file by hand, or moved by a merge
+    [Fact]
+    public void A_definition_out_of_order_is_found_and_not_added_again()
+    {
+        var asset = new TileSetAsset();
+        asset.Tiles.Add(new TileDefinition { Tile = TileId.FromGrid(1, 3, 4), Kind = "wall" });
+        asset.Tiles.Add(new TileDefinition { Tile = TileId.FromGrid(1, 0, 0), Kind = "grass" });
+
+        Assert.Equal("grass", asset.GetDefinition(TileId.FromGrid(1, 0, 0))?.Kind);
+        Assert.Equal("grass", asset.GetOrAddDefinition(TileId.FromGrid(1, 0, 0)).Kind);
+        Assert.Equal(2, asset.Tiles.Count);
+    }
+
     [Fact]
     public void A_definition_that_says_nothing_is_removed()
     {

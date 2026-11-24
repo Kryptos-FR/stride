@@ -97,7 +97,7 @@ public sealed class TileSetAssetCompiler : AssetCompilerBase
             : base(url, parameters, assetFinder)
         {
             // To raise when the content of a tile set changes for the same asset
-            Version = 1;
+            Version = 2;
         }
 
         /// <summary>
@@ -235,11 +235,32 @@ public sealed class TileSetAssetCompiler : AssetCompilerBase
             }
 
             var asset = Parameters.Asset;
-            var set = new TileSet { PixelsPerUnit = asset.PixelsPerUnit, TileSize = asset.TileSize };
+            // The definitions by tile, in any order: the first of a tile is kept
+            var definitions = new Dictionary<TileId, TileDefinition>();
+            var twice = new SortedSet<TileId>();
+            foreach (var definition in asset.Tiles)
+            {
+                if (!definitions.TryAdd(definition.Tile, definition))
+                {
+                    twice.Add(definition.Tile);
+                }
+            }
+            if (twice.Count > 0)
+            {
+                logger.Warning($"{Url}: {Count(twice.Count, "tile")} {(twice.Count == 1 ? "has" : "have")} data twice or more, and the first is kept: {string.Join(", ", twice)}.");
+            }
+            var absent = definitions.Values.Where(definition => !definition.IsDefault && !atlas.Placements.ContainsKey(definition.Tile))
+                .Select(definition => definition.Tile).Order().ToList();
+            if (absent.Count > 0)
+            {
+                logger.Warning($"{Url}: the data of {Count(absent.Count, "tile")} is left out, as the set does not have {(absent.Count == 1 ? "it" : "them")}: {string.Join(", ", absent)}.");
+            }
+
+            var set = new TileSet { PixelsPerUnit = asset.PixelsPerUnit, TileSize = asset.TileSize, PremultipliedAlpha = asset.PremultiplyAlpha };
             foreach (var (id, (texture, region)) in atlas.Placements.OrderBy(placement => placement.Key))
             {
                 var tile = new Tile { Id = id, Texture = textures[texture], Region = region };
-                if (asset.GetDefinition(id) is { } definition)
+                if (definitions.TryGetValue(id, out var definition))
                 {
                     (tile.Collision, tile.Kind) = (definition.Collision, string.IsNullOrEmpty(definition.Kind) ? null : definition.Kind);
                     foreach (var (name, property) in definition.Properties)

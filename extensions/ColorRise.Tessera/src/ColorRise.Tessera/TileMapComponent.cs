@@ -141,29 +141,67 @@ public sealed class TileMapComponent : ActivableEntityComponent
         var size = map.CellSize;
         var (firstX, lastX) = (Math.Floor((double)min.X / size.X), Math.Ceiling((double)max.X / size.X) - 1);
         var (firstY, lastY) = (Math.Floor((double)min.Y / size.Y), Math.Ceiling((double)max.Y / size.Y) - 1);
+        // A rectangle that is not a number, or an entity scaled to zero, covers no cell
+        if (!double.IsFinite(firstX) || !double.IsFinite(lastX) || !double.IsFinite(firstY) || !double.IsFinite(lastY) || lastX < firstX || lastY < firstY)
+        {
+            return false;
+        }
+        var cells = (FirstX: (long)Math.Max(firstX, long.MinValue / 2), LastX: (long)Math.Min(lastX, long.MaxValue / 2),
+            FirstY: (long)Math.Max(firstY, long.MinValue / 2), LastY: (long)Math.Min(lastY, long.MaxValue / 2));
+        // The chunks under the rectangle, clamped to the chunks that cells of int can be in
+        var (chunkMinX, chunkMaxX) = (Math.Max(cells.FirstX >> 4, int.MinValue >> 4), Math.Min(cells.LastX >> 4, int.MaxValue >> 4));
+        var (chunkMinY, chunkMaxY) = (Math.Max(cells.FirstY >> 4, int.MinValue >> 4), Math.Min(cells.LastY >> 4, int.MaxValue >> 4));
+        var chunksUnder = (double)(chunkMaxX - chunkMinX + 1) * (chunkMaxY - chunkMinY + 1);
 
-        // Through the chunks, which a layer has only where there are tiles: a huge rectangle reads no more cells than the map has
         foreach (var layer in map.Layers)
         {
             if (!layer.Collision)
             {
                 continue;
             }
-            foreach (var chunk in layer.Chunks)
+            // Through the chunks under the rectangle, or through the layer's chunks when it has fewer: a huge rectangle reads
+            // no more chunks than the layer has, and a small one no more than it covers
+            if (chunksUnder <= layer.Chunks.Count)
             {
-                var (chunkX, chunkY) = ((long)chunk.Position.X * TileChunk.Size, (long)chunk.Position.Y * TileChunk.Size);
-                var (fromX, toX) = ((long)Math.Max(firstX, chunkX), (long)Math.Min(lastX, chunkX + TileChunk.Size - 1));
-                var (fromY, toY) = ((long)Math.Max(firstY, chunkY), (long)Math.Min(lastY, chunkY + TileChunk.Size - 1));
-                for (var y = fromY; y <= toY; y++)
+                for (var y = chunkMinY; y <= chunkMaxY; y++)
                 {
-                    for (var x = fromX; x <= toX; x++)
+                    for (var x = chunkMinX; x <= chunkMaxX; x++)
                     {
-                        var cell = chunk.Cells[(y - chunkY) * TileChunk.Size + (x - chunkX)];
-                        if (!cell.IsEmpty && map.GetTile(cell) is { IsSolid: true })
+                        if (layer.GetChunk(new Int2((int)x, (int)y)) is { } chunk && HasSolid(map, chunk, cells))
                         {
                             return true;
                         }
                     }
+                }
+            }
+            else
+            {
+                foreach (var chunk in layer.Chunks)
+                {
+                    if (HasSolid(map, chunk, cells))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    // Whether the cells of a chunk inside a range of cells have a solid tile
+    private static bool HasSolid(TileMap map, TileChunk chunk, (long FirstX, long LastX, long FirstY, long LastY) cells)
+    {
+        var (chunkX, chunkY) = ((long)chunk.Position.X * TileChunk.Size, (long)chunk.Position.Y * TileChunk.Size);
+        var (fromX, toX) = (Math.Max(cells.FirstX, chunkX), Math.Min(cells.LastX, chunkX + TileChunk.Size - 1));
+        var (fromY, toY) = (Math.Max(cells.FirstY, chunkY), Math.Min(cells.LastY, chunkY + TileChunk.Size - 1));
+        for (var y = fromY; y <= toY; y++)
+        {
+            for (var x = fromX; x <= toX; x++)
+            {
+                var cell = chunk.Cells[(y - chunkY) * TileChunk.Size + (x - chunkX)];
+                if (!cell.IsEmpty && map.GetTile(cell) is { IsSolid: true })
+                {
+                    return true;
                 }
             }
         }

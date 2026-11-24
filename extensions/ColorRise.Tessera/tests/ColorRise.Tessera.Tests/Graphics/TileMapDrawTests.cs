@@ -67,6 +67,20 @@ public sealed class TileMapDrawTests
         Assert.All(new[] { pixel.R, pixel.G, pixel.B }, channel => Assert.InRange(channel, 127, 128));
     }
 
+    // Half-transparent red whose colour is not multiplied by its alpha, over black: half red, not full red
+    [Fact]
+    public void A_tile_set_whose_alpha_is_not_premultiplied_blends_by_its_alpha()
+    {
+        var frame = DrawMap(device =>
+        {
+            var set = TestTiles.Flat(device, new Color(255, 0, 0, 128));
+            set.PremultipliedAlpha = false;
+            return TestTiles.Map(set, ["0"]);
+        }, new Vector2(0.5f, 0.5f), 1, options: new HarnessOptions { Background = K });
+        var pixel = frame[32, 32];
+        Assert.True(pixel.R is >= 126 and <= 130 && pixel.G == 0 && pixel.B == 0, $"The pixel is {pixel}.");
+    }
+
     [Fact]
     public void A_tint_multiplies_the_colours()
     {

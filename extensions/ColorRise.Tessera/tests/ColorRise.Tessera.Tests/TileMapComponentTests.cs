@@ -117,6 +117,63 @@ public sealed class TileMapComponentTests
     }
 
     [Fact]
+    public void Overlap_of_a_rectangle_that_is_not_a_number_is_false()
+    {
+        var (map, set) = MapWithTiles();
+        map.Map!.Layers.Add("Walls").SetCell(new Int2(40, 40), set, Rock);
+        Assert.False(map.OverlapsSolid(new RectangleF(float.NaN, 0, 1, 1)));
+        Assert.False(map.OverlapsSolid(new RectangleF(0, 0, float.PositiveInfinity, 1)));
+    }
+
+    [Fact]
+    public void Overlap_on_an_entity_scaled_to_zero_is_false()
+    {
+        var (map, set) = MapWithTiles();
+        map.Map!.Layers.Add("Walls").SetCell(new Int2(40, 40), set, Rock);
+        map.Entity.Transform.Scale = Vector3.Zero;
+        map.Entity.Transform.UpdateWorldMatrix();
+        Assert.False(map.OverlapsSolid(new RectangleF(0, 0, 1, 1)));
+    }
+
+    // A map of 512 by 512 cells on four layers has 4096 chunks: a small query reads the chunks under it, not all of them
+    [Fact]
+    public void A_small_overlap_on_a_big_map_reads_only_the_chunks_under_it()
+    {
+        var (map, set) = MapWithTiles();
+        for (var l = 0; l < 4; l++)
+        {
+            var layer = map.Map!.Layers.Add($"Layer {l}");
+            for (var y = 0; y < 512; y += 16)
+            {
+                for (var x = 0; x < 512; x += 16)
+                {
+                    layer.SetCell(new Int2(x, y), set, Grass);
+                }
+            }
+        }
+
+        var time = System.Diagnostics.Stopwatch.StartNew();
+        for (var i = 0; i < 20000; i++)
+        {
+            Assert.False(map.OverlapsSolid(new RectangleF(100.2f + i % 7, 200.2f, 0.6f, 0.6f)));
+        }
+        Assert.True(time.ElapsedMilliseconds < 500, $"20000 small queries took {time.ElapsedMilliseconds} ms.");
+    }
+
+    // As a prefab's instances do: the map and its tile sets are content, shared and not copied
+    [Fact]
+    public void A_cloned_entity_shares_the_map_and_its_tile_sets()
+    {
+        var (map, set) = MapWithTiles();
+        map.Map!.Layers.Add("Walls").SetCell(new Int2(1, 1), set, Rock);
+
+        var clone = map.Entity.Clone().Get<TileMapComponent>();
+
+        Assert.Same(map.Map, clone.Map);
+        Assert.Same(set, clone.Map!.TileSets[1]);
+    }
+
+    [Fact]
     public void A_component_without_a_map_answers_without_throwing()
     {
         var map = Place(new TileMapComponent(), new Vector3(10, 20, 0));

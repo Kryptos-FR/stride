@@ -3,6 +3,7 @@ using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization;
 using Stride.Core.Serialization.Contents;
+using Stride.Engine.Design;
 
 namespace ColorRise.Tessera;
 
@@ -13,6 +14,7 @@ namespace ColorRise.Tessera;
 [DataSerializer(typeof(TileMapSerializer))]
 [ContentSerializer(typeof(DataContentSerializer<TileMap>))]
 [ReferenceSerializer, DataSerializerGlobal(typeof(ReferenceSerializer<TileMap>), Profile = "Content")]
+[DataSerializerGlobal(typeof(CloneSerializer<TileMap>), Profile = "Clone")]
 public sealed class TileMap
 {
     private readonly Dictionary<ushort, TileSet> tileSets = [];

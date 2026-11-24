@@ -67,7 +67,7 @@ public sealed class TileSetAsset : Asset
     [Display(category: "Texture")]
     public AlphaFormat Alpha { get; set; } = AlphaFormat.Auto;
 
-    /// <userdoc>Premultiplies the colours of the atlas by their alpha, as the tile maps draw them.</userdoc>
+    /// <userdoc>Premultiplies the colours of the atlas by their alpha. The maps blend the tiles either way, by the alpha they have.</userdoc>
     [DataMember(80)]
     [DefaultValue(true)]
     [Display(category: "Texture")]
@@ -138,9 +138,15 @@ public sealed class TileSetAsset : Asset
     /// </summary>
     public void RemoveDefaultDefinitions() => Tiles.RemoveAll(definition => definition.IsDefault);
 
-    // The index of a tile's definition, or the complement of where it goes
+    // The index of a tile's first definition, or the complement of where it goes. The list is read in full: a file written by
+    // hand or merged may not be sorted, and a search by halves would miss a definition out of order
     private int IndexOf(TileId tile)
     {
+        var found = Tiles.FindIndex(definition => definition.Tile == tile);
+        if (found >= 0)
+        {
+            return found;
+        }
         var (low, high) = (0, Tiles.Count - 1);
         while (low <= high)
         {

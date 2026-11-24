@@ -31,17 +31,20 @@ public sealed class TileBatch : BatchBase<TileBatch.DrawInfo>
     /// </summary>
     /// <param name="color">The colour each texel is multiplied by, its alpha not premultiplied.</param>
     /// <param name="sampler">Linear and clamped when null.</param>
-    /// <param name="blend">Blending for premultiplied alpha when null, which suits textures whose alpha is premultiplied.</param>
+    /// <param name="blend">When null, blending for the alpha that <paramref name="premultipliedAlpha"/> says the textures have.</param>
     /// <param name="depthStencil">Depth read and not written when null.</param>
     /// <param name="rasterizer">No culling when null; a multisampled output takes one of its sample count.</param>
+    /// <param name="premultipliedAlpha">Whether the colours of the textures are multiplied by their alpha.</param>
     public void Begin(GraphicsContext context, in Matrix viewProjection, Color4 color, SamplerState? sampler = null,
-        BlendStateDescription? blend = null, DepthStencilStateDescription? depthStencil = null, RasterizerStateDescription? rasterizer = null)
+        BlendStateDescription? blend = null, DepthStencilStateDescription? depthStencil = null, RasterizerStateDescription? rasterizer = null,
+        bool premultipliedAlpha = true)
     {
         CheckEndHasBeenCalled("begin");
         this.viewProjection = viewProjection;
-        this.color = Color4.PremultiplyAlpha(graphicsDevice.ColorSpace == ColorSpace.Linear ? color.ToLinear() : color);
-        Begin(context, null, SpriteSortMode.Deferred, blend ?? BlendStates.AlphaBlend, sampler, depthStencil ?? DepthStencilStates.DepthRead,
-            rasterizer ?? RasterizerStates.CullNone, 0);
+        var linear = graphicsDevice.ColorSpace == ColorSpace.Linear ? color.ToLinear() : color;
+        this.color = premultipliedAlpha ? Color4.PremultiplyAlpha(linear) : linear;
+        Begin(context, null, SpriteSortMode.Deferred, blend ?? (premultipliedAlpha ? BlendStates.AlphaBlend : BlendStates.NonPremultiplied), sampler,
+            depthStencil ?? DepthStencilStates.DepthRead, rasterizer ?? RasterizerStates.CullNone, 0);
     }
 
     /// <summary>

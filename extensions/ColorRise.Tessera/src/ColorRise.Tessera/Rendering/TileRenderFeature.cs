@@ -52,12 +52,9 @@ public sealed class TileRenderFeature : RootRenderFeature
     public override void Draw(RenderDrawContext context, RenderView renderView, RenderViewStage renderViewStage, int startIndex, int endIndex)
     {
         base.Draw(context, renderView, renderViewStage, startIndex, endIndex);
-        var batch = batches!.Value!;
-        var rasterizer = Rasterizer(RenderSystem.RenderStages[renderViewStage.Index].Output);
+        var run = new BatchRun(batches!.Value!, context, renderView.ViewProjection, Rasterizer(RenderSystem.RenderStages[renderViewStage.Index].Output));
         Span<Vector2> uvs = stackalloc Vector2[4];
 
-        var begun = false;
-        var (color, sampler) = (default(Color4), default(TileSampler));
         for (var index = startIndex; index < endIndex; index++)
         {
             var render = (RenderTileChunk)GetRenderNode(renderViewStage.SortedRenderNodes[index].RenderNode).RenderObject;
@@ -65,26 +62,9 @@ public sealed class TileRenderFeature : RootRenderFeature
             {
                 continue;
             }
-
-            // One batch for each run of chunks of the same colour and sampler
-            var chunkColor = ChunkColor(render.Layer, render.Component.Color);
-            if (!begun || chunkColor != color || render.Component.Sampler != sampler)
-            {
-                if (begun)
-                {
-                    batch.End();
-                }
-                (color, sampler) = (chunkColor, render.Component.Sampler);
-                var samplerState = sampler == TileSampler.Linear ? context.GraphicsDevice.SamplerStates.LinearClamp : context.GraphicsDevice.SamplerStates.PointClamp;
-                batch.Begin(context.GraphicsContext, renderView.ViewProjection, color, samplerState, rasterizer: rasterizer);
-                begun = true;
-            }
-            DrawChunk(batch, render, map, uvs);
+            DrawChunk(ref run, render, map, ChunkColor(render.Layer, render.Component.Color), uvs);
         }
-        if (begun)
-        {
-            batch.End();
-        }
+        run.End();
 
         lock (countLock)
         {
@@ -113,7 +93,7 @@ public sealed class TileRenderFeature : RootRenderFeature
         return rasterizer;
     }
 
-    private void DrawChunk(TileBatch batch, RenderTileChunk render, TileMap map, Span<Vector2> uvs)
+    private void DrawChunk(ref BatchRun run, RenderTileChunk render, TileMap map, Color4 color, Span<Vector2> uvs)
     {
         ref readonly var world = ref render.World;
         var cellSize = map.CellSize;
@@ -167,7 +147,39 @@ public sealed class TileRenderFeature : RootRenderFeature
             var fullSize = texture.FullQualitySize;
             TileQuads.Uvs(region, fullSize.Width, fullSize.Height, cell.Flip, uvs);
             (quad.UvBottomLeft, quad.UvBottomRight, quad.UvTopRight, quad.UvTopLeft) = (uvs[0], uvs[1], uvs[2], uvs[3]);
-            batch.Draw(texture, quad);
+            run.Use(color, render.Component.Sampler, set.PremultipliedAlpha).Draw(texture, quad);
+        }
+    }
+
+    // One batch for each run of quads of the same colour, sampler and alpha
+    private struct BatchRun(TileBatch batch, RenderDrawContext context, Matrix viewProjection, RasterizerStateDescription? rasterizer)
+    {
+        private bool begun;
+        private Color4 color;
+        private TileSampler sampler;
+        private bool premultipliedAlpha;
+
+        public TileBatch Use(Color4 color, TileSampler sampler, bool premultipliedAlpha)
+        {
+            if (!begun || color != this.color || sampler != this.sampler || premultipliedAlpha != this.premultipliedAlpha)
+            {
+                End();
+                (this.color, this.sampler, this.premultipliedAlpha) = (color, sampler, premultipliedAlpha);
+                var states = context.GraphicsDevice.SamplerStates;
+                batch.Begin(context.GraphicsContext, viewProjection, color, sampler == TileSampler.Linear ? states.LinearClamp : states.PointClamp,
+                    rasterizer: rasterizer, premultipliedAlpha: premultipliedAlpha);
+                begun = true;
+            }
+            return batch;
+        }
+
+        public void End()
+        {
+            if (begun)
+            {
+                batch.End();
+                begun = false;
+            }
         }
     }
 
