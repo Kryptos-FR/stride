@@ -1026,7 +1026,7 @@ public void A_sprite_goes_between_two_layers_by_its_z()
 - Consumes: `Tile.Animation`, `TileMapComponent.AnimationTime` and `AnimationSpeed`.
 - Produces: `public TileId Tile.FrameAt(double time)`. Each frame, the processor adds the frame's elapsed time times `AnimationSpeed` to `AnimationTime`. A cell shows the tile `FrameAt(AnimationTime)` of its own tile, taken from the same tile set. A frame that names a tile the set does not have shows the cell's own tile.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 [Theory]
@@ -1045,8 +1045,8 @@ public void The_frame_at_a_time_loops(double time, string expected)
     // AnimationSpeed 2, three frames drawn: AnimationTime is above 0 and twice what a second component at speed 1 has, within 1 %
 ```
 
-- [ ] **Step 2: Run, see them fail, write the code, run again.** Filter: `FullyQualifiedName~TileAnimation`.
-- [ ] **Step 3: Commit and push**: `feat(tessera): animated tiles`
+- [x] **Step 2: Run, see them fail, write the code, run again.** Filter: `FullyQualifiedName~TileAnimation`.
+- [x] **Step 3: Commit and push**: `feat(tessera): animated tiles`
 
 ### Task 11: The content types and the tile map compiler
 

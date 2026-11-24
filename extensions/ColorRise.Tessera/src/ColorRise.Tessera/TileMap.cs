@@ -1,5 +1,8 @@
+using ColorRise.Tessera.Serialization;
 using Stride.Core;
 using Stride.Core.Mathematics;
+using Stride.Core.Serialization;
+using Stride.Core.Serialization.Contents;
 
 namespace ColorRise.Tessera;
 
@@ -7,6 +10,9 @@ namespace ColorRise.Tessera;
 /// A map of tiles: layers of cells, each cell a tile of one of the map's tile sets, found by the slot of the set.
 /// </summary>
 [DataContract]
+[DataSerializer(typeof(TileMapSerializer))]
+[ContentSerializer(typeof(DataContentSerializer<TileMap>))]
+[ReferenceSerializer, DataSerializerGlobal(typeof(ReferenceSerializer<TileMap>), Profile = "Content")]
 public sealed class TileMap
 {
     private readonly Dictionary<ushort, TileSet> tileSets = [];
@@ -106,6 +112,28 @@ public sealed class TileMap
     /// </summary>
     public Tile? GetTile(TileCell cell)
         => !cell.IsEmpty && tileSets.TryGetValue(cell.Slot, out var tileSet) ? tileSet.GetTile(cell.Tile) : null;
+
+    /// <summary>
+    /// Raised after the content manager read the map again in place (<see cref="ContentManager.Reload"/>): the same object
+    /// has the layers, the cells and the tile sets of the content, in new layer objects. A tile set the map did not have
+    /// before may still be loading when the event is raised.
+    /// </summary>
+    public event EventHandler? Reloaded;
+
+    // Whether the content manager read this map, so that a second read is a reload
+    internal bool WasRead { get; set; }
+
+    // Empties the map before the content manager reads it
+    internal void ClearForReading()
+    {
+        tileSets.Clear();
+        while (Layers.Count > 0)
+        {
+            Layers.Remove(Layers[^1]);
+        }
+    }
+
+    internal void OnReloaded() => Reloaded?.Invoke(this, EventArgs.Empty);
 
     /// <summary>
     /// A copy with its own layers and cells, and the same tile sets.

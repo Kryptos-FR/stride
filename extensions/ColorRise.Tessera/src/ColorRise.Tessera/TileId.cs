@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using ColorRise.Tessera.Serialization;
 using Stride.Core;
+using Stride.Core.Serialization;
 
 namespace ColorRise.Tessera;
 
@@ -13,6 +15,7 @@ namespace ColorRise.Tessera;
 /// <c>1:3,4</c> (source, column, row) or <c>2:#17</c> (source, number).
 /// </remarks>
 [DataContract]
+[DataSerializer(typeof(TileIdSerializer))]
 public readonly struct TileId : IEquatable<TileId>, IComparable<TileId>
 {
     public const int MaxSource = 255;
@@ -23,6 +26,9 @@ public readonly struct TileId : IEquatable<TileId>, IComparable<TileId>
     private const uint NumberedFlag = 1u << 23;
 
     private TileId(uint value) => Value = value;
+
+    // An id read back from its number, as content keeps it
+    internal static TileId FromValue(uint value) => new(value);
 
     /// <summary>
     /// The id in one number, as the remarks of the type lay it out.

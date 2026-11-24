@@ -11,6 +11,9 @@
     <!-- A software Vulkan driver, so that the graphics tests draw without a GPU and without a window (the version the engine's
          own tests use) -->
     <PackageReference Include="Stride.Dependencies.Lavapipe" Version="2026.10.12" />
+    <!-- The tests build assets in their process, where MSBuildLocator loads the SDK's MSBuild: an older MSBuild beside the tests,
+         which the Roslyn workspace of Stride.Core.Assets brings, would be loaded instead and fail (docs/plugin-findings.md) -->
+    <PackageReference Include="Microsoft.Build.Framework" Version="17.11.48" ExcludeAssets="runtime" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ColorRise.Tessera\ColorRise.Tessera.csproj" />

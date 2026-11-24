@@ -1,5 +1,7 @@
 using Stride.Core;
 using Stride.Core.Mathematics;
+using Stride.Core.Serialization;
+using Stride.Core.Serialization.Contents;
 using Stride.Graphics;
 
 namespace ColorRise.Tessera;
@@ -8,6 +10,8 @@ namespace ColorRise.Tessera;
 /// The tiles that maps paint with, by id.
 /// </summary>
 [DataContract]
+[ContentSerializer(typeof(DataContentSerializer<TileSet>))]
+[ReferenceSerializer, DataSerializerGlobal(typeof(ReferenceSerializer<TileSet>), Profile = "Content")]
 public sealed class TileSet
 {
     /// <summary>

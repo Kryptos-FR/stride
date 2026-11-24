@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using ColorRise.Tessera.Serialization;
 using Stride.Core;
+using Stride.Core.Serialization;
 
 namespace ColorRise.Tessera;
 
@@ -8,6 +10,7 @@ namespace ColorRise.Tessera;
 /// One cell of a tile map layer: which of the map's tile sets, which tile of it, and how the tile is turned. Eight bytes.
 /// </summary>
 [DataContract]
+[DataSerializer(typeof(TileCellSerializer))]
 [StructLayout(LayoutKind.Sequential, Pack = 2)]
 public readonly struct TileCell : IEquatable<TileCell>
 {
