@@ -1081,7 +1081,7 @@ internal sealed class AssetBuild : IDisposable
 
 Model: how Skein's `tests/ColorRise.Skein.Tests` compile a Yarn project "as the build of the game does".
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // ContentTests: written and read back with a content manager
@@ -1115,10 +1115,10 @@ public void A_cell_of_a_slot_the_map_does_not_have_is_kept()
 [Fact] public void A_change_of_a_cell_builds_the_map_again()
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~ContentTests|FullyQualifiedName~TileMapCompilerTests`.
-- [ ] **Step 3: Write `AssetBuild`, the content attributes and serializers, and the compiler.** If Stride's serializer cannot write a `Dictionary<string, object>` of the five property types, write a data serializer for `Tile` and keep the public shape.
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): tile maps and tile sets as content, and the tile map compiler`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~ContentTests|FullyQualifiedName~TileMapCompilerTests`.
+- [x] **Step 3: Write `AssetBuild`, the content attributes and serializers, and the compiler.** If Stride's serializer cannot write a `Dictionary<string, object>` of the five property types, write a data serializer for `Tile` and keep the public shape.
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): tile maps and tile sets as content, and the tile map compiler`
 
 ### Task 12: The tile set asset and its tiles
 
@@ -1203,7 +1203,7 @@ public static class TileSlicer
 
 A position fits when `Margin.X + column * (width + Spacing.X) + width <= imageWidth`, and the same for rows. This is Tiled's rule: the margin moves the start of the grid and asks for nothing at the far edge. The grid stops at column 4095 and row 2047.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // TileSlicerTests
@@ -1253,10 +1253,10 @@ public void A_renamed_sprite_is_missing_and_a_new_one_is_unbound()
 [Fact] public void Sources_get_ids_that_are_never_reused()   // add a, b; remove b; add c: ids 1 and 3
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileSlicerTests|FullyQualifiedName~TileSetAssetYamlTests`.
-- [ ] **Step 3: Write the types.** Read `sources/engine/Stride.Assets/Sprite/SpriteSheetAsset.cs` for the texture options.
-- [ ] **Step 4: Run the tests, write the golden file as in Task 7, read it, run again.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): the tile set asset and the tiles of its sources`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileSlicerTests|FullyQualifiedName~TileSetAssetYamlTests`.
+- [x] **Step 3: Write the types.** Read `sources/engine/Stride.Assets/Sprite/SpriteSheetAsset.cs` for the texture options.
+- [x] **Step 4: Run the tests, write the golden file as in Task 7, read it, run again.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): the tile set asset and the tiles of its sources`
 
 ### Task 13: The tile set compiler and its atlas
 

@@ -1,0 +1,49 @@
+!TileSetAsset
+Id: 2b7f6c1e-9d3a-4c58-8e21-5a4f0c7d9b31
+SerializedVersion: {ColorRise.Tessera: 1.0.0.0}
+Tags: []
+TileSize: {X: 16, Y: 16}
+PixelsPerUnit: 16.0
+ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+Sources:
+    9e000ef543ba4bfde3e229fb80ed3336: !GridTileSetSource
+        Id: 1
+        Name: Town
+        Image: !file town.png
+        TileSize: {X: 0, Y: 0}
+        Margin: {X: 1, Y: 1}
+        Spacing: {X: 2, Y: 2}
+    97bf3a95b29a250655ed84cb03f978f5: !SpriteSheetTileSetSource
+        Id: 2
+        Name: Props
+        Sheet: 8c0e4d2a-71b5-4f93-a6d8-0e3b5c9f1a72:Sheets/Props
+        Bindings:
+            904e1dc502aba2e588fde246390f889c:
+                Number: 1
+                SpriteName: torch
+            c2a7fd7c602c68ab090a6d7e18a7592a:
+                Number: 2
+                SpriteName: torch lit
+        LastNumber: 2
+Tiles:
+    5982a080d494d5d0ddbe8e3b6ad2ea2c:
+        Tile: 1:3,4
+        Collision: Solid
+        Kind: wall
+        Properties:
+            b7c89ef99a99319ed73cdd17f6d2bd97~height: !TileIntProperty
+                Value: 2
+        Animation: {}
+    1e61bab801f6b14dcc419b4493d5aa85:
+        Tile: 2:#1
+        Collision: None
+        Kind: null
+        Properties: {}
+        Animation:
+            5116158b2d14b0c1f33332035683a0ae:
+                Tile: 2:#1
+                Duration: 0.25
+            0591e4f12412306cb6845f77df87bf77:
+                Tile: 2:#2
+                Duration: 0.25
+LastSourceId: 2
