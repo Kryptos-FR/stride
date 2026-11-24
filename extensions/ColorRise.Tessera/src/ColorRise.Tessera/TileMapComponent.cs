@@ -1,3 +1,4 @@
+using ColorRise.Tessera.Rendering;
 using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Engine;
@@ -12,6 +13,7 @@ namespace ColorRise.Tessera;
 [DataContract("TileMapComponent")]
 [Display("Tile map", Expand = ExpandRule.Once)]
 [ComponentCategory("2D")]
+[DefaultEntityComponentRenderer(typeof(TileMapRenderProcessor))]
 public sealed class TileMapComponent : ActivableEntityComponent
 {
     /// <userdoc>The tile map to show.</userdoc>

@@ -841,7 +841,7 @@ public sealed class TileMapComponent : ActivableEntityComponent
 
 Layer offsets are for the look only: the queries use the grid.
 
-- [ ] **Step 1: Write the failing tests** (an entity made in the test, `entity.Transform.UpdateWorldMatrix()` called by the test)
+- [x] **Step 1: Write the failing tests** (an entity made in the test, `entity.Transform.UpdateWorldMatrix()` called by the test)
 
 ```csharp
 [Fact]
@@ -871,10 +871,10 @@ public void Overlap_finds_a_solid_cell_under_a_rectangle()
 [Fact] public void A_component_without_a_map_answers_without_throwing()   // IsSolid false, WorldToCell (0, 0)
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileMapComponentTests`.
-- [ ] **Step 3: Write the component.**
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): the tile map component, cells and solid queries`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileMapComponentTests`.
+- [x] **Step 3: Write the component.**
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): the tile map component, cells and solid queries`
 
 ### Task 9: Drawing a map (R2)
 

@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using ColorRise.Tessera.Rendering;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Engine.Processors;
@@ -292,6 +293,10 @@ internal sealed class HarnessGame : Game
                             TransparentRenderStage = transparent,
                         },
                     },
+                },
+                new TileRenderFeature
+                {
+                    RenderStageSelectors = { new TileTransparentRenderStageSelector { TransparentRenderStage = transparent } },
                 },
             },
             Game = new SceneCameraRenderer { Camera = slot, Child = view },

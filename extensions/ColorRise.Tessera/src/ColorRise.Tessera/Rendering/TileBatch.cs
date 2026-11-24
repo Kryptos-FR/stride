@@ -33,14 +33,15 @@ public sealed class TileBatch : BatchBase<TileBatch.DrawInfo>
     /// <param name="sampler">Linear and clamped when null.</param>
     /// <param name="blend">Blending for premultiplied alpha when null, which suits textures whose alpha is premultiplied.</param>
     /// <param name="depthStencil">Depth read and not written when null.</param>
+    /// <param name="rasterizer">No culling when null; a multisampled output takes one of its sample count.</param>
     public void Begin(GraphicsContext context, in Matrix viewProjection, Color4 color, SamplerState? sampler = null,
-        BlendStateDescription? blend = null, DepthStencilStateDescription? depthStencil = null)
+        BlendStateDescription? blend = null, DepthStencilStateDescription? depthStencil = null, RasterizerStateDescription? rasterizer = null)
     {
         CheckEndHasBeenCalled("begin");
         this.viewProjection = viewProjection;
         this.color = Color4.PremultiplyAlpha(graphicsDevice.ColorSpace == ColorSpace.Linear ? color.ToLinear() : color);
         Begin(context, null, SpriteSortMode.Deferred, blend ?? BlendStates.AlphaBlend, sampler, depthStencil ?? DepthStencilStates.DepthRead,
-            RasterizerStates.CullNone, 0);
+            rasterizer ?? RasterizerStates.CullNone, 0);
     }
 
     /// <summary>
