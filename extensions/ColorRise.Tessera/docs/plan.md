@@ -309,7 +309,7 @@ public readonly struct TileCell : IEquatable<TileCell>
 }
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // TileIdTests
@@ -372,16 +372,16 @@ public void A_cell_keeps_its_slot_tile_and_flips()
 }
 ```
 
-- [ ] **Step 2: Run them to see them fail**
+- [x] **Step 2: Run them to see them fail**
 
 Run: `dotnet test extensions/ColorRise.Tessera/tests/ColorRise.Tessera.Tests --filter "FullyQualifiedName~TileIdTests|FullyQualifiedName~TileCellTests"`
 Expected: FAIL to compile.
 
-- [ ] **Step 3: Write the three types** with the signatures above. Parsing and formatting use the invariant culture.
+- [x] **Step 3: Write the three types** with the signatures above. Parsing and formatting use the invariant culture.
 
-- [ ] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 4: Run the tests.** Expected: PASS.
 
-- [ ] **Step 5: Commit and push**: `feat(tessera): tile ids, flips and the cell of a map`
+- [x] **Step 5: Commit and push**: `feat(tessera): tile ids, flips and the cell of a map`
 
 ### Task 4: The batch (R3)
 

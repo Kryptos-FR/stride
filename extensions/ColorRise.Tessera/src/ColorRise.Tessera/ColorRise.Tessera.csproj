@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>ColorRise.Tessera</RootNamespace>
+    <!-- The batch writes its vertices straight into the vertex buffer of Stride's BatchBase -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageTags>stride-plugin;tilemap;tileset;2d</PackageTags>
     <Description>Tessera: tile sets, tile maps and flipbooks for Stride games. The runtime: tile sets, maps, their components and their drawing.</Description>
   </PropertyGroup>
