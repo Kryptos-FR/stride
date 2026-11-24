@@ -203,7 +203,7 @@ Every test class that uses the harness is in the xunit collection `GraphicsColle
 
 Model: `sources/engine/Stride.Graphics.Regression/GameTester.cs` and `Module.cs` (`game.Run(GameContextFactory.NewGameContext(AppContextType.Headless))`, and `Stride.Dependencies.Lavapipe.Lavapipe.TryConfigure()` when `VK_DRIVER_FILES` is not set). The compositor is made in code, with a forward renderer without post effects, and the game's own classes only: the engine's `Stride.Graphics.Regression` is not referenced.
 
-- [ ] **Step 1: Write the failing tests** in `HarnessTests.cs`
+- [x] **Step 1: Write the failing tests** in `HarnessTests.cs`
 
 ```csharp
 private static readonly Color Magenta = new(255, 0, 255, 255);
@@ -241,21 +241,21 @@ public void An_exception_in_an_action_comes_out_of_Run()   // the build action t
 
 A test that only needs a graphics device (to make a texture) calls `Run` with a build action and no frame action.
 
-- [ ] **Step 2: Run them to see them fail**
+- [x] **Step 2: Run them to see them fail**
 
 Run: `dotnet test extensions/ColorRise.Tessera/tests/ColorRise.Tessera.Tests --filter "FullyQualifiedName~HarnessTests"`
 Expected: FAIL to compile, `GraphicsHarness` does not exist.
 
-- [ ] **Step 3: Write the harness.** The game is a subclass of `Game` that runs the frame actions in `Update`, reads the back buffer into a `Frame` at the end of each `Draw`, and exits after the last one. An exception in an action or in a frame ends the run and is thrown again by `Run`.
+- [x] **Step 3: Write the harness.** The game is a subclass of `Game` that runs the frame actions in `Update`, reads the back buffer into a `Frame` at the end of each `Draw`, and exits after the last one. An exception in an action or in a frame ends the run and is thrown again by `Run`.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: the command of step 2.
 Expected: PASS, 4 tests, and no window is opened (`DISPLAY` may be unset).
 
-- [ ] **Step 5: Gate.** If the Lavapipe package cannot be restored from nuget.org, or the game cannot run without a window from packages, use the software driver installed in the container (`VK_DRIVER_FILES` set to its `lvp_icd` file, under `Xvfb :99` if a display is needed), skip the graphics tests with a clear message where there is none, and write the finding.
+- [x] **Step 5: Gate.** If the Lavapipe package cannot be restored from nuget.org, or the game cannot run without a window from packages, use the software driver installed in the container (`VK_DRIVER_FILES` set to its `lvp_icd` file, under `Xvfb :99` if a display is needed), skip the graphics tests with a clear message where there is none, and write the finding.
 
-- [ ] **Step 6: Commit and push**
+- [x] **Step 6: Commit and push**
 
 ```bash
 git add extensions/ColorRise.Tessera
