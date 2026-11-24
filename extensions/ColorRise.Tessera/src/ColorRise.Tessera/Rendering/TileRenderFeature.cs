@@ -121,13 +121,20 @@ public sealed class TileRenderFeature : RootRenderFeature
         var z = render.LayerIndex * render.Component.LayerSpacing;
         var (originX, originY) = (render.Chunk.Position.X * TileChunk.Size, render.Chunk.Position.Y * TileChunk.Size);
         var cells = render.Chunk.Cells;
+        var time = render.Component.AnimationTime;
         Texture? lastTexture = null;
 
         for (var i = 0; i < cells.Length; i++)
         {
             var cell = cells[i];
             if (cell.IsEmpty || !map.TileSets.TryGetValue(cell.Slot, out var set) || !(set.PixelsPerUnit > 0)
-                || set.GetTile(cell.Tile) is not { Texture: { } texture } tile)
+                || set.GetTile(cell.Tile) is not { } own)
+            {
+                continue;
+            }
+            // An animated tile shows the frame of the time, from the same set; a frame the set does not have shows the tile
+            var tile = own.Animation.Count > 0 && set.GetTile(own.FrameAt(time)) is { } frame ? frame : own;
+            if (tile.Texture is not { } texture)
             {
                 continue;
             }

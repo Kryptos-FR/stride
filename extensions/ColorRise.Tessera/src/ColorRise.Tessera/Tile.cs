@@ -39,7 +39,44 @@ public sealed class Tile
     public bool IsSolid => (Collision & TileCollision.Solid) != 0;
 
     /// <summary>
-    /// The tile shown at a time, in seconds.
+    /// The tile shown at a time, in seconds: the frames loop, a negative time counts back from the end of the loop, and a
+    /// frame whose duration is not above 0 is not shown.
     /// </summary>
-    public TileId FrameAt(double time) => Id;
+    /// <returns>The tile itself when it has no frames; the first frame's when no frame lasts, or the time is not finite.</returns>
+    public TileId FrameAt(double time)
+    {
+        if (Animation.Count == 0)
+        {
+            return Id;
+        }
+
+        var loop = 0.0;
+        foreach (var frame in Animation)
+        {
+            loop += Math.Max(frame.Duration, 0);
+        }
+        if (!(loop > 0) || !double.IsFinite(time))
+        {
+            return Animation[0].Tile;
+        }
+
+        var left = time % loop;
+        if (left < 0)
+        {
+            left += loop;
+        }
+        foreach (var frame in Animation)
+        {
+            if (frame.Duration > 0)
+            {
+                if (left < frame.Duration)
+                {
+                    return frame.Tile;
+                }
+                left -= frame.Duration;
+            }
+        }
+        // Rounding left a sliver past the last frame
+        return Animation.FindLast(frame => frame.Duration > 0).Tile;
+    }
 }

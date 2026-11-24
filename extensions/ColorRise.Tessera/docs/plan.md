@@ -945,7 +945,7 @@ Models: `sources/engine/Stride.Rendering/Rendering/Sprites/SpriteRenderFeature.c
 
 What the feature does: layer `i` is at the entity's local Z `i * LayerSpacing`. The colour of a chunk's draw is the layer's tint with its alpha times its opacity, times the component's colour. The sampler is point or linear clamp, by the component. A tile of the cell's size has its four corners from `TileQuads.Corner`. A larger tile is anchored at the cell's bottom-left corner and goes up and to the right, by its size in pixels over `PixelsPerUnit`. A cell whose tile the map does not have is skipped. A hidden layer, a disabled component and a component without a map have no render object. The diagonal flip of a tile that is not square is drawn as the data says, in the tile's own rectangle: the editor of step 2 does not offer it.
 
-- [ ] **Step 1: Write the failing tests of the corners and the flips**
+- [x] **Step 1: Write the failing tests of the corners and the flips**
 
 ```csharp
 [Fact]
@@ -969,7 +969,7 @@ public void Uvs_follow_the_flips(TileFlip flip, params double[] expected)
 
 The diagonal row is the transpose: the top-left texel stays at the top-left, and the top-right and bottom-left ones change places.
 
-- [ ] **Step 2: Write the failing graphics tests**, in `TileMapDrawTests.cs` (collection `Graphics`). `R`, `G`, `B`, `Y`, `W`, `K` are red, green, blue, yellow, white, black, all opaque. Unless said, the frame is 64 by 64 and the view is centred on the map.
+- [x] **Step 2: Write the failing graphics tests**, in `TileMapDrawTests.cs` (collection `Graphics`). `R`, `G`, `B`, `Y`, `W`, `K` are red, green, blue, yellow, white, black, all opaque. Unless said, the frame is 64 by 64 and the view is centred on the map.
 
 ```csharp
 [Fact]
@@ -1010,11 +1010,11 @@ public void A_sprite_goes_between_two_layers_by_its_z()
 [Fact] public void Linear_sampling_blends_two_texels_and_point_does_not()   // a tile of two colours, magnified: the middle column
 ```
 
-- [ ] **Step 3: Run them to see them fail.** Filter: `FullyQualifiedName~TileQuadsTests|FullyQualifiedName~TileMapDrawTests`.
-- [ ] **Step 4: Write `TileQuads`, then the render object, the processor, the feature and the selector.** The harness adds the feature and its selector to its compositor.
-- [ ] **Step 5: Run the tests.** Expected: PASS. Save the frame of the three-layer test and look at it.
-- [ ] **Step 6: Gate (R2).** If layers, sprites and maps do not order by depth in the transparent stage, try the fallback: a render stage of the extension's own that a game adds to its compositor. It keeps the order between layers, but a `SpriteComponent` can then no longer go between two layers, which the design promises: stop and ask Nicolas before taking it.
-- [ ] **Step 7: Commit and push**: `feat(tessera): draw tile maps in the transparent stage`
+- [x] **Step 3: Run them to see them fail.** Filter: `FullyQualifiedName~TileQuadsTests|FullyQualifiedName~TileMapDrawTests`.
+- [x] **Step 4: Write `TileQuads`, then the render object, the processor, the feature and the selector.** The harness adds the feature and its selector to its compositor.
+- [x] **Step 5: Run the tests.** Expected: PASS. Save the frame of the three-layer test and look at it.
+- [x] **Step 6: Gate (R2).** If layers, sprites and maps do not order by depth in the transparent stage, try the fallback: a render stage of the extension's own that a game adds to its compositor. It keeps the order between layers, but a `SpriteComponent` can then no longer go between two layers, which the design promises: stop and ask Nicolas before taking it.
+- [x] **Step 7: Commit and push**: `feat(tessera): draw tile maps in the transparent stage`
 
 ### Task 10: Animated tiles
 

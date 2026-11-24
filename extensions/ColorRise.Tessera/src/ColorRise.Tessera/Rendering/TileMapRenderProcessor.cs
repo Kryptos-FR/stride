@@ -1,5 +1,6 @@
 using Stride.Core.Mathematics;
 using Stride.Engine;
+using Stride.Games;
 using Stride.Rendering;
 
 namespace ColorRise.Tessera.Rendering;
@@ -16,6 +17,21 @@ public sealed class TileMapRenderProcessor : EntityProcessor<TileMapComponent, T
     }
 
     public VisibilityGroup VisibilityGroup { get; set; } = null!;
+
+    /// <summary>
+    /// Runs the clock of the animated tiles of each enabled component, at its speed.
+    /// </summary>
+    public override void Update(GameTime time)
+    {
+        var elapsed = time.Elapsed.TotalSeconds;
+        foreach (var component in ComponentDatas.Keys)
+        {
+            if (component.Enabled)
+            {
+                component.AnimationTime += elapsed * component.AnimationSpeed;
+            }
+        }
+    }
 
     public override void Draw(RenderContext context)
     {
