@@ -10,7 +10,8 @@ namespace ColorRise.Tessera.Rendering;
 /// stage, by depth, so that the layers, the sprites and the other maps go one over the other by their z. In the scene
 /// editor's picking stage, each tile is drawn in the id of its component.
 /// </summary>
-[DataContract("TileRenderFeature")]
+// As the base class: only the members marked [DataMember] are saved, so the selectors and none of the runtime state
+[DataContract("TileRenderFeature", DefaultMemberMode = DataMemberMode.Never)]
 [Display("Tile maps")]
 public sealed class TileRenderFeature : RootRenderFeature
 {
