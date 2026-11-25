@@ -64,6 +64,8 @@ public sealed class TileCanvas : Control
     private (Vector2 Last, MouseButton Button)? pan;
     // The buttons whose press the input heard and whose release it has not
     private readonly HashSet<CanvasButton> held = [];
+    // The turns of the wheel not yet given to the zoom, less than one step
+    private double wheel;
     private bool spaceDown;
     private bool fitted;
     // A fit asked by Fit, or a centring asked by Centre, done once the scene has bounds and the canvas a size
@@ -350,7 +352,10 @@ public sealed class TileCanvas : Control
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
-        var steps = Math.Sign(e.Delta.Y);
+        // A touchpad gives small deltas: they add up, and each whole one is a step of zoom
+        wheel += e.Delta.Y;
+        var steps = (int)Math.Truncate(wheel);
+        wheel -= steps;
         if (steps != 0)
         {
             View.ZoomAt(ToVector(e.GetPosition(this)), steps);

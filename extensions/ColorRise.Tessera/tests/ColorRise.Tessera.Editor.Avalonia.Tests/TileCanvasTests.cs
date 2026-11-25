@@ -144,6 +144,21 @@ public sealed class TileCanvasTests
     }
 
     [AvaloniaFact]
+    public void Small_wheel_deltas_add_up_to_one_step()
+    {
+        // As a touchpad gives them
+        var (canvas, window) = Show(new TestScene(), zoom: 1);
+
+        window.MouseWheel(new Point(32, 32), new Vector(0, 0.25));
+        Assert.Equal(1, canvas.View.Zoom);
+        for (var i = 0; i < 3; i++)
+        {
+            window.MouseWheel(new Point(32, 32), new Vector(0, 0.25));
+        }
+        Assert.Equal(2, canvas.View.Zoom);
+    }
+
+    [AvaloniaFact]
     public void The_middle_button_pans()
     {
         var (canvas, window) = Show(new TestScene(), zoom: 2);
