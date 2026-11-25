@@ -37,8 +37,8 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
     // The slot the palette gives its cells; a flipbook has one tile set
     private const ushort PaletteSlot = 1;
 
-    private readonly ObservableList<FlipbookAnimationItemViewModel> animationItems = [];
-    private readonly ObservableList<FlipbookFrameItemViewModel> frameItems = [];
+    private ObservableList<FlipbookAnimationItemViewModel> AnimationItems { get; } = [];
+    private ObservableList<FlipbookFrameItemViewModel> FrameItems { get; } = [];
     // The pictures of the frames, made once and kept until the asset or the pictures of the tile set change
     private readonly Dictionary<FlipbookFrame, FlipbookFramePicture?> framePictures = new(ReferenceEqualityComparer.Instance);
     // A change of the asset came during a transaction, an undo or a redo: the editor follows it once that is over
@@ -73,7 +73,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
     /// <summary>
     /// The animations of the flipbook, in the order of the asset, each with its clips.
     /// </summary>
-    public IReadOnlyObservableList<FlipbookAnimationItemViewModel> Animations => animationItems;
+    public IReadOnlyObservableList<FlipbookAnimationItemViewModel> Animations => AnimationItems;
 
     /// <summary>
     /// What the tree selects: an animation item, a clip item, or nothing. Setting it empties <see cref="SelectedFrames"/>.
@@ -123,7 +123,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
     /// <summary>
     /// The frames of <see cref="SelectedClip"/>, in order.
     /// </summary>
-    public IReadOnlyObservableList<FlipbookFrameItemViewModel> Frames => frameItems;
+    public IReadOnlyObservableList<FlipbookFrameItemViewModel> Frames => FrameItems;
 
     /// <summary>
     /// The frames selected in the strip, in their order; the property grid shows them.
@@ -134,7 +134,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         set
         {
             // Only frames of the strip, in the order of the strip
-            var frames = frameItems.Where(value.Contains).ToList();
+            var frames = FrameItems.Where(value.Contains).ToList();
             if (!frames.SequenceEqual(field))
             {
                 SetValue(ref field, frames);
@@ -345,11 +345,11 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         Preview.IsPlaying = false;
         CloseSheet();
         SetPictures(null);
-        foreach (var item in frameItems)
+        foreach (var item in FrameItems)
         {
             item.Destroy();
         }
-        foreach (var item in animationItems)
+        foreach (var item in AnimationItems)
         {
             item.Destroy();
         }
@@ -428,7 +428,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
             UndoRedoService.SetName(transaction, "Add frames");
         }
         Message = null;
-        SelectedFrames = [.. frameItems.Where(item => frames.Contains(item.Frame))];
+        SelectedFrames = [.. FrameItems.Where(item => frames.Contains(item.Frame))];
     }
 
     /// <summary>
@@ -533,10 +533,10 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
 
     // The first clip of the first animation; the first animation when it has no clip; nothing without an animation
     private object? FirstClip()
-        => animationItems.FirstOrDefault() is { } first ? first.Clips.FirstOrDefault() ?? (object)first : null;
+        => AnimationItems.FirstOrDefault() is { } first ? first.Clips.FirstOrDefault() ?? (object)first : null;
 
     private bool IsInAsset(FlipbookClipItemViewModel item)
-        => animationItems.Contains(item.Animation) && item.Animation.Clips.Contains(item);
+        => AnimationItems.Contains(item.Animation) && item.Animation.Clips.Contains(item);
 
     // The items follow the asset; a selection that is still in it stays
     private void Follow()
@@ -553,7 +553,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         {
             if (animation is not null)
             {
-                var item = animationItems.FirstOrDefault(existing => existing.Animation == animation);
+                var item = AnimationItems.FirstOrDefault(existing => existing.Animation == animation);
                 if (item is null)
                 {
                     item = new FlipbookAnimationItemViewModel(this, animation);
@@ -565,11 +565,11 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
                 wanted.Add(item);
             }
         }
-        Sync(animationItems, wanted);
+        Sync(AnimationItems, wanted);
 
         var gone = SelectedItem switch
         {
-            FlipbookAnimationItemViewModel animation => !animationItems.Contains(animation),
+            FlipbookAnimationItemViewModel animation => !AnimationItems.Contains(animation),
             FlipbookClipItemViewModel clip => !IsInAsset(clip),
             _ => false,
         };
@@ -624,14 +624,14 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
                 {
                     continue;
                 }
-                var item = frameItems.FirstOrDefault(existing => existing.Frame == frame && existing.Clip == clipItem)
+                var item = FrameItems.FirstOrDefault(existing => existing.Frame == frame && existing.Clip == clipItem)
                     ?? new FlipbookFrameItemViewModel(this, clipItem, frame);
                 item.Follow(index, ++number, PictureOf(frame));
                 item.IsCurrent = index == Preview.FrameIndex;
                 wanted.Add(item);
             }
         }
-        Sync(frameItems, wanted);
+        Sync(FrameItems, wanted);
         SelectedFrames = SelectedFrames;
     }
 
@@ -670,7 +670,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
     // The strip marks the frame the preview shows
     private void PreviewFrameChanged(object? sender, EventArgs e)
     {
-        foreach (var item in frameItems)
+        foreach (var item in FrameItems)
         {
             item.IsCurrent = item.Index == Preview.FrameIndex;
         }
@@ -809,12 +809,12 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
             UndoRedoService.SetName(transaction, "Add animation");
         }
         Message = null;
-        SelectedItem = animationItems.FirstOrDefault(item => item.Animation == animation);
+        SelectedItem = AnimationItems.FirstOrDefault(item => item.Animation == animation);
     }
 
     private void AddClip(FlipbookDirection direction)
     {
-        if (SelectedAnimation is not { } item || !animationItems.Contains(item) || !FreeDirections.Contains(direction))
+        if (SelectedAnimation is not { } item || !AnimationItems.Contains(item) || !FreeDirections.Contains(direction))
         {
             return;
         }
@@ -876,11 +876,11 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
                 return;
             }
         }
-        if (IsDestroyed || !animationItems.Contains(item))
+        if (IsDestroyed || !AnimationItems.Contains(item))
         {
             return;
         }
-        var position = animationItems.IndexOf(item);
+        var position = AnimationItems.IndexOf(item);
         using (var transaction = UndoRedoService.CreateTransaction())
         {
             FlipbookGraph.RemoveAnimation(Asset, item.Animation);
@@ -888,7 +888,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         }
         Message = null;
         // The animation after it, else the one before, else nothing
-        SelectedItem = animationItems.Count > 0 ? animationItems[Math.Min(position, animationItems.Count - 1)] : null;
+        SelectedItem = AnimationItems.Count > 0 ? AnimationItems[Math.Min(position, AnimationItems.Count - 1)] : null;
     }
 
     private void RemoveFrames()
@@ -985,7 +985,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         }
         CloseSheet();
         Message = null;
-        SelectedItem = animationItems.FirstOrDefault(item => item.Animation == animation);
+        SelectedItem = AnimationItems.FirstOrDefault(item => item.Animation == animation);
     }
 
     /// <summary>

@@ -13,7 +13,7 @@ namespace ColorRise.Tessera.Editor.FlipbookEditor;
 public sealed class FlipbookAnimationItemViewModel : DispatcherViewModel, IAssetPropertyProviderViewModel, IIsEditableViewModel
 {
     private readonly FlipbookEditorViewModel editor;
-    private readonly ObservableList<FlipbookClipItemViewModel> clipItems = [];
+    private ObservableList<FlipbookClipItemViewModel> ClipItems { get; } = [];
 
     internal FlipbookAnimationItemViewModel(FlipbookEditorViewModel editor, FlipbookAnimation animation)
         : base(editor.ServiceProvider)
@@ -59,7 +59,7 @@ public sealed class FlipbookAnimationItemViewModel : DispatcherViewModel, IAsset
     /// <summary>
     /// The clips of the animation, in the order of the asset.
     /// </summary>
-    public IReadOnlyObservableList<FlipbookClipItemViewModel> Clips => clipItems;
+    public IReadOnlyObservableList<FlipbookClipItemViewModel> Clips => ClipItems;
 
     bool IPropertyProviderViewModel.CanProvidePropertiesViewModel => !IsDestroyed;
 
@@ -70,7 +70,7 @@ public sealed class FlipbookAnimationItemViewModel : DispatcherViewModel, IAsset
     /// </summary>
     public override void Destroy()
     {
-        foreach (var item in clipItems)
+        foreach (var item in ClipItems)
         {
             item.Destroy();
         }
@@ -87,11 +87,11 @@ public sealed class FlipbookAnimationItemViewModel : DispatcherViewModel, IAsset
         {
             if (clip is not null)
             {
-                wanted.Add(clipItems.FirstOrDefault(item => item.Clip == clip) ?? new FlipbookClipItemViewModel(editor, this, clip));
+                wanted.Add(ClipItems.FirstOrDefault(item => item.Clip == clip) ?? new FlipbookClipItemViewModel(editor, this, clip));
             }
         }
-        FlipbookEditorViewModel.Sync(clipItems, wanted);
-        foreach (var item in clipItems)
+        FlipbookEditorViewModel.Sync(ClipItems, wanted);
+        foreach (var item in ClipItems)
         {
             item.Refresh();
         }
