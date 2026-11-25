@@ -27,6 +27,24 @@ internal static class CanvasProbe
     }
 
     /// <summary>
+    /// Runs the dispatched work until the condition holds, or fails after 10 seconds: the pictures of a tile set are made again
+    /// after the session records a change, from a thread of the pool.
+    /// </summary>
+    public static async Task WaitUntilAsync(Func<bool> condition, string what)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!condition())
+        {
+            if (DateTime.UtcNow > deadline)
+            {
+                throw new TimeoutException($"Timed out waiting for {what}.");
+            }
+            await Task.Delay(10);
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    /// <summary>
     /// Renders the window, then reads a pixel of the frame.
     /// </summary>
     public static StrideColor Pixel(Window window, int x, int y)

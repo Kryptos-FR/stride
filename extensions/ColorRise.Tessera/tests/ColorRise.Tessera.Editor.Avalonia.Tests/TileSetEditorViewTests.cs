@@ -9,6 +9,7 @@ using Avalonia.VisualTree;
 using ColorRise.Tessera.Assets;
 using ColorRise.Tessera.Editor.Avalonia.Controls;
 using ColorRise.Tessera.Editor.Avalonia.Views;
+using ColorRise.Tessera.Editor.Canvas;
 using ColorRise.Tessera.Editor.Tests;
 using ColorRise.Tessera.Editor.TileSetEditor;
 using Stride.Assets.Editor.Avalonia;
@@ -182,6 +183,37 @@ public sealed class TileSetEditorViewTests
     }
 
     // The editor's view in a window of 800 by 600
+    // Each source shows whole at the zoom that fits it, not at the one of the source shown before
+    [AvaloniaFact]
+    public async Task Another_source_is_fitted_to_its_own_size()
+    {
+        await using var session = await OpenTownAsync();
+        var editor = await session.EditTileSetAsync("Tiles/Town");
+        var (view, window) = Show(editor);
+        try
+        {
+            editor.ProposeImage(session.WriteImage("Tiles/cave.png", 16, 16, (_, _) => StrideColor.Gray));
+            Dispatcher.UIThread.RunJobs();
+            Click(window, Named<Button>(view, "AddPendingButton"));
+            await CanvasProbe.WaitUntilAsync(() => editor.Sources.All(source => source.Layout is { Size.X: > 0 }), "the pictures of the two sources");
+            var canvas = view.FindControl<TileCanvas>("Canvas")!;
+            var size = new Vector2((float)canvas.Bounds.Width, (float)canvas.Bounds.Height);
+
+            foreach (var source in new[] { editor.Sources[1], editor.Sources[0], editor.Sources[1] })
+            {
+                editor.SelectedSource = source;
+                Dispatcher.UIThread.RunJobs();
+                var fitted = new CanvasView();
+                fitted.Fit(editor.Scene.Bounds!.Value, size);
+                Assert.Equal(fitted.Zoom, canvas.View.Zoom);
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     private static (TileSetEditorView View, Window Window) Show(TileSetEditorViewModel editor)
     {
         var view = new TileSetEditorView { DataContext = editor };

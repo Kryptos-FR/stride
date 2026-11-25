@@ -73,11 +73,14 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         get;
         set
         {
-            if (SetValue(ref field, value))
+            if (field == value)
             {
-                ShowLayout(value?.Layout);
-                SelectionFollows(show: true);
+                return;
             }
+            // The scene shows the source before the view hears of it, so that the view fits the new source
+            ShowLayout(value?.Layout);
+            SetValue(ref field, value);
+            SelectionFollows(show: true);
         }
     }
 
@@ -460,14 +463,15 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         Scene.MarkOf = SolidMark;
     }
 
-    // The scene forgets a press when its source changes: the solid drag in progress ends with it
+    // The scene forgets a press when its source changes: the solid drag in progress ends with it. The pictures of the same
+    // source, made again, keep both
     private void ShowLayout(TileSourceLayout? layout)
     {
-        if (Scene.Layout != layout)
+        if (Scene.Layout?.Source != layout?.Source)
         {
             EndSolidDrag();
-            Scene.Layout = layout;
         }
+        Scene.Layout = layout;
     }
 
     // The selected tiles are the scene's; the property grid shows them when they change, or when asked
