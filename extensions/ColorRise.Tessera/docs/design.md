@@ -46,6 +46,21 @@ Checked against the fork's `master` at `659bb239e` (Stride 4.5.4) and against Sk
 - C: the templates are in the group `Sprite` (`TileSet`, `TileMap`, a new map with the layer `Ground`), the entity factory is `[Display(40, "Tile map", "2D")]`, and the icons are drawn by a script.
 - C: a check game, `tests/StudioCheck`, for the by-hand run in Game Studio; it is not the sample of step 4.
 
+**Decided for step 3** ([plan-step3.md](plan-step3.md), "What step 3 decides"):
+
+- D (Nicolas, 2026-11-25): six of the eleven deferred minors of step 2 went in (M1, M3, M5, M6, M9 and the build that threw on an empty chunk item); the other five wait.
+- D (Nicolas, 2026-11-25): the map editor plays animated tiles, with a button of its tool bar and a setting that stop them, as Tiled's "Show tile animations".
+- D (Nicolas, 2026-11-25): the scene view plays flipbooks and animated tiles. Nothing is built for it: the scene editor's game runs the entity processors, and their clocks with them.
+- C: the small types of a flipbook (`FlipbookAnimation`, `FlipbookClip`, `FlipbookFrame`, `FlipbookCell`, `FlipbookDirection`, `FlipbookLoopMode`) are the runtime's, shared by the asset and the content. `FlipbookComponent.Animation` is the animation shown at start and the one playing now; `Play`, `Queue`, `Pause`, `Resume`, `Stop` and `Advance` drive it, and `FrameChanged` and `AnimationEnded` are raised from `Advance` only.
+- C: two render features, `TileRenderFeature` and `FlipbookRenderFeature`, since a root render feature draws one exact type of render object (finding 18).
+- C: flipbooks of one depth are ordered by the Y of their entity, through the state part of the sort key (R2).
+- C: picking of flipbooks as of maps: the whole rectangle of a frame answers a click (R7).
+- C: Animation mode is the third mode of the tile set editor, with a bar of frames under the canvas and durations in the property grid (R11).
+- C: the flipbook editor has a tree, a strip, a preview and the palette; the palette adds frames by a click or a drag inside it, and `Sheet` and `Mirror` make clips. A drop from the palette onto the strip waits.
+- C: `[Display(50, "Flipbook", "2D")]` for the entity factory, a drop policy that sets the flipbook and its first animation, the template `Flipbook` with one animation `idle`.
+- C: the build of a flipbook declares its tile set as a runtime dependency and does not read it; it warns about what it can see alone.
+- C: the by-hand check runs over step 2's check game, with a character sheet of 16 by 24 pixel frames and a script that walks the character around a square.
+
 ## 1. Intent
 
 Nicolas's request, in his words **(N)**:
@@ -338,6 +353,13 @@ public sealed class FlipbookFrame
 
 One flipbook is one character or object: all its animations in one asset, as Godot's `SpriteFrames`, because a character with four directions and six actions would otherwise be 24 assets. A frame is a list of cells so that a character can be composed of parts later (D4). The pivot is a point of the frame's first cell, in fractions of its size. A clip with direction `None` is used when the animation has no clip for the asked direction, and the first clip when there is none either.
 
+**Note (2026-11-25, step 3).** What step 3 settled in this section:
+- The small types of a flipbook are the runtime's (`FlipbookAnimation`, `FlipbookClip`, `FlipbookFrame`, `FlipbookCell`, `FlipbookDirection`, `FlipbookLoopMode`), used by the asset and by the content, as `TileDefinition` uses the runtime's `TileAnimationFrame`. The asset has no copy of them.
+- A direction without a clip falls back as written above, the clip `None` then the first clip; before that, a diagonal tries its horizontal part, then its vertical part (`UpLeft` shows `Left`, then `Up`). Of two clips of one direction, the first plays, and the build warns.
+- `PingPong` plays 1, 2, 3, 2 and again: the end frames are shown once a pass. A frame whose duration is not above 0 is never shown, as for animated tiles.
+- The build leaves out the empty items a merge can leave in the four lists of a flipbook.
+- The flipbook's directions have a `Display` name each ("Any direction" for `None`, "Down left" for `DownLeft`), and `FlipbookDirections.NameOf` gives it to every text Tessera writes. The cross-platform property grid does not show them yet (finding 20).
+
 ## 8. Runtime
 
 ### Components
@@ -419,6 +441,12 @@ bool hit = map.OverlapsSolid(new RectangleF(...));   // a world rectangle in the
 - A change of a cell raises `TileLayer.Changed` with the chunk, which the renderer and the game can listen to.
 - A `TileMap` can be reloaded in place by the content manager (`Content.Reload`), which is how Game Studio's scene view follows an edited asset. The renderer notices.
 - Maps and tile sets can also be made in code (`new TileMap()`, `TileSet.FromTexture(texture, tileSize)`), for generated levels. The first version keeps this simple and tested, without more.
+
+**Note (2026-11-25, step 3).** What step 3 settled in this section:
+- Flipbooks have a render feature of their own, `FlipbookRenderFeature`, beside `TileRenderFeature`: the render system finds the feature of a render object by its exact type (finding 18). Both draw with `TileBatch`, take the same selector ("Tiles in the transparent stage") and the sort key 128, so chunks, flipbooks and sprites still interleave by depth. A game's compositor needs both, and *Add package features* adds the one it lacks.
+- The Y key of a flipbook: its entity's world Y, 256 steps a unit, from -32768 to 32768 units, the higher Y drawn first; it decides only between render objects of one depth. With `TileAxisSortMode`, flipbooks of one z order by Y under any camera; with Stride's back to front sort, under a camera that looks straight at the map only. A flipbook at a layer's own z is drawn over the layer, and a sprite at the z of flipbooks under them.
+- `Play(name)` leaves a playing animation alone, resumes a paused one and starts an ended one again; `restart: true` always starts at 0, and both empty the queue. `Queue(name)` plays after the current pass: at the end of a `Once`, at the next turn of a `Loop` or a `PingPong`, at once when nothing shows. `Stop()` stops, goes back to the first frame and empties the queue. A name the flipbook does not have, a flipbook without a tile set and a clip without frames draw nothing and throw nothing.
+- `FlipbookDirections.FromVector(move, diagonals)` gives the direction of a movement, and `Mirrored()` the direction mirrored left to right.
 
 ## 9. Game Studio (Avalonia)
 
@@ -519,6 +547,13 @@ Two controls are shared by the three editors:
 - A stamp with a tile that is not square is not turned, as section 7 says of the diagonal flip; it can still be mirrored.
 - When the canvas loses the pointer in the middle of a drag (another window, a dialog), the drag is dropped as Escape drops it.
 
+**Note (2026-11-25, step 3).** What step 3 settled in this section:
+- Animation mode, as built: the first click picks the tile to animate, each click after it adds a frame after the selected one or at the end, with the duration of the frame before it (0.2 s for the first). A bar under the canvas shows the frames with their pictures and durations; `<`, `>`, `x`, Delete and `Clear` edit them, and the property grid edits the durations (R11 held: no number box in the bar). Every animated tile of the source shown plays in place in the three modes, with a corner mark, and the frames of the animated tile carry their numbers. The canvas has a clock of its own, which ticks a playing scene 30 times a second (R12 held).
+- The map editor plays animated tiles, and `Play` in its tool bar, or the setting "Play the animated tiles", stops them on their first frame.
+- The flipbook editor, as built: the tree (animations and their clips by direction, `+`, `+ Direction`, `-`, F2); the strip (several frames selected, `<`, `>`, `x`, Delete and a drag move and remove them); the palette, where a click adds a tile as a frame and a drag adds a block row by row; `Sheet`, a bar that makes a clip per row of a block (Down, Left, Right, Up by default, "In order" or "There and back"); `Mirror`, which makes the clip of the mirrored direction from the selected one and asks before it replaces one with frames; the preview, which plays the selected clip at 25 to 200% around a cross at the pivot, with `Loop`. The design's "drop tiles from the palette" onto the strip waits: a drag out of a drawn canvas onto another control cannot be driven in a headless test.
+- Tessera gives the cross-platform property grid an editor of its flag enums (`TileFlip`, `TileCollision`), a check box for each flag, because Game Studio's writes nothing (finding 19).
+- In the scene editor: `[Display(50, "Flipbook", "2D")]` after `Tile map`; a flipbook dropped in a scene makes an entity with the flipbook and its first animation; *Add component* offers `Flipbook`; the scene view plays flipbooks and animated tiles and shows a flipbook changed in its editor at once, before the save (R13).
+
 ### WPF Game Studio
 
 The neutral `Editor` package should load there, with the assets in the property grid and maps drawn in scenes, and the three editors, which have no view, should not open. None of this can be checked from the Linux container the work is done in, as for Skein. The README lists it as not checked until someone opens a project on Windows.
@@ -566,6 +601,13 @@ Step 1 starts with R9, since nothing can be built before it, then spikes on R1, 
 - R5 holds, no fallback: a stamp then a save in the map editor shows at once in the open scene (finding 15 for the fast reload a plugin cannot join).
 - R6 holds as planned: the canvas reads the single keys while it has the focus, and not while a layer's name is typed; they cannot be rebound (finding 13).
 - R7 holds, no fallback: a click on a tile selects the map's entity, and a click on an empty cell selects what is behind, through Tessera's own selector on the picking stage (finding 16).
+
+**Note (2026-11-25, step 3).** R2 and R7 for flipbooks, and the plan's three new risks, tried in step 3:
+- R2 holds for flipbooks, no fallback: two flipbooks of one z have bit-equal depths under both sort modes, so their Y key alone orders them; seen in Game Studio and in the game too.
+- R7 holds for flipbooks, no fallback: a click anywhere in a flipbook's frame selects its entity, through the same picking selector, which `TilePickingService` now gives both features (finding 16).
+- R11 (the property grid editing a duration inside a struct frame of the copy of a tile's animation) holds, no fallback.
+- R12 (a timer of the Avalonia control ticking the canvas, under the headless platform of the view tests) holds, no fallback.
+- R13 (the scene view playing flipbooks, and following a flipbook edited while its scene is open) holds, no fallback: the editor's reload gives the component the new flipbook (finding 15).
 
 ## 12. Steps and branches **(C)**
 
@@ -634,7 +676,7 @@ The first four are in Nicolas's order **(D3)**. The rest is in the order I would
 
 **Note (2026-11-25, step 2).** Decided since: the canvas makes a picture per chunk and layer from the start, coarser when zoomed out; the entity factory is third in `2D` (`[Display(40, "Tile map", "2D")]`, after Sprite and Background); the icons are drawn by a script; the templates' default names are `TileSet` and `TileMap`, in the group `Sprite`. Still open: the sample's name and story (step 4), and the flipbook's names (step 3).
 
-**Note (2026-11-25, step 3).** Decided since: one step of a flipbook's Y sort key is a 256th of a unit, over Y from -32768 to 32768, in the top 24 bits of the render object's state key that the sort modes keep after the depth (`FlipbookSortKey`); the spike of R2 found that two flipbooks of one z have bit-equal depths under both sort modes, so the key alone orders them.
+**Note (2026-11-25, step 3).** Decided since: one step of a flipbook's Y sort key is a 256th of a unit, over Y from -32768 to 32768, in the top 24 bits of the render object's state key that the sort modes keep after the depth (`FlipbookSortKey`); the spike of R2 found that two flipbooks of one z have bit-equal depths under both sort modes, so the key alone orders them. Also decided: the names of the small types of a flipbook (`FlipbookAnimation`, `FlipbookClip`, `FlipbookFrame`, `FlipbookCell`, `FlipbookDirection`, `FlipbookLoopMode`, `FlipbookComponent`, `FlipbookRenderFeature`); the entity factory `[Display(50, "Flipbook", "2D")]`, after `Tile map`; the template's default name `Flipbook`, in the group `Sprite`, with one animation `idle`. Still open: the sample's name and story (step 4).
 
 ## Sources
 
