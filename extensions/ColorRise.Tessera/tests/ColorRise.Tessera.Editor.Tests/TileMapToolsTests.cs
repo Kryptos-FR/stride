@@ -67,6 +67,23 @@ public sealed class TileMapToolsTests
     }
 
     [Fact]
+    public async Task A_lost_pointer_drops_the_stroke_and_the_next_press_paints()
+    {
+        await using var map = await OpenAsync([["."]]);
+        map.Editor.Stamp = TileStamp.Single(Cell(1, 0));
+
+        Press(map.Editor, 0, 0);
+        Move(map.Editor, 2, 0);
+        map.Editor.Input.PointerCaptureLost();
+        Move(map.Editor, 4, 0);
+        Assert.Equal([". . . . ."], Tokens(map.Editor.Document.GetLayer(0), 0, 0, 4, 0));
+
+        Click(map.Editor, 1, 1);
+        Assert.Equal(["Stamp"], map.Session.Steps);
+        Assert.Equal([". . . . .", ". 1,0 . . .", ". . . . ."], Tokens(Saved(map, 0), 0, 0, 4, 2));
+    }
+
+    [Fact]
     public async Task Shift_click_draws_a_line_from_the_last_cell()
     {
         await using var map = await OpenAsync([["."]]);

@@ -64,7 +64,7 @@ internal static class CanvasProbe
 }
 
 /// <summary>
-/// An input that writes down what the canvas tells it: "press 20,40 Left None", "move 21,40 None", "key B None", "left".
+/// An input that writes down what the canvas tells it: "press 20,40 Left None", "move 21,40 None", "key B None", "left", "lost".
 /// </summary>
 internal sealed class RecordingInput : ICanvasInput
 {
@@ -82,6 +82,8 @@ internal sealed class RecordingInput : ICanvasInput
     public void PointerReleased(Vector2 position, CanvasButton button, CanvasModifiers modifiers) => Events.Add($"release {At(position)} {button} {modifiers}");
 
     public void PointerLeft() => Events.Add("left");
+
+    public void PointerCaptureLost() => Events.Add("lost");
 
     public bool KeyPressed(CanvasKey key, CanvasModifiers modifiers)
     {

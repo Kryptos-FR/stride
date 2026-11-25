@@ -74,6 +74,22 @@ public sealed class TilePaletteTests
     }
 
     [Fact]
+    public async Task A_lost_pointer_ends_the_drag_without_a_pick()
+    {
+        await using var session = await OpenTownAsync(TestTown.TileSet());
+        var palette = Palette(session);
+
+        palette.Scene.PointerPressed(new Vector2(4, 4), CanvasButton.Left, CanvasModifiers.None);
+        palette.Scene.PointerMoved(new Vector2(40, 20), CanvasModifiers.None);
+        palette.Scene.PointerCaptureLost();
+        palette.Scene.PointerMoved(new Vector2(60, 20), CanvasModifiers.None);
+        palette.Scene.PointerReleased(new Vector2(60, 20), CanvasButton.Left, CanvasModifiers.None);
+
+        Assert.Null(palette.Picked);
+        Assert.Empty(palette.Scene.Selection);
+    }
+
+    [Fact]
     public async Task A_position_without_a_tile_is_a_hole_in_the_block()
     {
         await using var session = await OpenTownAsync(TestTown.TileSet());

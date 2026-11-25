@@ -214,6 +214,7 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         Scene.SelectionChanged += SceneSelectionChanged;
         Scene.Painted += ScenePainted;
         Scene.PaintEnded += ScenePaintEnded;
+        Scene.PaintCancelled += ScenePaintCancelled;
         Follow();
         SelectedSource = Items.FirstOrDefault();
         if (SelectedSource is null)
@@ -236,6 +237,7 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         Scene.SelectionChanged -= SceneSelectionChanged;
         Scene.Painted -= ScenePainted;
         Scene.PaintEnded -= ScenePaintEnded;
+        Scene.PaintCancelled -= ScenePaintCancelled;
         DropTileData();
         foreach (var item in Items)
         {
@@ -593,6 +595,13 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
             }
             UndoRedoService.SetName(transaction, "Solid");
         }
+        Scene.MarkOf = SolidMark;
+    }
+
+    // The canvas lost the pointer in the middle of a drag: nothing is written, and the marks show the asset again
+    private void ScenePaintCancelled(object? sender, EventArgs e)
+    {
+        EndSolidDrag();
         Scene.MarkOf = SolidMark;
     }
 

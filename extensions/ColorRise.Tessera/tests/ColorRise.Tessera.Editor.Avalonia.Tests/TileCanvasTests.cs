@@ -123,6 +123,27 @@ public sealed class TileCanvasTests
     }
 
     [AvaloniaFact]
+    public void A_press_whose_pointer_is_taken_away_tells_the_input()
+    {
+        var (canvas, window) = Show(new TestScene(), zoom: 1);
+        var input = new RecordingInput();
+        canvas.Input = input;
+        IPointer? pointer = null;
+        canvas.AddHandler(InputElement.PointerPressedEvent, (_, e) => pointer = e.Pointer, RoutingStrategies.Bubble, handledEventsToo: true);
+
+        window.MouseDown(new Point(10, 10), MouseButton.Left);
+        pointer!.Capture(null);
+        Assert.Equal(["press", "lost"], Kinds(input));
+
+        // A press that ends with its own release loses nothing
+        window.MouseUp(new Point(10, 10), MouseButton.Left);
+        input.Events.Clear();
+        window.MouseDown(new Point(10, 10), MouseButton.Left);
+        window.MouseUp(new Point(10, 10), MouseButton.Left);
+        Assert.Equal(["press", "release"], Kinds(input));
+    }
+
+    [AvaloniaFact]
     public void The_middle_button_pans()
     {
         var (canvas, window) = Show(new TestScene(), zoom: 2);
@@ -268,6 +289,9 @@ public sealed class TileCanvasTests
         canvas.View.Zoom = zoom;
         return (canvas, CanvasProbe.Show(canvas, 64, 64));
     }
+
+    // What the input heard, without the moves
+    private static List<string> Kinds(RecordingInput input) => [.. input.Events.Select(e => e.Split(' ')[0]).Where(kind => kind != "move")];
 
     private static StackPanel Beside(Control first, Control second)
         => new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top, HorizontalAlignment = HorizontalAlignment.Left, Children = { first, second } };

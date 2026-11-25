@@ -351,6 +351,26 @@ public sealed class TileSetEditorTilesTests
         Assert.Equal(["Solid"], session.Steps);
     }
 
+    [Fact]
+    public async Task A_lost_pointer_drops_the_solid_drag()
+    {
+        await using var session = await OpenTownAsync();
+        var editor = await session.EditTileSetAsync("Tiles/Town");
+        editor.Mode = TileSetEditorMode.Solid;
+
+        editor.Scene.PointerPressed(Middle(editor, "1:1,0"), CanvasButton.Left, CanvasModifiers.None);
+        editor.Scene.PointerMoved(Middle(editor, "1:2,0"), CanvasModifiers.None);
+        editor.Scene.PointerCaptureLost();
+        editor.Scene.PointerMoved(Middle(editor, "1:3,0"), CanvasModifiers.None);
+        editor.Scene.PointerReleased(Middle(editor, "1:3,0"), CanvasButton.Left, CanvasModifiers.None);
+        Assert.Empty(SolidTiles(session));
+        Assert.Empty(session.Steps);
+
+        Click(editor, "1:0,0");
+        Assert.Equal(Tiles("1:0,0"), SolidTiles(session));
+        Assert.Equal(["Solid"], session.Steps);
+    }
+
     private static List<TileId> Tiles(params string[] tiles) => [.. tiles.Select(TileId.Parse)];
 
     private static List<TileId> SolidTiles(TesseraSession session)

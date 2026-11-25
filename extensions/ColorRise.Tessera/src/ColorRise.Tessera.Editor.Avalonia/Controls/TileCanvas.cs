@@ -62,6 +62,8 @@ public sealed class TileCanvas : Control
     private readonly CanvasView ownView = new();
     private readonly CanvasFrame frame = new();
     private (Vector2 Last, MouseButton Button)? pan;
+    // The buttons whose press the input heard and whose release it has not
+    private readonly HashSet<CanvasButton> held = [];
     private bool spaceDown;
     private bool fitted;
     // A fit asked by Fit, or a centring asked by Centre, done once the scene has bounds and the canvas a size
@@ -270,6 +272,7 @@ public sealed class TileCanvas : Control
         if (ButtonOf(kind) is { } button && Input is { } input && !spaceDown)
         {
             e.Pointer.Capture(this);
+            held.Add(button);
             input.PointerPressed(View.ToCanvas(position), button, ModifiersOf(e.KeyModifiers));
             e.Handled = true;
         }
@@ -314,6 +317,7 @@ public sealed class TileCanvas : Control
         };
         if (button is { } released && Input is { } input && !spaceDown)
         {
+            held.Remove(released);
             input.PointerReleased(View.ToCanvas(ToVector(e.GetPosition(this))), released, ModifiersOf(e.KeyModifiers));
             e.Handled = true;
         }
@@ -334,6 +338,12 @@ public sealed class TileCanvas : Control
     {
         base.OnPointerCaptureLost(e);
         pan = null;
+        // The capture also ends after each release, when nothing is held any more
+        if (held.Count > 0)
+        {
+            held.Clear();
+            Input?.PointerCaptureLost();
+        }
     }
 
     /// <inheritdoc />

@@ -139,6 +139,12 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
     public event EventHandler? PaintEnded;
 
     /// <summary>
+    /// Raised in <see cref="TilePickMode.Paint"/> mode when the canvas lost the pointer before the left button went up: the
+    /// tiles painted since the press are not kept.
+    /// </summary>
+    public event EventHandler? PaintCancelled;
+
+    /// <summary>
     /// Selects tiles of the source; the others are left out.
     /// </summary>
     public void Select(IEnumerable<TileId> tiles)
@@ -288,6 +294,22 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
     /// <inheritdoc/>
     public void PointerLeft()
     {
+    }
+
+    /// <inheritdoc/>
+    public void PointerCaptureLost()
+    {
+        if (press is null)
+        {
+            return;
+        }
+        press = null;
+        painted.Clear();
+        if (Mode == TilePickMode.Paint)
+        {
+            PaintCancelled?.Invoke(this, EventArgs.Empty);
+        }
+        RaiseChanged();
     }
 
     /// <inheritdoc/>

@@ -113,6 +113,12 @@ public interface ICanvasInput
     void PointerLeft();
 
     /// <summary>
+    /// The canvas lost the pointer while a button pressed over it was held (another window, a dialog), so that button's
+    /// release will not come: the input drops what the press started, as Escape does.
+    /// </summary>
+    void PointerCaptureLost();
+
+    /// <summary>
     /// A key was pressed while the canvas has the focus; true when the key did something.
     /// </summary>
     bool KeyPressed(CanvasKey key, CanvasModifiers modifiers);

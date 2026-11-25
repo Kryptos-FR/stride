@@ -44,6 +44,16 @@ internal sealed class TileMapInput(TileMapEditorViewModel editor) : ICanvasInput
 
     public void PointerLeft() => editor.Hover(null);
 
+    public void PointerCaptureLost()
+    {
+        if (pressed is null)
+        {
+            return;
+        }
+        pressed = null;
+        editor.CurrentTool.Cancel();
+    }
+
     public bool KeyPressed(CanvasKey key, CanvasModifiers modifiers) => editor.KeyPressed(key, modifiers);
 }
 
