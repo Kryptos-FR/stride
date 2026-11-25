@@ -77,7 +77,7 @@ public sealed class TileRenderFeature : RootRenderFeature
         var stage = RenderSystem.RenderStages[renderViewStage.Index];
         // The picking stage draws the same quads, white, in the id of the component
         var picking = stage.Name == PickingStageName ? Context.GraphicsDevice.GetSharedWhiteTexture() : null;
-        var run = new BatchRun(batches!.Value!, context, renderView.ViewProjection, Rasterizer(stage.Output), picking);
+        var run = new TileBatchRun(batches!.Value!, context, renderView.ViewProjection, TileBatchRun.Rasterizer(stage.Output), picking);
         Span<Vector2> uvs = stackalloc Vector2[4];
 
         for (var index = startIndex; index < endIndex; index++)
@@ -106,20 +106,7 @@ public sealed class TileRenderFeature : RootRenderFeature
         return tint * componentColor;
     }
 
-    // Multisampled outputs take a rasterizer of their sample count, as the sprites do
-    private static RasterizerStateDescription? Rasterizer(RenderOutputDescription output)
-    {
-        if (output.MultisampleCount == MultisampleCount.None)
-        {
-            return null;
-        }
-        var rasterizer = RasterizerStates.CullNone;
-        rasterizer.MultisampleCount = output.MultisampleCount;
-        rasterizer.MultisampleAntiAliasLine = true;
-        return rasterizer;
-    }
-
-    private void DrawChunk(ref BatchRun run, RenderTileChunk render, TileMap map, Color4 color, Span<Vector2> uvs)
+    private void DrawChunk(ref TileBatchRun run, RenderTileChunk render, TileMap map, Color4 color, Span<Vector2> uvs)
     {
         ref readonly var world = ref render.World;
         var cellSize = map.CellSize;
@@ -174,47 +161,6 @@ public sealed class TileRenderFeature : RootRenderFeature
             TileQuads.Uvs(region, fullSize.Width, fullSize.Height, cell.Flip, uvs);
             (quad.UvBottomLeft, quad.UvBottomRight, quad.UvTopRight, quad.UvTopLeft) = (uvs[0], uvs[1], uvs[2], uvs[3]);
             run.Draw(texture, quad, color, render.Component.Sampler, set.PremultipliedAlpha);
-        }
-    }
-
-    // One batch for each run of quads of the same colour, sampler and alpha; with a picking texture, every quad is drawn with
-    // it, and the colour is an id
-    private struct BatchRun(TileBatch batch, RenderDrawContext context, Matrix viewProjection, RasterizerStateDescription? rasterizer,
-        Texture? pickingTexture)
-    {
-        private bool begun;
-        private Color4 color;
-        private TileSampler sampler;
-        private bool premultipliedAlpha;
-
-        public void Draw(Texture texture, in TileQuad quad, Color4 color, TileSampler sampler, bool premultipliedAlpha)
-        {
-            if (!begun || color != this.color || sampler != this.sampler || premultipliedAlpha != this.premultipliedAlpha)
-            {
-                End();
-                (this.color, this.sampler, this.premultipliedAlpha) = (color, sampler, premultipliedAlpha);
-                if (pickingTexture is not null)
-                {
-                    batch.BeginPicking(context.GraphicsContext, viewProjection, color);
-                }
-                else
-                {
-                    var states = context.GraphicsDevice.SamplerStates;
-                    batch.Begin(context.GraphicsContext, viewProjection, color, sampler == TileSampler.Linear ? states.LinearClamp : states.PointClamp,
-                        rasterizer: rasterizer, premultipliedAlpha: premultipliedAlpha);
-                }
-                begun = true;
-            }
-            batch.Draw(pickingTexture ?? texture, quad);
-        }
-
-        public void End()
-        {
-            if (begun)
-            {
-                batch.End();
-                begun = false;
-            }
         }
     }
 

@@ -257,7 +257,7 @@ internal sealed class HarnessGame : Game
         return new Frame(buffer.Width, buffer.Height, pixels, picking?.Ids);
     }
 
-    // A forward renderer without post effects that draws sprites, a renderer of its own when multisampled, or the test's own
+    // A forward renderer without post effects that draws sprites, tiles and flipbooks, a renderer of its own when multisampled, or the test's own
     // drawing in place of the scene; then the picking pass when the options ask for it.
     private GraphicsCompositor CreateCompositor(SceneCameraSlot slot)
     {
@@ -289,6 +289,11 @@ internal sealed class HarnessGame : Game
         {
             RenderStageSelectors = { new TileTransparentRenderStageSelector { TransparentRenderStage = transparent } },
         };
+        // The flipbooks' feature, with the selector of the tiles' feature: it puts any render object in its stage
+        var flipbooks = new FlipbookRenderFeature
+        {
+            RenderStageSelectors = { new TileTransparentRenderStageSelector { TransparentRenderStage = transparent } },
+        };
         var compositor = new GraphicsCompositor
         {
             Cameras = { slot },
@@ -308,6 +313,7 @@ internal sealed class HarnessGame : Game
                     },
                 },
                 tiles,
+                flipbooks,
             },
         };
 

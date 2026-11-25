@@ -1,3 +1,4 @@
+using ColorRise.Tessera.Rendering;
 using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Engine;
@@ -18,6 +19,7 @@ namespace ColorRise.Tessera;
 [Display("Flipbook", Expand = ExpandRule.Once)]
 [ComponentCategory("2D")]
 [DefaultEntityComponentProcessor(typeof(FlipbookProcessor))]
+[DefaultEntityComponentRenderer(typeof(FlipbookRenderProcessor))]
 public sealed class FlipbookComponent : ActivableEntityComponent
 {
     // The animations to play after the current one, in order

@@ -36,4 +36,28 @@ public sealed class TileRenderFeatureYamlTests
         // Saved as a reference to the stage's id, which the editor resolves
         Assert.Equal(Assert.Single(loaded.RenderStages).Id, selector.TransparentRenderStage?.Id);
     }
+
+    [Fact]
+    public void A_compositor_asset_keeps_only_the_selectors_of_the_flipbook_feature()
+    {
+        var transparent = new RenderStage("Transparent", "Main");
+        var compositor = new GraphicsCompositorAsset();
+        compositor.RenderStages.Add(transparent);
+        compositor.RenderFeatures.Add(new FlipbookRenderFeature
+        {
+            RenderStageSelectors = { new TileTransparentRenderStageSelector { TransparentRenderStage = transparent } },
+        });
+
+        using var output = new MemoryStream();
+        AssetFileSerializer.Save(output, compositor, null);
+        var text = Encoding.UTF8.GetString(output.ToArray());
+        Assert.Contains("!FlipbookRenderFeature", text);
+        Assert.All(new[] { "RenderData", "RenderObjects", "ObjectNodeReferences", "RenderNodes", "Enabled", "DrawnFlipbooks" }, member => Assert.DoesNotContain(member, text));
+
+        using var input = new MemoryStream(Encoding.UTF8.GetBytes(text));
+        var loaded = (GraphicsCompositorAsset)AssetFileSerializer.Load<Asset>(input, new UFile("Compositor.sdgfxcomp")).Asset;
+        var feature = Assert.IsType<FlipbookRenderFeature>(Assert.Single(loaded.RenderFeatures));
+        var selector = Assert.IsType<TileTransparentRenderStageSelector>(Assert.Single(feature.RenderStageSelectors));
+        Assert.Equal(Assert.Single(loaded.RenderStages).Id, selector.TransparentRenderStage?.Id);
+    }
 }

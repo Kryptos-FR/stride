@@ -595,7 +595,7 @@ Where a frame is drawn, in the entity's plane z = 0, y up, with `p` the set's pi
 
 The colour is the component's, the sampler the component's, the alpha what the set says, as for a chunk. The render processor sets the render group, the bounds and (Task 6) the sort key in `Draw`, adds the render object when the component is enabled and `Bounds` is not null, and removes it otherwise.
 
-- [ ] **Step 1: Write the failing tests.** The scenes use `TestTiles.Flat` (tiles of 4 pixels, one unit wide) and a new `TestTiles.Tall(device, colors)`: tiles 4 pixels wide and 6 high over a set whose tile size is 4 by 4 and pixels per unit 4. The view is 4 units high in 64 pixels: 16 pixels a unit.
+- [x] **Step 1: Write the failing tests.** The scenes use `TestTiles.Flat` (tiles of 4 pixels, one unit wide) and a new `TestTiles.Tall(device, colors)`: tiles 4 pixels wide and 6 high over a set whose tile size is 4 by 4 and pixels per unit 4. The view is 4 units high in 64 pixels: 16 pixels a unit.
 
 ```csharp
 public sealed class FlipbookQuadsTests            // no GPU: the tiles have a region and a stand-in texture is not needed for Bounds
@@ -628,11 +628,15 @@ public sealed class FlipbookDrawTests
 [Fact] public void A_compositor_asset_keeps_only_the_selectors_of_the_flipbook_feature()   // as the tile feature's test: finding 17
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~FlipbookQuadsTests|FullyQualifiedName~FlipbookDrawTests|FullyQualifiedName~TileRenderFeatureYamlTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Move the batch run out of `TileRenderFeature`**, and run step 1 and 2's graphics tests (`FullyQualifiedName~Graphics`). Expected: PASS, as before the move.
-- [ ] **Step 4: Write the quads, the render object, the render processor and the feature**, and give the harness's compositor the feature.
-- [ ] **Step 5: Run the tests.** Expected: PASS. Save the frames of the first, the mirrored and the two-cell tests to `/mnt/project-files/tilemap/step3/frames/`.
-- [ ] **Step 6: Commit and push**: `feat(tessera): draw flipbooks with a render feature of their own`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~FlipbookQuadsTests|FullyQualifiedName~FlipbookDrawTests|FullyQualifiedName~TileRenderFeatureYamlTests`. Expected: FAIL to compile.
+- [x] **Step 3: Move the batch run out of `TileRenderFeature`**, and run step 1 and 2's graphics tests (`FullyQualifiedName~Graphics`). Expected: PASS, as before the move.
+- [x] **Step 4: Write the quads, the render object, the render processor and the feature**, and give the harness's compositor the feature.
+- [x] **Step 5: Run the tests.** Expected: PASS. Save the frames of the first, the mirrored and the two-cell tests to `/mnt/project-files/tilemap/step3/frames/`.
+- [x] **Step 6: Commit and push**: `feat(tessera): draw flipbooks with a render feature of their own`
+
+**Done (2026-11-25).** Red: the test project did not compile (`FlipbookRenderFeature` and `FlipbookQuads` not found). The move of the batch run: the 57 graphics tests of steps 1 and 2 pass (the new tests set aside while they ran). Green: the 19 tests of the filter pass, and the runtime project's 365. The frames `flipbook-pivot.png`, `flipbook-flipx.png` and `flipbook-two-cells.png` are in `/mnt/project-files/tilemap/step3/frames/`.
+
+**Done differently.** `FlipbookQuadsTests` runs without a GPU, where a texture that stands in has no size: it checks the corners, and that the mirrored frame carries the texture coordinates of the other side is checked by the draw tests (`FlipX_draws_the_frame_mirrored` and `A_cell_flip_turns_the_tile`). Mirrored, a quad keeps its corners in their places on screen (the bottom-left corner is the one at the left) and its left corners take the texture coordinates of the right ones; the quad is the same on screen as with the x of its corners negated. `Bounds` counts the cells `TryCell` would draw, so a tile without a texture is out of the bounds too; the quads tests give their tiles a texture that stands in. The render object keeps what the processor saw before the frame (the flipbook, the frame, the world, the mirror, the colour and the sampler), so that the feature reads no component while it draws. `FlipbookDrawTests` has a pivot test on a tall tile (its four edges), and its disabled test reads `DrawnFlipbooks` (1, then 0). Two quads tests beyond the plan: the entity's world, and the cells that cannot be drawn. The feature does not draw in the picking stage yet (Task 7).
 
 ### Task 6: Order: between the layers by z, among flipbooks by Y (risk R2)
 

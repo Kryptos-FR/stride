@@ -18,6 +18,18 @@ internal static class TestTiles
     }
 
     /// <summary>
+    /// A tile set of one texture: a flat tile of 4 by 6 pixels per colour, in a row, in a set whose tile size is 4 by 4 at 4
+    /// pixels a unit. The tile of colours[i] is 1:i,0, one unit wide and 1.5 high.
+    /// </summary>
+    public static TileSet Tall(GraphicsDevice device, params Color[] colors)
+    {
+        var texture = TestTextures.FromPixels(device, 4 * colors.Length, 6, (x, _) => colors[x / 4]);
+        var set = TileSet.FromTexture(texture, new Int2(4, 6), pixelsPerUnit: 4);
+        set.TileSize = new Int2(4, 4);
+        return set;
+    }
+
+    /// <summary>
     /// A tile set of one tile, 1:0,0, the quarters texture of 8 by 8 pixels, one unit wide.
     /// </summary>
     public static TileSet Quarters(GraphicsDevice device)
