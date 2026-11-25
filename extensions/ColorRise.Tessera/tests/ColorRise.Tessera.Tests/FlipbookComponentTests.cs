@@ -311,6 +311,113 @@ public sealed class FlipbookComponentTests
         Assert.Equal("walk", component.Animation);
     }
 
+    [Fact]
+    public void A_queue_that_starts_with_the_playing_animation_plays_each_name_once()
+    {
+        var component = Component();
+        var ended = new List<string>();
+        component.AnimationEnded += (_, e) => ended.Add(e.Animation);
+        component.Play("attack");
+        component.Queue("attack");
+        component.Queue("walk");
+        component.Queue("idle");
+
+        for (var step = 0; step < 100; step++)
+        {
+            component.Advance(0.05);
+        }
+
+        Assert.Equal(["attack", "attack", "walk"], ended);
+        Assert.Equal("idle", component.Animation);
+        Assert.True(component.IsPlaying);
+    }
+
+    [Fact]
+    public void An_ended_once_turned_to_a_longer_clip_stays_ended_on_its_last_frame()
+    {
+        var component = Component();
+        var swing = new FlipbookAnimation { Name = "swing", LoopMode = FlipbookLoopMode.Once };
+        swing.Clips.Add(Clip(FlipbookDirection.Left, 0.1f, 0.1f, 0.1f));
+        swing.Clips.Add(Clip(FlipbookDirection.Down, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f));
+        component.Flipbook!.Animations.Add(swing);
+        component.Direction = FlipbookDirection.Left;
+        component.Play("swing");
+        component.Advance(1);
+        Assert.False(component.IsPlaying);
+
+        component.Direction = FlipbookDirection.Down;
+        Assert.Equal(4, component.CurrentFrameIndex);
+        component.Resume();
+        Assert.False(component.IsPlaying);
+
+        component.Play("swing");
+        Assert.True(component.IsPlaying);
+        Assert.Equal(0, component.Time);
+        Assert.Equal(0, component.CurrentFrameIndex);
+    }
+
+    [Fact]
+    public void A_queue_behind_an_ended_once_turned_to_a_longer_clip_starts_at_once()
+    {
+        var component = Component();
+        var swing = new FlipbookAnimation { Name = "swing", LoopMode = FlipbookLoopMode.Once };
+        swing.Clips.Add(Clip(FlipbookDirection.Left, 0.1f, 0.1f, 0.1f));
+        swing.Clips.Add(Clip(FlipbookDirection.Down, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f));
+        component.Flipbook!.Animations.Add(swing);
+        component.Direction = FlipbookDirection.Left;
+        component.Play("swing");
+        component.Advance(1);
+        component.Direction = FlipbookDirection.Down;
+        var ended = new List<FlipbookEventArgs>();
+        component.AnimationEnded += (_, e) => ended.Add(e);
+
+        component.Queue("walk");
+        component.Advance(0.05);
+
+        Assert.Equal("walk", component.Animation);
+        Assert.True(component.IsPlaying);
+        var end = Assert.Single(ended);
+        Assert.Equal(("swing", 4), (end.Animation, end.FrameIndex));
+    }
+
+    // Review Focus 2
+    [Fact]
+    public void An_infinite_speed_does_not_move_the_time()
+    {
+        var component = Component();
+        var ended = 0;
+        component.AnimationEnded += (_, _) => ended++;
+        component.Play("walk");
+        component.Queue("attack");
+        component.Queue("idle");
+        component.Speed = float.PositiveInfinity;
+
+        component.Advance(0.1);
+
+        Assert.Equal(0, component.Time);
+        Assert.Equal("walk", component.Animation);
+        Assert.Equal(0, ended);
+    }
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    public void A_time_that_is_not_finite_starts_again_from_0(double time)
+    {
+        var component = Component();
+        var ended = 0;
+        component.AnimationEnded += (_, _) => ended++;
+        component.Play("attack");
+        component.Queue("idle");
+        component.Time = time;
+
+        component.Advance(0.05);
+
+        Assert.Equal(0.05, component.Time, 6);
+        Assert.Equal("attack", component.Animation);
+        Assert.Equal(0, ended);
+    }
+
     // Review Focus 3
     [Fact]
     public void A_flipbook_replaced_while_playing_keeps_the_animation_by_name()

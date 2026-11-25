@@ -118,10 +118,18 @@ public sealed class FlipbookComponent : ActivableEntityComponent
     public bool IsPlaying { get; private set; }
 
     /// <summary>
-    /// The seconds since the animation started, at its speed.
+    /// The seconds since the animation started, at its speed. A time set from outside lets go of an ended <c>Once</c>.
     /// </summary>
     [DataMemberIgnore]
-    public double Time { get; set; }
+    public double Time
+    {
+        get;
+        set
+        {
+            field = value;
+            Ended = false;
+        }
+    }
 
     /// <summary>
     /// The clip shown: of <see cref="Animation"/> and <see cref="Direction"/>, with the fallbacks of
@@ -134,7 +142,10 @@ public sealed class FlipbookComponent : ActivableEntityComponent
     /// The index of the frame shown in <see cref="CurrentClip"/>; -1 when nothing is shown.
     /// </summary>
     [DataMemberIgnore]
-    public int CurrentFrameIndex => CurrentAnimation is { } animation && animation.FindClip(Direction) is { } clip ? clip.FrameAt(Time, animation.LoopMode) : -1;
+    public int CurrentFrameIndex
+        => CurrentAnimation is { } animation && animation.FindClip(Direction) is { } clip
+            ? HasEnded ? clip.FrameAt(clip.GetPassLength(FlipbookLoopMode.Once), FlipbookLoopMode.Once) : clip.FrameAt(Time, animation.LoopMode)
+            : -1;
 
     /// <summary>
     /// The frame shown; null when nothing is shown.
@@ -144,10 +155,11 @@ public sealed class FlipbookComponent : ActivableEntityComponent
 
     private FlipbookAnimation? CurrentAnimation => Flipbook?.FindAnimation(Animation);
 
-    // A Once that reached the end of its pass and stopped there
-    private bool HasEnded
-        => !IsPlaying && CurrentAnimation is { LoopMode: FlipbookLoopMode.Once } animation
-           && (animation.FindClip(Direction) is not { } clip || Time >= clip.GetPassLength(FlipbookLoopMode.Once));
+    // A Once that reached the end of its pass and stopped there: it shows the last frame of whatever clip the direction
+    // gives, until it is played again or its time is set
+    private bool HasEnded => Ended && !IsPlaying && CurrentAnimation is { LoopMode: FlipbookLoopMode.Once };
+
+    private bool Ended { get; set; }
 
     /// <summary>
     /// Raised when the frame shown is another one: another clip or another index.
@@ -220,11 +232,20 @@ public sealed class FlipbookComponent : ActivableEntityComponent
     /// </summary>
     public void Advance(double seconds)
     {
-        if (IsPlaying && seconds > 0 && double.IsFinite(seconds) && Speed > 0)
+        if (!double.IsFinite(Time))
         {
-            Time += seconds * Speed;
+            Time = 0;
         }
-        EndWhatEnds(seconds > 0 && double.IsFinite(seconds) && Speed > 0 ? seconds * Speed : 0);
+        var step = seconds * Speed;
+        if (!(step > 0 && double.IsFinite(step)))
+        {
+            step = 0;
+        }
+        if (IsPlaying)
+        {
+            Time += step;
+        }
+        EndWhatEnds(step);
         ReportFrame();
     }
 
@@ -250,10 +271,11 @@ public sealed class FlipbookComponent : ActivableEntityComponent
             var clip = animation?.FindClip(Direction);
             var mode = animation?.LoopMode ?? FlipbookLoopMode.Loop;
             var pass = clip?.GetPassLength(mode) ?? 0;
+            var wasEnded = HasEnded;
             double end;
-            if (!(pass > 0))
+            if (!(pass > 0) || wasEnded)
             {
-                // Nothing is shown, or nothing lasts: the queue goes on at once
+                // Nothing is shown, nothing lasts, or a Once already ended: the queue goes on at once
                 end = Time;
             }
             else if (mode == FlipbookLoopMode.Once)
@@ -270,7 +292,7 @@ public sealed class FlipbookComponent : ActivableEntityComponent
             {
                 break;
             }
-            var index = clip is null ? -1 : clip.FrameAt(Math.Max(end - 1e-5, 0), mode);
+            var index = clip is null ? -1 : wasEnded ? CurrentFrameIndex : clip.FrameAt(Math.Max(end - 1e-5, 0), mode);
             var ended = new FlipbookEventArgs(Animation ?? "", clip?.Direction ?? Direction, index);
             var left = Math.Max(Time - end, 0);
             var next = queued.Dequeue();
@@ -289,6 +311,7 @@ public sealed class FlipbookComponent : ActivableEntityComponent
             {
                 Time = pass;
                 IsPlaying = false;
+                Ended = true;
                 AnimationEnded?.Invoke(this, new FlipbookEventArgs(Animation!, onceClip.Direction, onceClip.FrameAt(pass, FlipbookLoopMode.Once)));
             }
         }
@@ -296,6 +319,10 @@ public sealed class FlipbookComponent : ActivableEntityComponent
 
     private void SetAnimation(string animation)
     {
+        if (animation == Animation)
+        {
+            return;
+        }
         var rest = queued.ToArray();
         Animation = animation;
         foreach (var name in rest)
