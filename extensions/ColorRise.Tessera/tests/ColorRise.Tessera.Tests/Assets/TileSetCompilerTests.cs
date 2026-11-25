@@ -296,7 +296,7 @@ public sealed class TileSetCompilerTests
         Assert.Equal(16, build.LoadAlone<TileSet>("Tiles/Town").PixelsPerUnit);
     }
 
-    private static TileSetAsset RedAndBlue(AssetBuild build)
+    internal static TileSetAsset RedAndBlue(AssetBuild build)
     {
         var path = build.WriteFile("tiles.png", TestImages.Png(32, 16, (x, _) => x < 16 ? Red : Blue));
         var asset = new TileSetAsset { Id = AssetId.New(), PixelsPerUnit = 8 };

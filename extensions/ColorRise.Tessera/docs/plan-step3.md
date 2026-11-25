@@ -510,7 +510,7 @@ The lines of `FlipbookAssetChecks.Of`, each a warning of the build and a line of
 - `The clip Left of 'walk' has no frame.`
 - `The frame 3 of the clip Left of 'walk' has no cell.` (frames are counted from 1)
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 public sealed class FlipbookAssetYamlTests
@@ -538,10 +538,14 @@ public sealed class FlipbookCompilerTests
 }
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~Flipbook`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the asset, the factory, the checks and the compiler.**
-- [ ] **Step 4: Run the tests, and read the golden file.** Expected: PASS. Copy the golden file's text into the ledger: it is what a person sees in a diff.
-- [ ] **Step 5: Commit and push**: `feat(tessera): the flipbook asset and its build`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~Flipbook`. Expected: FAIL to compile.
+- [x] **Step 3: Write the asset, the factory, the checks and the compiler.**
+- [x] **Step 4: Run the tests, and read the golden file.** Expected: PASS. Copy the golden file's text into the ledger: it is what a person sees in a diff.
+- [x] **Step 5: Commit and push**: `feat(tessera): the flipbook asset and its build`
+
+**Done (2026-11-25).** Red: the test project did not compile (`FlipbookAsset` not found). Green: the 22 tests of the three classes pass, the 83 of the filter `Flipbook`, and the runtime project's 347. The golden file `Golden/hero.sdflipbook` was written by the first run and read: one line per value, the tile set as `id:Tiles/Hero`, a cell as `Tile: 1:0,0`, `Offset` and `Flip`; its text is in the ledger.
+
+**Done differently.** `FlipbookAssetChecks` is public (a ruling of the pre-flight: the editor of Task 13 reads it, and the Assets project shows its internals to the runtime tests only), and `Of` gives an `IReadOnlyList<string>`, as `TileAssetChecks.Of` does. Every item of the four lists keeps an id in the file, as the frames of a tile's animation do in a tile set: Game Studio's undo, the property grid and a merge work on items by id. Past the names, only what game code plays is checked: the first animation of each name and the first clip of each direction in it, so that each line names one thing; an animation without a name is told once and its clips are not checked. `ToFlipbook` copies the animations, clips, frames and cells, and leaves out the empty items a merge can leave in a list (`~`), so that `Flipbook.FindAnimation` and the component never meet a null. The compiler's tests use the tile set of `TileSetCompilerTests.RedAndBlue`, now internal, as an item that is not a root: the flipbook brings it in the build. Two tests beyond the plan: the content's objects are its own, and the empty items.
 
 ### Task 5: Drawing a flipbook
 
