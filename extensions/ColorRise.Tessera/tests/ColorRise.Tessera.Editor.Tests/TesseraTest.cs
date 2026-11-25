@@ -1,3 +1,4 @@
+using ColorRise.Tessera.Editor.TileMapEditor;
 using ColorRise.Tessera.Editor.TileSetEditor;
 using ColorRise.Tessera.Editor.ViewModels;
 using ColorRise.Tessera.Tests.Assets;
@@ -99,6 +100,17 @@ internal sealed class TesseraSession : IAsyncDisposable
     public async Task<TileSetEditorViewModel> EditTileSetAsync(string location)
     {
         var editor = new TileSetEditorViewModel(TileSetAt(location));
+        editors.Add(editor);
+        Assert.True(await editor.Initialize());
+        return editor;
+    }
+
+    /// <summary>
+    /// Makes the editor of a map as Game Studio does, and initializes it; the session destroys it when it closes.
+    /// </summary>
+    public async Task<TileMapEditorViewModel> EditMapAsync(string location)
+    {
+        var editor = new TileMapEditorViewModel(MapAt(location));
         editors.Add(editor);
         Assert.True(await editor.Initialize());
         return editor;
