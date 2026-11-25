@@ -1721,7 +1721,7 @@ The tools (section 9), in the cells of the current layer:
 - **No stroke begins** without a layer, on a layer whose `Visible` is off, on a locked layer (Task 14), or without a stamp for the tools that need one; `Message` says which: "The layer 'Ground' is hidden.", "The layer 'Ground' is locked.", "The map has no layer. Add one.", "Pick a tile in the palette first."
 - **The pointer leaving** the canvas hides the ghost. A release without a press, and a second button pressed during a stroke, do nothing.
 
-- [ ] **Step 1: Write the failing tests.** `Press`, `Move`, `Release`, `Click`, `Drag` and `Key` call `editor.Input` with the middle of a cell (`Scene.CellBounds`). `Rows(layer, x0, y0, x1, y1)` gives the cells as the tokens of `TestTown.Map`.
+- [x] **Step 1: Write the failing tests.** `Press`, `Move`, `Release`, `Click`, `Drag` and `Key` call `editor.Input` with the middle of a cell (`Scene.CellBounds`). `Rows(layer, x0, y0, x1, y1)` gives the cells as the tokens of `TestTown.Map`.
 
 ```csharp
 // TilePaintingTests
@@ -1771,10 +1771,21 @@ public void The_bounds_of_a_fill_are_the_frame_then_the_used_cells_then_the_chun
 [Fact] public async Task A_layer_removed_from_outside_during_a_drag_ends_the_stroke()   // through the graph: CurrentLayer is valid or -1, nothing throws
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TilePaintingTests|FullyQualifiedName~TileMapToolsTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the geometry, then the editor's view model with one small class per tool** in `TileMapTools.cs` (a press, a move, a release and a cancel each). The view model owns the document and the scene, and disposes both in `Destroy`.
-- [ ] **Step 4: Run the tests.** Expected: PASS (39 cases with the theories).
-- [ ] **Step 5: Commit and push**: `feat(tessera): the map editor's tools: stamp, rectangle, fill, erase, pick and select`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TilePaintingTests|FullyQualifiedName~TileMapToolsTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the geometry, then the editor's view model with one small class per tool** in `TileMapTools.cs` (a press, a move, a release and a cancel each). The view model owns the document and the scene, and disposes both in `Destroy`.
+- [x] **Step 4: Run the tests.** Expected: PASS (39 cases with the theories).
+- [x] **Step 5: Commit and push**: `feat(tessera): the map editor's tools: stamp, rectangle, fill, erase, pick and select`
+
+**Done (2026-11-25).** Gates: the tests fail to compile without the tools, then the 41 cases pass (15 of the geometry, 26 of the tools). Mutation checks: a drag that stamps only its end, a fill modulo that can be negative, a lock that is not checked, a move whose holes overwrite, a fill without its used bounds, and a second button taken during a stroke, each make their tests fail. Taking away the check of a release without a press makes no test fail: each tool also ignores a release of a drag it did not begin. The whole editor test project passes (202), with no compiler warning.
+
+**Done differently.**
+- The theory of the fill bounds takes the used bounds and the expected rectangle as numbers (ten parameters, four cases, one more for a click outside used cells far from them). The anchoring of a fill at the cell zero has a test of its own, with a stamp three cells wide, as with two a modulo that can be negative gives the same cells.
+- Two more tools tests: a second button during a stroke and a release without a press do nothing; and the current layer stays on its layer when a layer under it is removed.
+- With Control or Alt held, a key gives false and does nothing: Control+Z and the like belong to Game Studio. X, Y and Z give false without a stamp; Escape and Delete give false when there was nothing to cancel, clear or empty.
+- A press that changes cells is refused, in this order, for no layer, a hidden layer, a locked layer, then no stamp (a stamp without a tile counts as none). Pick, a selection and a right-drag capture need a layer only. Erase needs no stamp.
+- The select tool: a click selects its one cell; a move is a stroke from the press, so it shows while dragged, and Escape or an undo puts the tiles and the selection back. The selection and the capture are drawn as outlines in the scene's overlay.
+- `TileClipboard` keeps the copied cells as a stamp and, for each slot, a `CopiedTileSet` (asset id and name). A cell whose slot had no tile set in its map cannot be pasted, and the message names it "slot N".
+- The lock is the editor's own for now (`LockLayer`, `IsLayerLocked`, by the layer's asset), until Task 14 keeps it in the settings.
 
 ### Task 14: Layers, tile sets, settings, commands and the status line
 
