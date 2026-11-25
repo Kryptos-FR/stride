@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Packs Tessera, then builds and runs a game outside this folder that has only Tessera's package and Stride's packages: the
-# game's build compiles a tile set and a map with the asset compiler, and the game draws the map in one frame without a
-# window. Prints TESSERA-PACKAGES-CHECK OK and exits with 0, or says what failed and exits with 1.
+# game's build compiles a tile set, a map and a flipbook with the asset compiler, and the game draws the map and the
+# flipbook in one frame without a window. Prints TESSERA-PACKAGES-CHECK OK and exits with 0, or says what failed and exits with 1.
 #
 # STRIDE_FEED: the folder of the Stride packages to build against; by default the packages of the engine build of the
 # checkout Tessera sits in (nuget.config's stride-dev source).

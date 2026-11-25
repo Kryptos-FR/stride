@@ -15,23 +15,25 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VK_DRIVER_FILES")))
 }
 
 using var game = new CheckGame();
-game.Run(new GameContextHeadless(CheckGame.Side, CheckGame.Side));
+game.Run(new GameContextHeadless(CheckGame.Width, CheckGame.Height));
 Console.WriteLine(game.Result);
 return game.Result == CheckGame.Passed ? 0 : 1;
 
 /// <summary>
-/// Loads the map its build compiled, draws one frame of its four cells, and reads four pixels: red, green, blue, yellow.
+/// Loads the map and the flipbook its build compiled, draws one frame of the map's four cells with the flipbook's one frame
+/// beside them, and reads five pixels: red, green, blue and yellow for the cells, yellow for the flipbook.
 /// </summary>
 internal sealed class CheckGame : Game
 {
-    public const int Side = 64;
+    public const int Width = 96;
+    public const int Height = 64;
     public const string Passed = "TESSERA-PACKAGES-CHECK OK";
 
     public CheckGame()
     {
         AutoLoadDefaultSettings = false;
-        GraphicsDeviceManager.PreferredBackBufferWidth = Side;
-        GraphicsDeviceManager.PreferredBackBufferHeight = Side;
+        GraphicsDeviceManager.PreferredBackBufferWidth = Width;
+        GraphicsDeviceManager.PreferredBackBufferHeight = Height;
         GraphicsDeviceManager.PreferredColorSpace = ColorSpace.Gamma;
         // The forward renderer reads the depth buffer, which a game without a window has none of by default
         GraphicsDeviceManager.PreferredDepthStencilFormat = PixelFormat.D24_UNorm_S8_UInt;
@@ -48,14 +50,18 @@ internal sealed class CheckGame : Game
         {
             var slot = new SceneCameraSlot();
             var scene = new Scene();
-            // Two units high, centred on the map's four cells: each cell is 32 pixels wide
+            // Two units high and three wide, the map's four cells on the left: each cell is 32 pixels wide
             var camera = new Entity("camera")
             {
                 new CameraComponent { Projection = CameraProjectionMode.Orthographic, OrthographicSize = 2, NearClipPlane = 0.1f, FarClipPlane = 100, Slot = slot.ToSlotId() },
             };
-            camera.Transform.Position = new Vector3(1, 1, 10);
+            camera.Transform.Position = new Vector3(1.5f, 1, 10);
             scene.Entities.Add(camera);
             scene.Entities.Add(new Entity("map") { new TileMapComponent { Map = Content.Load<TileMap>("Maps/Town") } });
+            // The flipbook's one frame, a tile of one unit, stands beside the map: x from 2 to 3, y from 0.5 to 1.5
+            var lamp = new Entity("lamp") { new FlipbookComponent { Flipbook = Content.Load<Flipbook>("Flipbooks/Lamp"), Animation = "idle" } };
+            lamp.Transform.Position = new Vector3(2.5f, 0.5f, 0);
+            scene.Entities.Add(lamp);
 
             SceneSystem.GraphicsCompositor = Compositor(slot);
             SceneSystem.SceneInstance = new SceneInstance(Services, scene);
@@ -86,14 +92,17 @@ internal sealed class CheckGame : Game
 
         var expected = new[] { new Color(255, 0, 0, 255), new Color(0, 255, 0, 255), new Color(0, 0, 255, 255), new Color(255, 255, 0, 255) };
         var actual = new[] { Pixel(16, 16), Pixel(48, 16), Pixel(16, 48), Pixel(48, 48) };
-        Result = expected.SequenceEqual(actual)
-            ? Passed
-            : $"TESSERA-PACKAGES-CHECK FAILED: the four cells are {string.Join(", ", actual)}, not red, green, blue, yellow";
+        var flipbook = Pixel(80, 32);
+        Result = !expected.SequenceEqual(actual)
+            ? $"TESSERA-PACKAGES-CHECK FAILED: the four cells are {string.Join(", ", actual)}, not red, green, blue, yellow"
+            : flipbook != expected[3]
+                ? $"TESSERA-PACKAGES-CHECK FAILED: the flipbook's frame is {flipbook}, not yellow"
+                : Passed;
         Exit();
     }
 
-    // A forward renderer of an opaque and a transparent stage, as a game's compositor has; Tessera's render feature draws the
-    // map in the transparent one
+    // A forward renderer of an opaque and a transparent stage, as a game's compositor has; Tessera's two render features draw
+    // the map and the flipbook in the transparent one
     private static GraphicsCompositor Compositor(SceneCameraSlot slot)
     {
         var opaque = new RenderStage("Opaque", "Main") { SortMode = new StateChangeSortMode() };
@@ -105,6 +114,7 @@ internal sealed class CheckGame : Game
             RenderFeatures =
             {
                 new TileRenderFeature { RenderStageSelectors = { new TileTransparentRenderStageSelector { TransparentRenderStage = transparent } } },
+                new FlipbookRenderFeature { RenderStageSelectors = { new TileTransparentRenderStageSelector { TransparentRenderStage = transparent } } },
             },
             Game = new SceneCameraRenderer
             {

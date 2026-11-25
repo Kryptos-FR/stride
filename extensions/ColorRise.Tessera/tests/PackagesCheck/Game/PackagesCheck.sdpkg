@@ -12,3 +12,4 @@ ResourceFolders:
     - !dir Resources
 RootAssets:
     - 3a9d6c21-5b7e-4f10-8c42-9e6d1f0a7b35:Maps/Town
+    - c0db059f-db44-480b-ab81-a64a8ac87c7b:Flipbooks/Lamp

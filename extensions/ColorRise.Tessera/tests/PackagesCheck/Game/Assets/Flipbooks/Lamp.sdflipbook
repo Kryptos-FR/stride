@@ -1,0 +1,21 @@
+!FlipbookAsset
+Id: c0db059f-db44-480b-ab81-a64a8ac87c7b
+SerializedVersion: {ColorRise.Tessera: 1.0.0.0}
+Tags: []
+TileSet: 7c2e5b19-4d8a-4e36-b1f0-2a9c6d3e8f41:Tiles/Town
+Pivot: {X: 0.5, Y: 0.0}
+Animations:
+    29c3eb0c3c2d4ad8a8cbb8665ef27d4d:
+        Name: idle
+        LoopMode: Loop
+        Clips:
+            42a16e427b314f529f345fc9759c2c27:
+                Direction: None
+                Frames:
+                    aca158989e2840429a05ad4b9a79c549:
+                        Duration: 1.0
+                        Cells:
+                            1df2623f544c436eaf7dcbb0fc7e0751:
+                                Tile: 1:3,0
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
