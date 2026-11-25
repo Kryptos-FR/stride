@@ -1,3 +1,4 @@
+using ColorRise.Tessera.Editor.FlipbookEditor;
 using ColorRise.Tessera.Editor.TileMapEditor;
 using ColorRise.Tessera.Editor.TileSetEditor;
 using Stride.Core.Assets.Editor.Commands;
@@ -36,6 +37,10 @@ internal static class TesseraCommands
         TileSet("Tessera.TileSet.Mode.Animation", "Animation mode", ["mode", "animate", "frames"], editor => editor.Mode = TileSetEditorMode.Animation, editor => editor.Mode == TileSetEditorMode.Animation),
         TileSet("Tessera.TileSet.AddImage", "Add image source", ["image", "source"], editor => editor.AddImageAsync()),
         TileSet("Tessera.TileSet.AddSpriteSheet", "Add sprite sheet source", ["sprite sheet", "source"], editor => editor.AddSpriteSheetAsync()),
+        Flipbook("Tessera.Flipbook.PlayPause", "Play or pause the preview", ["play", "pause", "preview"], editor => Run(() => editor.IsPlaying = !editor.IsPlaying), isChecked: editor => editor.IsPlaying),
+        Flipbook("Tessera.Flipbook.AddAnimation", "Add an animation", ["animation", "new"], editor => Run(() => editor.AddAnimationCommand.Execute())),
+        Flipbook("Tessera.Flipbook.Sheet", "Make clips from a sheet", ["sheet", "rows", "clips"], editor => Run(() => editor.SheetCommand.Execute()), editor => editor.SheetCommand.IsEnabled),
+        Flipbook("Tessera.Flipbook.Mirror", "Mirror the clip", ["mirror", "flip", "left", "right"], editor => editor.MirrorAsync(), editor => editor.MirrorCommand.IsEnabled),
     ];
 
     private static CommandDescriptor Tool(TileToolKind tool, string title, string key)
@@ -58,6 +63,28 @@ internal static class TesseraCommands
             CanExecute = context => context.Editor is TileSetEditorViewModel,
             ExecuteAsync = context => context.Editor is TileSetEditorViewModel editor ? execute(editor) : Task.CompletedTask,
         };
+
+    // A command on the flipbook editor that has the focus, when it can run there; a toggle when it has isChecked
+    private static CommandDescriptor Flipbook(
+        string id, string title, string[] keywords, Func<FlipbookEditorViewModel, Task> execute,
+        Func<FlipbookEditorViewModel, bool>? canExecute = null, Func<FlipbookEditorViewModel, bool>? isChecked = null)
+        => new()
+        {
+            Id = id,
+            Title = () => title,
+            Category = Category,
+            Keywords = keywords,
+            GestureScope = typeof(FlipbookEditorViewModel),
+            CanExecute = context => context.Editor is FlipbookEditorViewModel editor && (canExecute?.Invoke(editor) ?? true),
+            IsChecked = isChecked is null ? null : context => context.Editor is FlipbookEditorViewModel editor && isChecked(editor),
+            ExecuteAsync = context => context.Editor is FlipbookEditorViewModel editor && (canExecute?.Invoke(editor) ?? true) ? execute(editor) : Task.CompletedTask,
+        };
+
+    private static Task Run(Action action)
+    {
+        action();
+        return Task.CompletedTask;
+    }
 
     // A command on the editor of type T that has the focus; a toggle when it has isChecked
     private static CommandDescriptor Command<T>(string id, string title, string[] keywords, Action<T> execute, Func<T, bool>? isChecked)

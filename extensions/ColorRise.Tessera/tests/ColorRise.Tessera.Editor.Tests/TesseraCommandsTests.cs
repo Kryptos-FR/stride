@@ -1,3 +1,4 @@
+using ColorRise.Tessera.Editor.FlipbookEditor;
 using ColorRise.Tessera.Editor.Palette;
 using ColorRise.Tessera.Editor.TileMapEditor;
 using ColorRise.Tessera.Editor.TileSetEditor;
@@ -17,6 +18,7 @@ public sealed class TesseraCommandsTests
 {
     private const string MapLocation = "Maps/Town";
     private const string TileSetLocation = "Tiles/Town";
+    private const string FlipbookLocation = "Characters/Hero";
 
     private static readonly string[] MapIds =
     [
@@ -27,26 +29,32 @@ public sealed class TesseraCommandsTests
 
     private static readonly string[] TileSetIds = ["Tessera.TileSet.Mode.Select", "Tessera.TileSet.Mode.Solid", "Tessera.TileSet.Mode.Animation", "Tessera.TileSet.AddImage", "Tessera.TileSet.AddSpriteSheet"];
 
+    private static readonly string[] FlipbookIds = ["Tessera.Flipbook.PlayPause", "Tessera.Flipbook.AddAnimation", "Tessera.Flipbook.Sheet", "Tessera.Flipbook.Mirror"];
+
     [Fact]
     public void Every_command_has_its_id_a_scope_and_no_default_gesture()
     {
         var commands = TesseraCommands.Create();
 
-        Assert.Equal([.. MapIds, .. TileSetIds], commands.Select(command => command.Id));
+        Assert.Equal([.. MapIds, .. TileSetIds, .. FlipbookIds], commands.Select(command => command.Id));
         Assert.All(commands, command =>
         {
             Assert.Equal("Tessera", command.Category);
             Assert.Null(command.DefaultGesture);
             Assert.NotNull(command.CanExecute);
-            Assert.Equal(MapIds.Contains(command.Id) ? typeof(TileMapEditorViewModel) : typeof(TileSetEditorViewModel), command.GestureScope);
+            var scope = MapIds.Contains(command.Id) ? typeof(TileMapEditorViewModel) : TileSetIds.Contains(command.Id) ? typeof(TileSetEditorViewModel) : typeof(FlipbookEditorViewModel);
+            Assert.Equal(scope, command.GestureScope);
         });
         Assert.Equal("Stamp tool", Command("Tessera.Map.Tool.Stamp").Title());
         Assert.Equal("Flip stamp horizontally", Command("Tessera.Map.FlipStampX").Title());
         Assert.Contains("B", Command("Tessera.Map.Tool.Stamp").Keywords);
         Assert.Contains("Shift+Z", Command("Tessera.Map.RotateStampCounterClockwise").Keywords);
         Assert.All(MapIds.Take(6), id => Assert.NotNull(Command(id).IsChecked));
-        Assert.Equal(19, commands.Count);
+        Assert.Equal(23, commands.Count);
         Assert.Equal("Animation mode", Command("Tessera.TileSet.Mode.Animation").Title());
+        Assert.Equal(
+            ["Play or pause the preview", "Add an animation", "Make clips from a sheet", "Mirror the clip"],
+            FlipbookIds.Select(id => Command(id).Title()));
     }
 
     [Fact]
@@ -168,6 +176,56 @@ public sealed class TesseraCommandsTests
         }
     }
 
+    [Fact]
+    public async Task The_flipbook_commands_reach_the_focused_flipbook_editor()
+    {
+        await using var session = await OpenAsync();
+        var editor = await session.EditFlipbookAsync(FlipbookLocation);
+        var context = In(session, editor);
+        var playPause = Command("Tessera.Flipbook.PlayPause");
+
+        Assert.True(playPause.IsChecked!(context));
+        await playPause.ExecuteAsync(context);
+        Assert.False(editor.IsPlaying);
+        Assert.False(playPause.IsChecked!(context));
+        await playPause.ExecuteAsync(context);
+        Assert.True(editor.IsPlaying);
+
+        await Command("Tessera.Flipbook.AddAnimation").ExecuteAsync(context);
+        Assert.Equal(["walk", "idle", "animation"], editor.Animations.Select(animation => animation.Name));
+        Assert.Equal(["Add animation"], session.Steps);
+
+        Assert.True(Command("Tessera.Flipbook.Sheet").CanExecute!(context));
+        await Command("Tessera.Flipbook.Sheet").ExecuteAsync(context);
+        Assert.NotNull(editor.PendingSheet);
+
+        // Down is its own mirror
+        var mirror = Command("Tessera.Flipbook.Mirror");
+        editor.SelectedItem = editor.Animations[0].Clips[0];
+        Assert.False(mirror.CanExecute!(context));
+        editor.SelectedItem = editor.Animations[0].Clips[1];
+        Assert.True(mirror.CanExecute!(context));
+        await mirror.ExecuteAsync(context);
+        Assert.Equal(["Down", "Left", "Right"], editor.Animations[0].Clips.Select(clip => clip.Label));
+        Assert.Equal(["Add animation", "Mirror clip"], session.Steps);
+    }
+
+    [Fact]
+    public async Task A_flipbook_command_cannot_run_without_a_flipbook_editor()
+    {
+        await using var session = await OpenAsync();
+        var mapEditor = await session.EditMapAsync(MapLocation);
+        var flipbookEditor = await session.EditFlipbookAsync(FlipbookLocation);
+
+        Assert.All(FlipbookIds, id => Assert.False(Command(id).CanExecute!(In(session, mapEditor)), id));
+        Assert.All(MapIds.Concat(TileSetIds), id => Assert.False(Command(id).CanExecute!(In(session, flipbookEditor)), id));
+        Assert.All(FlipbookIds.Take(3), id => Assert.True(Command(id).CanExecute!(In(session, flipbookEditor)), id));
+
+        // A command that cannot run does nothing
+        await Command("Tessera.Flipbook.AddAnimation").ExecuteAsync(In(session, mapEditor));
+        Assert.Empty(session.Steps);
+    }
+
     private static CommandDescriptor Command(string id) => TesseraCommands.Create().Single(command => command.Id == id);
 
     private static CommandContext In(TesseraSession session, IAssetEditorViewModel editor)
@@ -176,7 +234,8 @@ public sealed class TesseraCommandsTests
     private static async DispatcherTask<TesseraSession> OpenAsync()
     {
         var tileSet = TileSet();
-        var session = await TesseraSession.OpenAsync((TileSetLocation, tileSet), (MapLocation, Map(tileSet, TileSetLocation, [["."]])));
+        var session = await TesseraSession.OpenAsync(
+            (TileSetLocation, tileSet), (MapLocation, Map(tileSet, TileSetLocation, [["."]])), (FlipbookLocation, Flipbook(tileSet, TileSetLocation)));
         session.WriteImage("Tiles/town.png", 64, 32, Pixel);
         return session;
     }

@@ -111,6 +111,26 @@ public sealed class FlipbookSheetTests
     }
 
     [Fact]
+    public async Task A_row_offers_skip_and_the_directions_as_the_tree_names_them()
+    {
+        await using var book = await OpenAsync();
+        var editor = book.Editor;
+        editor.SheetCommand.Execute();
+        Drag(editor, (0, 0), (2, 1));
+        var row = editor.PendingSheet!.RowItems[1];
+
+        Assert.Equal(
+            ["Skip", "Any direction", "Down", "Left", "Right", "Up", "Down left", "Down right", "Up left", "Up right"],
+            SheetRowViewModel.Choices.Select(choice => choice.Label));
+        Assert.Equal("Left", row.Choice.Label);
+
+        row.Choice = SheetRowViewModel.Choices[0];
+        Assert.Null(row.Direction);
+        row.Direction = FlipbookDirection.UpRight;
+        Assert.Same(SheetRowViewModel.Choices[^1], row.Choice);
+    }
+
+    [Fact]
     public async Task One_row_is_a_clip_for_any_direction()
     {
         await using var book = await OpenAsync();

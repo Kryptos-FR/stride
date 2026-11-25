@@ -1460,7 +1460,7 @@ The rules of Mirror:
 - One step, `Mirror clip`. The target's frames are copies of the selected clip's: the same durations, and each cell with the same tile, its `Flip` with `Horizontal` toggled, and its offset mirrored around the middle of the first cell: for a cell `w` pixels wide at the offset `x`, with the first cell `w0` wide, `x' = w0 - (x + w)`; `y` is kept. The widths are those of the tiles in the set's pictures, or the set's tile size for a tile it lacks.
 - With the pivot's X at 0.5 the mirrored clip is what `FlipX` shows. Then the target clip is selected.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // FlipbookSheetTests: TestTown's grid is four tiles wide; the block of these tests is its three first columns over its two rows,
@@ -1491,10 +1491,17 @@ public async Task Mirror_is_off_for_a_direction_that_is_its_own_mirror(FlipbookD
 [Fact] public async Task A_diagonal_mirrors_to_the_other_diagonal()                            // UpRight makes UpLeft
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
-- [ ] **Step 3: Write the bar's view model, and the two commands.**
-- [ ] **Step 4: Run the tests.** Expected: PASS, with `FlipbookEditorTests`.
-- [ ] **Step 5: Commit and push**: `feat(tessera): Sheet and Mirror in the flipbook editor`
+- [x] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
+- [x] **Step 3: Write the bar's view model, and the two commands.**
+- [x] **Step 4: Run the tests.** Expected: PASS, with `FlipbookEditorTests`.
+- [x] **Step 5: Commit and push**: `feat(tessera): Sheet and Mirror in the flipbook editor`
+
+**Done differently** (cca87cb67). "Every row is skipped." is also the problem when no row with a direction has a tile, as a
+row of holes makes no clip. `Note` speaks of rows that write a clip, says "the clip Down" for one clip, and is null while
+there is a problem. The open bar closes when the palette is made again for another tile set, as its block names tiles of
+the old one; Sheet does nothing while the bar is open. Mirror takes 16 pixels as the width of a tile when the flipbook has
+no tile set, and skips empty frames and cells. One more test, `Sheet_is_off_without_a_palette`. Tests: sheet 17, mirror 8,
+editor 21; solution runtime 395, editor 359, views 52.
 
 ### Task 16: The view of the flipbook editor, and its commands
 

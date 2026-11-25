@@ -23,6 +23,13 @@ public enum SheetFrameOrder
 }
 
 /// <summary>
+/// What a row of a sheet can make, as the bar offers it: a clip of a direction, or nothing.
+/// </summary>
+/// <param name="Direction">The direction of the clip; null to skip the row.</param>
+/// <param name="Label">"Skip", or the direction as the tree names it.</param>
+public sealed record SheetDirectionChoice(FlipbookDirection? Direction, string Label);
+
+/// <summary>
 /// A row of the block of a sheet, and the direction of the clip it makes.
 /// </summary>
 public sealed class SheetRowViewModel : DispatcherViewModel
@@ -38,9 +45,27 @@ public sealed class SheetRowViewModel : DispatcherViewModel
     }
 
     /// <summary>
+    /// What a row can make: Skip, then each direction in its order.
+    /// </summary>
+    public static IReadOnlyList<SheetDirectionChoice> Choices { get; } =
+    [
+        new(null, "Skip"),
+        .. Enum.GetValues<FlipbookDirection>().Select(direction => new SheetDirectionChoice(direction, FlipbookClipItemViewModel.LabelOf(direction))),
+    ];
+
+    /// <summary>
     /// The number of the row, from 1, from the top of the block.
     /// </summary>
     public int Row { get; }
+
+    /// <summary>
+    /// The choice of <see cref="Choices"/> that is <see cref="Direction"/>.
+    /// </summary>
+    public SheetDirectionChoice Choice
+    {
+        get => Choices.First(choice => choice.Direction == Direction);
+        set => Direction = value?.Direction;
+    }
 
     /// <summary>
     /// The direction of the clip the row makes; null when the row is skipped.
@@ -52,6 +77,7 @@ public sealed class SheetRowViewModel : DispatcherViewModel
         {
             if (SetValue(ref field, value))
             {
+                OnPropertyChanged(nameof(Choice));
                 changed?.Invoke();
             }
         }

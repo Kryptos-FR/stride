@@ -1,0 +1,224 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:sys="using:System"
+             xmlns:controls="using:ColorRise.Tessera.Editor.Avalonia.Controls"
+             xmlns:views="using:ColorRise.Tessera.Editor.Avalonia.Views"
+             xmlns:editor="using:ColorRise.Tessera.Editor.FlipbookEditor"
+             x:Class="ColorRise.Tessera.Editor.Avalonia.Views.FlipbookEditorView"
+             x:DataType="editor:FlipbookEditorViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.bar">
+      <Setter Property="Background" Value="#22FFFFFF"/>
+      <Setter Property="Padding" Value="6,4"/>
+    </Style>
+    <Style Selector="Border.bar TextBlock">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <!-- The order that is on stays on: a click on it does nothing -->
+    <Style Selector="ToggleButton.mode:checked">
+      <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style Selector="TextBlock.problem">
+      <Setter Property="Foreground" Value="#FFB040"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="WrapPanel#TreeBar > Button">
+      <Setter Property="Margin" Value="0,0,4,4"/>
+    </Style>
+    <Style Selector="TreeView#AnimationTree TreeViewItem">
+      <Setter Property="IsExpanded" Value="True"/>
+    </Style>
+    <Style Selector="ListBox#FrameStrip ListBoxItem">
+      <Setter Property="Padding" Value="2"/>
+    </Style>
+    <!-- The frame the preview shows -->
+    <Style Selector="Border.frame">
+      <Setter Property="BorderThickness" Value="2"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="Padding" Value="2"/>
+    </Style>
+    <Style Selector="Border.frame.current">
+      <Setter Property="BorderBrush" Value="#FFD040"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <!-- Why the last thing asked was not done, and what is wrong in the flipbook -->
+    <StackPanel DockPanel.Dock="Bottom" Margin="6,2,6,4">
+      <ItemsControl x:Name="ProblemList" ItemsSource="{Binding Problems}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="sys:String">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Classes="problem" Text="⚠" Margin="0,0,6,0"/>
+              <TextBlock Classes="problem" Text="{Binding}"/>
+            </DockPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock x:Name="MessageText" Classes="problem" Text="{Binding Message}" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+    </StackPanel>
+
+    <!-- The animations and their clips; a name is typed in place with a double click or F2 -->
+    <DockPanel DockPanel.Dock="Left" Width="230" Margin="6,4,0,0">
+      <WrapPanel x:Name="TreeBar" DockPanel.Dock="Top">
+        <Button x:Name="AddAnimationButton" Content="+" ToolTip.Tip="Add an animation" Command="{Binding AddAnimationCommand}"/>
+        <!-- A menu of the directions the animation lacks -->
+        <Button x:Name="AddClipButton" Content="+ Direction" ToolTip.Tip="Add a clip for a direction the animation lacks" Click="OnAddClip"/>
+        <Button x:Name="RemoveButton" Content="-" ToolTip.Tip="Remove the selected clip or animation" Command="{Binding RemoveSelectedCommand}"/>
+        <Button x:Name="SheetButton" Content="Sheet" ToolTip.Tip="Make clips from the rows of a block of the palette" Command="{Binding SheetCommand}"/>
+        <Button x:Name="MirrorButton" Content="Mirror" ToolTip.Tip="Copy the clip to the other side, flipped" Command="{Binding MirrorCommand}"/>
+      </WrapPanel>
+      <TreeView x:Name="AnimationTree" ItemsSource="{Binding Animations}" SelectedItem="{Binding SelectedItem}">
+        <sd:EditCommands.Bindings>
+          <sd:EditCommandBinding Kind="Rename" Command="{x:Static sd:BeginEditCommand.Instance}" CommandParameter="{Binding SelectedItem}"/>
+          <sd:EditCommandBinding Kind="Delete" Command="{Binding RemoveSelectedCommand}"/>
+        </sd:EditCommands.Bindings>
+        <TreeView.DataTemplates>
+          <TreeDataTemplate DataType="editor:FlipbookAnimationItemViewModel" x:DataType="editor:FlipbookAnimationItemViewModel" ItemsSource="{Binding Clips}">
+            <Panel>
+              <TextBlock x:Name="AnimationName" Background="Transparent" Text="{Binding Name}" TextTrimming="CharacterEllipsis"
+                         IsVisible="{Binding !IsEditing}" DoubleTapped="OnAnimationNameDoubleTapped"/>
+              <TextBox x:Name="AnimationNameBox" MinWidth="120" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsEditing}">
+                <Interaction.Behaviors>
+                  <sd:InlineEditBehavior Name="{Binding Name, Mode=TwoWay}" IsEditing="{Binding IsEditing, Mode=TwoWay}"/>
+                </Interaction.Behaviors>
+              </TextBox>
+            </Panel>
+          </TreeDataTemplate>
+          <DataTemplate DataType="editor:FlipbookClipItemViewModel" x:DataType="editor:FlipbookClipItemViewModel">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock x:Name="ClipLabel" Text="{Binding Label}"/>
+              <TextBlock x:Name="ClipFrames" Opacity="0.6" Text="{Binding FrameCount}"/>
+            </StackPanel>
+          </DataTemplate>
+        </TreeView.DataTemplates>
+      </TreeView>
+    </DockPanel>
+
+    <!-- The palette of the tile set: a click or a drag adds frames, or gives Sheet its block -->
+    <DockPanel DockPanel.Dock="Right" Width="300" Margin="6,4">
+      <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4" IsVisible="{Binding Pictures, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <Button x:Name="ChangeTileSetButton" DockPanel.Dock="Right" Content="Change" ToolTip.Tip="Pick another tile set"
+                Command="{Binding PickTileSetCommand}"/>
+        <TextBlock x:Name="TileSetName" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Pictures.TileSet.Name}"/>
+      </DockPanel>
+      <Button x:Name="PickTileSetButton" DockPanel.Dock="Top" Content="Pick a tile set" Command="{Binding PickTileSetCommand}"
+              IsVisible="{Binding Pictures, Converter={x:Static ObjectConverters.IsNull}}"/>
+      <Panel IsVisible="{Binding Palette, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <controls:TilePalette DataContext="{Binding Palette}"/>
+      </Panel>
+    </DockPanel>
+
+    <DockPanel Margin="6,4,0,0">
+      <!-- The frames of the clip: Delete removes the selected ones, and a drag along the strip moves them -->
+      <DockPanel DockPanel.Dock="Bottom" Margin="0,4,0,0">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0" VerticalAlignment="Center">
+          <Button x:Name="MoveFramesLeftButton" Content="&lt;" ToolTip.Tip="Move the selected frames one place earlier" Command="{Binding MoveFramesLeftCommand}"/>
+          <Button x:Name="MoveFramesRightButton" Content="&gt;" ToolTip.Tip="Move the selected frames one place later" Command="{Binding MoveFramesRightCommand}"/>
+          <Button x:Name="RemoveFramesButton" Content="x" ToolTip.Tip="Remove the selected frames (Delete)" Command="{Binding RemoveFramesCommand}"/>
+        </StackPanel>
+        <ListBox x:Name="FrameStrip" ItemsSource="{Binding Frames}" SelectionMode="Multiple" Background="Transparent" MinHeight="100"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+          <sd:EditCommands.Bindings>
+            <sd:EditCommandBinding Kind="Delete" Command="{Binding RemoveFramesCommand}"/>
+          </sd:EditCommands.Bindings>
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="2"/>
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="editor:FlipbookFrameItemViewModel">
+              <Border Classes="frame" Classes.current="{Binding IsCurrent}" ToolTip.Tip="{Binding Tile}">
+                <StackPanel Spacing="1">
+                  <controls:PictureView Width="64" Height="64" Picture="{Binding Picture}"/>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
+                    <TextBlock x:Name="FrameLabel" Text="{Binding Label}"/>
+                    <TextBlock Classes="problem" Text="⚠" IsVisible="{Binding HasMissing}"/>
+                  </StackPanel>
+                  <TextBlock HorizontalAlignment="Center" Opacity="0.7" Text="{Binding Duration, StringFormat='{}{0:0.###} s'}"/>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <!-- Sheet: the block of the palette cut into a clip a row -->
+      <ContentControl DockPanel.Dock="Bottom" Content="{Binding PendingSheet}">
+        <ContentControl.ContentTemplate>
+          <DataTemplate x:DataType="editor:PendingSheetViewModel">
+            <Border Classes="bar">
+              <StackPanel Spacing="4">
+                <WrapPanel>
+                  <TextBlock Margin="0,0,12,0" IsVisible="{Binding Block, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock.Text>
+                      <MultiBinding StringFormat="{}{0} by {1}">
+                        <Binding Path="Columns"/>
+                        <Binding Path="Rows"/>
+                      </MultiBinding>
+                    </TextBlock.Text>
+                  </TextBlock>
+                  <ItemsControl ItemsSource="{Binding RowItems}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel/>
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="editor:SheetRowViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,10,0">
+                          <TextBlock Text="{Binding Row, StringFormat='Row {0}'}"/>
+                          <ComboBox x:Name="RowDirection" ItemsSource="{x:Static editor:SheetRowViewModel.Choices}" SelectedItem="{Binding Choice}" MinWidth="110">
+                            <ComboBox.ItemTemplate>
+                              <DataTemplate x:DataType="editor:SheetDirectionChoice">
+                                <TextBlock Text="{Binding Label}"/>
+                              </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                          </ComboBox>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </WrapPanel>
+                <WrapPanel>
+                  <ToggleButton x:Name="InOrderButton" Classes="mode" Content="In order" ToolTip.Tip="The frames of a row from the left: 1, 2, 3"
+                                IsChecked="{Binding Order, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:SheetFrameOrder.InOrder}}"/>
+                  <ToggleButton x:Name="ThereAndBackButton" Classes="mode" Content="There and back" Margin="4,0,12,0"
+                                ToolTip.Tip="The frames of a row from the left, then back: 1, 2, 3, 2"
+                                IsChecked="{Binding Order, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:SheetFrameOrder.ThereAndBack}}"/>
+                  <TextBlock Text="Duration" Margin="0,0,4,0"/>
+                  <TextBox x:Name="SheetDurationBox" Width="56" MinWidth="0" Text="{Binding Duration, UpdateSourceTrigger=PropertyChanged}"/>
+                  <TextBlock Text="s" Margin="4,0,12,0"/>
+                  <TextBlock Text="Animation" Margin="0,0,4,0"/>
+                  <TextBox x:Name="SheetNameBox" Width="120" MinWidth="0" Text="{Binding AnimationName, UpdateSourceTrigger=PropertyChanged}"/>
+                  <Button x:Name="MakeButton" Content="Make" Margin="12,0,0,0" Command="{Binding ConfirmCommand}"/>
+                  <Button x:Name="CancelSheetButton" Content="Cancel" Margin="4,0,0,0" Command="{Binding CancelCommand}"/>
+                </WrapPanel>
+                <TextBlock Classes="problem" Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <TextBlock Text="{Binding Note}" IsVisible="{Binding Note, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ContentControl.ContentTemplate>
+      </ContentControl>
+
+      <!-- Under the preview: play or pause, the speed, and whether the clip starts again at its end -->
+      <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
+        <ToggleButton x:Name="PlayButton" Content="Play" ToolTip.Tip="Play or pause the preview" IsChecked="{Binding IsPlaying}"/>
+        <ComboBox x:Name="SpeedChoice" ItemsSource="{Binding PreviewSpeeds}" SelectedItem="{Binding PreviewSpeed}" ToolTip.Tip="How fast the preview plays">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="sys:Single">
+              <TextBlock Text="{Binding StringFormat='{}{0:0%}'}"/>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <CheckBox x:Name="LoopBox" Content="Loop" ToolTip.Tip="Start again at the end, whatever the loop mode of the animation" IsChecked="{Binding LoopPreview}"/>
+      </StackPanel>
+
+      <!-- The clip, played around the cross of the pivot -->
+      <controls:TileCanvas x:Name="Canvas" Scene="{Binding Preview}" View="{Binding PreviewView}" ShowGrid="False" FitOnFirstLayout="True"/>
+    </DockPanel>
+  </DockPanel>
+</UserControl>

@@ -988,8 +988,11 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         SelectedItem = animationItems.FirstOrDefault(item => item.Animation == animation);
     }
 
-    // The selected clip copied to the clip of the mirrored direction, in one step
-    private async Task MirrorAsync()
+    /// <summary>
+    /// Copies the selected clip to the clip of the mirrored direction, made when the animation lacks it, in one step "Mirror
+    /// clip"; a clip with frames is replaced only after a yes. The target clip is then selected.
+    /// </summary>
+    internal async Task MirrorAsync()
     {
         if (SelectedClip is not { } item || !IsInAsset(item))
         {
