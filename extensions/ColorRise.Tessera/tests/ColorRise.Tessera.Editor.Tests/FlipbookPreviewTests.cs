@@ -52,6 +52,21 @@ public sealed class FlipbookPreviewTests
         Assert.Equal(new RectangleF(-8, -16, 16, 19), book.Editor.Preview.Bounds);
     }
 
+    // Studio check, step 3, line 7: a fit asked on an empty clip showed the cross alone, at the largest zoom, and stayed so
+    [Fact]
+    public async Task The_bounds_are_none_until_a_frame_of_the_clip_has_a_picture()
+    {
+        await using var book = await OpenAsync(asset => asset.Animations[1].Clips[0].Frames.Clear());
+        var (editor, preview) = (book.Editor, book.Editor.Preview);
+        editor.SelectedItem = editor.Animations[1];
+        Assert.Same(Clip(book, 1, 0), preview.Clip);
+        Assert.Null(preview.Bounds);
+
+        Click(editor, 0, 0);
+
+        Assert.Equal(new RectangleF(-8, -16, 16, 19), preview.Bounds);
+    }
+
     [Fact]
     public async Task Advance_moves_the_frame_at_the_speed_and_asks_a_redraw_only_then()
     {

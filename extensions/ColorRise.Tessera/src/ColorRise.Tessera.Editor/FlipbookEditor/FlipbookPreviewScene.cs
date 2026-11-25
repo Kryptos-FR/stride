@@ -152,19 +152,22 @@ public sealed class FlipbookPreviewScene : ICanvasScene, ICanvasClock
     }
 
     /// <inheritdoc/>
-    /// <remarks>All the frames of the clip and the cross of the pivot, so that the view does not jump from frame to frame.</remarks>
+    /// <remarks>
+    /// All the frames of the clip and the cross of the pivot, so that the view does not jump from frame to frame; null while
+    /// no frame has a picture, so that a fit asked on an empty clip waits for its first frame instead of showing the cross alone.
+    /// </remarks>
     public RectangleF? Bounds
     {
         get
         {
-            var bounds = Cross;
+            RectangleF? bounds = null;
             if (Clip is { } clip && PictureOf is { } pictureOf)
             {
                 foreach (var frame in clip.Frames)
                 {
                     if (frame is not null && pictureOf(frame) is { } picture)
                     {
-                        bounds = RectangleF.Union(bounds, OnCanvas(picture.Bounds));
+                        bounds = RectangleF.Union(bounds ?? Cross, OnCanvas(picture.Bounds));
                     }
                 }
             }
