@@ -546,15 +546,11 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
     private void FindUnreadable()
     {
         unreadable.Clear();
-        var layers = document.Map.Asset.Layers;
-        for (var index = 0; index < layers.Count && index < document.LayerCount; index++)
+        for (var index = 0; index < document.LayerCount; index++)
         {
-            foreach (var place in layers[index].Chunks.Select(chunk => chunk.Position).Distinct())
+            foreach (var place in document.UnreadableChunks(index))
             {
-                if (document.IsUnreadable(index, place))
-                {
-                    unreadable.Add((index, place));
-                }
+                unreadable.Add((index, place));
             }
         }
     }

@@ -93,6 +93,16 @@ public sealed class TileMapDocument : IDisposable
     public bool IsUnreadable(int layer, Int2 chunk) => (uint)layer < (uint)layers.Count && IsLocked(layers[layer], chunk);
 
     /// <summary>
+    /// The places of the chunks of a layer that the document does not paint (see <see cref="IsUnreadable"/>).
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">The map has no such layer.</exception>
+    public IEnumerable<Int2> UnreadableChunks(int layer)
+    {
+        var state = LayerAt(layer);
+        return state.Chunks.Where(pair => pair.Value.Error is not null).Select(pair => pair.Key).Union(state.Twice);
+    }
+
+    /// <summary>
     /// The smallest rectangle of cells that holds every tile of a layer; null for a layer without a tile.
     /// </summary>
     public Rectangle? UsedBounds(int layer)
@@ -448,6 +458,7 @@ public sealed class TileMapDocument : IDisposable
         {
             if (item is null)
             {
+                layer.Errors.Add($"Layer '{layer.Asset.Name}': the list of chunks has an empty item, which the editor leaves as it is.");
                 continue;
             }
             var place = item.Position;

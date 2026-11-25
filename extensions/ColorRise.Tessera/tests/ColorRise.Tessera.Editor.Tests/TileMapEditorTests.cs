@@ -321,6 +321,18 @@ public sealed class TileMapEditorTests
     }
 
     [Fact]
+    public async Task A_map_with_an_empty_chunk_item_opens_and_names_it()
+    {
+        // As a hand edit or a merge leaves "- ~" in the list of chunks
+        await using var map = await OpenAsync([["0,0"]], asset => asset.Layers[0].Chunks.Add(null!));
+
+        Assert.Contains(map.Editor.Problems, line => line.Contains("empty item", StringComparison.Ordinal));
+        map.Editor.Stamp = TileStamp.Single(Cell(1, 0));
+        Click(map.Editor, 1, 0);
+        Assert.Equal(["Stamp"], map.Session.Steps);
+    }
+
+    [Fact]
     public async Task A_tile_set_deleted_from_the_session_shows_as_missing()
     {
         await using var map = await OpenAsync([["0,0"]]);
