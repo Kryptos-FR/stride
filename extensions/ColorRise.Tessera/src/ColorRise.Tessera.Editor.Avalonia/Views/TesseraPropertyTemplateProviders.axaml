@@ -1,0 +1,29 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:caev="using:Stride.Core.Assets.Editor.Avalonia.Views"
+                    xmlns:cpqvm="using:Stride.Core.Presentation.Quantum.ViewModels"
+                    xmlns:s="using:System"
+                    xmlns:tessera="using:ColorRise.Tessera"
+                    xmlns:controls="using:ColorRise.Tessera.Editor.Avalonia.Controls"
+                    x:Class="ColorRise.Tessera.Editor.Avalonia.Views.TesseraPropertyTemplateProviders">
+  <!-- Tessera's [Flags] enums: a check box for each flag, which Game Studio's own editor of flags does not write -->
+  <DataTemplate x:Key="TesseraFlagsTemplate" DataType="cpqvm:NodeViewModel">
+    <controls:FlagsBox Margin="2" EnumType="{Binding Type}" Value="{Binding NodeValue, Mode=TwoWay}"/>
+  </DataTemplate>
+  <caev:TypeMatchTemplateProvider x:Key="TileFlipTemplateProvider" Type="tessera:TileFlip"
+                                  caev:PropertyViewHelper.TemplateCategory="PropertyEditor"
+                                  Template="{StaticResource TesseraFlagsTemplate}">
+    <caev:TypeMatchTemplateProvider.OverriddenProviderNames>
+      <s:String>Enum</s:String>
+      <s:String>FlagEnum</s:String>
+    </caev:TypeMatchTemplateProvider.OverriddenProviderNames>
+  </caev:TypeMatchTemplateProvider>
+  <caev:TypeMatchTemplateProvider x:Key="TileCollisionTemplateProvider" Type="tessera:TileCollision"
+                                  caev:PropertyViewHelper.TemplateCategory="PropertyEditor"
+                                  Template="{StaticResource TesseraFlagsTemplate}">
+    <caev:TypeMatchTemplateProvider.OverriddenProviderNames>
+      <s:String>Enum</s:String>
+      <s:String>FlagEnum</s:String>
+    </caev:TypeMatchTemplateProvider.OverriddenProviderNames>
+  </caev:TypeMatchTemplateProvider>
+</ResourceDictionary>
