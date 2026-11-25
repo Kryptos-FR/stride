@@ -383,12 +383,12 @@ public sealed class TileMapToolsTests
         Assert.Equal("The layer 'Layer0' is hidden.", map.Editor.Message);
 
         SetVisible(map, 0, true);
-        map.Editor.LockLayer(0, true);
+        map.Editor.Layers[0].IsLocked = true;
         Click(map.Editor, 0, 0);
         Assert.Equal("The layer 'Layer0' is locked.", map.Editor.Message);
         Assert.Equal(0, Count(Saved(map, 0)));
 
-        map.Editor.LockLayer(0, false);
+        map.Editor.Layers[0].IsLocked = false;
         Click(map.Editor, 0, 0);
         Assert.Null(map.Editor.Message);
         Assert.Equal(1, Count(Saved(map, 0)));

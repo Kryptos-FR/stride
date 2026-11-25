@@ -1,3 +1,5 @@
+using System.Collections.Specialized;
+using System.Globalization;
 using ColorRise.Tessera.Assets;
 using ColorRise.Tessera.Editor.Canvas;
 using ColorRise.Tessera.Editor.Palette;
@@ -5,17 +7,21 @@ using ColorRise.Tessera.Editor.Pictures;
 using ColorRise.Tessera.Editor.ViewModels;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Annotations;
+using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.ViewModels;
+using Stride.Core.Extensions;
 using Stride.Core.IO;
 using Stride.Core.Mathematics;
+using Stride.Core.Presentation.Collections;
 using Stride.Core.Presentation.Commands;
+using Stride.Core.Presentation.Services;
 using Stride.Core.Serialization;
 using Stride.Core.Transactions;
 
 namespace ColorRise.Tessera.Editor.TileMapEditor;
 
 /// <summary>
-/// The editor of a map: its cells on a canvas, painted with the tools in the current layer.
+/// The editor of a map: its cells on a canvas, painted with the tools in the current layer, its layers and its tile sets.
 /// </summary>
 [AssetEditorViewModel<TileMapViewModel>]
 public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewModel>
@@ -23,12 +29,25 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
     private static readonly Color SelectionColor = new(80, 170, 255, 255);
 
     private readonly Dictionary<TileToolKind, TileTool> tools;
-    // The layers locked in this editor
-    private readonly HashSet<TileLayerAsset> lockedLayers = new(ReferenceEqualityComparer.Instance);
+    // The layers of the list, the top one first
+    private readonly ObservableList<TileLayerItemViewModel> layerItems = [];
+    // An item per layer the editor has seen, kept while the layer is out of the map, so that a moved layer keeps its item
+    private readonly Dictionary<TileLayerAsset, TileLayerItemViewModel> knownLayers = new(ReferenceEqualityComparer.Instance);
+    // The name each layer had when the editor last looked: a renamed layer takes its lock with it
+    private readonly Dictionary<TileLayerAsset, string> layerNames = new(ReferenceEqualityComparer.Instance);
+    // The slots of the list, by slot
+    private readonly ObservableList<TileSetSlotItemViewModel> tileSetItems = [];
     // The layer of CurrentLayer, followed when the layers change
     private TileLayerAsset? currentLayerAsset;
+    // The current layer went out of the map, and the current layer is the nearest one until it comes back (a move, an undo)
+    private TileLayerAsset? lostLayer;
+    // The editor follows a change of the layers: the current layer moves, and the selection of the list stays as the user left it
+    private bool followingStructure;
     // The cells a right drag of the stamp tool is taking, shown over the map
     private Rectangle? captureCells;
+    // The zoom changed since the editor opened: its setting is written to the file when the editor closes
+    private bool zoomChanged;
+    private bool initialized;
 
     /// <summary>
     /// Makes the editor of a map; <see cref="Initialize"/> opens it.
@@ -37,7 +56,11 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
         : base(asset)
     {
         Document = new TileMapDocument(asset);
-        Scene = new TileMapScene(Document, TilePictureService.Of(asset.Session));
+        Scene = new TileMapScene(Document, TilePictureService.Of(asset.Session))
+        {
+            DimOthers = DimOtherLayers,
+            DimOpacity = Math.Clamp(TesseraEditorSettings.DimOpacity.GetValue(), 0, 1),
+        };
         Input = new TileMapInput(this);
         tools = new Dictionary<TileToolKind, TileTool>
         {
@@ -52,7 +75,21 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
         CutCommand = new AnonymousCommand(ServiceProvider, Cut);
         PasteCommand = new AnonymousCommand(ServiceProvider, Paste);
         DeleteCommand = new AnonymousCommand(ServiceProvider, Delete);
+        AddLayerCommand = new AnonymousCommand(ServiceProvider, AddLayer);
+        RemoveLayerCommand = new AnonymousTaskCommand(ServiceProvider, RemoveLayerAsync);
+        MoveLayerUpCommand = new AnonymousCommand(ServiceProvider, () => MoveLayer(1));
+        MoveLayerDownCommand = new AnonymousCommand(ServiceProvider, () => MoveLayer(-1));
+        AddTileSetCommand = new AnonymousTaskCommand(ServiceProvider, AddTileSetAsync);
+        RemoveTileSetCommand = new AnonymousTaskCommand(ServiceProvider, RemoveTileSetAsync);
+        if (TesseraEditorSettings.LastZoom.GetValue() is > 0 and var zoom)
+        {
+            View.Zoom = zoom;
+        }
+        FollowLayerNames();
+        SyncLayers();
+        SyncTileSets();
         CurrentLayer = Document.LayerCount - 1;
+        UpdateProblems();
     }
 
     /// <summary>
@@ -71,7 +108,7 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
     public ICanvasInput Input { get; }
 
     /// <summary>
-    /// The zoom and the pan of the canvas.
+    /// The zoom and the pan of the canvas; the zoom the last map editor had at first.
     /// </summary>
     public CanvasView View { get; } = new();
 
@@ -125,10 +162,139 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
                 SetValue(ref field, value);
             }
             currentLayerAsset = value >= 0 ? Asset.Asset.Layers[value] : null;
+            if (!followingStructure)
+            {
+                lostLayer = null;
+            }
             Scene.CurrentLayer = value;
+            // The map in the property grid stays there while the layers change under it
+            if (!followingStructure || SelectedLayer is not null)
+            {
+                SelectedLayer = currentLayerAsset is null ? null : knownLayers.GetValueOrDefault(currentLayerAsset);
+            }
             ShowOverlay();
+            UpdateStatus();
         }
     }
+
+    /// <summary>
+    /// The layers of the map, the top one first, as the list shows them.
+    /// </summary>
+    public IReadOnlyObservableList<TileLayerItemViewModel> Layers => layerItems;
+
+    /// <summary>
+    /// The layer selected in the list: the current layer, which the property grid shows; null shows the map.
+    /// </summary>
+    public TileLayerItemViewModel? SelectedLayer
+    {
+        get;
+        set
+        {
+            if (!SetValue(ref field, value))
+            {
+                return;
+            }
+            if (value is not null && Asset.Asset.Layers.IndexOf(value.Layer) is >= 0 and var index && index != CurrentLayer)
+            {
+                CurrentLayer = index;
+            }
+            ShowProperties();
+        }
+    }
+
+    /// <summary>
+    /// The slots of the map with their tile sets, by slot.
+    /// </summary>
+    public IReadOnlyObservableList<TileSetSlotItemViewModel> TileSets => tileSetItems;
+
+    /// <summary>
+    /// The slot whose palette is shown; the first one at first.
+    /// </summary>
+    public TileSetSlotItemViewModel? SelectedTileSet
+    {
+        get;
+        set => SetValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Whether the canvas draws the grid of the cells; kept in the editor settings.
+    /// </summary>
+    public bool ShowGrid
+    {
+        get;
+        set
+        {
+            if (SetValue(ref field, value))
+            {
+                TesseraEditorSettings.ShowGrid.SetValue(value);
+                TesseraEditorSettings.Save();
+            }
+        }
+    } = TesseraEditorSettings.ShowGrid.GetValue();
+
+    /// <summary>
+    /// Whether the layers other than the current one are dimmed; kept in the editor settings.
+    /// </summary>
+    public bool DimOtherLayers
+    {
+        get;
+        set
+        {
+            if (SetValue(ref field, value))
+            {
+                Scene.DimOthers = value;
+                TesseraEditorSettings.DimOtherLayers.SetValue(value);
+                TesseraEditorSettings.Save();
+            }
+        }
+    } = TesseraEditorSettings.DimOtherLayers.GetValue();
+
+    /// <summary>
+    /// The cell under the pointer, such as "cell 12, 7"; empty when the pointer is not over the canvas.
+    /// </summary>
+    public string StatusCell
+    {
+        get;
+        private set => SetValue(ref field, value);
+    } = "";
+
+    /// <summary>
+    /// The current layer, such as "Ground" or "Ground (locked)"; "no layer" when the map has none.
+    /// </summary>
+    public string StatusLayer
+    {
+        get;
+        private set => SetValue(ref field, value);
+    } = "";
+
+    /// <summary>
+    /// The tile of the current layer under the pointer, with the name of its tile set, such as "Town 1:3,4"; empty when there
+    /// is none.
+    /// </summary>
+    public string StatusTile
+    {
+        get;
+        private set => SetValue(ref field, value);
+    } = "";
+
+    /// <summary>
+    /// The zoom of the canvas, such as "300%".
+    /// </summary>
+    public string StatusZoom
+    {
+        get;
+        private set => SetValue(ref field, value);
+    } = "";
+
+    /// <summary>
+    /// What is wrong in the map: the checks of the build, the chunks that cannot be read, and the tile sets that are gone, by
+    /// slot.
+    /// </summary>
+    public IReadOnlyList<string> Problems
+    {
+        get;
+        private set => SetValue(ref field, value);
+    } = [];
 
     /// <summary>
     /// The cells the select tool selected, with Y up; null when none are.
@@ -183,16 +349,53 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
     /// </summary>
     public ICommandBase DeleteCommand { get; }
 
-    internal TileTool CurrentTool => tools[Tool];
+    /// <summary>
+    /// Puts a new layer over the current one, and makes it current.
+    /// </summary>
+    public ICommandBase AddLayerCommand { get; }
 
     /// <summary>
-    /// Follows the history and the layers of the map.
+    /// Removes the current layer, after a question when it has tiles; the layer under it becomes current.
+    /// </summary>
+    public ICommandBase RemoveLayerCommand { get; }
+
+    /// <summary>
+    /// Moves the current layer one place up, over the layer above it.
+    /// </summary>
+    public ICommandBase MoveLayerUpCommand { get; }
+
+    /// <summary>
+    /// Moves the current layer one place down, under the layer below it.
+    /// </summary>
+    public ICommandBase MoveLayerDownCommand { get; }
+
+    /// <summary>
+    /// Picks a tile set in the session, and adds it in a new slot.
+    /// </summary>
+    public ICommandBase AddTileSetCommand { get; }
+
+    /// <summary>
+    /// Removes the selected slot, after a question when cells use it; the cells stay.
+    /// </summary>
+    public ICommandBase RemoveTileSetCommand { get; }
+
+    internal TileTool CurrentTool => tools[Tool];
+
+    private IEditorDialogService Dialogs => ServiceProvider.Get<IEditorDialogService>();
+
+    /// <summary>
+    /// Follows the history, the layers and the tile sets of the map, and shows the current layer in the property grid.
     /// </summary>
     public override Task<bool> Initialize()
     {
         UndoRedoService.Undone += HistoryMoved;
         UndoRedoService.Redone += HistoryMoved;
         Document.StructureChanged += StructureChanged;
+        Document.CellsChanged += CellsChanged;
+        Session.DeletedAssetsChanged += DeletedAssetsChanged;
+        View.Changed += ViewChanged;
+        initialized = true;
+        ShowProperties();
         return Task.FromResult(true);
     }
 
@@ -202,9 +405,52 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
         UndoRedoService.Undone -= HistoryMoved;
         UndoRedoService.Redone -= HistoryMoved;
         Document.StructureChanged -= StructureChanged;
+        Document.CellsChanged -= CellsChanged;
+        Session.DeletedAssetsChanged -= DeletedAssetsChanged;
+        View.Changed -= ViewChanged;
+        foreach (var item in tileSetItems)
+        {
+            DestroySlot(item);
+        }
+        foreach (var item in knownLayers.Values)
+        {
+            item.Destroy();
+        }
+        if (zoomChanged)
+        {
+            TesseraEditorSettings.SaveInternal();
+        }
         Scene.Dispose();
         Document.Dispose();
         base.Destroy();
+    }
+
+    /// <summary>
+    /// Adds a tile set in a new slot, as one step, and selects the slot; false, with a <see cref="Message"/>, when the map
+    /// has the tile set already or has given every slot.
+    /// </summary>
+    public bool AddTileSet(TileSetViewModel tileSet)
+    {
+        ArgumentNullException.ThrowIfNull(tileSet);
+        if (Asset.Asset.TileSets.Any(slot => IdOf(slot) == tileSet.Id))
+        {
+            Message = $"The map already has the tile set '{tileSet.Name}'.";
+            return false;
+        }
+        if (!TileAssetChecks.IsInRange(Asset.Asset.LastSlot + 1))
+        {
+            Message = "The map has given every slot: no tile set can be added.";
+            return false;
+        }
+        TileSetSlot added;
+        using (var transaction = UndoRedoService.CreateTransaction())
+        {
+            added = TileMapGraph.AddTileSet(Asset, tileSet);
+            UndoRedoService.SetName(transaction, "Add tile set");
+        }
+        SelectedTileSet = tileSetItems.FirstOrDefault(item => item.Slot == added.Slot) ?? SelectedTileSet;
+        Message = null;
+        return true;
     }
 
     /// <summary>
@@ -223,25 +469,76 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
     public void RotateStamp(bool clockwise) => Stamp = clockwise ? Stamp?.RotateClockwise() : Stamp?.RotateCounterClockwise();
 
     /// <summary>
-    /// Locks or unlocks a layer in this editor: no tool changes the cells of a locked layer.
+    /// Locks or unlocks a layer: no tool changes the cells of a locked layer. The lock is kept in the editor settings, by the
+    /// map and the name of the layer.
     /// </summary>
-    internal void LockLayer(int layer, bool locked)
+    internal void LockLayer(TileLayerAsset layer, bool locked)
     {
-        var asset = Asset.Asset.Layers[layer];
-        if (locked)
-        {
-            lockedLayers.Add(asset);
-        }
-        else
-        {
-            lockedLayers.Remove(asset);
-        }
+        SetLock(layer.Name, locked);
+        UpdateStatus();
     }
 
     /// <summary>
-    /// Whether a layer is locked in this editor.
+    /// Whether a layer is locked.
     /// </summary>
-    internal bool IsLayerLocked(int layer) => lockedLayers.Contains(Asset.Asset.Layers[layer]);
+    internal bool IsLayerLocked(TileLayerAsset layer) => IsLocked(layer.Name);
+
+    /// <summary>
+    /// Gives a layer a new name, as one step; an empty name, or the name of another layer, is refused with a
+    /// <see cref="Message"/>.
+    /// </summary>
+    internal void RenameLayer(TileLayerAsset layer, string? name)
+    {
+        var index = Asset.Asset.Layers.IndexOf(layer);
+        name = name?.Trim() ?? "";
+        if (index < 0 || name == layer.Name)
+        {
+            return;
+        }
+        if (name.Length == 0)
+        {
+            Message = "A layer needs a name.";
+            return;
+        }
+        if (Asset.Asset.Layers.Any(other => other != layer && other.Name == name))
+        {
+            Message = $"Another layer is named '{name}'.";
+            return;
+        }
+        using (var transaction = UndoRedoService.CreateTransaction())
+        {
+            TileMapGraph.RenameLayer(Asset, index, name);
+            UndoRedoService.SetName(transaction, "Rename layer");
+        }
+        Message = null;
+    }
+
+    /// <summary>
+    /// Shows or hides a layer, as one step.
+    /// </summary>
+    internal void SetLayerVisible(TileLayerAsset layer, bool visible)
+    {
+        var index = Asset.Asset.Layers.IndexOf(layer);
+        if (index < 0 || layer.Visible == visible)
+        {
+            return;
+        }
+        using var transaction = UndoRedoService.CreateTransaction();
+        TileMapGraph.SetVisible(Asset, index, visible);
+        UndoRedoService.SetName(transaction, "Layer visibility");
+    }
+
+    /// <summary>
+    /// Shows a tile in the palette of its slot, and selects the slot.
+    /// </summary>
+    internal void ShowInPalette(TileCell cell)
+    {
+        if (!cell.IsEmpty && tileSetItems.FirstOrDefault(item => item.Slot == cell.Slot) is { Palette: { } palette } item)
+        {
+            SelectedTileSet = item;
+            palette.Show(cell.Tile);
+        }
+    }
 
     /// <summary>
     /// Whether the map has a layer to work on; <see cref="Message"/> says why not.
@@ -267,9 +564,9 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
         {
             return false;
         }
-        var name = Asset.Asset.Layers[CurrentLayer].Name;
-        Message = !Document.GetLayer(CurrentLayer).Visible ? $"The layer '{name}' is hidden."
-            : IsLayerLocked(CurrentLayer) ? $"The layer '{name}' is locked."
+        var layer = currentLayerAsset!;
+        Message = !Document.GetLayer(CurrentLayer).Visible ? $"The layer '{layer.Name}' is hidden."
+            : IsLayerLocked(layer) ? $"The layer '{layer.Name}' is locked."
             : needsStamp && Stamp is not { IsEmpty: false } ? "Pick a tile in the palette first."
             : null;
         return Message is null;
@@ -287,6 +584,7 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
     {
         HoverCell = cell;
         ShowGhost();
+        UpdateStatus();
     }
 
     /// <summary>
@@ -393,6 +691,302 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
         return new RectangleF(bottomLeft.X, bottomLeft.Bottom - height, width, height);
     }
 
+    private void ShowProperties()
+    {
+        if (!initialized || IsDestroyed)
+        {
+            return;
+        }
+        if (SelectedLayer is not { } item)
+        {
+            ShowAssetProperties();
+            return;
+        }
+        EditorProperties.TypeDescription = "Layer";
+        EditorProperties.Name = item.Name;
+        EditorProperties.GenerateSelectionPropertiesAsync([item]).Forget();
+    }
+
+    // The document tells of the cells of a stroke it drops before it reads the asset's new layers: the editor's own layer
+    // is the one to name then, not the asset's at the same index
+    private void UpdateStatus()
+    {
+        var layer = currentLayerAsset;
+        StatusCell = HoverCell is { } cell ? string.Create(CultureInfo.InvariantCulture, $"cell {cell.X}, {cell.Y}") : "";
+        StatusLayer = layer is null ? "no layer" : IsLayerLocked(layer) ? $"{layer.Name} (locked)" : layer.Name;
+        StatusTile = HoverCell is { } hover && layer is not null && Read(hover) is { IsEmpty: false } tile
+            ? $"{tileSetItems.FirstOrDefault(item => item.Slot == tile.Slot)?.Name ?? $"missing (slot {tile.Slot})"} {tile.Tile}"
+            : "";
+        StatusZoom = (View.Zoom * 100).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+    }
+
+    private void UpdateProblems()
+    {
+        var problems = new List<string>(TileAssetChecks.Of(Asset.Asset));
+        problems.AddRange(Document.Errors);
+        foreach (var item in tileSetItems.Where(item => item.IsMissing))
+        {
+            problems.Add(string.Create(CultureInfo.InvariantCulture, $"The tile set of the slot {item.Slot} is missing: its cells show as missing boxes."));
+        }
+        if (!problems.SequenceEqual(Problems))
+        {
+            Problems = problems;
+        }
+    }
+
+    private void AddLayer()
+    {
+        var names = Asset.Asset.Layers.Select(layer => layer.Name).ToHashSet(StringComparer.Ordinal);
+        var number = 1;
+        while (names.Contains(LayerName(number)))
+        {
+            number++;
+        }
+        var index = CurrentLayer + 1;
+        CancelDrag();
+        using (var transaction = UndoRedoService.CreateTransaction())
+        {
+            TileMapGraph.AddLayer(Asset, index, LayerName(number));
+            UndoRedoService.SetName(transaction, "Add layer");
+        }
+        CurrentLayer = index;
+        Message = null;
+
+        static string LayerName(int number) => string.Create(CultureInfo.InvariantCulture, $"Layer {number}");
+    }
+
+    private async Task RemoveLayerAsync()
+    {
+        if (!HasLayer())
+        {
+            return;
+        }
+        var layer = Asset.Asset.Layers[CurrentLayer];
+        var tiles = CountTiles(CurrentLayer);
+        if (tiles > 0)
+        {
+            var question = string.Create(CultureInfo.InvariantCulture, $"Remove the layer '{layer.Name}' and its {tiles:N0} {(tiles == 1 ? "tile" : "tiles")}?");
+            if (await Dialogs.MessageBoxAsync(question, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+        // The layers may have changed while the question was open
+        var index = Asset.Asset.Layers.IndexOf(layer);
+        if (index < 0)
+        {
+            return;
+        }
+        CancelDrag();
+        using (var transaction = UndoRedoService.CreateTransaction())
+        {
+            TileMapGraph.RemoveLayer(Asset, index);
+            UndoRedoService.SetName(transaction, "Remove layer");
+        }
+        SetLock(layer.Name, false);
+        CurrentLayer = Document.LayerCount == 0 ? -1 : Math.Max(index - 1, 0);
+    }
+
+    // Moves the current layer by one place: up is toward the end of the asset's layers, drawn last
+    private void MoveLayer(int delta)
+    {
+        if (!HasLayer())
+        {
+            return;
+        }
+        var (from, to) = (CurrentLayer, CurrentLayer + delta);
+        if (to < 0 || to >= Document.LayerCount)
+        {
+            return;
+        }
+        CancelDrag();
+        using (var transaction = UndoRedoService.CreateTransaction())
+        {
+            TileMapGraph.MoveLayer(Asset, from, to);
+            UndoRedoService.SetName(transaction, "Move layer");
+        }
+        CurrentLayer = to;
+    }
+
+    private int CountTiles(int layer)
+    {
+        var count = 0;
+        foreach (var chunk in Document.GetLayer(layer).Chunks)
+        {
+            foreach (var cell in chunk.Cells)
+            {
+                if (!cell.IsEmpty)
+                {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    private async Task AddTileSetAsync()
+    {
+        if (await Dialogs.OpenAssetPickerAsync(Session, [typeof(TileSetAsset)]) is TileSetViewModel tileSet)
+        {
+            AddTileSet(tileSet);
+        }
+    }
+
+    private async Task RemoveTileSetAsync()
+    {
+        if (SelectedTileSet is not { } selected)
+        {
+            return;
+        }
+        var cells = Document.CountCells(selected.Slot);
+        if (cells > 0)
+        {
+            var use = cells == 1 ? "1 cell uses it" : string.Create(CultureInfo.InvariantCulture, $"{cells:N0} cells use it");
+            var question = $"Remove the tile set '{selected.Name}'? {use}. They stay in the map and show as missing. This cannot be put right by adding the tile set again; use Undo.";
+            if (await Dialogs.MessageBoxAsync(question, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+        // The slot may have gone while the question was open
+        if (!Asset.Asset.TileSets.Contains(selected.Item))
+        {
+            return;
+        }
+        using (var transaction = UndoRedoService.CreateTransaction())
+        {
+            TileMapGraph.RemoveTileSet(Asset, selected.Item);
+            UndoRedoService.SetName(transaction, "Remove tile set");
+        }
+        Message = null;
+    }
+
+    // The list shows the layers of the asset, the top one first; a layer keeps its item while the editor is open
+    private void SyncLayers()
+    {
+        var layers = Asset.Asset.Layers;
+        var wanted = new List<TileLayerItemViewModel>(layers.Count);
+        for (var index = layers.Count - 1; index >= 0; index--)
+        {
+            if (!knownLayers.TryGetValue(layers[index], out var item))
+            {
+                item = new TileLayerItemViewModel(this, layers[index]);
+                knownLayers[layers[index]] = item;
+            }
+            wanted.Add(item);
+        }
+        foreach (var gone in layerItems.Where(item => !wanted.Contains(item)).ToList())
+        {
+            layerItems.Remove(gone);
+        }
+        for (var index = 0; index < wanted.Count; index++)
+        {
+            var item = wanted[index];
+            var at = layerItems.IndexOf(item);
+            if (at != index)
+            {
+                if (at >= 0)
+                {
+                    layerItems.RemoveAt(at);
+                }
+                layerItems.Insert(index, item);
+            }
+            item.Refresh();
+        }
+    }
+
+    // A layer renamed takes its lock with it
+    private void FollowLayerNames()
+    {
+        foreach (var layer in Asset.Asset.Layers)
+        {
+            if (layerNames.TryGetValue(layer, out var before) && before != layer.Name && IsLocked(before))
+            {
+                SetLock(before, false);
+                SetLock(layer.Name, true);
+            }
+            layerNames[layer] = layer.Name;
+        }
+    }
+
+    private bool IsLocked(string name) => TesseraEditorSettings.LockedLayers.GetValue()?.Contains(LockKey(name)) == true;
+
+    private void SetLock(string name, bool locked)
+    {
+        var key = LockKey(name);
+        var keys = TesseraEditorSettings.LockedLayers.GetValue() ?? [];
+        if (keys.Contains(key) == locked)
+        {
+            return;
+        }
+        // A new list: the one of the settings is never changed in place
+        TesseraEditorSettings.LockedLayers.SetValue(locked ? [.. keys, key] : [.. keys.Where(other => other != key)]);
+        TesseraEditorSettings.SaveInternal();
+    }
+
+    private string LockKey(string name) => $"{Asset.Id}/{name}";
+
+    // The list shows the slots of the asset by slot, the first of each number; a slot keeps its item while its tile set does
+    private void SyncTileSets()
+    {
+        var pictures = TilePictureService.Of(Session);
+        var wanted = Asset.Asset.TileSets
+            .Where(slot => TileAssetChecks.IsInRange(slot.Slot))
+            .DistinctBy(slot => slot.Slot)
+            .OrderBy(slot => slot.Slot)
+            .Select(slot => (Item: slot, Pictures: pictures.Get(slot.TileSet)))
+            .ToList();
+        var items = new List<TileSetSlotItemViewModel>(wanted.Count);
+        foreach (var (slot, found) in wanted)
+        {
+            var item = tileSetItems.FirstOrDefault(existing => existing.Item == slot && existing.Slot == slot.Slot && existing.Pictures == found);
+            if (item is null)
+            {
+                item = new TileSetSlotItemViewModel(ServiceProvider, slot, found);
+                if (item.Palette is { } palette)
+                {
+                    palette.PickedChanged += PalettePicked;
+                }
+            }
+            items.Add(item);
+        }
+        if (items.SequenceEqual(tileSetItems))
+        {
+            return;
+        }
+        var selected = SelectedTileSet?.Slot;
+        foreach (var gone in tileSetItems.Where(item => !items.Contains(item)).ToList())
+        {
+            DestroySlot(gone);
+        }
+        tileSetItems.Clear();
+        tileSetItems.AddRange(items);
+        SelectedTileSet = items.FirstOrDefault(item => item.Slot == selected) ?? items.FirstOrDefault();
+    }
+
+    private void DestroySlot(TileSetSlotItemViewModel item)
+    {
+        if (item.Palette is { } palette)
+        {
+            palette.PickedChanged -= PalettePicked;
+        }
+        item.Destroy();
+    }
+
+    // A pick in a palette is the stamp, for the stamp tool
+    private void PalettePicked(object? sender, EventArgs e)
+    {
+        if (sender is TilePaletteViewModel { Picked: { } picked })
+        {
+            Stamp = picked;
+            Tool = TileToolKind.Stamp;
+            Message = null;
+        }
+    }
+
+    private static AssetId? IdOf(TileSetSlot slot)
+        => slot.TileSet is { } reference ? AttachedReferenceManager.GetAttachedReference(reference)?.Id : null;
+
     private void Copy()
     {
         if (SelectedCells is not { } selection || CurrentLayer < 0)
@@ -459,9 +1053,9 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
         var slotOf = new Dictionary<AssetId, ushort>();
         foreach (var item in Asset.Asset.TileSets)
         {
-            if (item is { Slot: >= 1 and <= ushort.MaxValue, TileSet: { } reference } && AttachedReferenceManager.GetAttachedReference(reference) is { } attached)
+            if (TileAssetChecks.IsInRange(item.Slot) && IdOf(item) is { } id)
             {
-                slotOf.TryAdd(attached.Id, (ushort)item.Slot);
+                slotOf.TryAdd(id, (ushort)item.Slot);
             }
         }
         var slots = new Dictionary<ushort, ushort>();
@@ -509,16 +1103,67 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
     // An undo or a redo drops the drag in progress, as the document drops its stroke
     private void HistoryMoved(object? sender, TransactionEventArgs e) => CancelDrag();
 
-    // The layers changed: the drag ends, and the current layer stays on its layer, or the nearest one when it is gone
+    // The layers or the tile sets changed: the drag ends, the lists follow, and the current layer stays on its layer, or the
+    // nearest one while it is gone
     private void StructureChanged(object? sender, EventArgs e)
     {
         CancelDrag();
+        FollowLayerNames();
+        SyncLayers();
+        SyncTileSets();
         var layers = Asset.Asset.Layers;
-        var index = currentLayerAsset is null ? -1 : layers.IndexOf(currentLayerAsset);
-        if (index < 0)
+        int index;
+        if (lostLayer is not null && layers.IndexOf(lostLayer) is >= 0 and var back)
         {
+            index = back;
+            lostLayer = null;
+        }
+        else if (currentLayerAsset is not null && layers.IndexOf(currentLayerAsset) is >= 0 and var same)
+        {
+            index = same;
+        }
+        else
+        {
+            lostLayer ??= currentLayerAsset;
             index = CurrentLayer < 0 ? layers.Count - 1 : Math.Min(CurrentLayer, layers.Count - 1);
         }
-        CurrentLayer = index;
+        followingStructure = true;
+        try
+        {
+            CurrentLayer = index;
+        }
+        finally
+        {
+            followingStructure = false;
+        }
+        UpdateProblems();
+    }
+
+    private void CellsChanged(object? sender, TileCellsChangedEventArgs e)
+    {
+        UpdateStatus();
+        UpdateProblems();
+    }
+
+    // A tile set deleted from the session, or brought back, changes what its slots show
+    private void DeletedAssetsChanged(object? sender, NotifyCollectionChangedEventArgs e) => Dispatcher.InvokeAsync(() =>
+    {
+        if (!IsDestroyed)
+        {
+            SyncTileSets();
+            UpdateProblems();
+            UpdateStatus();
+        }
+    });
+
+    // The zoom is kept for the next map editor
+    private void ViewChanged(object? sender, EventArgs e)
+    {
+        if (View.Zoom != TesseraEditorSettings.LastZoom.GetValue())
+        {
+            TesseraEditorSettings.LastZoom.SetValue(View.Zoom);
+            zoomChanged = true;
+        }
+        UpdateStatus();
     }
 }

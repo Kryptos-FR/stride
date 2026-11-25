@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using ColorRise.Tessera.Assets;
 using ColorRise.Tessera.Editor;
+using Stride.Core.Assets.Editor;
 using Stride.Core.Reflection;
 
 // The sessions of the editor test kit share one dispatcher and process-wide registries: two test classes that run at the same
@@ -20,6 +21,8 @@ internal static class TestAssemblies
 #pragma warning restore CA2255
     internal static void Register()
     {
+        // The settings files the editors save, away from the user's own and apart for each test process
+        EditorPath.UserDataPath = Path.Combine(Path.GetTempPath(), "ColorRise.Tessera.Editor.Tests", "config-" + Environment.ProcessId);
         AssemblyRegistry.Register(typeof(TileMap).Assembly, AssemblyCommonCategories.Assets);
         AssemblyRegistry.Register(typeof(TileMapAsset).Assembly, AssemblyCommonCategories.Assets);
         AssemblyRegistry.Register(typeof(TesseraEditorPlugin).Assembly, AssemblyCommonCategories.Assets);

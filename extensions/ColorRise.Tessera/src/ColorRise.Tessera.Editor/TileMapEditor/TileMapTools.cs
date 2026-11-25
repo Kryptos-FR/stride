@@ -147,7 +147,7 @@ internal abstract class TileStrokeTool(TileMapEditorViewModel editor) : TileTool
 
 /// <summary>
 /// Paints the stamp under the cursor and along a drag; Shift paints along the line from the last painted cell. A right drag
-/// takes the cells under it as the stamp.
+/// takes the cells under it as the stamp, and a stamp of one tile shows it in the palette.
 /// </summary>
 internal sealed class StampTool(TileMapEditorViewModel editor) : TileStrokeTool(editor)
 {
@@ -196,6 +196,10 @@ internal sealed class StampTool(TileMapEditorViewModel editor) : TileStrokeTool(
             if (!stamp.IsEmpty)
             {
                 Editor.Stamp = stamp;
+                if (stamp.Size == Int2.One)
+                {
+                    Editor.ShowInPalette(stamp[0, 0]);
+                }
             }
         }
         else if (button == CanvasButton.Left && IsOpen)
@@ -357,7 +361,8 @@ internal sealed class EraseTool(TileMapEditorViewModel editor) : TileStrokeTool(
 }
 
 /// <summary>
-/// Takes the clicked cell as the stamp, and goes back to the stamp tool; an empty cell does nothing.
+/// Takes the clicked cell as the stamp, shows its tile in the palette, and goes back to the stamp tool; an empty cell does
+/// nothing.
 /// </summary>
 internal sealed class PickTool(TileMapEditorViewModel editor) : TileTool(editor)
 {
@@ -371,6 +376,7 @@ internal sealed class PickTool(TileMapEditorViewModel editor) : TileTool(editor)
         if (!picked.IsEmpty)
         {
             Editor.Stamp = TileStamp.Single(picked);
+            Editor.ShowInPalette(picked);
             Editor.Tool = TileToolKind.Stamp;
         }
     }

@@ -302,7 +302,10 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         }
     }
 
-    private async Task AddImageAsync()
+    /// <summary>
+    /// Picks an image file, and proposes it as a source.
+    /// </summary>
+    internal async Task AddImageAsync()
     {
         var images = new FilePickerFilter("Images") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tga", "*.dds", "*.gif"] };
         if (await Dialogs.OpenFilePickerAsync(Asset.AssetItem.FullPath.GetParent(), [images]) is { } file)
@@ -311,7 +314,10 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         }
     }
 
-    private async Task AddSpriteSheetAsync()
+    /// <summary>
+    /// Picks a sprite sheet in the session, and adds it as a source.
+    /// </summary>
+    internal async Task AddSpriteSheetAsync()
     {
         if (await Dialogs.OpenAssetPickerAsync(Session, [typeof(SpriteSheetAsset)]) is SpriteSheetViewModel sheet)
         {

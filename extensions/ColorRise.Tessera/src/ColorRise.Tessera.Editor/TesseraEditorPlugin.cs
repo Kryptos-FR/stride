@@ -10,6 +10,19 @@ namespace ColorRise.Tessera.Editor;
 public sealed class TesseraEditorPlugin : StrideAssetsPlugin
 {
     /// <summary>
+    /// Registers the commands of the editors.
+    /// </summary>
+    public override void Initialize(IEditorPluginContext context)
+    {
+        base.Initialize(context);
+
+        foreach (var command in TesseraCommands.Create())
+        {
+            context.Commands.Register(command);
+        }
+    }
+
+    /// <summary>
     /// Registers the session's services: the pictures of the tile sets.
     /// </summary>
     public override void InitializeSession(ISessionPluginContext context)

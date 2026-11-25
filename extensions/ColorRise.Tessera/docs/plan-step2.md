@@ -1867,7 +1867,7 @@ What the editor does:
 - **Commands**, all in the category `Tessera`, with `GestureScope` set to the editor's view model type, no `DefaultGesture`, and `CanExecute` true only when that editor has the focus (`context.Editor`). The ids never change:
   `Tessera.Map.Tool.Stamp`, `Tessera.Map.Tool.Rectangle`, `Tessera.Map.Tool.Fill`, `Tessera.Map.Tool.Erase`, `Tessera.Map.Tool.Pick`, `Tessera.Map.Tool.Select` (each with `IsChecked`), `Tessera.Map.FlipStampX`, `Tessera.Map.FlipStampY`, `Tessera.Map.RotateStampClockwise`, `Tessera.Map.RotateStampCounterClockwise`, `Tessera.Map.ToggleGrid`, `Tessera.Map.ToggleDimOtherLayers`, `Tessera.Map.AddLayer`, `Tessera.TileSet.Mode.Select`, `Tessera.TileSet.Mode.Solid`, `Tessera.TileSet.AddImage`, `Tessera.TileSet.AddSpriteSheet`. Titles are what the tool bar says ("Stamp tool", "Flip stamp horizontally"); the single key is in the keywords ("B") so that the palette finds it.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests.** `OpenWithCaveAsync` adds a second tile set, "Tiles/Cave", over the same image, in the slot 2 or in no slot; `MapAsset`, `LayerNames`, `Members` and `Child` read the asset and the property grid.
 
 ```csharp
 // TileMapEditorTests
@@ -1901,10 +1901,25 @@ What the editor does:
 [Fact] public async Task The_tile_set_commands_reach_the_tile_set_editor()
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileMapEditorTests|FullyQualifiedName~TesseraCommandsTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the items, the graph helpers, the settings and the commands.**
-- [ ] **Step 4: Run the tests.** Expected: PASS (24 cases).
-- [ ] **Step 5: Commit and push**: `feat(tessera): the map editor's layers, tile sets, settings and commands`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileMapEditorTests|FullyQualifiedName~TesseraCommandsTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the items, the graph helpers, the settings and the commands.**
+- [x] **Step 4: Run the tests.** Expected: PASS (24 cases).
+- [x] **Step 5: Commit and push**: `feat(tessera): the map editor's layers, tile sets, settings and commands`
+
+**Done (2026-11-25).** Gates: the tests fail to compile without the new members, then the 24 cases pass (19 of the editor, 5 of the commands). Mutation checks (the last ones of the step: Nicolas asked to stop them, as they take long): a name in use accepted, a removed layer that keeps its lock, a rename that drops it, the pick tool or a capture of one tile that does not show the tile, a map command that runs anywhere, commands not registered, the zoom not kept, a palette pick that keeps the tool, the list bottom first, deleted assets not followed, a tile set added twice, and a removal in use without a question, each make a test fail. The whole run found one regression: the status line read the asset's layer at the current index while the document dropped a stroke before reading the new layers; it now names the editor's own layer. The whole editor test project passes (226 tests, and the 21 of the views), with no compiler warning.
+
+**Done differently.**
+- The commands are registered in the plugin's `Initialize(IEditorPluginContext)`: the context of a session has no `Commands`.
+- The view model opens at `LastZoom` when it is above 0. Centring the map, and fitting it the first time, need the size of the view: Task 15's view does them.
+- A layer keeps its item while the editor is open, even out of the map: a move is a remove then an add in the graph, and the item, its row and the property grid stay. While the current layer is out of the map (the middle of a move, an undo), the nearest layer is current, and the layer is current again when it comes back.
+- While the property grid shows the map (no layer selected), a change of the layers leaves it there.
+- A lock is kept as "&lt;asset id&gt;/&lt;layer name&gt;" in a new list each time (the list of the settings is never changed in place), written to the internal settings file at once. A rename moves it, in every open editor of the map. `RemoveLayerCommand` drops the lock of the layer it removes; a layer gone any other way (the undo of an add) leaves its key, which a new layer of that name would find.
+- A name typed in the property grid is not checked as the list's rename is: two layers can get one name there, and then share a lock.
+- One tile and one cell have their own words: "its 1 tile", "1 cell uses it". A map that has given every slot refuses a tile set: "The map has given every slot: no tile set can be added."
+- `Problems` has a line per missing slot: "The tile set of the slot 2 is missing: its cells show as missing boxes." The editor follows the session's deleted assets through the dispatcher, so a tile set deleted, or brought back by an undo, changes its slot.
+- The keywords of a command have its key, when it has one, and a word or two ("tool", "mirror", "turn"). The titles besides the brief's: "Rectangle tool", "Fill tool", "Erase tool", "Pick tool", "Select tool", "Flip stamp vertically", "Rotate stamp clockwise", "Rotate stamp counterclockwise", "Show grid", "Dim other layers", "Add layer", "Select tiles", "Set tiles solid", "Add image source", "Add sprite sheet source".
+- `TileSetEditorViewModel.AddImageAsync` and `AddSpriteSheetAsync` are internal, so the commands await them.
+- The tests write their settings files to a folder of the temp folder per process (`EditorPath.UserDataPath`, set by `TestAssemblies`), and the settings test puts the defaults back.
 
 ### Task 15: The map editor's view (risk R6)
 
