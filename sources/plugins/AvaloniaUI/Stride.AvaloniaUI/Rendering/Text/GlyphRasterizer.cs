@@ -81,7 +81,7 @@ internal static unsafe class GlyphRasterizer
 
         // Skia doesn't hint glyphs that aren't axis-aligned, as skewed ones
         var hinting = oblique ? TextHintingMode.None : key.Hinting;
-        if (FreeTypeNative.FT_Load_Glyph(face, key.Glyph, GetLoadFlags(key.Rendering, hinting)) != 0)
+        if (FreeTypeNative.FT_Load_Glyph(face, key.Glyph, GetLoadFlags(key.Font, key.Rendering, hinting)) != 0)
             return false;
         var slot = face->glyph;
         if (slot->format != OutlineFormat)
@@ -127,17 +127,24 @@ internal static unsafe class GlyphRasterizer
         return true;
     }
 
-    private static int GetLoadFlags(GlyphRendering rendering, TextHintingMode hinting)
+    private static int GetLoadFlags(NativeFont font, GlyphRendering rendering, TextHintingMode hinting)
     {
         var flags = FreeTypeLoadFlags.NoBitmap | FreeTypeLoadFlags.IgnoreGlobalAdvanceWidth;
-        if (rendering == GlyphRendering.Alias)
-            return (int)flags | (int)FreeTypeLoadTarget.Mono | (hinting == TextHintingMode.None ? (int)FreeTypeLoadFlags.NoHinting : 0);
-        return hinting switch
-        {
-            TextHintingMode.None => (int)(flags | FreeTypeLoadFlags.NoHinting),
-            TextHintingMode.Light => (int)(flags | FreeTypeLoadFlags.ForceAutohint) | (int)FreeTypeLoadTarget.Light,
-            _ => (int)flags | (int)FreeTypeLoadTarget.Normal,
-        };
+        if (hinting == TextHintingMode.None)
+            return (int)(flags | FreeTypeLoadFlags.NoHinting) | (int)(rendering == GlyphRendering.Alias ? FreeTypeLoadTarget.Mono : FreeTypeLoadTarget.Normal);
+        if (rendering == GlyphRendering.Antialias && hinting == TextHintingMode.Light)
+            return (int)(flags | FreeTypeLoadFlags.ForceAutohint) | (int)FreeTypeLoadTarget.Light;
+
+        // Skia's FreeType (the system's on Linux, 2.13 on Ubuntu 24.04) hints a TrueType font with instructions with its
+        // bytecode interpreter, even when only its prep program has some (as Inter's), where the engine's FreeType autohints
+        // a font whose glyphs have none
+        if (!font.HasHintingInstructions)
+            return (int)flags | (int)(rendering == GlyphRendering.Alias ? FreeTypeLoadTarget.Mono : FreeTypeLoadTarget.Normal);
+        flags |= FreeTypeLoadFlags.NoAutohint;
+
+        // The engine's FreeType rounds the offsets of a glyph's components in aliased text, where Skia's doesn't; when the
+        // glyphs have no instructions, that is all that aliased hinting changes
+        return (int)flags | (int)(rendering == GlyphRendering.Alias && font.HasGlyphInstructions ? FreeTypeLoadTarget.Mono : FreeTypeLoadTarget.Normal);
     }
 
     // A 1-bit bitmap, its bits expanded to 0 and 255

@@ -23,6 +23,10 @@ internal sealed unsafe class NativeFont : IDisposable
     private static readonly uint VariationTable = Tag("fvar");
     private static readonly uint HeadTable = Tag("head");
     private static readonly uint NameTable = Tag("name");
+    private static readonly uint GlyphTable = Tag("glyf");
+    private static readonly uint FontProgramTable = Tag("fpgm");
+    private static readonly uint ControlValueProgramTable = Tag("prep");
+    private static readonly uint MaximumProfileTable = Tag("maxp");
 
     private NativeFont(FT_FaceRec* face, FontFile file, string familyName, FontSimulations simulations)
     {
@@ -30,6 +34,11 @@ internal sealed unsafe class NativeFont : IDisposable
         File = file;
         FamilyName = familyName;
         Simulations = simulations;
+        if (TableLength(face, GlyphTable) > 0)
+        {
+            HasGlyphInstructions = MaxSizeOfInstructions(face) > 0;
+            HasHintingInstructions = HasGlyphInstructions || TableLength(face, FontProgramTable) > 0 || TableLength(face, ControlValueProgramTable) > 0;
+        }
     }
 
     /// <summary>
@@ -51,6 +60,17 @@ internal sealed unsafe class NativeFont : IDisposable
     /// Gets the FreeType face, or <c>null</c> once disposed.
     /// </summary>
     internal FT_FaceRec* Face { get; private set; }
+
+    /// <summary>
+    /// Gets whether the face is a TrueType font with an <c>fpgm</c> or <c>prep</c> program or glyph instructions, which
+    /// Skia's FreeType hints with its bytecode interpreter rather than its autohinter.
+    /// </summary>
+    internal bool HasHintingInstructions { get; }
+
+    /// <summary>
+    /// Gets whether the face is a TrueType font whose glyphs have instructions, as its <c>maxp</c> table says.
+    /// </summary>
+    internal bool HasGlyphInstructions { get; }
 
     /// <summary>
     /// Opens the face of a typeface with FreeType.
@@ -158,6 +178,23 @@ internal sealed unsafe class NativeFont : IDisposable
     }
 
     private static uint Tag(string tag) => OpenTypeTag.Parse(tag);
+
+    // At byte 26 of a version 1.0 maxp table, which TrueType outlines have
+    private static int MaxSizeOfInstructions(FT_FaceRec* face)
+    {
+        var size = stackalloc byte[2];
+        var length = new CULong(2);
+        return FreeTypeNative.FT_Load_Sfnt_Table(face, new CULong(MaximumProfileTable), new CLong(26), size, &length) == 0
+            ? (size[0] << 8) | size[1]
+            : 0;
+    }
+
+    // 0 when the face has no such table
+    private static long TableLength(FT_FaceRec* face, uint tag)
+    {
+        CULong length = default;
+        return FreeTypeNative.FT_Load_Sfnt_Table(face, new CULong(tag), new CLong(0), null, &length) == 0 ? (long)length.Value : 0;
+    }
 
     private static bool TableEquals(FT_FaceRec* face, uint tag, ReadOnlySpan<byte> expected)
     {
