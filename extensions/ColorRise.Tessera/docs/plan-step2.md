@@ -1337,8 +1337,8 @@ What the editor does:
 - **Rebinding** (section 6: "a missing tile that the editor shows and can rebind"). With one missing tile of a sheet source selected, `RebindCandidates` has the sheet's sprite names that are bound to another tile. `RebindSpriteCommand` asks: "Give the sprite 'sea' to the tile #2? The tile #4, which has it now, goes away: cells of maps that use #4 will show as missing." Yes makes one step `Rebind sprite`: the binding 2 names `sea`, the binding 4 and its definition are removed.
 - **A selection of tiles that are gone is cleared** (Review Focus 5): after an undo, a redo, a removed source or a new grid, the tiles of the selection that the layout no longer has leave it, and the grid follows.
 
-- [ ] **Step 1: The spike, as a test.** `The_property_grid_edits_the_data_of_a_tile`: select 1:1,0; in `EditorProperties`, set `Kind` to `"door"`, add the property `locked` with a `TileProperty` of the bool kind, set `Collision` to `Solid`, each through the node presenters as Skein's `tests/ColorRise.Skein.Editor.Tests/Spikes/NodeHeadersGridTests.cs` does. Expected at the end: the asset has one definition for 1:1,0 with the three values, and three steps `Tile data`. If the grid cannot do one of them, stop and take the fallback above.
-- [ ] **Step 2: Write the other failing tests**
+- [x] **Step 1: The spike, as a test.** `The_property_grid_edits_the_data_of_a_tile`: select 1:1,0; in `EditorProperties`, set `Kind` to `"door"`, add the property `locked` with a `TileProperty` of the bool kind, set `Collision` to `Solid`, each through the node presenters as Skein's `tests/ColorRise.Skein.Editor.Tests/Spikes/NodeHeadersGridTests.cs` does. Expected at the end: the asset has one definition for 1:1,0 with the three values, and three steps `Tile data`. If the grid cannot do one of them, stop and take the fallback above.
+- [x] **Step 2: Write the other failing tests**
 
 ```csharp
 [Fact] public async Task A_click_selects_a_tile_and_control_adds_one()                    // Scene input: SelectedTiles == [1:1,0], then [1:1,0, 1:2,1]
@@ -1367,10 +1367,20 @@ What the editor does:
 [Fact] public async Task An_undo_in_the_middle_of_a_solid_drag_ends_the_drag()            // press, drag, session Undo, release: no step, nothing throws
 ```
 
-- [ ] **Step 3: Run them to see them fail.** Filter: `FullyQualifiedName~TileSetEditorTilesTests`. Expected: FAIL to compile.
-- [ ] **Step 4: Write the mode, the tile data and the rebind.**
-- [ ] **Step 5: Run the tests.** Expected: PASS (16 cases), with Task 8's.
-- [ ] **Step 6: Commit and push**: `feat(tessera): the tile set editor: tile data, solid mode and rebinding a missing sprite`
+- [x] **Step 3: Run them to see them fail.** Filter: `FullyQualifiedName~TileSetEditorTilesTests`. Expected: FAIL to compile.
+- [x] **Step 4: Write the mode, the tile data and the rebind.**
+- [x] **Step 5: Run the tests.** Expected: PASS (16 cases), with Task 8's.
+- [x] **Step 6: Commit and push**: `feat(tessera): the tile set editor: tile data, solid mode and rebinding a missing sprite`
+
+**Done (2026-11-25).** Gates: the tests fail to compile without the mode, the selected tiles and the rebind, then the 16 cases pass. The spike passes: the session's property grid edits the string, the dictionary of abstract values (`AddPrimitiveKey`, then `CreateNewInstance` with the bool type) and the flags enum of a copy outside the asset, so no fallback panel was needed. Mutation checks: a write inside the grid's transaction, definitions added at the end, an undo that keeps the drag, a `Follow` that keeps the selection, or copies that are not made again each make their tests fail. The whole editor test project passes (114), and the Avalonia test project (12), with no compiler warning.
+
+**Done differently.**
+- `TileDataViewModel` is one per selected tile (`Tile`, not `Tiles`): the property grid shows several at once by being given several providers, as it does for several assets, and one provider has one root node.
+- The grid names its own step (`Update property Kind`, `Execute AddPrimitiveKey`) after the change, and a name given later does not reach the history panel. The copies' graph is outside the asset, so the grid's transaction stays empty; the editor writes the asset once that transaction is over, in a step `Tile data` of its own, with every copy that changed. A property added in the grid has no value until its type is chosen; it is not written before.
+- During a solid drag the tiles show the value they will get (their hatch), and the asset changes once, at the release. An undo or a redo drops the drag in progress and a change of tile data not written yet.
+- The rebind test selects 2:#2, not 1:#2: the sheet source of Task 8 has the id 2. Its tile #4 is given a kind first, to check that its data goes too.
+- After the undo of Add image, the grid shows the selected source (Town) again, the rule of Task 8 when no tile is selected, not the asset. The new grid of the last test comes from `TileSize` set through the asset's graph, since the grid shows the tiles while they are selected.
+- A solid drag that changes nothing is one over no tile: the first tile of a drag always changes.
 
 ### Task 10: The tile set editor's view
 

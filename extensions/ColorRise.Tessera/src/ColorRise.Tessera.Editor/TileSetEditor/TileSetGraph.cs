@@ -104,6 +104,122 @@ internal static class TileSetGraph
         return count;
     }
 
+    /// <summary>
+    /// Puts the data of a tile in the asset: it replaces the tile's definition, goes in at its place in the order of the tiles
+    /// when the tile has none, or removes the tile's definition when it says nothing. The definition goes in the asset as it
+    /// is, so it is one that nothing else holds. Nothing changes when the asset has the same data.
+    /// </summary>
+    public static void SetDefinition(TileSetViewModel tileSet, TileDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        var asset = tileSet.Asset;
+        var tiles = Root(tileSet)[nameof(TileSetAsset.Tiles)].Target!;
+        var index = asset.Tiles.FindIndex(existing => existing.Tile == definition.Tile);
+        if (index >= 0)
+        {
+            if (definition.IsDefault)
+            {
+                tiles.Remove(asset.Tiles[index], new NodeIndex(index));
+            }
+            else if (!HaveSameData(asset.Tiles[index], definition))
+            {
+                tiles.Update(definition, new NodeIndex(index));
+            }
+        }
+        else if (!definition.IsDefault)
+        {
+            tiles.Add(definition, new NodeIndex(PlaceOf(asset, definition.Tile)));
+        }
+    }
+
+    /// <summary>
+    /// Sets or clears the solid flag of a tile, and keeps its other data; false when the tile already was so. A definition
+    /// that says nothing more goes away.
+    /// </summary>
+    public static bool SetSolid(TileSetViewModel tileSet, TileId tile, bool solid)
+    {
+        var asset = tileSet.Asset;
+        var index = asset.Tiles.FindIndex(existing => existing.Tile == tile);
+        var collision = index >= 0 ? asset.Tiles[index].Collision : TileCollision.None;
+        if (collision.HasFlag(TileCollision.Solid) == solid)
+        {
+            return false;
+        }
+        var tiles = Root(tileSet)[nameof(TileSetAsset.Tiles)].Target!;
+        collision = solid ? collision | TileCollision.Solid : collision & ~TileCollision.Solid;
+        if (index < 0)
+        {
+            tiles.Add(new TileDefinition { Tile = tile, Collision = collision }, new NodeIndex(PlaceOf(asset, tile)));
+            return true;
+        }
+        var definition = asset.Tiles[index];
+        if (collision == TileCollision.None && string.IsNullOrEmpty(definition.Kind) && definition.Properties.Count == 0 && definition.Animation.Count == 0)
+        {
+            tiles.Remove(definition, new NodeIndex(index));
+        }
+        else
+        {
+            tiles.IndexedTarget(new NodeIndex(index))![nameof(TileDefinition.Collision)].Update(collision);
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Gives the sprite of the tile <paramref name="fromNumber"/> to the tile <paramref name="missingNumber"/> of a sheet
+    /// source: the binding of the missing tile names the sprite, and the other binding and the data of its tile go away.
+    /// </summary>
+    public static void Rebind(TileSetViewModel tileSet, SpriteSheetTileSetSource source, int missingNumber, int fromNumber)
+    {
+        var asset = tileSet.Asset;
+        var sourceIndex = asset.Sources.IndexOf(source);
+        var missing = source.Bindings.FindIndex(binding => binding.Number == missingNumber);
+        var from = source.Bindings.FindIndex(binding => binding.Number == fromNumber);
+        if (sourceIndex < 0 || missing < 0 || from < 0 || missing == from)
+        {
+            return;
+        }
+        var bindings = Root(tileSet)[nameof(TileSetAsset.Sources)].Target!.IndexedTarget(new NodeIndex(sourceIndex))![nameof(SpriteSheetTileSetSource.Bindings)].Target!;
+        bindings.IndexedTarget(new NodeIndex(missing))![nameof(SpriteTileBinding.SpriteName)].Update(source.Bindings[from].SpriteName);
+        bindings.Remove(source.Bindings[from], new NodeIndex(from));
+        var gone = TileId.FromNumber(source.Id, fromNumber);
+        var tiles = Root(tileSet)[nameof(TileSetAsset.Tiles)].Target!;
+        // From the end, so that the indices that remain are still right
+        for (var definition = asset.Tiles.Count - 1; definition >= 0; definition--)
+        {
+            if (asset.Tiles[definition].Tile == gone)
+            {
+                tiles.Remove(asset.Tiles[definition], new NodeIndex(definition));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether two definitions give a tile the same data: collision, kind, properties of the same types and values, and
+    /// animation. The tile they are for is not compared.
+    /// </summary>
+    public static bool HaveSameData(TileDefinition first, TileDefinition second)
+    {
+        if (first.Collision != second.Collision || (first.Kind ?? "") != (second.Kind ?? "") || first.Properties.Count != second.Properties.Count)
+        {
+            return false;
+        }
+        foreach (var (name, property) in first.Properties)
+        {
+            if (!second.Properties.TryGetValue(name, out var other) || property?.GetType() != other?.GetType() || !Equals(property?.GetValue(), other?.GetValue()))
+            {
+                return false;
+            }
+        }
+        return first.Animation.SequenceEqual(second.Animation);
+    }
+
+    // Where a definition of the tile goes in the list: before the first definition of a tile that comes after it
+    private static int PlaceOf(TileSetAsset asset, TileId tile)
+    {
+        var place = asset.Tiles.FindIndex(existing => existing.Tile.CompareTo(tile) > 0);
+        return place < 0 ? asset.Tiles.Count : place;
+    }
+
     // Gives the source the id after the last one given, and writes that id, so that an undo gives it back
     private static void AddSource(TileSetViewModel tileSet, TileSetSource source)
     {

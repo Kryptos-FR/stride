@@ -19,6 +19,7 @@ using Stride.Core.Presentation.Collections;
 using Stride.Core.Presentation.Commands;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Serialization;
+using Stride.Core.Transactions;
 using Stride.Graphics;
 
 namespace ColorRise.Tessera.Editor.TileSetEditor;
@@ -29,6 +30,16 @@ namespace ColorRise.Tessera.Editor.TileSetEditor;
 [AssetEditorViewModel<TileSetViewModel>]
 public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewModel>, IAddChildViewModel
 {
+    // The tiles a solid drag passed, in order, and the value they get at its release; null when no drag is open
+    private List<TileId>? solidDrag;
+    private bool solidValue;
+    // An undo or a redo dropped the drag in progress: the rest of it is ignored until the button goes up
+    private bool solidDragDropped;
+    // The grid changed a copy of tile data, and the write to the asset waits for the grid's transaction to end
+    private bool tileDataDirty;
+    private bool tileDataWriteQueued;
+    private bool writingTileData;
+
     /// <summary>
     /// Makes the editor of a tile set; <see cref="Initialize"/> opens it.
     /// </summary>
@@ -40,6 +51,8 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         AddSpriteSheetCommand = new AnonymousTaskCommand(ServiceProvider, AddSpriteSheetAsync);
         RemoveSourceCommand = new AnonymousTaskCommand(ServiceProvider, RemoveSourceAsync);
         RefreshCommand = new AnonymousCommand(ServiceProvider, Pictures.Refresh);
+        RebindSpriteCommand = new AnonymousTaskCommand<string>(ServiceProvider, RebindSpriteAsync) { IsEnabled = false };
+        Scene.Mode = TilePickMode.Many;
     }
 
     /// <summary>
@@ -62,11 +75,53 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         {
             if (SetValue(ref field, value))
             {
-                Scene.Layout = value?.Layout;
-                ShowProperties();
+                ShowLayout(value?.Layout);
+                SelectionFollows(show: true);
             }
         }
     }
+
+    /// <summary>
+    /// What a press on a tile does: select it, or set it solid.
+    /// </summary>
+    public TileSetEditorMode Mode
+    {
+        get;
+        set
+        {
+            if (SetValue(ref field, value))
+            {
+                // The scene forgets the press in progress
+                EndSolidDrag();
+                Scene.Mode = value == TileSetEditorMode.Solid ? TilePickMode.Paint : TilePickMode.Many;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The selected tiles of the selected source, in the order of their ids; the property grid shows their data.
+    /// </summary>
+    public IReadOnlyList<TileId> SelectedTiles
+    {
+        get;
+        private set => SetValue(ref field, value);
+    } = [];
+
+    /// <summary>
+    /// The names of the sprites that the selected tile can take, when it is one missing tile of a sprite sheet source: the
+    /// sprites of the sheet that other tiles have.
+    /// </summary>
+    public IReadOnlyList<string> RebindCandidates
+    {
+        get;
+        private set => SetValue(ref field, value);
+    } = [];
+
+    /// <summary>
+    /// Gives the selected missing tile a sprite of <see cref="RebindCandidates"/>, the parameter, after a question: the tile
+    /// that had the sprite goes away.
+    /// </summary>
+    public ICommandBase RebindSpriteCommand { get; }
 
     /// <summary>
     /// The selected source on the canvas.
@@ -127,6 +182,9 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
 
     private ObservableList<TileSourceItemViewModel> Items { get; } = [];
 
+    // The copies of the data of the selected tiles that the property grid shows
+    private List<TileDataViewModel> TileData { get; } = [];
+
     private IEditorDialogService Dialogs => ServiceProvider.Get<IEditorDialogService>();
 
     /// <summary>
@@ -138,6 +196,11 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         Asset.PropertyGraph.ItemChanged += GraphItemChanged;
         Pictures.Changed += PicturesChanged;
         Session.AssetPropertiesChanged += AssetPropertiesChanged;
+        UndoRedoService.Undone += HistoryMoved;
+        UndoRedoService.Redone += HistoryMoved;
+        Scene.SelectionChanged += SceneSelectionChanged;
+        Scene.Painted += ScenePainted;
+        Scene.PaintEnded += ScenePaintEnded;
         Follow();
         SelectedSource = Items.FirstOrDefault();
         if (SelectedSource is null)
@@ -155,6 +218,12 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         Asset.PropertyGraph.ItemChanged -= GraphItemChanged;
         Pictures.Changed -= PicturesChanged;
         Session.AssetPropertiesChanged -= AssetPropertiesChanged;
+        UndoRedoService.Undone -= HistoryMoved;
+        UndoRedoService.Redone -= HistoryMoved;
+        Scene.SelectionChanged -= SceneSelectionChanged;
+        Scene.Painted -= ScenePainted;
+        Scene.PaintEnded -= ScenePaintEnded;
+        DropTileData();
         foreach (var item in Items)
         {
             item.Destroy();
@@ -365,8 +434,232 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         {
             SelectedSource = Items.Count == 0 ? null : Items[Math.Clamp(selectedIndex - 1, 0, Items.Count - 1)];
         }
-        Scene.Layout = SelectedSource?.Layout;
+        ShowLayout(SelectedSource?.Layout);
+        // The selected tiles that the source no longer has leave the selection
+        SelectionFollows(show: false);
+        UpdateRebind();
+        TileDataFollows();
         UpdateProblems();
+        // The marks of the solid tiles are drawn again
+        Scene.MarkOf = SolidMark;
+    }
+
+    // The scene forgets a press when its source changes: the solid drag in progress ends with it
+    private void ShowLayout(TileSourceLayout? layout)
+    {
+        if (Scene.Layout != layout)
+        {
+            EndSolidDrag();
+            Scene.Layout = layout;
+        }
+    }
+
+    // The selected tiles are the scene's; the property grid shows them when they change, or when asked
+    private void SelectionFollows(bool show)
+    {
+        if (SelectedTiles.SequenceEqual(Scene.Selection))
+        {
+            if (show)
+            {
+                ShowProperties();
+            }
+            return;
+        }
+        SelectedTiles = Scene.Selection;
+        UpdateRebind();
+        ShowProperties();
+    }
+
+    // After a change of the asset that is not the editor's own, the copies that say something else than the asset are made
+    // again, and the grid shows them
+    private void TileDataFollows()
+    {
+        if (writingTileData || tileDataDirty || TileData.Count == 0)
+        {
+            return;
+        }
+        var asset = Asset.Asset;
+        if (TileData.All(data => TileSetGraph.HaveSameData(data.ToDefinition(), asset.GetDefinition(data.Tile) ?? new TileDefinition { Tile = data.Tile })))
+        {
+            return;
+        }
+        ShowProperties();
+    }
+
+    private void UpdateRebind()
+    {
+        RebindCandidates = RebindCandidatesOf(SelectedTiles);
+        RebindSpriteCommand.IsEnabled = RebindCandidates.Count > 0;
+    }
+
+    // The sprites of the sheet that other tiles have, when the tiles are one missing tile of a sheet source
+    private List<string> RebindCandidatesOf(IReadOnlyList<TileId> tiles)
+    {
+        if (tiles is not [var tile]
+            || Scene.Layout is not { Source: SpriteSheetTileSetSource source } layout
+            || layout.SlotOf(tile) is not { IsMissing: true }
+            || SheetOf(source) is not { } sheet)
+        {
+            return [];
+        }
+        return [.. sheet.Sprites.Select(sprite => sprite.Name).Distinct(StringComparer.Ordinal)
+            .Where(name => source.Bindings.Any(binding => binding.SpriteName == name && binding.Number != tile.Number))];
+    }
+
+    private async Task RebindSpriteAsync(string spriteName)
+    {
+        if (!RebindCandidates.Contains(spriteName) || SelectedTiles is not [var tile] || Scene.Layout?.Source is not SpriteSheetTileSetSource source)
+        {
+            return;
+        }
+        var from = source.Bindings.First(binding => binding.SpriteName == spriteName && binding.Number != tile.Number).Number;
+        var question = string.Create(CultureInfo.InvariantCulture, $"Give the sprite '{spriteName}' to the tile #{tile.Number}? The tile #{from}, which has it now, goes away: cells of maps that use #{from} will show as missing.");
+        if (await Dialogs.MessageBoxAsync(question, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+        {
+            return;
+        }
+        using var transaction = UndoRedoService.CreateTransaction();
+        TileSetGraph.Rebind(Asset, source, tile.Number, from);
+        UndoRedoService.SetName(transaction, "Rebind sprite");
+    }
+
+    private bool IsSolid(TileId tile) => Asset.Asset.GetDefinition(tile) is { } definition && definition.Collision.HasFlag(TileCollision.Solid);
+
+    // A solid tile is hatched; during a solid drag, the tiles it passed show the value they get at its release
+    private CanvasMark? SolidMark(TileId tile)
+    {
+        var solid = solidDrag is not null && solidDrag.Contains(tile) ? solidValue : IsSolid(tile);
+        return solid ? CanvasMark.Hatch : null;
+    }
+
+    private void SceneSelectionChanged(object? sender, EventArgs e) => SelectionFollows(show: false);
+
+    // The first tile of a drag gives the value: solid when it was not, not solid when it was
+    private void ScenePainted(object? sender, TileId tile)
+    {
+        if (solidDragDropped)
+        {
+            return;
+        }
+        if (solidDrag is null)
+        {
+            solidDrag = [];
+            solidValue = !IsSolid(tile);
+        }
+        if (!solidDrag.Contains(tile))
+        {
+            solidDrag.Add(tile);
+            Scene.MarkOf = SolidMark;
+        }
+    }
+
+    // The release writes the drag in one step, and makes none when no tile changes
+    private void ScenePaintEnded(object? sender, EventArgs e)
+    {
+        var tiles = solidDrag;
+        EndSolidDrag();
+        if (tiles is null)
+        {
+            return;
+        }
+        using (var transaction = UndoRedoService.CreateTransaction())
+        {
+            foreach (var tile in tiles)
+            {
+                TileSetGraph.SetSolid(Asset, tile, solidValue);
+            }
+            UndoRedoService.SetName(transaction, "Solid");
+        }
+        Scene.MarkOf = SolidMark;
+    }
+
+    private void EndSolidDrag()
+    {
+        solidDrag = null;
+        solidDragDropped = false;
+    }
+
+    // An undo or a redo drops what the person had in progress: the solid drag, and a change of tile data not written yet.
+    // The editor then follows the asset
+    private void HistoryMoved(object? sender, TransactionEventArgs e)
+    {
+        if (solidDrag is not null)
+        {
+            solidDrag = null;
+            solidDragDropped = true;
+            Scene.MarkOf = SolidMark;
+        }
+        tileDataDirty = false;
+        TileDataFollows();
+    }
+
+    // Raised inside the grid's transaction, which names the step after the grid's own action: the asset is written once that
+    // transaction is over, in a step of its own, and the changes of several tiles in one step
+    private void TileDataChanged(object? sender, EventArgs e)
+    {
+        if (writingTileData)
+        {
+            return;
+        }
+        tileDataDirty = true;
+        if (!tileDataWriteQueued)
+        {
+            tileDataWriteQueued = true;
+            _ = Dispatcher.InvokeAsync(WriteTileData);
+        }
+    }
+
+    private void WriteTileData()
+    {
+        if (IsDestroyed)
+        {
+            return;
+        }
+        if (UndoRedoService.TransactionInProgress)
+        {
+            _ = UndoRedoService.TransactionCompletion.ContinueWith(_ => Dispatcher.InvokeAsync(WriteTileData), TaskScheduler.Default);
+            return;
+        }
+        tileDataWriteQueued = false;
+        if (!tileDataDirty)
+        {
+            return;
+        }
+        tileDataDirty = false;
+        var asset = Asset.Asset;
+        var changed = TileData
+            .Select(data => data.ToDefinition())
+            .Where(definition => !TileSetGraph.HaveSameData(definition, asset.GetDefinition(definition.Tile) ?? new TileDefinition { Tile = definition.Tile }))
+            .ToList();
+        if (changed.Count == 0)
+        {
+            return;
+        }
+        writingTileData = true;
+        try
+        {
+            using var transaction = UndoRedoService.CreateTransaction();
+            foreach (var definition in changed)
+            {
+                TileSetGraph.SetDefinition(Asset, definition);
+            }
+            UndoRedoService.SetName(transaction, "Tile data");
+        }
+        finally
+        {
+            writingTileData = false;
+        }
+    }
+
+    private void DropTileData()
+    {
+        foreach (var data in TileData)
+        {
+            data.Changed -= TileDataChanged;
+            data.Destroy();
+        }
+        TileData.Clear();
+        tileDataDirty = false;
     }
 
     private void UpdateProblems()
@@ -396,6 +689,20 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
     {
         if (IsDestroyed)
         {
+            return;
+        }
+        DropTileData();
+        if (SelectedTiles.Count > 0)
+        {
+            foreach (var tile in SelectedTiles)
+            {
+                var data = new TileDataViewModel(ServiceProvider, Session.AssetNodeContainer, tile, Asset.Asset.GetDefinition(tile));
+                data.Changed += TileDataChanged;
+                TileData.Add(data);
+            }
+            EditorProperties.TypeDescription = SelectedTiles.Count == 1 ? "Tile" : "Tiles";
+            EditorProperties.Name = SelectedTiles.Count == 1 ? SelectedTiles[0].ToString() : string.Create(CultureInfo.InvariantCulture, $"{SelectedTiles.Count} tiles");
+            EditorProperties.GenerateSelectionPropertiesAsync(TileData.ToList()).Forget();
             return;
         }
         if (SelectedSource is not { } item)
