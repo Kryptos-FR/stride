@@ -22,6 +22,9 @@ public sealed partial class TileMapEditorView : UserControl, IAssetEditorView
     public TileMapEditorView()
     {
         InitializeComponent();
+        // After a click on the tool bar, the canvas has the focus again: its single keys and Space work, and Space does not
+        // press the button
+        ToolBar.AddHandler(Button.ClickEvent, (_, _) => Canvas.Focus(), RoutingStrategies.Bubble, handledEventsToo: true);
     }
 
     private TileMapEditorViewModel? Editor => DataContext as TileMapEditorViewModel;

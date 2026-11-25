@@ -29,7 +29,7 @@
 
   <DockPanel>
     <!-- The tool bar: the tools, the stamp's flips, and what the canvas shows -->
-    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="6,4">
+    <StackPanel x:Name="ToolBar" DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="6,4">
       <ToggleButton x:Name="StampToolButton" Classes="tool" Content="Stamp" ToolTip.Tip="Stamp (B)"
                     IsChecked="{Binding Tool, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileToolKind.Stamp}}"/>
       <ToggleButton x:Name="RectangleToolButton" Classes="tool" Content="Rectangle" ToolTip.Tip="Rectangle (P)"

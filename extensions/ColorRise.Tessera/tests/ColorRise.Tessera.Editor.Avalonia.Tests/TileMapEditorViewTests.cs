@@ -216,6 +216,29 @@ public sealed class TileMapEditorViewTests
     }
 
     [AvaloniaFact]
+    public async Task The_keys_reach_the_tools_after_a_click_on_the_tool_bar()
+    {
+        await using var session = await OpenAsync(TwoLayers);
+        var editor = await session.EditMapAsync(Location);
+        var (view, window) = Show(editor);
+        try
+        {
+            Click(window, view.FindControl<ToggleButton>("FillToolButton")!);
+            PressKey(window, Key.B, PhysicalKey.B, "b");
+            Assert.Equal(TileToolKind.Stamp, editor.Tool);
+
+            Click(window, view.FindControl<ToggleButton>("GridButton")!);
+            PressKey(window, Key.E, PhysicalKey.E, "e");
+            Assert.Equal(TileToolKind.Erase, editor.Tool);
+            Assert.True(view.FindControl<TileCanvas>("Canvas")!.IsFocused);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task The_tool_buttons_show_the_current_tool()
     {
         await using var session = await OpenAsync(TwoLayers);
