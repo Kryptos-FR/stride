@@ -5,7 +5,8 @@ namespace ColorRise.Tessera.Rendering;
 
 /// <summary>
 /// Keeps one <see cref="RenderFlipbook"/> in the visibility group for each enabled flipbook component that shows a frame,
-/// and updates it before each frame is drawn.
+/// and updates it before each frame is drawn: its bounds, and the key that orders it by its y among the flipbooks of its
+/// depth.
 /// </summary>
 public sealed class FlipbookRenderProcessor : EntityProcessor<FlipbookComponent, RenderFlipbook>, IEntityComponentRenderProcessor
 {
@@ -40,6 +41,8 @@ public sealed class FlipbookRenderProcessor : EntityProcessor<FlipbookComponent,
                     (render.FlipX, render.Color, render.Sampler) = (component.FlipX, component.Color, component.Sampler);
                     render.RenderGroup = component.RenderGroup;
                     render.BoundingBox = bounds;
+                    // Among the flipbooks of one depth, the higher is drawn first, so that the lower goes over it
+                    render.StateSortKey = component.SortByY ? FlipbookSortKey.FromY(world.TranslationVector.Y) : 0;
                     shown = true;
                 }
             }

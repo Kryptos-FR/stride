@@ -86,6 +86,13 @@ A game draws its maps once its graphics compositor has `TileRenderFeature`, with
 
 **The sort mode.** A sprite or a flipbook whose z is between two layers is drawn between them under a camera that looks straight at the map with the engine's sort. Under a tilted or turned camera, as the scene view's, it can be drawn over or under both layers. To keep it between them under any camera, select the transparent stage in the compositor editor and set its sort mode to "Back to front along an axis" (`TileAxisSortMode`), whose axis is Z by default. It orders everything of that stage by its position along the axis instead of by its distance to the camera's plane, which is right for flat things in the XY plane, and it costs no more than the engine's sort. A 3D object that is transparent and stands across the axis is sorted by its centre along the axis too. The check game's pictures `studio-09-axis-sort.png` and `studio-09-back-to-front.png` show the two sorts (see [docs/studio-check.md](docs/studio-check.md), line 9).
 
+**The order of flipbooks.** Flipbooks are ordered first by depth, as everything in the transparent stage is. Among flipbooks of one depth, the one whose entity is higher on Y is drawn first, so the lower one goes over it, as a character in front of another in a top-down game (*Sort by Y* on the component, on by default; 256 steps a unit, for Y from -32768 to 32768). What each sort mode gives:
+
+- With "Back to front along an axis", flipbooks of one z are ordered by Y under any camera: their depth along the axis is exactly their z.
+- With the engine's back to front sort, they are ordered by Y under a camera that looks straight at the map, and by their distance to the camera's plane under a tilted one.
+- Either way, a flipbook at a layer's own z is drawn over that layer, and a sprite at the z of flipbooks is drawn under them. A flipbook with *Sort by Y* off is drawn under the flipbooks of its depth that sort.
+- The Y is the world's: a map turned into another plane than XY does not get this order.
+
 For pixel art, leave out the post effects: tone mapping and the others change the colours of everything drawn before them.
 
 ## Keys of the map editor

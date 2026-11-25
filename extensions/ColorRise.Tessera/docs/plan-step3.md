@@ -662,7 +662,7 @@ internal static class FlipbookSortKey
 
 The render processor sets `StateSortKey` to `FromY` of the y of the entity's world position when `SortByY`, and to 0 otherwise.
 
-- [ ] **Step 1: Write the failing tests.** The two flipbooks of the order tests are one unit wide and high, of flat colours, and overlap by half: `high` at (0, 0.5) and `low` at (0, 0), so the lower half of `high` and the upper half of `low` share pixels. Each test adds them in both orders (a theory with `lowFirst`), so that the order of adding cannot pass for the order of Y.
+- [x] **Step 1: Write the failing tests.** The two flipbooks of the order tests are one unit wide and high, of flat colours, and overlap by half: `high` at (0, 0.5) and `low` at (0, 0), so the lower half of `high` and the upper half of `low` share pixels. Each test adds them in both orders (a theory with `lowFirst`), so that the order of adding cannot pass for the order of Y.
 
 ```csharp
 public sealed class FlipbookSortKeyTests
@@ -695,11 +695,15 @@ public sealed class FlipbookOrderTests
 }
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: FAIL to compile, then, with the key left at 0, the two `lowFirst: true` rows of the first theory fail.
-- [ ] **Step 3: Write the key, and set it in the render processor.**
-- [ ] **Step 4: Run the tests.** Expected: PASS. If the rows under the tilted camera with the axis sort fail, print the two depths the sort mode computes: they must be bit-equal for one z (R2). If they are not, make the bounds of a flat frame keep the entity's z exactly, and say so in the ledger.
-- [ ] **Step 5: Write it up.** `README.md`: the order of flipbooks (decision 6), with what each sort mode gives. `docs/design.md`, section 16: 256 steps a unit.
-- [ ] **Step 6: Commit and push**: `feat(tessera): order flipbooks of one depth by their y`
+- [x] **Step 2: Run them to see them fail.** Expected: FAIL to compile, then, with the key left at 0, the two `lowFirst: true` rows of the first theory fail.
+- [x] **Step 3: Write the key, and set it in the render processor.**
+- [x] **Step 4: Run the tests.** Expected: PASS. If the rows under the tilted camera with the axis sort fail, print the two depths the sort mode computes: they must be bit-equal for one z (R2). If they are not, make the bounds of a flat frame keep the entity's z exactly, and say so in the ledger.
+- [x] **Step 5: Write it up.** `README.md`: the order of flipbooks (decision 6), with what each sort mode gives. `docs/design.md`, section 16: 256 steps a unit.
+- [x] **Step 6: Commit and push**: `feat(tessera): order flipbooks of one depth by their y`
+
+**Done (2026-11-25).** Red: the test project did not compile; then, with the key left at 0, six rows failed: both `lowFirst: true` rows of the two first theories, two orders of the three flipbooks, the sprite and *Sort by Y* off. Green: the 26 tests of the two classes pass, the rows under the tilted camera with the axis sort among them (R2 holds: no fallback), and the runtime project's 391.
+
+**Done differently.** The layer test is a theory over the order of adding (the flipbook first or the map first): added after the map, it passed with the key at 0 by the order alone. Each order test draws one frame per point it reads, the camera looking at that point, so that a tilted camera needs no projection in the test. `FromY` computes in double, so that a y on a 256th of a unit gives its exact step.
 
 ### Task 7: Compositors and a click in the scene view (risk R7)
 

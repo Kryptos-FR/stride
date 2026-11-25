@@ -634,6 +634,8 @@ The first four are in Nicolas's order **(D3)**. The rest is in the order I would
 
 **Note (2026-11-25, step 2).** Decided since: the canvas makes a picture per chunk and layer from the start, coarser when zoomed out; the entity factory is third in `2D` (`[Display(40, "Tile map", "2D")]`, after Sprite and Background); the icons are drawn by a script; the templates' default names are `TileSet` and `TileMap`, in the group `Sprite`. Still open: the sample's name and story (step 4), and the flipbook's names (step 3).
 
+**Note (2026-11-25, step 3).** Decided since: one step of a flipbook's Y sort key is a 256th of a unit, over Y from -32768 to 32768, in the top 24 bits of the render object's state key that the sort modes keep after the depth (`FlipbookSortKey`); the spike of R2 found that two flipbooks of one z have bit-equal depths under both sort modes, so the key alone orders them.
+
 ## Sources
 
 Read on 2026-11-24:
