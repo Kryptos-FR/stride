@@ -91,6 +91,51 @@ internal static class TestTown
     }
 
     /// <summary>
+    /// The rows of a layer for <see cref="Map"/> with the given tokens at the given cells, and "." elsewhere, from (0, 0).
+    /// </summary>
+    public static string[] Rows(params (int X, int Y, string Token)[] cells)
+    {
+        var (width, height) = (cells.Max(cell => cell.X) + 1, cells.Max(cell => cell.Y) + 1);
+        var rows = new string[height];
+        for (var row = 0; row < height; row++)
+        {
+            var y = height - 1 - row;
+            rows[row] = string.Join(' ', Enumerable.Range(0, width).Select(x => cells.FirstOrDefault(cell => cell.X == x && cell.Y == y).Token ?? "."));
+        }
+        return rows;
+    }
+
+    /// <summary>
+    /// A map of <paramref name="side"/> by <paramref name="side"/> cells from (0, 0), a multiple of 16, in
+    /// <paramref name="layers"/> layers, every cell with the tile 1:(x mod 4),(y mod 2) of the slot 1. Its chunks are written as
+    /// text directly, which is quicker than through a runtime map.
+    /// </summary>
+    public static TileMapAsset LargeMap(TileSetAsset tileSet, string tileSetLocation, int side, int layers)
+    {
+        var asset = Map(tileSet, tileSetLocation);
+        var cells = new TileCell[TileChunk.Size * TileChunk.Size];
+        for (var i = 0; i < cells.Length; i++)
+        {
+            cells[i] = Cell(i % TileChunk.Size % 4, i / TileChunk.Size % 2);
+        }
+        var text = TileChunkText.Encode(cells);
+        var chunks = side / TileChunk.Size;
+        for (var index = 0; index < layers; index++)
+        {
+            var layer = new TileLayerAsset { Name = $"Layer{index}" };
+            for (var y = chunks - 1; y >= 0; y--)
+            {
+                for (var x = 0; x < chunks; x++)
+                {
+                    layer.Chunks.Add(new TileChunkAsset { Position = new Int2(x, y), Cells = text });
+                }
+            }
+            asset.Layers.Add(layer);
+        }
+        return asset;
+    }
+
+    /// <summary>
     /// The cell of the tile 1:c,r of the slot 1.
     /// </summary>
     public static TileCell Cell(int column, int row, TileFlip flip = TileFlip.None) => new(1, TileId.Parse($"1:{column},{row}"), flip);

@@ -46,7 +46,7 @@ public sealed class TileMapDocumentTests
     [Fact]
     public async Task A_stroke_shows_at_once_and_is_one_step_that_writes_only_its_chunks()
     {
-        await using var map = await OpenAsync(Layer((0, 0, "0,0"), (48, 0, "1,0")));
+        await using var map = await OpenAsync(Rows((0, 0, "0,0"), (48, 0, "1,0")));
         var chunks = map.Asset.Layers[0].Chunks;
         var (first, far) = (chunks.Single(chunk => chunk.Position == new Int2(0, 0)), chunks.Single(chunk => chunk.Position == new Int2(3, 0)));
         var (firstText, farText) = (first.Cells, far.Cells);
@@ -159,7 +159,7 @@ public sealed class TileMapDocumentTests
     [Fact]
     public async Task A_new_chunk_goes_to_its_place_in_the_file_and_an_empty_one_leaves()
     {
-        await using var map = await OpenAsync(Layer((0, 0, "0,0"), (0, 32, "1,0")));
+        await using var map = await OpenAsync(Rows((0, 0, "0,0"), (0, 32, "1,0")));
         var chunks = map.Asset.Layers[0].Chunks;
         Assert.Equal([new Int2(0, 2), new Int2(0, 0)], chunks.Select(chunk => chunk.Position));
 
@@ -207,7 +207,7 @@ public sealed class TileMapDocumentTests
     [Fact]
     public async Task A_cell_of_a_tile_set_the_map_does_not_have_is_kept_bit_for_bit()
     {
-        await using var map = await OpenAsync(Layer((3, 3, "0,0")), asset => Replace(asset, "1/1:0,0", "7/9:3,3dv"));
+        await using var map = await OpenAsync(Rows((3, 3, "0,0")), asset => Replace(asset, "1/1:0,0", "7/9:3,3dv"));
         Assert.Empty(map.Document.Errors);
         Assert.Equal(new TileCell(7, TileId.Parse("9:3,3"), TileFlip.Diagonal | TileFlip.Vertical), map.Document.GetLayer(0).GetCell(new Int2(3, 3)));
         var before = ChunkLines(map, 0);
@@ -222,7 +222,7 @@ public sealed class TileMapDocumentTests
     [Fact]
     public async Task A_cell_of_a_tile_the_set_does_not_have_is_kept_too()
     {
-        await using var map = await OpenAsync(Layer((3, 3, "0,0")), asset => Replace(asset, "1/1:0,0", "1/1:9,9"));
+        await using var map = await OpenAsync(Rows((3, 3, "0,0")), asset => Replace(asset, "1/1:0,0", "1/1:9,9"));
         var before = ChunkLines(map, 0);
 
         Assert.True(map.Document.Write(0, new Dictionary<Int2, TileCell> { [new Int2(5, 5)] = Cell(1, 0) }, "Stamp"));
@@ -236,7 +236,7 @@ public sealed class TileMapDocumentTests
     [Fact]
     public async Task A_chunk_that_cannot_be_read_is_named_and_never_written()
     {
-        await using var map = await OpenAsync(Layer((0, 0, "0,0")), asset =>
+        await using var map = await OpenAsync(Rows((0, 0, "0,0")), asset =>
         {
             var chunk = asset.Layers[0].Chunks[0];
             var lines = chunk.Cells.Split('\n');
@@ -269,7 +269,7 @@ public sealed class TileMapDocumentTests
     [Fact]
     public async Task A_conflict_marker_in_a_chunk_is_unreadable_and_the_other_chunks_load()
     {
-        await using var map = await OpenAsync(Layer((0, 0, "0,0"), (16, 0, "1,0")), asset =>
+        await using var map = await OpenAsync(Rows((0, 0, "0,0"), (16, 0, "1,0")), asset =>
         {
             var chunk = asset.Layers[0].Chunks.Single(chunk => chunk.Position == new Int2(0, 0));
             var lines = chunk.Cells.Split('\n');
@@ -286,7 +286,7 @@ public sealed class TileMapDocumentTests
     public async Task A_chunk_given_twice_keeps_the_first_and_touches_neither()
     {
         TileChunkAsset? second = null;
-        await using var map = await OpenAsync(Layer((0, 0, "0,0")), asset =>
+        await using var map = await OpenAsync(Rows((0, 0, "0,0")), asset =>
         {
             var cells = new TileCell[256];
             cells[1 * 16 + 1] = Cell(3, 0);
@@ -312,7 +312,7 @@ public sealed class TileMapDocumentTests
     [Fact]
     public async Task A_chunk_made_readable_again_by_hand_is_read()
     {
-        await using var map = await OpenAsync(Layer((0, 0, "0,0")), asset => asset.Layers[0].Chunks[0].Cells = "1/1:0,0\n");
+        await using var map = await OpenAsync(Rows((0, 0, "0,0")), asset => asset.Layers[0].Chunks[0].Cells = "1/1:0,0\n");
         Assert.True(map.Document.IsUnreadable(0, new Int2(0, 0)));
         var changes = Changes(map.Document);
         var cells = new TileCell[256];
@@ -349,7 +349,7 @@ public sealed class TileMapDocumentTests
     [Fact]
     public async Task A_change_from_outside_is_followed()
     {
-        await using var map = await OpenAsync(Layer((0, 0, "0,0"), (16, 0, "1,0")));
+        await using var map = await OpenAsync(Rows((0, 0, "0,0"), (16, 0, "1,0")));
         var changes = Changes(map.Document);
         var structure = 0;
         map.Document.StructureChanged += (_, _) => structure++;
@@ -395,7 +395,7 @@ public sealed class TileMapDocumentTests
     [Fact]
     public async Task A_frame_keeps_tiles_inside_and_lets_erase_work_outside()
     {
-        await using var map = await OpenAsync(Layer((9, 9, "0,0")), asset => asset.Size = new Int2(4, 4));
+        await using var map = await OpenAsync(Rows((9, 9, "0,0")), asset => asset.Size = new Int2(4, 4));
         Assert.Equal(Cell(0, 0), map.Document.GetLayer(0).GetCell(new Int2(9, 9)));
 
         Assert.True(map.Document.Write(0, new Dictionary<Int2, TileCell> { [new Int2(3, 3)] = Cell(1, 0), [new Int2(4, 4)] = Cell(1, 0) }, "Stamp"));
@@ -463,19 +463,6 @@ public sealed class TileMapDocumentTests
         var tileSet = AssetFileSerializer.Load<TileSetAsset>(map.Session.FileOf("Tiles/Town", TileSetAsset.FileExtension)).Asset;
         await map.DisposeAsync();
         return await OpenAsync(tileSet, asset);
-    }
-
-    // The rows of a layer for TestTown.Map with the given cells, and "." elsewhere
-    private static string[] Layer(params (int X, int Y, string Token)[] cells)
-    {
-        var (width, height) = (cells.Max(cell => cell.X) + 1, cells.Max(cell => cell.Y) + 1);
-        var rows = new string[height];
-        for (var row = 0; row < height; row++)
-        {
-            var y = height - 1 - row;
-            rows[row] = string.Join(' ', Enumerable.Range(0, width).Select(x => cells.FirstOrDefault(cell => cell.X == x && cell.Y == y).Token ?? "."));
-        }
-        return rows;
     }
 
     private static void Replace(TileMapAsset asset, string token, string by)
