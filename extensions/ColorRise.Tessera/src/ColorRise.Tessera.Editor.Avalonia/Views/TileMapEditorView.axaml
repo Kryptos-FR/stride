@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:sys="using:System"
+             xmlns:controls="using:ColorRise.Tessera.Editor.Avalonia.Controls"
+             xmlns:views="using:ColorRise.Tessera.Editor.Avalonia.Views"
+             xmlns:editor="using:ColorRise.Tessera.Editor.TileMapEditor"
+             x:Class="ColorRise.Tessera.Editor.Avalonia.Views.TileMapEditorView"
+             x:DataType="editor:TileMapEditorViewModel">
+  <UserControl.Styles>
+    <!-- The tool that is on stays on: a click on it does nothing -->
+    <Style Selector="ToggleButton.tool:checked">
+      <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style Selector="ToggleButton.row">
+      <Setter Property="Padding" Value="4,0"/>
+      <Setter Property="MinWidth" Value="26"/>
+      <Setter Property="Margin" Value="0,0,4,0"/>
+    </Style>
+    <Style Selector="TextBlock.problem">
+      <Setter Property="Foreground" Value="#FFB040"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.title">
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Margin" Value="0,6,0,4"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <!-- The tool bar: the tools, the stamp's flips, and what the canvas shows -->
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="6,4">
+      <ToggleButton x:Name="StampToolButton" Classes="tool" Content="Stamp" ToolTip.Tip="Stamp (B)"
+                    IsChecked="{Binding Tool, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileToolKind.Stamp}}"/>
+      <ToggleButton x:Name="RectangleToolButton" Classes="tool" Content="Rectangle" ToolTip.Tip="Rectangle (P)"
+                    IsChecked="{Binding Tool, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileToolKind.Rectangle}}"/>
+      <ToggleButton x:Name="FillToolButton" Classes="tool" Content="Fill" ToolTip.Tip="Fill (F)"
+                    IsChecked="{Binding Tool, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileToolKind.Fill}}"/>
+      <ToggleButton x:Name="EraseToolButton" Classes="tool" Content="Erase" ToolTip.Tip="Erase (E)"
+                    IsChecked="{Binding Tool, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileToolKind.Erase}}"/>
+      <ToggleButton x:Name="PickToolButton" Classes="tool" Content="Pick" ToolTip.Tip="Pick (I)"
+                    IsChecked="{Binding Tool, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileToolKind.Pick}}"/>
+      <ToggleButton x:Name="SelectToolButton" Classes="tool" Content="Select" ToolTip.Tip="Select (R)"
+                    IsChecked="{Binding Tool, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileToolKind.Select}}"/>
+      <Button Content="Flip X" ToolTip.Tip="Flip the stamp left to right (X)" Margin="12,0,0,0" Click="OnFlipX"/>
+      <Button Content="Flip Y" ToolTip.Tip="Flip the stamp top to bottom (Y)" Click="OnFlipY"/>
+      <Button Content="Rotate" ToolTip.Tip="Turn the stamp clockwise (Z), or the other way (Shift+Z)" Click="OnRotate"/>
+      <ToggleButton x:Name="GridButton" Content="Grid" ToolTip.Tip="Show the grid of the cells" Margin="12,0,0,0" IsChecked="{Binding ShowGrid}"/>
+      <ToggleButton x:Name="DimButton" Content="Dim other layers" ToolTip.Tip="Draw the other layers faded" IsChecked="{Binding DimOtherLayers}"/>
+    </StackPanel>
+
+    <!-- The status line: the cell, the layer, the tile and the zoom, then why the last press did nothing -->
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="16" Margin="6,2,6,4">
+      <TextBlock Text="{Binding StatusCell}" MinWidth="90"/>
+      <TextBlock Text="{Binding StatusLayer}" MinWidth="120"/>
+      <TextBlock Text="{Binding StatusTile}" MinWidth="120"/>
+      <TextBlock Text="{Binding StatusZoom}" MinWidth="48"/>
+      <TextBlock Classes="problem" Text="{Binding Message}" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+    </StackPanel>
+
+    <!-- The layers, then the tile sets and the palette of the selected one -->
+    <DockPanel DockPanel.Dock="Right" Width="300" Margin="6,0">
+      <TextBlock DockPanel.Dock="Top" Classes="title" Text="Layers"/>
+      <ListBox x:Name="LayerList" DockPanel.Dock="Top" Height="170"
+               ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}">
+        <sd:EditCommands.Bindings>
+          <sd:EditCommandBinding Kind="Rename" Command="{x:Static sd:BeginEditCommand.Instance}" CommandParameter="{Binding SelectedLayer}"/>
+          <sd:EditCommandBinding Kind="Delete" Command="{Binding RemoveLayerCommand}"/>
+        </sd:EditCommands.Bindings>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="editor:TileLayerItemViewModel">
+            <DockPanel>
+              <ToggleButton x:Name="EyeButton" Classes="row" DockPanel.Dock="Left" Content="👁"
+                            ToolTip.Tip="Show or hide the layer" IsChecked="{Binding IsVisible}"/>
+              <ToggleButton x:Name="LockButton" Classes="row" DockPanel.Dock="Left" Content="🔒"
+                            ToolTip.Tip="Lock the layer: no tool changes its cells" IsChecked="{Binding IsLocked}"/>
+              <Panel>
+                <!-- A double click, or Rename, types the name in place -->
+                <TextBlock x:Name="LayerName" VerticalAlignment="Center" Background="Transparent" Text="{Binding Name}"
+                           TextTrimming="CharacterEllipsis" IsVisible="{Binding !IsEditing}" DoubleTapped="OnLayerNameDoubleTapped"/>
+                <TextBox x:Name="LayerNameBox" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsEditing}">
+                  <Interaction.Behaviors>
+                    <sd:InlineEditBehavior Name="{Binding Name, Mode=TwoWay}" IsEditing="{Binding IsEditing, Mode=TwoWay}"/>
+                  </Interaction.Behaviors>
+                </TextBox>
+              </Panel>
+            </DockPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+        <Button x:Name="AddLayerButton" Content="+" ToolTip.Tip="Add a layer over the current one" Command="{Binding AddLayerCommand}"/>
+        <Button x:Name="RemoveLayerButton" Content="-" ToolTip.Tip="Remove the current layer" Command="{Binding RemoveLayerCommand}"/>
+        <Button x:Name="MoveLayerUpButton" Content="Up" ToolTip.Tip="Move the current layer up" Command="{Binding MoveLayerUpCommand}"/>
+        <Button x:Name="MoveLayerDownButton" Content="Down" ToolTip.Tip="Move the current layer down" Command="{Binding MoveLayerDownCommand}"/>
+      </StackPanel>
+
+      <TextBlock DockPanel.Dock="Top" Classes="title" Text="Tile sets"/>
+      <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+        <Button x:Name="RemoveTileSetButton" DockPanel.Dock="Right" Content="-" Margin="4,0,0,0"
+                ToolTip.Tip="Remove the tile set from the map" Command="{Binding RemoveTileSetCommand}"/>
+        <Button x:Name="AddTileSetButton" DockPanel.Dock="Right" Content="+" Margin="4,0,0,0"
+                ToolTip.Tip="Add a tile set of the project to the map" Command="{Binding AddTileSetCommand}"/>
+        <ComboBox x:Name="TileSetChoice" HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding TileSets}" SelectedItem="{Binding SelectedTileSet}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="editor:TileSetSlotItemViewModel">
+              <TextBlock Text="{Binding Name}"/>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </DockPanel>
+      <ContentControl Content="{Binding SelectedTileSet}">
+        <ContentControl.ContentTemplate>
+          <DataTemplate x:DataType="editor:TileSetSlotItemViewModel">
+            <Panel>
+              <Panel IsVisible="{Binding !IsMissing}">
+                <controls:TilePalette DataContext="{Binding Palette}"/>
+              </Panel>
+              <TextBlock Classes="problem" Text="This tile set is missing." IsVisible="{Binding IsMissing}"/>
+            </Panel>
+          </DataTemplate>
+        </ContentControl.ContentTemplate>
+      </ContentControl>
+    </DockPanel>
+
+    <!-- What is wrong in the map, over the canvas -->
+    <ItemsControl x:Name="ProblemList" DockPanel.Dock="Top" Margin="6,0" ItemsSource="{Binding Problems}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="sys:String">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Classes="problem" Text="⚠" Margin="0,0,6,0"/>
+            <TextBlock Classes="problem" Text="{Binding}"/>
+          </DockPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <!-- The map: the tools read the pointer, and the single keys while the canvas has the focus -->
+    <controls:TileCanvas x:Name="Canvas" Margin="6,0,0,0" Scene="{Binding Scene}" Input="{Binding Input}" View="{Binding View}"
+                         ShowGrid="{Binding ShowGrid}">
+      <sd:EditCommands.Bindings>
+        <sd:EditCommandBinding Kind="Copy" Command="{Binding CopyCommand}"/>
+        <sd:EditCommandBinding Kind="Cut" Command="{Binding CutCommand}"/>
+        <sd:EditCommandBinding Kind="Paste" Command="{Binding PasteCommand}"/>
+        <sd:EditCommandBinding Kind="Delete" Command="{Binding DeleteCommand}"/>
+      </sd:EditCommands.Bindings>
+    </controls:TileCanvas>
+  </DockPanel>
+</UserControl>

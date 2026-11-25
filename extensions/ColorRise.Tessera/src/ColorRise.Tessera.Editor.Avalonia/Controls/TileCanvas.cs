@@ -64,8 +64,9 @@ public sealed class TileCanvas : Control
     private (Vector2 Last, MouseButton Button)? pan;
     private bool spaceDown;
     private bool fitted;
-    // A fit asked by Fit, done once the scene has bounds and the canvas a size
+    // A fit asked by Fit, or a centring asked by Centre, done once the scene has bounds and the canvas a size
     private bool fitAsked;
+    private bool centreAsked;
 
     static TileCanvas()
     {
@@ -137,6 +138,16 @@ public sealed class TileCanvas : Control
     public void Fit()
     {
         fitAsked = true;
+        TryFit();
+    }
+
+    /// <summary>
+    /// Puts the middle of the scene in the middle of the canvas at the zoom it has: now, or as soon as the scene has bounds
+    /// and the canvas a size.
+    /// </summary>
+    public void Centre()
+    {
+        centreAsked = true;
         TryFit();
     }
 
@@ -523,12 +534,20 @@ public sealed class TileCanvas : Control
 
     private void TryFit()
     {
-        if (!(FitOnFirstLayout && !fitted || fitAsked) || Scene?.Bounds is not { } bounds || Bounds.Width <= 0 || Bounds.Height <= 0)
+        if (!(FitOnFirstLayout && !fitted || fitAsked || centreAsked) || Scene?.Bounds is not { } bounds || Bounds.Width <= 0 || Bounds.Height <= 0)
         {
+            return;
+        }
+        var size = new Vector2((float)Bounds.Width, (float)Bounds.Height);
+        if (centreAsked && !fitAsked && !(FitOnFirstLayout && !fitted))
+        {
+            centreAsked = false;
+            View.Centre(bounds, size);
             return;
         }
         fitted = true;
         fitAsked = false;
-        View.Fit(bounds, new Vector2((float)Bounds.Width, (float)Bounds.Height));
+        centreAsked = false;
+        View.Fit(bounds, size);
     }
 }

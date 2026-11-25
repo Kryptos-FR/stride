@@ -120,6 +120,12 @@ public sealed class CanvasView : INotifyPropertyChanged
         });
     }
 
+    /// <summary>
+    /// Puts the middle of <paramref name="bounds"/> in the middle of a view of the given size, at the zoom the view has.
+    /// </summary>
+    public void Centre(RectangleF bounds, Vector2 viewSize)
+        => Origin = new Vector2(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2) - viewSize / (2 * Zoom);
+
     // Raises Changed once for all the changes the action makes
     private void Update(Action change)
     {

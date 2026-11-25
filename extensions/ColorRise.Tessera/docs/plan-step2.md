@@ -1941,7 +1941,7 @@ The layout is section 9's sketch:
 - The lines of `Problems` in a bar over the canvas, each with a warning sign.
 - **Keys (R6).** The canvas gets the focus on a press, so `TileCanvas` gives it the single keys while it has the focus; a `TextBox` that has the focus (a layer's name) keeps its keys, because the canvas does not have it then. Nothing in the view handles a key at the level of the window. Copy, Cut, Paste and Delete come through the `EditCommandBinding`s on the view, so the Edit menu and the user's shortcuts reach them.
 
-- [ ] **Step 1: Write the failing tests** (a window of 1280 by 720; the session has both plugins)
+- [x] **Step 1: Write the failing tests** (a window of 1280 by 720; the session has both plugins)
 
 ```csharp
 [AvaloniaFact] public async Task The_editor_opens_from_the_session_with_its_view()
@@ -1961,12 +1961,22 @@ The layout is section 9's sketch:
 [AvaloniaFact] public async Task A_missing_tile_set_shows_in_place_of_the_palette()
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileMapEditorViewTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the view.**
-- [ ] **Step 4: Run the tests.** Expected: PASS (10 cases). If a single key cannot be kept from the canvas while a name is typed, or cannot reach it at all, that is R6's fallback: the keys stay off, the commands and the tool bar remain, and the finding says what stopped them.
-- [ ] **Step 5: Save a picture** of the view over a map of two layers with a stamp of 2 by 2 under the cursor, to `/mnt/project-files/tilemap/step2/tile-map-editor.png`, and look at it.
-- [ ] **Step 6: Write the finding of R6** in `docs/plugin-findings.md`: a plugin's command cannot have a single key as its default shortcut (`CommandGestureBindings`), so the keys of the tools are read by the control and cannot be rebound.
-- [ ] **Step 7: Commit and push**: `feat(tessera): the view of the map editor`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileMapEditorViewTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the view.**
+- [x] **Step 4: Run the tests.** Expected: PASS (10 cases). If a single key cannot be kept from the canvas while a name is typed, or cannot reach it at all, that is R6's fallback: the keys stay off, the commands and the tool bar remain, and the finding says what stopped them.
+- [x] **Step 5: Save a picture** of the view over a map of two layers with a stamp of 2 by 2 under the cursor, to `/mnt/project-files/tilemap/step2/tile-map-editor.png`, and look at it.
+- [x] **Step 6: Write the finding of R6** in `docs/plugin-findings.md`: a plugin's command cannot have a single key as its default shortcut (`CommandGestureBindings`), so the keys of the tools are read by the control and cannot be rebound.
+- [x] **Step 7: Commit and push**: `feat(tessera): the view of the map editor`
+
+**Done (2026-11-25).** Gates: the tests fail to compile without `TileMapEditorView`; the first run with the view failed 7 of the 10 cases, because opening at the last zoom did not centre the map yet; then the 10 pass, with the canvas test of `Centre` (red with a stub, then green). R6 holds: the single keys reach the tools while the canvas has the focus, and a name typed in the layer list keeps them, so no fallback. The picture is saved and readable, nothing clipped. No mutation checks from this task on (Nicolas). The editor tests pass (227) and the view tests too (10 new, 1 new canvas test), with no compiler warning.
+
+**Done differently.**
+- The view model gives the view `GridColor` and `OpensAtLastZoom`: the settings are internal to the editor assembly, which the Avalonia assembly cannot see.
+- `CanvasView.Centre` and `TileCanvas.Centre`: an editor that opens at the last zoom puts the middle of the map in the middle of the canvas, at that zoom; the first time, it fits. The view asks for one or the other on the dispatcher, after its data context is set, so the canvas already has the editor's view.
+- Any fit writes `LastZoom` (it is a change of the view), so the next editor opens at the fitted zoom.
+- `TileLayerItemViewModel` is an `IIsEditableViewModel`, which `BeginEditCommand` needs for the `Rename` binding of the layer list.
+- Delete on the layer list removes the layer (with its question); on the canvas it empties the selected cells.
+- The lock button shows the same sign checked or not; its checked look tells them apart.
 
 ### Task 16: A click on a map in the scene view (risk R7)
 

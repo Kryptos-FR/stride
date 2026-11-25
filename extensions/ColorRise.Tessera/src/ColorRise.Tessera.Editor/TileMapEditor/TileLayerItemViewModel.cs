@@ -10,7 +10,7 @@ namespace ColorRise.Tessera.Editor.TileMapEditor;
 /// <summary>
 /// A layer in the list of the map editor, and what the property grid shows for it.
 /// </summary>
-public sealed class TileLayerItemViewModel : DispatcherViewModel, IAssetPropertyProviderViewModel
+public sealed class TileLayerItemViewModel : DispatcherViewModel, IAssetPropertyProviderViewModel, IIsEditableViewModel
 {
     private readonly TileMapEditorViewModel editor;
 
@@ -39,6 +39,11 @@ public sealed class TileLayerItemViewModel : DispatcherViewModel, IAssetProperty
             Refresh();
         }
     }
+
+    /// <summary>
+    /// Whether the name can be typed in the list: always.
+    /// </summary>
+    public bool IsEditable => true;
 
     /// <summary>
     /// Whether the name is being typed in the list.

@@ -84,6 +84,7 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
         if (TesseraEditorSettings.LastZoom.GetValue() is > 0 and var zoom)
         {
             View.Zoom = zoom;
+            OpensAtLastZoom = true;
         }
         FollowLayerNames();
         SyncLayers();
@@ -111,6 +112,17 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
     /// The zoom and the pan of the canvas; the zoom the last map editor had at first.
     /// </summary>
     public CanvasView View { get; } = new();
+
+    /// <summary>
+    /// Whether the editor opened at the zoom of the last map editor: the view centres the map at that zoom, where it would
+    /// otherwise fit the map.
+    /// </summary>
+    public bool OpensAtLastZoom { get; }
+
+    /// <summary>
+    /// The colour of the grid of the cells, from the editor settings.
+    /// </summary>
+    public Color GridColor { get; } = TesseraEditorSettings.GridColor.GetValue();
 
     /// <summary>
     /// The tool the pointer uses; the stamp at first. Choosing another drops the drag in progress.

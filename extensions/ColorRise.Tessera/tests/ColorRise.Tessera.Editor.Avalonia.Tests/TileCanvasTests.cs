@@ -243,6 +243,24 @@ public sealed class TileCanvasTests
         window.Close();
     }
 
+    [AvaloniaFact]
+    public void Centre_keeps_the_zoom_and_puts_the_scene_in_the_middle_now_or_once_it_has_bounds()
+    {
+        var scene = new TestScene();
+        var (canvas, window) = Show(scene, zoom: 2);
+
+        canvas.Centre();
+        Assert.Equal(Vector2.Zero, canvas.View.Origin);
+        scene.Bounds = new RectangleF(100, 40, 16, 8);
+        scene.RaiseChanged();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(2, canvas.View.Zoom);
+        // The middle (108, 44) is at the middle of the 64 pixels, 16 canvas units from the corner
+        Assert.Equal(new Vector2(92, 28), canvas.View.Origin);
+        window.Close();
+    }
+
     // A canvas of 64 by 64 pixels filling its window, at a zoom, without the grid
     private static (TileCanvas Canvas, Window Window) Show(TestScene scene, float zoom)
     {
