@@ -586,7 +586,7 @@ public sealed class AddTileMapAssetPolicy : CreateComponentPolicyBase<TileMapAss
 
 Models: `sources/plugins/SpriteStudio/Stride.SpriteStudio.Editor/SpriteStudioRenderFeatureProvider.cs`; `sources/editor/Stride.Assets.Editor/EntityFactories/TwoDimensionEntityFactory.cs` (the category `2D` is registered there); `AddSpriteSheetAssetPolicy.cs` under `sources/editor/Stride.Assets.Editor/AssetEditors/EntityHierarchyEditor/ViewModels/AddAssetPolicies/`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 [Fact]
@@ -741,7 +741,7 @@ internal static class TestTown
 }
 ```
 
-- [ ] **Step 1: Write the failing tests.** Each opens a `TesseraSession` with `("Tiles/Town", TestTown.TileSet())`, writes the image with `session.WriteImage("Tiles/town.png", 64, 32, TestTown.Pixel)`, and asks `TilePictureService.Of(session.Session).Get(session.TileSetAt("Tiles/Town"))`.
+- [x] **Step 1: Write the failing tests.** Each opens a `TesseraSession` with `("Tiles/Town", TestTown.TileSet())`, writes the image with `session.WriteImage("Tiles/town.png", 64, 32, TestTown.Pixel)`, and asks `TilePictureService.Of(session.Session).Get(session.TileSetAt("Tiles/Town"))`.
 
 ```csharp
 [Fact]
@@ -789,18 +789,27 @@ public async Task The_service_gives_one_object_per_tile_set_and_finds_it_by_its_
     // is that object; a reference whose id no asset has gives null; Get((TileSet?)null) gives null
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TilePictureTests`. Expected: FAIL to compile.
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TilePictureTests`. Expected: FAIL to compile.
 
-- [ ] **Step 3: Write the five classes.**
+- [x] **Step 3: Write the five classes.**
   - Paths: an image's path is relative to the folder of the asset that names it (`UPath.Combine(assetItem.FullPath.GetParent(), image)`), as in `TileSetAssetCompiler.Prepare`, which is the model for the sprites of a sheet too.
   - A picture is made from the cache's `Image` (8-bit RGBA or BGRA) once per image and color key, and made again when the cache gives another `Image` object for the path.
   - Which grid positions are tiles is `TileSlicer.Grid` then `TileSlicer.IsEmpty` with the color key, as the build decides it. Which sprites are bound, missing and unbound is `TileSlicer.Sheet`.
   - `TileSetPictures` listens to `Session.AssetPropertiesChanged` for its tile set and for the sprite sheets its sources name (model: `EditorGameGraphicsCompositorService.AssetPropertyChanged`).
   - Every failure of a file is caught and becomes the `Problem` of the source.
 
-- [ ] **Step 4: Run the tests.** Expected: PASS, 12 tests (two theories).
+- [x] **Step 4: Run the tests.** Expected: PASS, 12 tests (two theories).
 
-- [ ] **Step 5: Commit and push**: `feat(tessera): the pictures of a tile set's sources for the editors`
+- [x] **Step 5: Commit and push**: `feat(tessera): the pictures of a tile set's sources for the editors`
+
+**Done (2026-11-25).** Gates: the tests fail to compile without the five classes, then the 12 pass; with the color key or the change listener taken out, their two tests fail. The whole editor test project passes (28), with no compiler warning.
+
+**Done differently.**
+- The test edits the tile size through `PropertyGraph.RootNode` (public), as `AssetRootNode` is not public, in a named undo transaction: the session raises `AssetPropertiesChanged` only once its history recorded the change, on a thread of the pool, so `TileSetPictures` makes its pictures again on the dispatcher and the test waits for `Changed`.
+- The boxes of a sheet source have a gap of 2 units; a sprite that is gone gets a box of the set's tile size. Of two bindings with one number, the first is kept.
+- A problem names the file and says whether it is not there or cannot be read. A sprite whose image cannot be read has no picture (it shows as missing) and its source has the problem.
+- `TestTown.Map` builds the map through the runtime `TileMap` and `TileMapAsset.FromTileMap`, then puts the tile set in slot 1.
+- The pixels are copied row by row with `Marshal.Copy`, which follows the image's row stride.
 
 ### Task 6: The tile canvas
 

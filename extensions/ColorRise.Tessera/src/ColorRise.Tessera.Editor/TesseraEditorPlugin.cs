@@ -1,3 +1,5 @@
+using ColorRise.Tessera.Editor.Pictures;
+using Stride.Core.Assets.Editor.Services;
 using Stride.Editor;
 
 namespace ColorRise.Tessera.Editor;
@@ -7,4 +9,15 @@ namespace ColorRise.Tessera.Editor;
 /// </summary>
 public sealed class TesseraEditorPlugin : StrideAssetsPlugin
 {
+    /// <summary>
+    /// Registers the session's services: the pictures of the tile sets.
+    /// </summary>
+    public override void InitializeSession(ISessionPluginContext context)
+    {
+        base.InitializeSession(context);
+
+        var pictures = new TilePictureService(context.Session);
+        context.Services.Register(pictures);
+        context.OnClose(pictures.Dispose);
+    }
 }

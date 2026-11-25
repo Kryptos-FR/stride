@@ -1,0 +1,102 @@
+using ColorRise.Tessera.Assets;
+using Stride.Core.IO;
+using Stride.Core.Mathematics;
+using Stride.Core.Serialization;
+
+namespace ColorRise.Tessera.Editor.Tests;
+
+/// <summary>
+/// The tile set and maps of the editor tests: "town.png", 64 by 32 pixels, four by two tiles of 16 pixels.
+/// </summary>
+internal static class TestTown
+{
+    /// <summary>
+    /// The colour of the flat tile (c, r).
+    /// </summary>
+    public static Color Flat(int column, int row) => new((byte)(40 + 60 * column), (byte)(80 + 100 * row), 200, 255);
+
+    /// <summary>
+    /// A pixel of "town.png", from the top left. The tile (c, r) is flat, of the colour <see cref="Flat"/>, but (0, 0) has
+    /// four quarters (top-left red, top-right green, bottom-left blue, bottom-right yellow) and (3, 1) is fully transparent.
+    /// </summary>
+    public static Color Pixel(int x, int y)
+    {
+        var (column, row) = (x / 16, y / 16);
+        return (column, row) switch
+        {
+            (0, 0) => (x % 16 < 8, y % 16 < 8) switch
+            {
+                (true, true) => Color.Red,
+                (false, true) => Color.Lime,
+                (true, false) => Color.Blue,
+                _ => Color.Yellow,
+            },
+            (3, 1) => Color.Transparent,
+            _ => Flat(column, row),
+        };
+    }
+
+    /// <summary>
+    /// A tile set with one grid source "Town", id 1, over the image, and tiles of 16 by 16 pixels.
+    /// </summary>
+    public static TileSetAsset TileSet(string image = "town.png")
+    {
+        var asset = new TileSetAsset { TileSize = new Int2(16, 16) };
+        asset.AddSource<GridTileSetSource>("Town").Image = new UFile(image);
+        return asset;
+    }
+
+    /// <summary>
+    /// A map whose slot 1 is the tile set, with one layer per array ("Layer0", "Layer1", ...). A layer is rows of tokens,
+    /// the top row first, down to the cell (0, 0) at the start of the last row: "." for no tile, or "c,r" and flip letters
+    /// (h, v, d) for the tile 1:c,r of the slot 1, as "2,1h".
+    /// </summary>
+    public static TileMapAsset Map(TileSetAsset tileSet, string tileSetLocation, params string[][] layers)
+    {
+        var map = new TileMap();
+        for (var index = 0; index < layers.Length; index++)
+        {
+            var layer = map.Layers.Add($"Layer{index}");
+            var rows = layers[index];
+            for (var row = 0; row < rows.Length; row++)
+            {
+                var tokens = rows[row].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                for (var x = 0; x < tokens.Length; x++)
+                {
+                    if (tokens[x] != ".")
+                    {
+                        layer.SetCell(new Int2(x, rows.Length - 1 - row), Token(tokens[x]));
+                    }
+                }
+            }
+        }
+        var asset = TileMapAsset.FromTileMap(map);
+        asset.TileSets.Add(new TileSetSlot { Slot = 1, TileSet = AttachedReferenceManager.CreateProxyObject<TileSet>(tileSet.Id, tileSetLocation) });
+        asset.LastSlot = 1;
+        return asset;
+    }
+
+    /// <summary>
+    /// The cell of the tile 1:c,r of the slot 1.
+    /// </summary>
+    public static TileCell Cell(int column, int row, TileFlip flip = TileFlip.None) => new(1, TileId.Parse($"1:{column},{row}"), flip);
+
+    // "2,1h": the tile 1:2,1, flipped horizontally
+    private static TileCell Token(string token)
+    {
+        var letters = token.AsSpan().TrimStart("0123456789,");
+        var flip = TileFlip.None;
+        foreach (var letter in letters)
+        {
+            flip |= letter switch
+            {
+                'h' => TileFlip.Horizontal,
+                'v' => TileFlip.Vertical,
+                'd' => TileFlip.Diagonal,
+                _ => throw new FormatException($"'{letter}' is no flip, in '{token}'."),
+            };
+        }
+        var place = token[..^letters.Length].Split(',');
+        return Cell(int.Parse(place[0]), int.Parse(place[1]), flip);
+    }
+}
