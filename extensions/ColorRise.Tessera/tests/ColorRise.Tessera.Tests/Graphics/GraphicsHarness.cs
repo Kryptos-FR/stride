@@ -123,6 +123,7 @@ internal sealed class HarnessGame : Game
     private HarnessScene? scene;
     private int actionsRun;
     private int draws;
+    private PickingRenderer? picking;
 
     public HarnessGame(HarnessOptions options, Action<HarnessScene> build, Action<HarnessScene>[] frameActions)
     {
@@ -253,11 +254,11 @@ internal sealed class HarnessGame : Game
                 pixels[y * buffer.Width + x] = bgra ? new Color(pixel.B, pixel.G, pixel.R, pixel.A) : pixel;
             }
         }
-        return new Frame(buffer.Width, buffer.Height, pixels);
+        return new Frame(buffer.Width, buffer.Height, pixels, picking?.Ids);
     }
 
     // A forward renderer without post effects that draws sprites, a renderer of its own when multisampled, or the test's own
-    // drawing in place of the scene.
+    // drawing in place of the scene; then the picking pass when the options ask for it.
     private GraphicsCompositor CreateCompositor(SceneCameraSlot slot)
     {
         var opaque = new RenderStage("Opaque", "Main") { SortMode = new StateChangeSortMode() };
@@ -284,7 +285,11 @@ internal sealed class HarnessGame : Game
                 TransparentRenderStage = transparent,
             };
 
-        return new GraphicsCompositor
+        var tiles = new TileRenderFeature
+        {
+            RenderStageSelectors = { new TileTransparentRenderStageSelector { TransparentRenderStage = transparent } },
+        };
+        var compositor = new GraphicsCompositor
         {
             Cameras = { slot },
             RenderStages = { opaque, transparent },
@@ -302,12 +307,20 @@ internal sealed class HarnessGame : Game
                         },
                     },
                 },
-                new TileRenderFeature
-                {
-                    RenderStageSelectors = { new TileTransparentRenderStageSelector { TransparentRenderStage = transparent } },
-                },
+                tiles,
             },
-            Game = new SceneCameraRenderer { Camera = slot, Child = view },
         };
+
+        if (options.Picking)
+        {
+            // The stage the scene editor makes, with the selector the editor's picking service gives the tile feature for it
+            var stage = new RenderStage("Picking", "Picking");
+            compositor.RenderStages.Add(stage);
+            tiles.RenderStageSelectors.Add(new TileTransparentRenderStageSelector { TransparentRenderStage = stage });
+            picking = new PickingRenderer { Stage = stage };
+            view = new SceneRendererCollection { view, picking };
+        }
+        compositor.Game = new SceneCameraRenderer { Camera = slot, Child = view };
+        return compositor;
     }
 }

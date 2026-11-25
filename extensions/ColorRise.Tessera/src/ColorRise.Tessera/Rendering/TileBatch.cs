@@ -51,6 +51,20 @@ public sealed class TileBatch : BatchBase<TileBatch.DrawInfo>
     }
 
     /// <summary>
+    /// Starts a batch for the scene editor's picking stage: each texel is multiplied by <paramref name="id"/> as it is, with no
+    /// conversion and no blending, and the depth is written, so that the quad in front wins whatever the order of the draws.
+    /// </summary>
+    /// <param name="id">The id of the component in the red channel, as the scene editor reads it.</param>
+    public void BeginPicking(GraphicsContext context, in Matrix viewProjection, Color4 id)
+    {
+        CheckEndHasBeenCalled("begin");
+        this.viewProjection = viewProjection;
+        color = id;
+        Begin(context, null, SpriteSortMode.Deferred, BlendStates.Opaque, graphicsDevice.SamplerStates.PointClamp, DepthStencilStates.Default,
+            RasterizerStates.CullNone, 0);
+    }
+
+    /// <summary>
     /// Adds a quad to the batch, drawn at <see cref="BatchBase{TDrawInfo}.End"/>.
     /// </summary>
     public void Draw(Texture texture, in TileQuad quad)

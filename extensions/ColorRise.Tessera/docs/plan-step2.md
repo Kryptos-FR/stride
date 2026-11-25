@@ -1968,7 +1968,7 @@ The layout is section 9's sketch:
 - [x] **Step 6: Write the finding of R6** in `docs/plugin-findings.md`: a plugin's command cannot have a single key as its default shortcut (`CommandGestureBindings`), so the keys of the tools are read by the control and cannot be rebound.
 - [x] **Step 7: Commit and push**: `feat(tessera): the view of the map editor`
 
-**Done (2026-11-25).** Gates: the tests fail to compile without `TileMapEditorView`; the first run with the view failed 7 of the 10 cases, because opening at the last zoom did not centre the map yet; then the 10 pass, with the canvas test of `Centre` (red with a stub, then green). R6 holds: the single keys reach the tools while the canvas has the focus, and a name typed in the layer list keeps them, so no fallback. The picture is saved and readable, nothing clipped. No mutation checks from this task on (Nicolas). The editor tests pass (227) and the view tests too (10 new, 1 new canvas test), with no compiler warning.
+**Done (2026-11-25).** Gates: the tests fail to compile without `TileMapEditorView`; the first run with the view failed 7 of the 10 cases, because opening at the last zoom did not centre the map yet; then the 10 pass, with the canvas test of `Centre` (red with a stub, then green). R6 holds: the single keys reach the tools while the canvas has the focus, and a name typed in the layer list keeps them, so no fallback. The picture is saved and readable, nothing clipped. No mutation checks from this task on (Nicolas). The editor tests pass (227) and the view tests too (32: the 10 new, a new canvas test and the 21 before), with no compiler warning.
 
 **Done differently.**
 - The view model gives the view `GridColor` and `OpensAtLastZoom`: the settings are internal to the editor assembly, which the Avalonia assembly cannot see.
@@ -2019,7 +2019,7 @@ How it works:
 - The render object's `Source` is the `TileMapComponent` already (`RenderTileChunk`), which the scene editor's filter needs.
 - `AddPickingSelector` finds the stage named `Picking` and the compositor's `TileRenderFeature`, and adds a `TileTransparentRenderStageSelector` for that stage when the feature has none.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // TilePickingTests (the harness of step 1, with Picking = true)
@@ -2036,9 +2036,18 @@ How it works:
     // AssemblyRegistry.GetScanTypes(the Editor assembly, typeof(EditorGameServiceAttribute)) has TilePickingService
 ```
 
-- [ ] **Step 2: Run them to see them fail**, **Step 3: write the three pieces**, **Step 4: run the tests** (filters `FullyQualifiedName~TilePickingTests` and `FullyQualifiedName~TilePickingServiceTests`; expected: PASS, 8 cases), and the packages check, since the runtime changed.
-- [ ] **Step 5: The fallback.** The real proof is Task 17's click in Game Studio. If the service is not found for a plugin, runs before the stage exists, or the click still selects nothing, keep the runtime's picking pass only if its tests cost nothing to keep, remove the service, and write the finding: a map is selected in the entity tree, and the selection service names the features it picks by type.
-- [ ] **Step 6: Commit and push**: `feat(tessera): a click on a tile map in the scene view selects its entity`
+- [x] **Step 2: Run them to see them fail**, **Step 3: write the three pieces**, **Step 4: run the tests** (filters `FullyQualifiedName~TilePickingTests` and `FullyQualifiedName~TilePickingServiceTests`; expected: PASS, 8 cases), and the packages check, since the runtime changed.
+- [ ] **Step 5: The fallback.** (Open until Task 17 shows the click in Game Studio.) The real proof is Task 17's click in Game Studio. If the service is not found for a plugin, runs before the stage exists, or the click still selects nothing, keep the runtime's picking pass only if its tests cost nothing to keep, remove the service, and write the finding: a map is selected in the entity tree, and the selection service names the features it picks by type.
+- [x] **Step 6: Commit and push**: `feat(tessera): a click on a tile map in the scene view selects its entity`
+
+**Done (2026-11-25).** Gates: the service's tests fail to compile without `TilePickingService` and `PickingStageName`; four of the six picking cases fail before the feature draws ids (they read 1, the red of the tile, in place of the id); the two others pass from the start, as guards: an empty cell and the normal frame must not change. Then the 9 cases pass (6 picking, 3 service), the runtime tests pass (260), and the packages check says TESSERA-PACKAGES-CHECK OK. The click in Game Studio is Task 17's, so Step 5 stays open until then.
+
+**Done differently.**
+- 9 cases, not 8: the test of two maps runs with the front map added first and last, since the picking stage has no sort.
+- The picking batch writes the depth (`DepthStencilStates.Default`): the editor's picking stage has no sort and a depth buffer of its own, so the depth is what makes the map in front win.
+- The harness draws the picking stage into a target of two floats (`R32G32_Float`) with a `D32_Float` depth buffer, the formats of the editor's `PickingSceneRenderer`, not into four floats.
+- The white texture is the device's shared one (`GetSharedWhiteTexture`, 2 by 2), so the feature makes and disposes nothing more.
+- `AddPickingSelector` returns true when the feature already has the selector (the second call), and takes the last stage named `Picking`, the one the selection service adds at the end.
 
 ### Task 17: Game Studio by hand, with a check game
 

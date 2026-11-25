@@ -23,6 +23,12 @@ internal sealed class HarnessOptions
     public int Msaa { get; init; } = 1;
 
     /// <summary>
+    /// Also draws the scene editor's picking stage, named "Picking", over the whole frame, into a target of floats whose red
+    /// channel is the id of the component drawn there (<see cref="Frame.PickedId"/>).
+    /// </summary>
+    public bool Picking { get; init; }
+
+    /// <summary>
     /// The sort mode of the transparent stage; null for the engine's <see cref="BackToFrontSortMode"/>.
     /// </summary>
     public SortMode? TransparentSortMode { get; init; }
