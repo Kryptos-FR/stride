@@ -1,0 +1,80 @@
+!SceneAsset
+Id: 663edaa6-8097-41ea-9ca6-d3028e288332
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 0.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! c123e63b-41b5-4fb8-bb54-879ceca0ec4e
+        - ref!! 8073f3c9-4e47-4cf6-a828-2a768531250d
+        - ref!! 3997a7dc-f15e-4314-9138-0f872a4d6145
+        - ref!! 0a26825e-e206-4c2f-b9e9-ae14fa88f469
+    Parts:
+        -   Entity:
+                Id: 0a26825e-e206-4c2f-b9e9-ae14fa88f469
+                Name: TileMap
+                Components:
+                    17188e992363d38bada84122b93e15db: !TransformComponent
+                        Id: 38cc7ac5-cf5e-4250-96aa-e8f4f80839e3
+                        Position: {X: -1.0890718, Y: 0.0, Z: -0.2886901}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    c28a024d6d759b02512e872bcb96deb9: !TileMapComponent
+                        Id: 120c435c-c74c-40af-b180-407846d0f762
+                        Map: 92158eed-c332-4694-a32a-4d62e68de051:TileMap
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+                        LayerSpacing: 0.1
+                        Sampler: Point
+                        AnimationSpeed: 1.0
+                        RenderGroup: Group0
+        -   Entity:
+                Id: 3997a7dc-f15e-4314-9138-0f872a4d6145
+                Name: Tile map
+                Components:
+                    5454595cbbb92b5aea643e1b2b8e470c: !TransformComponent
+                        Id: f5146011-05ce-4070-a691-8ccd7cf92cb4
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    570065dfad7d8c31e586a74f446628b7: !TileMapComponent
+                        Id: 6e8b25ef-4050-41dc-90ee-9dce045d4ec7
+                        Map: null
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+                        LayerSpacing: 0.1
+                        Sampler: Point
+                        AnimationSpeed: 1.0
+                        RenderGroup: Group0
+        -   Entity:
+                Id: 8073f3c9-4e47-4cf6-a828-2a768531250d
+                Name: Hero
+                Components:
+                    ad822ab31a12492ead135db6ef0bfa7f: !TransformComponent
+                        Id: 8702665e-17cd-43b9-9a66-aa835f3078e9
+                        Position: {X: 4.912, Y: 10.5, Z: -0.24}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    379613d39cdb4c9196eb6aca408f33a6: !SpriteComponent
+                        Id: 920f0008-6536-4aac-937b-afe748193c96
+                        SpriteProvider: !SpriteFromSheet
+                            Sheet: 8023ce6c-fa45-4632-8061-a51591e5769a:Sprites/Props
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+        -   Entity:
+                Id: c123e63b-41b5-4fb8-bb54-879ceca0ec4e
+                Name: Camera
+                Components:
+                    5419b66f5e714a48ac9ee67901241a2d: !TransformComponent
+                        Id: 94f0176b-1132-43cc-9f86-2add52063a58
+                        Position: {X: 6.0, Y: 9.0, Z: 10.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    4d52ec16f15a457faa24f368a985f3f6: !CameraComponent
+                        Id: 84a7ef58-b37c-49c1-bb46-2e38efdd84c4
+                        Name: null
+                        Projection: Orthographic
+                        OrthographicSize: 8.0
+                        Slot: d0a6bf72-b3cd-4bd4-94ca-69952999d537

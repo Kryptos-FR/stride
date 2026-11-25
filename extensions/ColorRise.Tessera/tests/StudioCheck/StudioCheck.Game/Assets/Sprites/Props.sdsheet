@@ -1,0 +1,25 @@
+!SpriteSheet
+Id: 8023ce6c-fa45-4632-8061-a51591e5769a
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: Sprite2D
+ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+Alpha: Explicit
+Packing: {}
+Sprites:
+    6a91b32b1cc44e56baed9a7216d03764:
+        Source: !file ../../Resources/town.png
+        Name: Tree
+        TextureRegion: {X: 32, Y: 16, Width: 16, Height: 16}
+        Center: {X: 0.0, Y: 0.0}
+        PixelsPerUnit: 16.0
+        Borders: {X: 0.0, Y: 0.0, Z: 0.0, W: 0.0}
+        BorderColor: {R: 0, G: 0, B: 0, A: 0}
+    56502bbe571e4b18bb4728073ca61449:
+        Source: !file ../../Resources/town.png
+        Name: Flower
+        TextureRegion: {X: 48, Y: 16, Width: 16, Height: 16}
+        Center: {X: 0.0, Y: 0.0}
+        PixelsPerUnit: 16.0
+        Borders: {X: 0.0, Y: 0.0, Z: 0.0, W: 0.0}
+        BorderColor: {R: 0, G: 0, B: 0, A: 0}

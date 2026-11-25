@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>StudioCheck</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Engine" Version="$(TesseraStrideVersion)" />
+    <PackageReference Include="Stride.AssetCompiler" Version="$(TesseraStrideVersion)" IncludeAssets="build;buildTransitive" />
+    <!-- The runtime of Tessera; the asset compiler and Game Studio find its companions -->
+    <ProjectReference Include="..\..\..\src\ColorRise.Tessera\ColorRise.Tessera.csproj" />
+  </ItemGroup>
+</Project>

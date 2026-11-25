@@ -2037,7 +2037,7 @@ How it works:
 ```
 
 - [x] **Step 2: Run them to see them fail**, **Step 3: write the three pieces**, **Step 4: run the tests** (filters `FullyQualifiedName~TilePickingTests` and `FullyQualifiedName~TilePickingServiceTests`; expected: PASS, 8 cases), and the packages check, since the runtime changed.
-- [ ] **Step 5: The fallback.** (Open until Task 17 shows the click in Game Studio.) The real proof is Task 17's click in Game Studio. If the service is not found for a plugin, runs before the stage exists, or the click still selects nothing, keep the runtime's picking pass only if its tests cost nothing to keep, remove the service, and write the finding: a map is selected in the entity tree, and the selection service names the features it picks by type.
+- [x] **Step 5: The fallback.** Not needed (2026-11-25): in Task 17, a click on a tile in Game Studio's scene view selects the map's entity, and a click on an empty cell selects the sprite behind it (line 11 of `docs/studio-check.md`). The real proof is Task 17's click in Game Studio. If the service is not found for a plugin, runs before the stage exists, or the click still selects nothing, keep the runtime's picking pass only if its tests cost nothing to keep, remove the service, and write the finding: a map is selected in the entity tree, and the selection service names the features it picks by type.
 - [x] **Step 6: Commit and push**: `feat(tessera): a click on a tile map in the scene view selects its entity`
 
 **Done (2026-11-25).** Gates: the service's tests fail to compile without `TilePickingService` and `PickingStageName`; four of the six picking cases fail before the feature draws ids (they read 1, the red of the tile, in place of the id); the two others pass from the start, as guards: an empty cell and the normal frame must not change. Then the 9 cases pass (6 picking, 3 service), the runtime tests pass (260), and the packages check says TESSERA-PACKAGES-CHECK OK. The click in Game Studio is Task 17's, so Step 5 stays open until then.
@@ -2059,8 +2059,8 @@ Nothing before this task opens Game Studio. This one does, and it is where R5 an
 
 **Model:** Skein's `sample/Brinemoor/` on `origin/feature/colorrise-skein`: the solution that also holds the extension's projects, `Brinemoor.Game.csproj`, `Brinemoor.Linux.csproj` (`StrideCurrentPackagePath`, `StridePlatform`). Game Studio is built in Task 0 (`sources/editor/Stride.GameStudio.Avalonia.Desktop`) and run with `DOTNET_ROOT`, `DISPLAY=:99` under Xvfb, the Lavapipe ICD, and the path of the `.slnx` as its argument; windows are driven with `xdotool` and pictured with `import` or `xwd`. Screenshots go to `/mnt/project-files/tilemap/step2/`, numbered as the list.
 
-- [ ] **Step 1: Make the check game** and build it from the command line. Expected: the build succeeds and runs the Tessera asset compilers (no map yet, so nothing to compile).
-- [ ] **Step 2: Open it in Game Studio and go through the list.** Each line gets "seen", "not as planned: ..." or "could not be checked: ..." in `docs/studio-check.md`.
+- [x] **Step 1: Make the check game** and build it from the command line. Expected: the build succeeds and runs the Tessera asset compilers (no map yet, so nothing to compile).
+- [x] **Step 2: Open it in Game Studio and go through the list.** Each line gets "seen", "not as planned: ..." or "could not be checked: ..." in `docs/studio-check.md`.
   1. The plugin loads: no error about Tessera in the log; the two packages are in the plugins of the project.
   2. *Add asset* has `Tile set` and `Tile map` in the group `Sprite`, with their icons; each makes an asset with the default name, and the map has the layer `Ground`.
   3. The tile set editor opens. `+ Image` with `town.png` shows the grid bar, and `Add` makes the source. A sprite sheet dragged from the asset view adds a sheet source. An image file dragged from a file manager cannot be done under Xvfb: say so.
@@ -2074,8 +2074,21 @@ Nothing before this task opens Game Studio. This one does, and it is where R5 an
   11. **R7**: a click on the map in the scene view selects its entity; a click on an empty cell selects what is behind. If not, Task 16's fallback.
   12. The game runs from the head project (`dotnet run`, a few frames under Xvfb) and draws the map; a screenshot.
   13. With the neutral editor only (the Avalonia package's plugin not loaded) nothing can be checked here: say that the WPF Game Studio remains unchecked, as the design says.
-- [ ] **Step 3: Fix what the list found** in the task that owns it, each fix with a test that would have caught it where a test can, and each gap of the plugin model as a row of `docs/plugin-findings.md`.
-- [ ] **Step 4: Commit and push**: `test(tessera): a check game for Game Studio, and what was seen in it`
+- [x] **Step 3: Fix what the list found** in the task that owns it, each fix with a test that would have caught it where a test can, and each gap of the plugin model as a row of `docs/plugin-findings.md`.
+- [x] **Step 4: Commit and push**: `test(tessera): a check game for Game Studio, and what was seen in it`
+
+**Done (2026-11-25).** The 13 lines are in `docs/studio-check.md`, with 28 pictures in `/mnt/project-files/tilemap/step2/`: 11 lines seen (R5 and R6 hold, R7 holds without the fallback), line 13 could not be checked (the WPF Game Studio), and five things were not as planned. Fixed, each with a test that failed first:
+- `fix(tessera): save only the selectors of the tile render feature`: the compositor saved the base class's runtime members and `Enabled`, whose setter throws on load, so the scene view drew nothing once the scene was opened again (`TileRenderFeatureYamlTests`).
+- `fix(tessera): fit each source of the tile set editor to its own size`: the view fitted the bounds of the source shown before (`Another_source_is_fitted_to_its_own_size`, zoom 8 in place of 32).
+- `fix(tessera): keep a drag when the pictures of its source are made again`: found by the view tests, which failed one run in four once the fit test was added: Game Studio's source tracker makes the pictures again a while after the image is written, and a new layout of the same source ended the press (two tests, the palette and the solid drag).
+- `fix(tessera): compile the sprite sheets of a tile set`: the head project's build failed when one sheet feeds a tile set and a sprite of the same scene, an engine gap written as row 14 of `docs/plugin-findings.md` (`A_sheet_of_a_tile_set_that_a_sprite_of_the_scene_shows_is_compiled`).
+- A drop on the tile set editor's list of sources does nothing; only the canvas takes a sprite sheet. Left as it is: the plan does not say where, and the canvas's tool tip says so.
+
+**Done differently.**
+- `town.png` is drawn by `draw-town.sh` with ImageMagick, not by a Python script, and lives in `StudioCheck.Game/Resources/`.
+- The check game has a sprite sheet `Props` (the tree and the flower of `town.png`), for line 3's sheet source and line 9's sprite.
+- The compositor is Brinemoor's without its UI stage and feature.
+- Line 9's order is shown with the camera turned toward the sprite, not tilted down: the scene view's camera is moved with the keys, and turning it is enough to make `BackToFrontSortMode` draw the grass over the tree.
 
 ### Task 18: The write-up and the gates
 

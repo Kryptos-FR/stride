@@ -1,0 +1,43 @@
+!TileSetAsset
+Id: 65440957-bac7-4249-b9f5-b4c9796088e2
+SerializedVersion: {ColorRise.Tessera: 1.0.0.0}
+Tags: []
+TileSize: {X: 16, Y: 16}
+PixelsPerUnit: 16.0
+ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+Sources:
+    6258681b438e6daadbc4cda5b3c4c07c: !GridTileSetSource
+        Id: 1
+        Name: town
+        Image: !file ../Resources/town.png
+        TileSize: {X: 0, Y: 0}
+        Margin: {X: 0, Y: 0}
+        Spacing: {X: 0, Y: 0}
+    19426aa77b85ff99824eb298d6005ea8: !SpriteSheetTileSetSource
+        Id: 2
+        Name: Props
+        Sheet: 8023ce6c-fa45-4632-8061-a51591e5769a:Sprites/Props
+        Bindings:
+            ad1b84650a43f964470d6f096b913994:
+                Number: 1
+                SpriteName: Tree
+            3ef32393be75fdbdc0a5ad9096ee2079:
+                Number: 2
+                SpriteName: Flower
+        LastNumber: 2
+Tiles:
+    252ba838bfaf06e56446bc5cf50c92cb:
+        Tile: 1:0,0
+        Collision: None
+        Kind: grass
+        Properties:
+            47af0ae87511092496b317312f0a2c86~speed: !TileFloatProperty
+                Value: 1.5
+        Animation: {}
+    37d5971401ef6ec3ee9900610d64ac18:
+        Tile: 1:1,0
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+LastSourceId: 2
