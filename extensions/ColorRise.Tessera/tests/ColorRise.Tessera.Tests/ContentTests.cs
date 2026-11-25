@@ -111,6 +111,32 @@ public sealed class ContentTests
     }
 
     [Fact]
+    public void A_flipbook_read_again_keeps_its_object_and_a_playing_component_shows_its_new_frames()
+    {
+        using var build = new AssetBuild();
+        build.Save("Flipbooks/Hero", FlipbookComponentTests.Hero());
+        var flipbook = build.Content.Load<Flipbook>("Flipbooks/Hero");
+        var component = new FlipbookComponent { Flipbook = flipbook, Direction = FlipbookDirection.Down };
+        component.Play("walk");
+        component.Advance(0.25);
+        Assert.Equal(2, component.CurrentFrameIndex);
+
+        // Saved again with a walk of two frames of 0.2 s: the time 0.25 is in the second
+        var changed = FlipbookComponentTests.Hero();
+        var walk = changed.FindAnimation("walk")!;
+        walk.Clips.Clear();
+        walk.Clips.Add(FlipbookComponentTests.Clip(FlipbookDirection.Down, 0.2f, 0.2f));
+        build.Save("Flipbooks/Hero", changed);
+        build.Content.Reload(flipbook);
+
+        Assert.Same(flipbook, component.Flipbook);
+        Assert.Equal(3, flipbook.Animations.Count);
+        Assert.Equal(2, Assert.Single(flipbook.FindAnimation("walk")!.Clips).Frames.Count);
+        Assert.Equal(1, component.CurrentFrameIndex);
+        component.Advance(0.1);
+    }
+
+    [Fact]
     public void A_map_read_again_keeps_its_object_and_tells()
     {
         using var build = new AssetBuild();

@@ -418,7 +418,7 @@ The rules, beyond decision 4:
 - `FlipbookEventArgs.Direction` is the direction of the clip shown, which a fallback can make differ from the component's.
 - The processor calls `Advance(time.Elapsed.TotalSeconds)` on enabled components. When a component is added, it starts: `IsPlaying = PlayOnStart`, `Time = 0`.
 
-- [ ] **Step 1: Write the failing tests.** A helper makes a flipbook with `idle` (Loop, one clip None, frames 0.5 and 0.5), `walk` (Loop, clips Down and Left, three frames of 0.1 each) and `attack` (Once, clip None, two frames of 0.1), and a component on it that a test advances itself.
+- [x] **Step 1: Write the failing tests.** A helper makes a flipbook with `idle` (Loop, one clip None, frames 0.5 and 0.5), `walk` (Loop, clips Down and Left, three frames of 0.1 each) and `attack` (Once, clip None, two frames of 0.1), and a component on it that a test advances itself.
 
 ```csharp
 [Fact] public void Play_shows_the_frames_in_time()                       // Play("walk"); Advance(0.15): index 1; Advance(0.1): 2; Advance(0.1): 0
@@ -452,10 +452,14 @@ The rules, beyond decision 4:
     // the same object, and a component on it at Time 0.25 shows the frame the new clip has there, without a throw
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~FlipbookComponentTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the component, the event arguments and the processor.**
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): the flipbook component: play, queue, pause and events`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~FlipbookComponentTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the component, the event arguments and the processor.**
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): the flipbook component: play, queue, pause and events`
+
+**Done (2026-11-25).** Red: the test project did not compile (`FlipbookComponent` not found). Green: the 25 tests of the filter `FlipbookComponentTests|ContentTests` pass, and the runtime project's 325.
+
+**Done differently.** The processor's start is an internal static `FlipbookProcessor.Start(component)`, which the EntityManager-free test calls; it resets the frame last reported, so the first `Advance` tells the first frame. The processor copies its components before it advances them, since a handler of an event may add or remove one. A queue goes on only while the animation plays or after a `Once` ended: a paused animation keeps its queue waiting, even when its name is unknown. A queued animation set in its place keeps the rest of the queue (the setter of `Animation`, which empties it, is not used there). `Content.Reload` of a flipbook replaces its lists in the same object without a copy of their items: the test passed with no special handling.
 
 ### Task 4: The flipbook asset and its build
 
