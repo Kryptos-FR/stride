@@ -1480,7 +1480,7 @@ How it works:
 - **Following the asset.** The document listens to the asset's graph. After a change that it did not make itself (an undo, a redo, an edit in the property grid, another editor), it compares the text of each chunk item with the text it last read or wrote (by reference first, then by value) and decodes again only those that differ. A change of the list of layers, of a layer's looks, of the tile sets or of the sizes raises `StructureChanged`.
 - **An undo while a stroke is open** cancels the stroke first, then follows the asset: the stroke is lost, which is what the user asked for.
 
-- [ ] **Step 1: Write the failing tests.** `Open(params string[][] layers)` opens a session with the town set and `TestTown.Map`, and gives the document. `ChunkLines(layer)` are the lines of the saved file inside the layer's chunks.
+- [x] **Step 1: Write the failing tests.** `Open(params string[][] layers)` opens a session with the town set and `TestTown.Map`, and gives the document. `ChunkLines(layer)` are the lines of the saved file inside the layer's chunks.
 
 ```csharp
 [Fact] public async Task The_document_reads_the_cells_of_the_asset()
@@ -1532,10 +1532,20 @@ How it works:
     // a layer of 1000 chunks: a one-cell stroke raises one change of the asset's graph, and its commit takes under 50 ms
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileMapDocumentTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the document.**
-- [ ] **Step 4: Run the tests.** Expected: PASS (18 cases).
-- [ ] **Step 5: Commit and push**: `feat(tessera): the map document: decoded cells, strokes as one step, only the changed chunks written`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileMapDocumentTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the document.**
+- [x] **Step 4: Run the tests.** Expected: PASS (18 cases).
+- [x] **Step 5: Commit and push**: `feat(tessera): the map document: decoded cells, strokes as one step, only the changed chunks written`
+
+**Done (2026-11-25).** Gates: the tests fail to compile without the document, then the 18 cases pass, with one more (a layer without a tile has no bounds). The one-cell stroke on a layer of 1000 chunks makes one change of the graph, well under 50 ms. Mutation checks: no cancel of the stroke on an undo, a decode of every chunk at each change, new chunks added at the end, a place given twice that can be painted, or no frame, each make their test fail. The whole editor test project passes (134), and the Avalonia test project (20), with no compiler warning.
+
+**Done differently.**
+- `IsUnreadable` is true for a chunk whose text cannot be read and for a place that a layer has twice: the document paints neither, and the canvas of Task 12 hatches both. The error of a place given twice says "the editor shows the first and paints neither".
+- Any change of the map's graph that the document did not make drops an open stroke before the document reads the asset again, not only an undo: a change from elsewhere during a drag is rare, and the stroke's first values would be wrong after it. An undo or a redo of another asset drops it too, as the tile set editor drops its drag.
+- A change of the layers, of a layer's looks, of the tile sets or of the sizes raises `StructureChanged` alone, with no `CellsChanged`: a listener draws everything again.
+- The commit writes a chunk only where a cell of the stroke has another value than before it, so a stroke that puts a cell back writes nothing, even over a chunk the file keeps empty.
+- `UsedBounds` counts the tiles only, not the area of unreadable chunks.
+- The session's asset is a copy read from the package's file: the tests take the strings to compare from it. "Read back after a reload" saves the session, loads the saved file, closes the session and opens a new one with the loaded asset. The test helpers that open a session return a `DispatcherTask`, so that the test goes on in the session's dispatcher.
 
 ### Task 12: The map on a canvas (risk R4)
 
