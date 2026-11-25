@@ -5,8 +5,10 @@ using ColorRise.Tessera.Editor.TileMapEditor;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Testing;
 using Stride.Core.Mathematics;
+using Stride.Core.Presentation.Quantum;
 using Stride.Core.Presentation.Quantum.ViewModels;
 using Stride.Core.Presentation.Services;
+using Stride.Core.Quantum;
 using Stride.Core.Serialization;
 using static ColorRise.Tessera.Editor.Tests.TestTown;
 
@@ -197,6 +199,18 @@ public sealed class TileMapEditorTests
         await ExclusiveDispatcherService.WaitUntilAsync(() => Members(map.Editor).Contains(nameof(TileMapAsset.CellSize)), "the map in the property grid");
         Assert.DoesNotContain(nameof(TileLayerAsset.Opacity), Members(map.Editor));
         Assert.Equal(0, map.Editor.CurrentLayer);
+    }
+
+    [Fact]
+    public async Task The_property_grid_has_no_node_for_the_chunks()
+    {
+        await using var map = await OpenAsync([["0,0"]]);
+        var asset = map.Session.MapAt(Location);
+        var layer = asset.PropertyGraph.RootNode[nameof(TileMapAsset.Layers)].Target!.IndexedTarget(new NodeIndex(0))!;
+
+        // The grid is built on another thread, and a node of the chunks would be rebuilt by every stroke
+        Assert.False(((IPropertyProviderViewModel)asset).ShouldConstructMember(layer[nameof(TileLayerAsset.Chunks)]));
+        Assert.True(((IPropertyProviderViewModel)asset).ShouldConstructMember(layer[nameof(TileLayerAsset.Opacity)]));
     }
 
     [Fact]

@@ -95,7 +95,7 @@ public sealed class TileLayerItemViewModel : DispatcherViewModel, IAssetProperty
         return path;
     }
 
-    // Chunks is not browsable: the editor paints them
+    // The map's filter: the chunks get no node
     bool IPropertyProviderViewModel.ShouldConstructMember(IMemberNode member) => ((IPropertyProviderViewModel)editor.Asset).ShouldConstructMember(member);
 
     bool IPropertyProviderViewModel.ShouldConstructItem(IObjectNode collection, NodeIndex index)
