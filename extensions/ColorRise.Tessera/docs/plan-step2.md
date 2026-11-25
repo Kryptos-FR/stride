@@ -105,12 +105,12 @@ What the tasks build, and who knows whom. The names are fixed here so that every
 **Interfaces:**
 - Produces: `dotnet` 10 on the `PATH`; the worktree `/home/user/stride-master` on the branch `feature/colorrise-tessera-editor`; Stride's packages at `4.5.4-dev` in `/home/user/stride-master/bin/packages`; step 1's tests green; the Avalonia Game Studio built, for Task 17.
 
-- [ ] **Step 1: Install the .NET 10 SDK** in `~/.dotnet` with Microsoft's `dotnet-install.sh` (`--channel 10.0`), and export `PATH=$HOME/.dotnet:$PATH` and `DOTNET_ROOT=$HOME/.dotnet`.
+- [x] **Step 1: Install the .NET 10 SDK** in `~/.dotnet` with Microsoft's `dotnet-install.sh` (`--channel 10.0`), and export `PATH=$HOME/.dotnet:$PATH` and `DOTNET_ROOT=$HOME/.dotnet`.
 
 Run: `dotnet --version`
 Expected: `10.0.4xx`, at least the version in the repository's `global.json`.
 
-- [ ] **Step 2: Make the branch** in a worktree, and set the author.
+- [x] **Step 2: Make the branch** in a worktree, and set the author.
 
 ```bash
 cd /home/user/stride
@@ -121,7 +121,7 @@ git config user.name "Nicolas Musset" && git config user.email "musset.nicolas@g
 git lfs pull
 ```
 
-- [ ] **Step 3: Build the engine, the editor and the asset compiler**, as step 1 did, then Game Studio. These are long runs: start them in the background, one after the other, with their output in log files in the scratch folder. Check the free disk space first (`df -h /home/user`).
+- [x] **Step 3: Build the engine, the editor and the asset compiler**, as step 1 did, then Game Studio. These are long runs: start them in the background, one after the other, with their output in log files in the scratch folder. Check the free disk space first (`df -h /home/user`).
 
 ```bash
 dotnet build sources/Stride.Editor.Avalonia.slnf
@@ -133,19 +133,19 @@ If the first two ask for a platform, add `-p:StridePlatforms=Linux -p:StrideGrap
 
 Expected: the builds succeed, and `ls bin/packages` lists at `4.5.4-dev`: `Stride.Engine`, `Stride.Assets`, `Stride.Core.Assets`, `Stride.AssetCompiler`, `Stride.Assets.Editor`, `Stride.Assets.Editor.Avalonia`, `Stride.Assets.Editor.Testing`.
 
-- [ ] **Step 4: See step 1's tests pass** before anything changes.
+- [x] **Step 4: See step 1's tests pass** before anything changes.
 
 Run: `dotnet test extensions/ColorRise.Tessera/ColorRise.Tessera.slnx`, then `extensions/ColorRise.Tessera/tests/PackagesCheck/run.sh`
 Expected: PASS, 241 tests (235 and 6), none skipped, then `TESSERA-PACKAGES-CHECK OK`.
 
-- [ ] **Step 5: Read what the test kit gives today**, in `sources/editor/Stride.Core.Assets.Editor.Testing/` and in "Testing a plugin's view models" of `docs/build/plugins.md`. Three things this plan relies on:
+- [x] **Step 5: Read what the test kit gives today**, in `sources/editor/Stride.Core.Assets.Editor.Testing/` and in "Testing a plugin's view models" of `docs/build/plugins.md`. Three things this plan relies on:
   - `StrideEditorTestSessionOptions.Dispatcher`, which makes Avalonia's UI thread the session's (the view tests of this plan use it instead of Skein's `ScriptView` way);
   - a session that runs the plugins' `OnClose` actions when it is disposed;
   - a test project without an `.sdpkg` that builds without `StrideCompilerSkipBuild`: remove the property from `ColorRise.Tessera.Editor.Avalonia.Tests.csproj` and build it. If the build then runs the asset compiler, put the property back.
 
   Write the result of each in the third table of `docs/plugin-findings.md`, against the Skein finding it answers.
 
-- [ ] **Step 6: Copy this plan** to `extensions/ColorRise.Tessera/docs/plan-step2.md`, commit and push.
+- [x] **Step 6: Copy this plan** to `extensions/ColorRise.Tessera/docs/plan-step2.md`, commit and push.
 
 ```bash
 git add extensions/ColorRise.Tessera
@@ -153,7 +153,11 @@ git commit -m "docs(tessera): the plan of step 2"
 git push -u origin feature/colorrise-tessera-editor
 ```
 
-- [ ] **Step 7: Gate.** If the engine or Game Studio cannot be built in the container, stop and tell Nicolas what failed, with the end of the log.
+- [x] **Step 7: Gate.** If the engine or Game Studio cannot be built in the container, stop and tell Nicolas what failed, with the end of the log.
+
+**Done (2026-11-25).** .NET SDK 10.0.404. The engine and editor build took 3 min 42 s, the asset compiler 1 min, Game Studio 36 s (all in the container, no error). The baseline: 235 and 6 tests pass, none skipped, and `TESSERA-PACKAGES-CHECK OK`. Step 5: all three hold on `659bb239e` (written against Skein's findings 8, 12 and 13 in the third table of `docs/plugin-findings.md`); `StrideCompilerSkipBuild` is removed from the view tests' project, whose build then runs no asset compiler.
+
+**Done differently.** `git lfs pull` fills a file outside LFS in the engine's tree (`sources/editor/Stride.Core.Assets.Editor.Tests/Resources/TestBrokenImage.txt`) and stages it; it was restored before the first commit, and no commit of this step takes it. The plan was committed and pushed before the builds, to learn early that the push works.
 
 ### Task 1: A sort mode along an axis (finding 8)
 
