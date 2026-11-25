@@ -54,15 +54,7 @@ public sealed class FlipbookClipItemViewModel : DispatcherViewModel, IAssetPrope
     /// The name of a direction as the editor shows it: "Any direction" for <see cref="FlipbookDirection.None"/>, else its
     /// words, such as "Up left".
     /// </summary>
-    public static string LabelOf(FlipbookDirection direction) => direction switch
-    {
-        FlipbookDirection.None => "Any direction",
-        FlipbookDirection.DownLeft => "Down left",
-        FlipbookDirection.DownRight => "Down right",
-        FlipbookDirection.UpLeft => "Up left",
-        FlipbookDirection.UpRight => "Up right",
-        _ => direction.ToString(),
-    };
+    public static string LabelOf(FlipbookDirection direction) => FlipbookDirections.NameOf(direction);
 
     /// <summary>
     /// Tells the views that the direction or the frames of the clip may have changed.
@@ -73,7 +65,7 @@ public sealed class FlipbookClipItemViewModel : DispatcherViewModel, IAssetPrope
     /// The question asked before the clip is removed with its frames, such as "Remove the clip Left of 'walk' and its 4 frames?".
     /// </summary>
     internal string RemoveQuestion()
-        => $"Remove the clip {Clip.Direction} of '{Animation.Name}' and its {FlipbookEditorViewModel.FramesText(FrameCount)}?";
+        => $"Remove the clip {LabelOf(Clip.Direction)} of '{Animation.Name}' and its {FlipbookEditorViewModel.FramesText(FrameCount)}?";
 
     IObjectNode? IPropertyProviderViewModel.GetRootNode() => editor.Session.AssetNodeContainer.GetNode(Clip);
 

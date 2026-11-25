@@ -50,21 +50,21 @@ public static class FlipbookAssetChecks
         var directions = clips.GroupBy(clip => clip.Direction).ToList();
         foreach (var group in directions.Where(group => group.Count() > 1))
         {
-            lines.Add($"The animation '{animation.Name}' has {Count(group.Count())} clips for {group.Key}: the first is played.");
+            lines.Add($"The animation '{animation.Name}' has {Count(group.Count())} clips for {FlipbookDirections.NameOf(group.Key)}: the first is played.");
         }
         foreach (var clip in directions.Select(group => group.First()))
         {
             var frames = clip.Frames.Where(frame => frame is not null).ToList();
             if (frames.Count == 0)
             {
-                lines.Add($"The clip {clip.Direction} of '{animation.Name}' has no frame.");
+                lines.Add($"The clip {FlipbookDirections.NameOf(clip.Direction)} of '{animation.Name}' has no frame.");
                 continue;
             }
             for (var i = 0; i < frames.Count; i++)
             {
                 if (!frames[i].Cells.Any(cell => cell is not null))
                 {
-                    lines.Add($"The frame {Count(i + 1)} of the clip {clip.Direction} of '{animation.Name}' has no cell.");
+                    lines.Add($"The frame {Count(i + 1)} of the clip {FlipbookDirections.NameOf(clip.Direction)} of '{animation.Name}' has no cell.");
                 }
             }
         }

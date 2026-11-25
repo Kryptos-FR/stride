@@ -295,7 +295,7 @@ public sealed class PendingSheetViewModel : DispatcherViewModel
             : name.Length == 0 ? "The animation needs a name."
             : !(Duration > 0) ? "The duration must be above 0."
             : written.Count == 0 ? "Every row is skipped."
-            : twice is not null ? $"Two rows have the direction {twice.Key}."
+            : twice is not null ? $"Two rows have the direction {FlipbookDirections.NameOf(twice.Key!.Value)}."
             : null;
 
         Note = null;
@@ -308,8 +308,8 @@ public sealed class PendingSheetViewModel : DispatcherViewModel
             Note = replaced.Count switch
             {
                 0 => null,
-                1 => string.Create(CultureInfo.InvariantCulture, $"Replaces the clip {replaced[0]} of '{name}'."),
-                _ => string.Create(CultureInfo.InvariantCulture, $"Replaces the clips {string.Join(", ", replaced)} of '{name}'."),
+                1 => string.Create(CultureInfo.InvariantCulture, $"Replaces the clip {FlipbookDirections.NameOf(replaced[0])} of '{name}'."),
+                _ => string.Create(CultureInfo.InvariantCulture, $"Replaces the clips {string.Join(", ", replaced.Select(FlipbookDirections.NameOf))} of '{name}'."),
             };
         }
         ConfirmCommand.IsEnabled = Problem is null;

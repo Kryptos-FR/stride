@@ -1,3 +1,5 @@
+using System.Reflection;
+using Stride.Core;
 using Stride.Core.Mathematics;
 
 namespace ColorRise.Tessera.Tests;
@@ -86,6 +88,27 @@ public sealed class FlipbookTests
     [InlineData(0.3f, -1f, true, FlipbookDirection.Down)]
     public void A_movement_gives_its_direction(float x, float y, bool diagonals, FlipbookDirection expected)
         => Assert.Equal(expected, FlipbookDirections.FromVector(new Vector2(x, y), diagonals));
+
+    [Theory]
+    [InlineData(FlipbookDirection.None, "Any direction")]
+    [InlineData(FlipbookDirection.Down, "Down")]
+    [InlineData(FlipbookDirection.Right, "Right")]
+    [InlineData(FlipbookDirection.DownLeft, "Down left")]
+    [InlineData(FlipbookDirection.UpRight, "Up right")]
+    public void A_direction_has_a_name_in_words(FlipbookDirection direction, string name)
+        => Assert.Equal(name, FlipbookDirections.NameOf(direction));
+
+    // Studio check, step 3, line 14: the property grid listed None, DownLeft... where the flipbook editor says "Any
+    // direction", "Down left"
+    [Fact]
+    public void The_property_grid_shows_each_direction_by_its_name()
+    {
+        foreach (var direction in Enum.GetValues<FlipbookDirection>())
+        {
+            var display = typeof(FlipbookDirection).GetField(direction.ToString())!.GetCustomAttribute<DisplayAttribute>();
+            Assert.Equal(FlipbookDirections.NameOf(direction), display?.Name);
+        }
+    }
 
     [Fact]
     public void Mirrored_swaps_left_and_right()

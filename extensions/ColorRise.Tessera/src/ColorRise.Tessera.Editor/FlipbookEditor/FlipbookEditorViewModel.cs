@@ -719,7 +719,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
                         foreach (var cell in frame.Cells.Where(cell => cell is not null && pictures.Find(cell.Tile) is not { IsMissing: false }))
                         {
                             problems.Add(string.Create(CultureInfo.InvariantCulture,
-                                $"The frame {number} of the clip {clip.Direction} of '{animation.Name}' uses the tile {cell.Tile}, which the tile set does not have."));
+                                $"The frame {number} of the clip {FlipbookDirections.NameOf(clip.Direction)} of '{animation.Name}' uses the tile {cell.Tile}, which the tile set does not have."));
                         }
                     }
                 }
@@ -1007,7 +1007,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         }
         if (ClipOf(animation, mirrored) is { Frames.Count: > 0 })
         {
-            var question = $"Replace the clip {mirrored} of '{animation.Name}'?";
+            var question = $"Replace the clip {FlipbookDirections.NameOf(mirrored)} of '{animation.Name}'?";
             if (await Dialogs.MessageBoxAsync(question, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             {
                 return;

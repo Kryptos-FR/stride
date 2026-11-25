@@ -1,3 +1,4 @@
+using Stride.Core;
 using Stride.Core.Mathematics;
 
 namespace ColorRise.Tessera;
@@ -10,38 +11,47 @@ public enum FlipbookDirection
     /// <summary>
     /// Any direction: the clip shown when the animation has none for the direction asked.
     /// </summary>
+    [Display("Any direction")]
     None,
     /// <summary>
     /// Facing down, toward the viewer.
     /// </summary>
+    [Display("Down")]
     Down,
     /// <summary>
     /// Facing left.
     /// </summary>
+    [Display("Left")]
     Left,
     /// <summary>
     /// Facing right.
     /// </summary>
+    [Display("Right")]
     Right,
     /// <summary>
     /// Facing up, away from the viewer.
     /// </summary>
+    [Display("Up")]
     Up,
     /// <summary>
     /// Facing down and left.
     /// </summary>
+    [Display("Down left")]
     DownLeft,
     /// <summary>
     /// Facing down and right.
     /// </summary>
+    [Display("Down right")]
     DownRight,
     /// <summary>
     /// Facing up and left.
     /// </summary>
+    [Display("Up left")]
     UpLeft,
     /// <summary>
     /// Facing up and right.
     /// </summary>
+    [Display("Up right")]
     UpRight,
 }
 
@@ -52,6 +62,20 @@ public static class FlipbookDirections
 {
     // tan(22.5°): a part of a movement smaller than this times the other part does not count for a diagonal
     private const float DiagonalSlope = 0.41421357f;
+
+    /// <summary>
+    /// The name of a direction in words, as Game Studio shows it: "Any direction" for <see cref="FlipbookDirection.None"/>,
+    /// else such as "Down" or "Up left".
+    /// </summary>
+    public static string NameOf(FlipbookDirection direction) => direction switch
+    {
+        FlipbookDirection.None => "Any direction",
+        FlipbookDirection.DownLeft => "Down left",
+        FlipbookDirection.DownRight => "Down right",
+        FlipbookDirection.UpLeft => "Up left",
+        FlipbookDirection.UpRight => "Up right",
+        _ => direction.ToString(),
+    };
 
     /// <summary>
     /// The direction of a movement in the map's plane, y up. Zero gives <see cref="FlipbookDirection.None"/>. Without

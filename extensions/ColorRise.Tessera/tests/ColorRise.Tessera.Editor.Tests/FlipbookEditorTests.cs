@@ -130,6 +130,21 @@ public sealed class FlipbookEditorTests
         Assert.Equal(Tiles("1:0,1", "1:1,1"), editor.Frames.Select(frame => frame.Tile));
     }
 
+    // Studio check, step 3, line 5: the editor's texts said "None" where its tree says "Any direction"
+    [Fact]
+    public async Task The_question_names_the_clip_as_the_tree_does()
+    {
+        await using var book = await OpenAsync();
+        var editor = book.Editor;
+        editor.SelectedItem = editor.Animations[1].Clips[0];
+        Assert.Equal("Any direction", editor.Animations[1].Clips[0].Label);
+
+        book.Session.Dialogs.Answers.Enqueue(MessageBoxResult.No);
+        editor.RemoveSelectedCommand.Execute();
+
+        Assert.Equal("Remove the clip Any direction of 'idle' and its 1 frame?", Assert.Single(book.Session.Dialogs.Messages));
+    }
+
     [Fact]
     public async Task Removing_a_clip_or_an_animation_with_frames_asks_first()
     {

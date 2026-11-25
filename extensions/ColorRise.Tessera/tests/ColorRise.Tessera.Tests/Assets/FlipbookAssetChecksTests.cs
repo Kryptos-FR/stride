@@ -26,6 +26,8 @@ public sealed class FlipbookAssetChecksTests
     [InlineData("two clips", "The animation 'walk' has 2 clips for Left: the first is played.")]
     [InlineData("no frame", "The clip Left of 'walk' has no frame.")]
     [InlineData("no cell", "The frame 3 of the clip Left of 'walk' has no cell.")]
+    [InlineData("no frame for any direction", "The clip Any direction of 'walk' has no frame.")]
+    [InlineData("two clips for a diagonal", "The animation 'walk' has 2 clips for Up left: the first is played.")]
     public void Each_thing_wrong_has_its_line(string wrong, string line)
     {
         var asset = Walker();
@@ -52,6 +54,13 @@ public sealed class FlipbookAssetChecksTests
                 break;
             case "no cell":
                 walk.Clips[1].Frames[2].Cells.Clear();
+                break;
+            case "no frame for any direction":
+                walk.Clips.Add(Clip(FlipbookDirection.None));
+                break;
+            case "two clips for a diagonal":
+                walk.Clips.Add(Clip(FlipbookDirection.UpLeft, Frame(0.1f, Cell("1:0,1"))));
+                walk.Clips.Add(Clip(FlipbookDirection.UpLeft, Frame(0.1f, Cell("1:0,1"))));
                 break;
         }
 
