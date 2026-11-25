@@ -31,6 +31,21 @@ Checked against the fork's `master` at `659bb239e` (Stride 4.5.4) and against Sk
 13. Four steps, each on its own branch stacked on the previous one. The first starts with the build from packages and four spikes on the main risks (sections 11 and 12).
 14. The sample's art is a CC0 pack (Kenney), listed in the extension's third-party notices. Nicolas agreed (section 13).
 
+**Decided for step 2** ([plan-step2.md](plan-step2.md), "What step 2 decides"):
+
+- D (Nicolas, 2026-11-24): a sprite between two layers under a tilted camera is ordered by a sort mode of Tessera's own, `TileAxisSortMode` ("Back to front along an axis", Z by default), which a game sets once on the transparent stage of its compositor (finding 8).
+- D (Nicolas, 2026-11-24): of step 1's deferred minors, M3 and M4 (a source id or a slot given twice, a pixels per unit not above 0) became warnings, with the small cleanups M11, M12 and M13.
+- C: `TileRenderFeatureProvider` is in the `Editor` package and gives one `TileRenderFeature` for the transparent stage; it cannot set the stage's sort mode (finding 10).
+- C: R5 needs nothing built: the editor reloads a changed map and the component takes the new one. The closed list of fast reloads is finding 15.
+- C: R6 as section 9 says: commands without default shortcuts, and the map canvas reads the single keys (finding 13).
+- C: R7 by an editor game service of Tessera that adds a selector for the scene editor's picking stage (finding 16).
+- C: the canvas draws a picture per chunk and layer from the start, coarser when zoomed out, in a cache with a size limit.
+- C: an image added to a tile set shows its grid in a bar of the editor, not a dialog, until Add.
+- C: paste makes the copied cells the stamp, as in Tiled; copy and paste work between maps of the session that have the tile set.
+- C: the eye of a layer is the asset's `Visible` (an undo step, and the game hides it too); lock and dimming are the editor's own settings.
+- C: the templates are in the group `Sprite` (`TileSet`, `TileMap`, a new map with the layer `Ground`), the entity factory is `[Display(40, "Tile map", "2D")]`, and the icons are drawn by a script.
+- C: a check game, `tests/StudioCheck`, for the by-hand run in Game Studio; it is not the sample of step 4.
+
 ## 1. Intent
 
 Nicolas's request, in his words **(N)**:
@@ -494,6 +509,13 @@ Two controls are shared by the three editors:
 - Icons for the two components and the three assets (`[assembly: TypeImage]`), asset templates in *Add asset*, and static thumbnails.
 - The cross-platform Game Studio cannot add a component to an existing entity yet (Skein's finding 17). The entity factories and the drop of an asset are the two ways to get a map or a flipbook into a scene.
 
+**Note (2026-11-25, step 2).** What step 2 settled in this section:
+- Adding an image to a tile set shows its grid in a bar above the canvas (name, tile size, margin, spacing, the number of tiles), with Add and Cancel, not in a dialog window. Nothing is in the asset before Add.
+- Paste makes the copied cells the stamp, and the user clicks where they go.
+- The eye of a layer is the asset's `Visible`: an undo step, and the game hides the layer too. Lock and dimming are the editor's own.
+- A tile whose sprite is gone is rebound by taking the sprite of another tile of the same sheet source (`Rebind sprite`), and a sprite sheet dropped on the tile set's canvas adds a sheet source.
+- Skein's finding 17 no longer holds: *Add component* adds `Tile map` to an entity in the cross-platform Game Studio, besides the entity factory and the drop.
+
 ### WPF Game Studio
 
 The neutral `Editor` package should load there, with the assets in the property grid and maps drawn in scenes, and the three editors, which have no view, should not open. None of this can be checked from the Linux container the work is done in, as for Skein. The README lists it as not checked until someone opens a project on Windows.
@@ -535,6 +557,12 @@ Step 1 starts with R9, since nothing can be built before it, then spikes on R1, 
 | R8 | Bleeding between tiles with point and linear sampling, and with MSAA | The test of R3, with a zoom that is not a whole number, on both samplers | A larger border in the atlas, or texture coordinates inset by a fraction of a texel |
 | R9 | Building from packages only. The engine's packages come from a local engine build, which is long in the container, and for Skein the asset compiler's own restore of companion packages failed in this sandbox (its finding 21) | Build the engine and the editor once, as Skein's README says, then the extension's empty projects, a first test and a `dotnet pack` | Skein's workarounds. If the engine cannot be built in the container in a reasonable time, this comes back to Nicolas |
 | R10 | Graphics tests without the engine's test base: a game without a window on a software Vulkan driver, from a third party's test project | A test that draws one coloured tile and reads its pixel back, with `GameContextHeadless` and the `Stride.Dependencies.Lavapipe` package from nuget.org, which the engine's own tests use | The software driver installed in the container (under Xvfb, as the project's memory describes), with the graphics tests skipped on a machine that has none |
+
+**Note (2026-11-25, step 2).** R4 to R7, tried in step 2:
+- R4 holds, no fallback: on 256 by 256 cells and four layers at the zoom 0.125, the first list of pictures takes 130 ms (1024 pictures made), the next 1.1 ms, and a frame of a pan 29.7 ms on average, headless on the CPU. The canvas makes a picture per chunk and layer from the start.
+- R5 holds, no fallback: a stamp then a save in the map editor shows at once in the open scene (finding 15 for the fast reload a plugin cannot join).
+- R6 holds as planned: the canvas reads the single keys while it has the focus, and not while a layer's name is typed; they cannot be rebound (finding 13).
+- R7 holds, no fallback: a click on a tile selects the map's entity, and a click on an empty cell selects what is behind, through Tessera's own selector on the picking stage (finding 16).
 
 ## 12. Steps and branches **(C)**
 
@@ -600,6 +628,8 @@ The first four are in Nicolas's order **(D3)**. The rest is in the order I would
 - The sample's name and its small story.
 - How the batch groups draws by colour, texture and sampler.
 - The plan itself: tasks, their order inside a step, and the tests of each.
+
+**Note (2026-11-25, step 2).** Decided since: the canvas makes a picture per chunk and layer from the start, coarser when zoomed out; the entity factory is third in `2D` (`[Display(40, "Tile map", "2D")]`, after Sprite and Background); the icons are drawn by a script; the templates' default names are `TileSet` and `TileMap`, in the group `Sprite`. Still open: the sample's name and story (step 4), and the flipbook's names (step 3).
 
 ## Sources
 
