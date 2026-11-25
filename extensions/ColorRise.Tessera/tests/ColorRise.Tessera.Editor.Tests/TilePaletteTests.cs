@@ -58,6 +58,21 @@ public sealed class TilePaletteTests
         Assert.Equal(6, palette.Scene.Selection.Count);
     }
 
+    // The pictures are made again when the image changes on disk, which may come in a drag
+    [Fact]
+    public async Task A_drag_goes_on_when_the_pictures_are_made_again()
+    {
+        await using var session = await OpenTownAsync(TestTown.TileSet());
+        var palette = Palette(session);
+
+        palette.Scene.PointerPressed(new Vector2(4, 4), CanvasButton.Left, CanvasModifiers.None);
+        palette.Pictures.Refresh();
+        palette.Scene.PointerMoved(new Vector2(40, 20), CanvasModifiers.None);
+        palette.Scene.PointerReleased(new Vector2(40, 20), CanvasButton.Left, CanvasModifiers.None);
+
+        Assert.Equal(new Int2(3, 2), palette.Picked!.Size);
+    }
+
     [Fact]
     public async Task A_position_without_a_tile_is_a_hole_in_the_block()
     {

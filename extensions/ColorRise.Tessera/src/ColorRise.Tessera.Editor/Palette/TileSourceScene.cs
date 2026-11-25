@@ -61,8 +61,12 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
             {
                 return;
             }
+            // The pictures of the same source, made again, keep the press in progress
+            if (field?.Source != value?.Source)
+            {
+                press = null;
+            }
             field = value;
-            press = null;
             List<TileId> kept = value is null ? [] : Selection.Where(tile => value.SlotOf(tile) is not null).ToList();
             if (kept.Count != Selection.Count)
             {

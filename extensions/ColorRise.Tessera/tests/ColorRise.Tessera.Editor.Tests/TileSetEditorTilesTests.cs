@@ -159,6 +159,23 @@ public sealed class TileSetEditorTilesTests
         Assert.Empty(editor.SelectedTiles);
     }
 
+    // The pictures are made again when the image changes on disk, which may come in a drag
+    [Fact]
+    public async Task A_solid_drag_goes_on_when_the_pictures_are_made_again()
+    {
+        await using var session = await OpenTownAsync(Solid("1:2,0"));
+        var editor = await session.EditTileSetAsync("Tiles/Town");
+        editor.Mode = TileSetEditorMode.Solid;
+
+        editor.Scene.PointerPressed(Middle(editor, "1:0,0"), CanvasButton.Left, CanvasModifiers.None);
+        editor.Pictures.Refresh();
+        editor.Scene.PointerMoved(Middle(editor, "1:1,0"), CanvasModifiers.None);
+        editor.Scene.PointerReleased(Middle(editor, "1:1,0"), CanvasButton.Left, CanvasModifiers.None);
+
+        Assert.Equal(Tiles("1:0,0", "1:1,0", "1:2,0"), SolidTiles(session));
+        Assert.Equal(["Solid"], session.Steps);
+    }
+
     [Fact]
     public async Task A_solid_drag_that_changes_nothing_makes_no_step()
     {
