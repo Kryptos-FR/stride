@@ -1,0 +1,10 @@
+!TemplateAssetFactory
+Id: 1d5571aa-f8a9-4c20-85f4-ca8de0d3dc4d
+AssetTypeName: FlipbookAsset
+Name: Flipbook
+Scope: Asset
+Description: Animations of a character or an object, made of the tiles of a tile set
+Group: Sprite
+DefaultOutputName: Flipbook
+FactoryTypeName: FlipbookAssetFactory
+Icon: .sdtpl/Flipbook.png

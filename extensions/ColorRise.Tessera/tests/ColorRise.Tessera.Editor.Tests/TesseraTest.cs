@@ -136,6 +136,8 @@ internal sealed class TesseraSession : IAsyncDisposable
 
     public TileMapViewModel MapAt(string location) => Kit.Asset<TileMapViewModel>(location);
 
+    public FlipbookViewModel FlipbookAt(string location) => Kit.Asset<FlipbookViewModel>(location);
+
     /// <summary>
     /// A template of Tessera, read from its file in the sources: <c>src/ColorRise.Tessera.Assets/Templates/Assets/&lt;name&gt;.sdtpl</c>.
     /// </summary>

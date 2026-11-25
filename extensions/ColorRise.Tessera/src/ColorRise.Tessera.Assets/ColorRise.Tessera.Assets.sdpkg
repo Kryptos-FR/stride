@@ -12,3 +12,4 @@ TemplateFolders:
       Files:
         - !file Templates/Assets/TileSet.sdtpl
         - !file Templates/Assets/TileMap.sdtpl
+        - !file Templates/Assets/Flipbook.sdtpl

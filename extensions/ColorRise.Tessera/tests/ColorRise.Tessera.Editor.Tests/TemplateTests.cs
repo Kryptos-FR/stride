@@ -7,7 +7,7 @@ using Stride.Core.Mathematics;
 namespace ColorRise.Tessera.Editor.Tests;
 
 /// <summary>
-/// The two assets have view models of their own, templates in "Add asset", and images in Game Studio.
+/// The three assets have view models of their own, templates in "Add asset", and images in Game Studio.
 /// </summary>
 public sealed class TemplateTests
 {
@@ -17,6 +17,29 @@ public sealed class TemplateTests
         await using var session = await TesseraSession.OpenAsync(("Tiles/Town", new TileSetAsset()), ("Maps/Town", new TileMapAssetFactory().New()));
         Assert.IsType<TileSetViewModel>(session.Session.AllAssets.Single(a => a.Name == "Town" && a.Asset is TileSetAsset));
         Assert.IsType<TileMapViewModel>(session.Session.AllAssets.Single(a => a.Asset is TileMapAsset));
+    }
+
+    [Fact]
+    public async Task A_flipbook_has_a_view_model_of_its_own()
+    {
+        await using var session = await TesseraSession.OpenAsync(("Flipbooks/Hero", new FlipbookAssetFactory().New()));
+        Assert.IsType<FlipbookViewModel>(session.FlipbookAt("Flipbooks/Hero"));
+    }
+
+    [Fact]
+    public async Task The_flipbook_template_makes_a_flipbook_with_the_animation_idle()
+    {
+        await using var session = await TesseraSession.OpenAsync();
+        var template = session.Template("Flipbook");
+        Assert.Equal(("Flipbook", "Sprite", "Flipbook"), (template.Name, template.Group, template.DefaultOutputName));
+        Assert.Equal("Animations of a character or an object, made of the tiles of a tile set", template.Description);
+
+        var flipbook = Assert.IsType<FlipbookViewModel>(Assert.Single(await session.RunTemplateAsync(template, "Flipbooks")));
+        Assert.Equal("/TestGame/Flipbooks/Flipbook", flipbook.Url);
+        var animation = Assert.Single(flipbook.Asset.Animations);
+        Assert.Equal("idle", animation.Name);
+        Assert.Equal(FlipbookDirection.None, Assert.Single(animation.Clips).Direction);
+        Assert.Null(flipbook.Asset.TileSet);
     }
 
     [Fact]
@@ -50,12 +73,13 @@ public sealed class TemplateTests
     }
 
     [Fact]
-    public void The_package_file_lists_both_templates()
+    public void The_package_file_lists_the_three_templates()
     {
         var package = File.ReadAllText(TesseraSession.SourceFile("src/ColorRise.Tessera.Assets/ColorRise.Tessera.Assets.sdpkg"));
         Assert.Contains("Templates/Assets/TileSet.sdtpl", package, StringComparison.Ordinal);
         Assert.Contains("Templates/Assets/TileMap.sdtpl", package, StringComparison.Ordinal);
-        foreach (var file in (string[])["TileSet.sdtpl", "TileMap.sdtpl", ".sdtpl/TileSet.png", ".sdtpl/TileMap.png"])
+        Assert.Contains("Templates/Assets/Flipbook.sdtpl", package, StringComparison.Ordinal);
+        foreach (var file in (string[])["TileSet.sdtpl", "TileMap.sdtpl", "Flipbook.sdtpl", ".sdtpl/TileSet.png", ".sdtpl/TileMap.png", ".sdtpl/Flipbook.png"])
         {
             Assert.True(File.Exists(TesseraSession.SourceFile($"src/ColorRise.Tessera.Assets/Templates/Assets/{file}")), file);
         }
@@ -68,8 +92,11 @@ public sealed class TemplateTests
         var thumbnails = assembly.GetCustomAttributes<StaticThumbnailAttribute>().ToDictionary(a => a.AssetType, a => a.ResourceName);
         Assert.Equal("TileSetThumbnail.png", thumbnails[typeof(TileSetAsset)]);
         Assert.Equal("TileMapThumbnail.png", thumbnails[typeof(TileMapAsset)]);
+        Assert.Equal("FlipbookThumbnail.png", thumbnails[typeof(FlipbookAsset)]);
         var icon = Assert.Single(assembly.GetCustomAttributes<TypeImageAttribute>(), a => a.Type == typeof(TileMapComponent));
-        foreach (var name in (string[])["TileSetThumbnail.png", "TileMapThumbnail.png", icon.ResourceName])
+        var flipbookIcon = Assert.Single(assembly.GetCustomAttributes<TypeImageAttribute>(), a => a.Type == typeof(FlipbookComponent));
+        Assert.Equal("FlipbookComponent.png", flipbookIcon.ResourceName);
+        foreach (var name in (string[])["TileSetThumbnail.png", "TileMapThumbnail.png", "FlipbookThumbnail.png", icon.ResourceName, flipbookIcon.ResourceName])
         {
             Assert.Contains(assembly.GetManifestResourceNames(), resource => resource.EndsWith(name, StringComparison.Ordinal));
         }

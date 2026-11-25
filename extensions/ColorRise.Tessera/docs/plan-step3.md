@@ -770,7 +770,7 @@ public sealed class AddFlipbookAssetPolicy : CreateComponentPolicyBase<FlipbookA
 
 The template: `Name: Flipbook`, `Group: Sprite`, `DefaultOutputName: Flipbook`, `AssetTypeName: FlipbookAsset`, `FactoryTypeName: FlipbookAssetFactory`, `Description: Animations of a character or an object, made of the tiles of a tile set`, a new `Id`, `Icon: .sdtpl/Flipbook.png`. The script draws three more images in the manner of the others: three small frames of a figure in a row.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // TemplateTests
@@ -786,10 +786,14 @@ The template: `Name: Flipbook`, `Group: Sprite`, `DefaultOutputName: Flipbook`, 
 [Fact] public async Task A_dropped_flipbook_without_an_animation_has_no_animation_set()
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TemplateTests|FullyQualifiedName~SceneEditorTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the pieces, and draw the images.**
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): flipbooks in Add asset and in the scene editor`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TemplateTests|FullyQualifiedName~SceneEditorTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the pieces, and draw the images.**
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): flipbooks in Add asset and in the scene editor`
+
+**Done (2026-11-25).** Red: the editor test project did not compile (`FlipbookViewModel` not found). Green: the 16 tests of the filter pass, and the editor project's 251. The script drew the three images; the five images of steps 1 and 2 came out byte for byte the same.
+
+**Done differently.** The 16 pixel icon of the component shows the three figures of the frames side by side, dark in a light edge, without the frames, which do not fit at that size; the thumbnail and the template's image have the three frames. The drop policy takes the first animation that is not an empty item. The two drop tests share a helper that opens the session with the asset given.
 
 ### Task 9: A canvas that knows the time, writes text and replaces what is under a sprite (risk R12)
 

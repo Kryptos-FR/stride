@@ -91,4 +91,75 @@ public sealed class SceneEditorTests
             editor.Destroy();
         }
     }
+
+    [Fact]
+    public void The_flipbook_factory_is_in_the_2D_category_after_Tile_map()
+    {
+        var display = typeof(FlipbookEntityFactory).GetCustomAttribute<DisplayAttribute>()!;
+        Assert.Equal((50, "Flipbook", "2D"), (display.Order, display.Name, display.Category));
+        Assert.True(display.Order > typeof(TileMapEntityFactory).GetCustomAttribute<DisplayAttribute>()!.Order);
+        Assert.Contains(typeof(FlipbookEntityFactory), AssemblyRegistry.GetScanTypes(typeof(FlipbookEntityFactory).Assembly, typeof(IEntityFactory)));
+    }
+
+    [Fact]
+    public async Task Create_entity_makes_an_entity_with_a_flipbook_component()
+    {
+        await using var session = await TesseraSession.OpenAsync(("MainScene", new SceneAsset()));
+        var editor = new SceneEditorViewModel(Assert.IsType<SceneViewModel>(session.Session.AllAssets.Single(a => a.Name == "MainScene")));
+        try
+        {
+            Assert.True(await editor.Initialize());
+            editor.CreateEntityInRootCommand.Execute(new FlipbookEntityFactory());
+            var entity = Assert.Single(editor.HierarchyRoot.Children.OfType<EntityViewModel>());
+            Assert.Equal("Flipbook", entity.Name);
+            var component = Assert.Single(entity.AssetSideEntity.Components.OfType<FlipbookComponent>());
+            Assert.Null(component.Flipbook);
+            Assert.Null(component.Animation);
+        }
+        finally
+        {
+            editor.Destroy();
+        }
+    }
+
+    [Fact]
+    public async Task A_dropped_flipbook_becomes_a_component_that_names_it_and_its_first_animation()
+    {
+        var asset = new FlipbookAssetFactory().New();
+        asset.Animations.Insert(0, new FlipbookAnimation { Name = "walk" });
+        var component = await DropFlipbookAsync(asset);
+
+        Assert.Equal("walk", component.Animation);
+    }
+
+    [Fact]
+    public async Task A_dropped_flipbook_without_an_animation_has_no_animation_set()
+    {
+        var component = await DropFlipbookAsync(new FlipbookAsset());
+
+        Assert.Null(component.Animation);
+    }
+
+    // A flipbook asset at Flipbooks/Hero dropped in a scene: the component the drop policy makes, which names the asset
+    private static async Task<FlipbookComponent> DropFlipbookAsync(FlipbookAsset asset)
+    {
+        AddAssetPolicyRegistry.RegisterAssembly(typeof(AddFlipbookAssetPolicy).Assembly);
+        await using var session = await TesseraSession.OpenAsync(("MainScene", new SceneAsset()), ("Flipbooks/Hero", asset));
+        var flipbook = session.FlipbookAt("Flipbooks/Hero");
+        var editor = new SceneEditorViewModel(Assert.IsType<SceneViewModel>(session.Session.AllAssets.Single(a => a.Name == "MainScene")));
+        try
+        {
+            Assert.True(await editor.Initialize());
+
+            var policy = Assert.Single(editor.AddAssetPolicies.OfType<AddFlipbookAssetPolicy>());
+            Assert.True(policy.Accept(flipbook.AssetType));
+            var component = Assert.IsType<FlipbookComponent>(((ICreateComponentPolicy)policy).CreateComponentFromAsset(editor.HierarchyRoot, flipbook));
+            Assert.Equal(flipbook.Id, AttachedReferenceManager.GetAttachedReference(component.Flipbook)?.Id);
+            return component;
+        }
+        finally
+        {
+            editor.Destroy();
+        }
+    }
 }
