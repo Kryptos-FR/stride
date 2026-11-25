@@ -41,6 +41,9 @@ public sealed class TileSetAssetCompiler : AssetCompilerBase
         yield return new BuildDependencyInfo(typeof(SpriteSheetAsset), typeof(AssetCompilationContext), BuildDependencyType.CompileAsset);
     }
 
+    /// <summary>
+    /// Warns about what the asset has wrong, finds the images and sprites of the sources on disk, and adds the command that packs and writes the tiles.
+    /// </summary>
     protected override void Prepare(AssetCompilerContext context, AssetItem assetItem, string targetUrlInStorage, AssetCompilerResult result)
     {
         var asset = (TileSetAsset)assetItem.Asset;

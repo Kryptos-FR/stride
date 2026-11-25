@@ -19,6 +19,9 @@ public sealed class TileMap
 {
     private readonly Dictionary<ushort, TileSet> tileSets = [];
 
+    /// <summary>
+    /// An empty map, with no tile set and no layer.
+    /// </summary>
     public TileMap() => Layers = new TileLayerCollection(this);
 
     /// <summary>
@@ -58,6 +61,9 @@ public sealed class TileMap
     [DataMemberIgnore]
     public IReadOnlyDictionary<ushort, TileSet> TileSets => tileSets;
 
+    /// <summary>
+    /// The layers, the bottom one first.
+    /// </summary>
     [DataMemberIgnore]
     public TileLayerCollection Layers { get; }
 

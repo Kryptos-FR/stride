@@ -10,9 +10,15 @@ namespace ColorRise.Tessera.Assets;
 [DataContract]
 public sealed class TileLayerAsset
 {
+    /// <summary>
+    /// The name of the layer, which game code finds it by.
+    /// </summary>
     [DataMember(10)]
     public string Name { get; set; } = "";
 
+    /// <summary>
+    /// Whether the layer is drawn.
+    /// </summary>
     [DataMember(20)]
     public bool Visible { get; set; } = true;
 

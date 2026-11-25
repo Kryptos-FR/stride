@@ -305,7 +305,7 @@ public static class TileAssetChecks
 }
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 public sealed class TileAssetChecksTests
@@ -338,23 +338,23 @@ public void A_slot_given_twice_builds_with_the_first_and_warns()
     // slots 1 (set A), 1 (set B): the built map's TileSets[1] is A, and a warning has "1"
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileAssetChecksTests|FullyQualifiedName~Two_sources_with_one_id|FullyQualifiedName~A_pixels_per_unit_of_zero|FullyQualifiedName~A_slot_given_twice`. Expected: FAIL to compile, `TileAssetChecks` does not exist.
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileAssetChecksTests|FullyQualifiedName~Two_sources_with_one_id|FullyQualifiedName~A_pixels_per_unit_of_zero|FullyQualifiedName~A_slot_given_twice`. Expected: FAIL to compile, `TileAssetChecks` does not exist.
 
-- [ ] **Step 3: Write the checks and use them.**
+- [x] **Step 3: Write the checks and use them.**
   - Both compilers call `TileAssetChecks.Of` in `Prepare` and give each line to `result.Warning`, with the asset's URL in front as their other warnings have.
   - The tile set compiler skips a source whose id an earlier source has, in `Prepare` and in the command, and builds with `PixelsPerUnit` 16 when the asset's is not above 0.
   - `TileMapAsset.ToTileMap` keeps the first tile set of a slot.
   - `TileSetAsset.PixelsPerUnit` gets `[DataMemberRange(0.01, 2)]`, so that the property grid refuses 0.
   - The versions of the two build commands go up by one (the tile set's to 3, the tile map's to 2): a build made before must run again to warn.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `dotnet test extensions/ColorRise.Tessera/tests/ColorRise.Tessera.Tests --filter "FullyQualifiedName~Assets"`
 Expected: PASS, with step 1's asset tests.
 
-- [ ] **Step 5: Commit and push**: `fix(tessera): warn about a source id or a slot given twice, and a PixelsPerUnit that is not above 0`
+- [x] **Step 5: Commit and push**: `fix(tessera): warn about a source id or a slot given twice, and a PixelsPerUnit that is not above 0`
 
-- [ ] **Step 6: The cleanups M11, M12 and M13.**
+- [x] **Step 6: The cleanups M11, M12 and M13.**
   - **M11.** `TileChunk.Cells` becomes `public ReadOnlySpan<TileCell> Cells { get; }` over an array that only the chunk holds: nothing outside the runtime can write a cell without `TileLayer.SetCell`, so `Count` and the saved content cannot drift. `Set` and `Clone` use the array; the readers (`TileLayer.GetCell`, `TileMapComponent`, `TileMapSerializer`, `TileRenderFeature`, `TileLayerAsset`) read the span, and none of them keeps it across an `await` or in a field. First the test, which does not compile before the change in a way a test can show, so it pins what stays true:
 
     ```csharp
@@ -375,6 +375,14 @@ Expected: PASS, with step 1's asset tests.
   - **M13.** `CS1591` leaves the `NoWarn` of `Directory.Build.props` (`CS1573` stays, with a comment that fits), and every public type and member of the four `src/` projects that the compiler then names gets a `<summary>` in plain, simple English that says what it is for, not its name again. Where the member is a constructor of a view, of a view model or of a plugin class that the editor makes, `/// <summary>Made by the editor.</summary>` is enough. From here on every task of this plan writes its summaries as it goes: the build has no `CS1591` warning at the end of each task.
   - Run: the whole of `tests/ColorRise.Tessera.Tests` (the change of `Cells` touches the readers), then `dotnet build extensions/ColorRise.Tessera/ColorRise.Tessera.slnx 2>&1 | grep -c CS1591`. Expected: PASS, and `0`.
   - Commit and push: `refactor(tessera): chunk cells read only from outside, comments of the serializer, summaries on public members`
+
+**Done (2026-11-25).** Gates: the asset tests pass (100), then the whole solution (254 and 6), and the build has no `CS1591` warning. The three compiler tests fail without the compiler changes and pass with them. 106 public types and members got a summary.
+
+**Done differently.**
+- `TileAssetChecks.Of(TileMapAsset)` names a slot out of range too, as its interface says, but the map compiler warns only with the slots given twice (`TileAssetChecks.SlotsGivenTwice`, internal): a slot out of range already fails the build in `ToTileMap`, as step 1 decided and tested (`A_slot_out_of_range_is_reported`), and a warning beside that error would say the same thing twice. One more test than the plan, `A_slot_out_of_range_is_named` (2 cases).
+- The warnings start with the URL the compiler writes to (`targetUrlInStorage`), as the commands' warnings do.
+- `TileChunk.Cells` reads a private array: the `field` keyword cannot back it, since the property is a `ReadOnlySpan<TileCell>` and its storage an array. `TileMapComponent.HasSolid` casts the index of a cell in its chunk (0 to 255) to `int`, which the span's indexer needs.
+- M12: the content manager throws a `ContentManagerException` when a tile set's content is not there (read in `ContentManager`), and the comment now says so.
 
 ### Task 3: Asset view models, templates and images
 

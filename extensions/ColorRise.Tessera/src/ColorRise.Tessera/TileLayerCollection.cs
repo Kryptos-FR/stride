@@ -13,8 +13,14 @@ public sealed class TileLayerCollection : IReadOnlyList<TileLayer>
 
     internal TileLayerCollection(TileMap map) => this.map = map;
 
+    /// <summary>
+    /// How many layers the map has.
+    /// </summary>
     public int Count => layers.Count;
 
+    /// <summary>
+    /// The layer at an index, the bottom one at 0.
+    /// </summary>
     public TileLayer this[int index] => layers[index];
 
     /// <summary>
@@ -24,12 +30,18 @@ public sealed class TileLayerCollection : IReadOnlyList<TileLayer>
     public TileLayer this[string name]
         => TryGet(name, out var layer) ? layer : throw new KeyNotFoundException($"The map has no layer named '{name}'.");
 
+    /// <summary>
+    /// Finds a layer by its name.
+    /// </summary>
     public bool TryGet(string name, [MaybeNullWhen(false)] out TileLayer layer)
     {
         layer = layers.Find(candidate => candidate.Name == name);
         return layer is not null;
     }
 
+    /// <summary>
+    /// The index of a layer, or -1 when the map does not have it.
+    /// </summary>
     public int IndexOf(TileLayer layer) => layers.IndexOf(layer);
 
     /// <summary>
@@ -57,6 +69,9 @@ public sealed class TileLayerCollection : IReadOnlyList<TileLayer>
         layer.Map = map;
     }
 
+    /// <summary>
+    /// Removes a layer from the map; false when the map does not have it.
+    /// </summary>
     public bool Remove(TileLayer layer)
     {
         if (!layers.Remove(layer))
@@ -67,6 +82,9 @@ public sealed class TileLayerCollection : IReadOnlyList<TileLayer>
         return true;
     }
 
+    /// <summary>
+    /// The layers, the bottom one first.
+    /// </summary>
     public IEnumerator<TileLayer> GetEnumerator() => layers.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

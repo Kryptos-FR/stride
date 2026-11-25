@@ -33,6 +33,9 @@ public sealed class TileSet
     [DefaultValue(true)]
     public bool PremultipliedAlpha { get; set; } = true;
 
+    /// <summary>
+    /// The tiles, by id.
+    /// </summary>
     public Dictionary<TileId, Tile> Tiles { get; } = [];
 
     /// <summary>

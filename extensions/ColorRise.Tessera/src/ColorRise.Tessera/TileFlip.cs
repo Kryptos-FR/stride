@@ -7,8 +7,20 @@ namespace ColorRise.Tessera;
 [Flags]
 public enum TileFlip : byte
 {
+    /// <summary>
+    /// The tile as it is.
+    /// </summary>
     None = 0,
+    /// <summary>
+    /// Mirrored left to right.
+    /// </summary>
     Horizontal = 1,
+    /// <summary>
+    /// Mirrored top to bottom.
+    /// </summary>
     Vertical = 2,
+    /// <summary>
+    /// Its x and y swapped, before the other flips.
+    /// </summary>
     Diagonal = 4,
 }

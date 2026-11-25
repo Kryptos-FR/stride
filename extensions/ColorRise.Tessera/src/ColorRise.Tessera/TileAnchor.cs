@@ -5,6 +5,12 @@ namespace ColorRise.Tessera;
 /// </summary>
 public enum TileAnchor
 {
+    /// <summary>
+    /// The bottom-left corner of the cell.
+    /// </summary>
     BottomLeft,
+    /// <summary>
+    /// The centre of the cell.
+    /// </summary>
     Center,
 }

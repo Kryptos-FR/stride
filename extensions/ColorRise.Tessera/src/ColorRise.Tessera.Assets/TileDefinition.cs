@@ -8,6 +8,9 @@ namespace ColorRise.Tessera.Assets;
 [DataContract]
 public sealed class TileDefinition
 {
+    /// <summary>
+    /// The tile the data is for.
+    /// </summary>
     [DataMember(10)]
     [Display(Browsable = false)]
     public TileId Tile { get; set; }

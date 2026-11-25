@@ -18,6 +18,20 @@ public sealed class TileLayerTests
         => Assert.Equal(new Int2(cx, cy), TileLayer.ChunkOf(new Int2(x, y)));
 
     [Fact]
+    public void A_chunk_gives_its_cells_to_read_and_counts_them()
+    {
+        var cell = new TileCell(1, A);
+        var layer = new TileLayer();
+        layer.SetCell(new Int2(17, 2), cell);
+        var chunk = layer.GetChunk(new Int2(1, 0))!;
+        Assert.Equal(TileChunk.Size * TileChunk.Size, chunk.Cells.Length);
+        Assert.Equal(cell, chunk.Cells[2 * TileChunk.Size + 1]);
+        Assert.Equal(1, chunk.Count);
+        // Read only from outside: a cell changes through TileLayer.SetCell, which keeps Count and the saved content right
+        Assert.True(typeof(TileChunk).GetProperty(nameof(TileChunk.Cells))!.PropertyType == typeof(ReadOnlySpan<TileCell>));
+    }
+
+    [Fact]
     public void A_cell_set_is_the_cell_got()
     {
         var (_, set, layer) = NewMap();

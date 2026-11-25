@@ -35,8 +35,9 @@
   <!-- The packages carry the documentation of their public types -->
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Replace('\', '/').Contains('/src/'))">
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- A parameter whose name says it all has no tag, and the constructor of a view or of a service no summary -->
-    <NoWarn>$(NoWarn);CS1573;CS1591</NoWarn>
+    <!-- A parameter whose name says it all has no tag, even when another parameter of the method has one; every public type
+         and member has a summary (CS1591) -->
+    <NoWarn>$(NoWarn);CS1573</NoWarn>
   </PropertyGroup>
 
   <!--

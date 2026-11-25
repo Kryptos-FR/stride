@@ -15,6 +15,9 @@ namespace ColorRise.Tessera.Assets;
 [Display(110, "Tile map")]
 public sealed class TileMapAsset : Asset
 {
+    /// <summary>
+    /// The extension of the files of tile map assets.
+    /// </summary>
     public const string FileExtension = ".sdtilemap";
 
     private const string FormatName = "ColorRise.Tessera";

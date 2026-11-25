@@ -5,6 +5,12 @@ namespace ColorRise.Tessera;
 /// </summary>
 public enum TileSampler
 {
+    /// <summary>
+    /// The nearest pixel: sharp pixel art.
+    /// </summary>
     Point,
+    /// <summary>
+    /// A blend of the four nearest pixels: smooth art.
+    /// </summary>
     Linear,
 }

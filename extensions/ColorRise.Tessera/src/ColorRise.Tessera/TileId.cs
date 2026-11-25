@@ -18,9 +18,21 @@ namespace ColorRise.Tessera;
 [DataSerializer(typeof(TileIdSerializer))]
 public readonly struct TileId : IEquatable<TileId>, IComparable<TileId>
 {
+    /// <summary>
+    /// The largest id of a source.
+    /// </summary>
     public const int MaxSource = 255;
+    /// <summary>
+    /// The largest column of a grid source.
+    /// </summary>
     public const int MaxColumn = 4095;
+    /// <summary>
+    /// The largest row of a grid source.
+    /// </summary>
     public const int MaxRow = 2047;
+    /// <summary>
+    /// The largest number of a tile of a sprite sheet source.
+    /// </summary>
     public const int MaxNumber = 8388607;
 
     private const uint NumberedFlag = 1u << 23;
@@ -40,8 +52,14 @@ public readonly struct TileId : IEquatable<TileId>, IComparable<TileId>
     /// </summary>
     public bool IsNone => Source == 0;
 
+    /// <summary>
+    /// The id of the source the tile comes from, 1 to 255; 0 for no tile.
+    /// </summary>
     public int Source => (int)(Value >> 24);
 
+    /// <summary>
+    /// Whether the tile is a sprite of a sheet, named by a number, and not a place in a grid.
+    /// </summary>
     public bool IsNumbered => (Value & NumberedFlag) != 0;
 
     /// <summary>
@@ -130,16 +148,34 @@ public readonly struct TileId : IEquatable<TileId>, IComparable<TileId>
         : IsNumbered ? string.Create(CultureInfo.InvariantCulture, $"{Source}:#{Number}")
         : string.Create(CultureInfo.InvariantCulture, $"{Source}:{Column},{Row}");
 
+    /// <summary>
+    /// Whether both ids name the same tile.
+    /// </summary>
     public bool Equals(TileId other) => Value == other.Value;
 
+    /// <summary>
+    /// Whether the object is an id of the same tile.
+    /// </summary>
     public override bool Equals([NotNullWhen(true)] object? obj) => obj is TileId other && Equals(other);
 
+    /// <summary>
+    /// A hash of the id.
+    /// </summary>
     public override int GetHashCode() => (int)Value;
 
+    /// <summary>
+    /// Orders ids by source, then by place in the grid or by number.
+    /// </summary>
     public int CompareTo(TileId other) => Value.CompareTo(other.Value);
 
+    /// <summary>
+    /// Whether both ids name the same tile.
+    /// </summary>
     public static bool operator ==(TileId left, TileId right) => left.Equals(right);
 
+    /// <summary>
+    /// Whether the ids name different tiles.
+    /// </summary>
     public static bool operator !=(TileId left, TileId right) => !left.Equals(right);
 
     private static void CheckSource(int source)

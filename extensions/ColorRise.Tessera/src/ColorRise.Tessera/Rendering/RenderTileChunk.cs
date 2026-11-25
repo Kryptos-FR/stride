@@ -17,8 +17,14 @@ public sealed class RenderTileChunk : RenderObject
         Source = component;
     }
 
+    /// <summary>
+    /// The component whose map the chunk is in.
+    /// </summary>
     public TileMapComponent Component { get; }
 
+    /// <summary>
+    /// The layer of the chunk.
+    /// </summary>
     public TileLayer Layer { get; }
 
     /// <summary>
@@ -26,6 +32,9 @@ public sealed class RenderTileChunk : RenderObject
     /// </summary>
     public int LayerIndex { get; internal set; }
 
+    /// <summary>
+    /// The chunk of cells to draw.
+    /// </summary>
     public TileChunk Chunk { get; internal set; }
 
     /// <summary>

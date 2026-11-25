@@ -16,6 +16,9 @@ public sealed class TileRenderFeature : RootRenderFeature
     private readonly Lock countLock = new();
     private ThreadLocal<TileBatch>? batches;
 
+    /// <summary>
+    /// The feature draws the chunks of tile maps.
+    /// </summary>
     public override Type SupportedRenderObjectType => typeof(RenderTileChunk);
 
     /// <summary>
@@ -23,12 +26,18 @@ public sealed class TileRenderFeature : RootRenderFeature
     /// </summary>
     internal int DrawnChunks { get; private set; }
 
+    /// <summary>
+    /// Makes a batch for each thread that draws.
+    /// </summary>
     protected override void InitializeCore()
     {
         base.InitializeCore();
         batches = new ThreadLocal<TileBatch>(() => new TileBatch(Context.GraphicsDevice), trackAllValues: true);
     }
 
+    /// <summary>
+    /// Disposes the batches.
+    /// </summary>
     protected override void Destroy()
     {
         if (batches is not null)
@@ -43,12 +52,18 @@ public sealed class TileRenderFeature : RootRenderFeature
         base.Destroy();
     }
 
+    /// <summary>
+    /// Counts the chunks drawn again from 0 for the new frame.
+    /// </summary>
     public override void Extract()
     {
         base.Extract();
         DrawnChunks = 0;
     }
 
+    /// <summary>
+    /// Draws the chunks of the stage between two indices, in the stage's order.
+    /// </summary>
     public override void Draw(RenderDrawContext context, RenderView renderView, RenderViewStage renderViewStage, int startIndex, int endIndex)
     {
         base.Draw(context, renderView, renderViewStage, startIndex, endIndex);

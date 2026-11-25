@@ -7,7 +7,12 @@ namespace ColorRise.Tessera;
 /// </summary>
 public sealed class TileChunk
 {
+    /// <summary>
+    /// The cells of a side of a chunk.
+    /// </summary>
     public const int Size = 16;
+
+    private readonly TileCell[] cells = new TileCell[Size * Size];
 
     internal TileChunk(Int2 position) => Position = position;
 
@@ -19,8 +24,9 @@ public sealed class TileChunk
     /// <summary>
     /// The cells, row by row from the bottom: the index of a cell is <c>y * Size + x</c>, with x and y inside the chunk.
     /// </summary>
-    /// <remarks>Read them here, and change them through <see cref="TileLayer.SetCell(Int2, TileCell)"/>.</remarks>
-    public TileCell[] Cells { get; } = new TileCell[Size * Size];
+    /// <remarks>Read them here, and change them through <see cref="TileLayer.SetCell(Int2, TileCell)"/>, which keeps
+    /// <see cref="Count"/> right.</remarks>
+    public ReadOnlySpan<TileCell> Cells => cells;
 
     /// <summary>
     /// How many cells are not empty.
@@ -35,20 +41,20 @@ public sealed class TileChunk
     // Whether the value of the cell changed
     internal bool Set(int index, TileCell value)
     {
-        var old = Cells[index];
+        var old = cells[index];
         if (old == value)
         {
             return false;
         }
         Count += (old.IsEmpty ? 0 : -1) + (value.IsEmpty ? 0 : 1);
-        Cells[index] = value;
+        cells[index] = value;
         return true;
     }
 
     internal TileChunk Clone()
     {
         var clone = new TileChunk(Position) { Count = Count };
-        Cells.CopyTo(clone.Cells, 0);
+        cells.CopyTo(clone.cells, 0);
         return clone;
     }
 }

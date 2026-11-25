@@ -11,8 +11,14 @@ public sealed class TileLayer
 {
     private readonly Dictionary<Int2, TileChunk> chunks = [];
 
+    /// <summary>
+    /// The name of the layer, which game code finds it by.
+    /// </summary>
     public string Name { get; set; } = "";
 
+    /// <summary>
+    /// Whether the layer is drawn.
+    /// </summary>
     public bool Visible { get; set; } = true;
 
     /// <summary>
@@ -41,6 +47,9 @@ public sealed class TileLayer
     [DataMemberIgnore]
     public TileMap? Map { get; internal set; }
 
+    /// <summary>
+    /// The chunks that have at least one tile.
+    /// </summary>
     [DataMemberIgnore]
     public IReadOnlyCollection<TileChunk> Chunks => chunks.Values;
 
@@ -110,6 +119,9 @@ public sealed class TileLayer
         SetCell(cell, new TileCell(slot, tile, flip));
     }
 
+    /// <summary>
+    /// Removes the tile of a cell.
+    /// </summary>
     public void ClearCell(Int2 cell) => SetCell(cell, TileCell.Empty);
 
     // The same looks and cells, in no map

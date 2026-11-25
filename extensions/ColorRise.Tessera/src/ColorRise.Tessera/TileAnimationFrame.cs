@@ -8,6 +8,9 @@ namespace ColorRise.Tessera;
 [DataContract]
 public struct TileAnimationFrame
 {
+    /// <summary>
+    /// The tile the frame shows, of the same tile set.
+    /// </summary>
     public TileId Tile;
 
     /// <summary>

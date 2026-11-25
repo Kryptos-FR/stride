@@ -13,7 +13,9 @@ namespace ColorRise.Tessera.Serialization;
 /// </remarks>
 internal sealed class TileMapSerializer : ClassDataSerializer<TileMap>
 {
-    // To raise when the layout below changes; a map of another layout fails to load and is compiled again
+    // The serializer's own number for the layout below. A map of another number fails to load with an InvalidDataException that
+    // says to build the game again. Nothing ties it to the version of the tile map's build command: a change of the layout
+    // raises both, this number and TileMapCommand.Version, so that the build writes the maps again
     private const int Format = 1;
 
     public override void Serialize(ref TileMap obj, ArchiveMode mode, SerializationStream stream)
@@ -94,7 +96,8 @@ internal sealed class TileMapSerializer : ClassDataSerializer<TileMap>
             var slot = stream.ReadUInt16();
             TileSet? tileSet = null;
             stream.SerializeExtended(ref tileSet, ArchiveMode.Deserialize);
-            // A tile set whose content is not there leaves its slot empty: its cells draw nothing
+            // A tile set whose content is not in the database fails the load: the content manager throws a
+            // ContentManagerException with its URL. A reference read as null leaves its slot empty, and its cells draw nothing
             if (tileSet is not null)
             {
                 map.SetTileSet(slot, tileSet);

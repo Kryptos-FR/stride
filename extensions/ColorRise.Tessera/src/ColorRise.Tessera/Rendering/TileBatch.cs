@@ -20,6 +20,9 @@ public sealed class TileBatch : BatchBase<TileBatch.DrawInfo>
     private Matrix viewProjection;
     private Color4 color;
 
+    /// <summary>
+    /// Makes a batch on a graphics device, with room for this many quads in its buffer.
+    /// </summary>
     public TileBatch(GraphicsDevice device, int bufferElementCount = 1024, int batchCapacity = 64)
         : base(device, SpriteEffect.Bytecode, SpriteEffect.Bytecode,
             StaticQuadBufferInfo.CreateQuadBufferInfo("ColorRise.Tessera.TileBatch", false, bufferElementCount, batchCapacity), VertexLayout)
@@ -57,6 +60,9 @@ public sealed class TileBatch : BatchBase<TileBatch.DrawInfo>
         Draw(texture, in element);
     }
 
+    /// <summary>
+    /// Gives the shader the matrix and the colour of the batch.
+    /// </summary>
     protected override void PrepareForRendering()
     {
         Parameters.Set(SpriteBaseKeys.MatrixTransform, viewProjection);
@@ -64,6 +70,9 @@ public sealed class TileBatch : BatchBase<TileBatch.DrawInfo>
         base.PrepareForRendering();
     }
 
+    /// <summary>
+    /// Writes the four corners of a quad, with their texture coordinates, in the order of the batch's indices.
+    /// </summary>
     protected override unsafe void UpdateBufferValuesFromElementInfo(ref ElementInfo elementInfo, IntPtr vertexPointer, IntPtr indexPointer, int vexterStartOffset)
     {
         // The order of the batch's static indices: top-left, top-right, bottom-left, bottom-right
@@ -80,6 +89,9 @@ public sealed class TileBatch : BatchBase<TileBatch.DrawInfo>
     /// </summary>
     public struct DrawInfo
     {
+        /// <summary>
+        /// The quad to draw.
+        /// </summary>
         public TileQuad Quad;
     }
 

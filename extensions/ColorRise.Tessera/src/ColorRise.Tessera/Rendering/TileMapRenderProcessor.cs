@@ -11,11 +11,17 @@ namespace ColorRise.Tessera.Rendering;
 /// </summary>
 public sealed class TileMapRenderProcessor : EntityProcessor<TileMapComponent, TileMapRenderProcessor.MapState>, IEntityComponentRenderProcessor
 {
+    /// <summary>
+    /// Made by the engine.
+    /// </summary>
     public TileMapRenderProcessor()
         : base(typeof(TransformComponent))
     {
     }
 
+    /// <summary>
+    /// Where the render objects of the chunks go; the engine sets it.
+    /// </summary>
     public VisibilityGroup VisibilityGroup { get; set; } = null!;
 
     /// <summary>
@@ -33,6 +39,9 @@ public sealed class TileMapRenderProcessor : EntityProcessor<TileMapComponent, T
         }
     }
 
+    /// <summary>
+    /// Adds, updates and removes the render objects of the chunks before a frame is drawn.
+    /// </summary>
     public override void Draw(RenderContext context)
     {
         foreach (var (component, state) in ComponentDatas)
@@ -46,11 +55,20 @@ public sealed class TileMapRenderProcessor : EntityProcessor<TileMapComponent, T
         }
     }
 
+    /// <summary>
+    /// The state of a component that the processor keeps.
+    /// </summary>
     protected override MapState GenerateComponentData(Entity entity, TileMapComponent component) => new(component);
 
+    /// <summary>
+    /// Whether the state is the one of this component.
+    /// </summary>
     protected override bool IsAssociatedDataValid(Entity entity, TileMapComponent component, MapState associatedData)
         => associatedData.Component == component;
 
+    /// <summary>
+    /// Removes the render objects of the component's chunks.
+    /// </summary>
     protected override void OnEntityComponentRemoved(Entity entity, TileMapComponent component, MapState data)
         => data.RemoveAll(VisibilityGroup);
 

@@ -21,6 +21,9 @@ public sealed class TileMapAssetCompiler : AssetCompilerBase
         yield return typeof(TileSet);
     }
 
+    /// <summary>
+    /// Warns about the slots given twice, and adds the command that writes the map.
+    /// </summary>
     protected override void Prepare(AssetCompilerContext context, AssetItem assetItem, string targetUrlInStorage, AssetCompilerResult result)
     {
         var asset = (TileMapAsset)assetItem.Asset;

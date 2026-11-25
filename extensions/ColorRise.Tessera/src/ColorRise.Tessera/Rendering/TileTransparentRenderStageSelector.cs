@@ -15,12 +15,21 @@ public sealed class TileTransparentRenderStageSelector : RenderStageSelector
 {
     private const string EffectName = "TileMap";
 
+    /// <summary>
+    /// The stage the chunks are drawn in: the compositor's transparent stage.
+    /// </summary>
     [DefaultValue(null)]
     public RenderStage? TransparentRenderStage { get; set; }
 
+    /// <summary>
+    /// The render groups whose chunks are drawn.
+    /// </summary>
     [DefaultValue(RenderGroupMask.All)]
     public RenderGroupMask RenderGroup { get; set; } = RenderGroupMask.All;
 
+    /// <summary>
+    /// Puts a chunk of a selected group in the stage.
+    /// </summary>
     public override void Process(RenderObject renderObject)
     {
         if (TransparentRenderStage is { } stage && ((RenderGroupMask)(1U << (int)renderObject.RenderGroup) & RenderGroup) != 0)

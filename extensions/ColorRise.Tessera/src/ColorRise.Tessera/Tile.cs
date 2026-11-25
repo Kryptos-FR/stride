@@ -10,8 +10,14 @@ namespace ColorRise.Tessera;
 [DataContract]
 public sealed class Tile
 {
+    /// <summary>
+    /// The id of the tile in its set.
+    /// </summary>
     public TileId Id { get; set; }
 
+    /// <summary>
+    /// The texture the tile's pixels are in.
+    /// </summary>
     public Texture? Texture { get; set; }
 
     /// <summary>
@@ -19,6 +25,9 @@ public sealed class Tile
     /// </summary>
     public Rectangle Region { get; set; }
 
+    /// <summary>
+    /// Whether the tile stops what moves on the map.
+    /// </summary>
     public TileCollision Collision { get; set; }
 
     /// <summary>
@@ -36,6 +45,9 @@ public sealed class Tile
     /// </summary>
     public List<TileAnimationFrame> Animation { get; } = [];
 
+    /// <summary>
+    /// Whether the tile has the solid flag.
+    /// </summary>
     public bool IsSolid => (Collision & TileCollision.Solid) != 0;
 
     /// <summary>

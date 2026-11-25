@@ -198,7 +198,7 @@ public sealed class TileMapComponent : ActivableEntityComponent
         {
             for (var x = fromX; x <= toX; x++)
             {
-                var cell = chunk.Cells[(y - chunkY) * TileChunk.Size + (x - chunkX)];
+                var cell = chunk.Cells[(int)((y - chunkY) * TileChunk.Size + (x - chunkX))];
                 if (!cell.IsEmpty && map.GetTile(cell) is { IsSolid: true })
                 {
                     return true;
