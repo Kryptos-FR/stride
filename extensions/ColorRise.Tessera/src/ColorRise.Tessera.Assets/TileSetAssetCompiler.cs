@@ -34,11 +34,18 @@ public sealed class TileSetAssetCompiler : AssetCompilerBase
     public const int MaxTextureSize = 2048;
 
     /// <summary>
-    /// The sprite sheets of sheet sources: the compiler reads their sprites, not their compiled content.
+    /// The sprite sheets of sheet sources: the compiler reads their sprites, not their compiled content; the build compiles
+    /// the sheets too.
     /// </summary>
+    /// <remarks>
+    /// The build prepares an asset once, at the first link that reaches it: a sheet reached first through a tile set, with
+    /// <see cref="BuildDependencyType.CompileAsset"/> alone, would not be compiled for a sprite of the same scene that shows
+    /// it (row 14 of <c>docs/plugin-findings.md</c>).
+    /// </remarks>
     public override IEnumerable<BuildDependencyInfo> GetInputTypes(AssetItem assetItem)
     {
-        yield return new BuildDependencyInfo(typeof(SpriteSheetAsset), typeof(AssetCompilationContext), BuildDependencyType.CompileAsset);
+        yield return new BuildDependencyInfo(typeof(SpriteSheetAsset), typeof(AssetCompilationContext),
+            BuildDependencyType.CompileAsset | BuildDependencyType.Runtime);
     }
 
     /// <summary>

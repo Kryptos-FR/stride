@@ -1,11 +1,14 @@
 using ColorRise.Tessera.Assets;
+using Stride.Assets.Entities;
 using Stride.Assets.Sprite;
 using Stride.Core.Assets;
 using Stride.Core.BuildEngine;
 using Stride.Core.IO;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization;
+using Stride.Engine;
 using Stride.Graphics;
+using Stride.Rendering.Sprites;
 
 namespace ColorRise.Tessera.Tests.Assets;
 
@@ -317,6 +320,37 @@ public sealed class TileSetCompilerTests
         source.Sheet = AttachedReferenceManager.CreateProxyObject<SpriteSheet>(item.Id, item.Location);
         TileSlicer.Bind(source, bound);
         return (asset, sheet);
+    }
+
+    // A scene whose first entity shows a map of the tile set, and whose second shows a sprite of the tile set's sheet: the
+    // build reaches the sheet through the tile set first, which reads only its asset, then through the sprite, which needs
+    // its content
+    [Fact]
+    public void A_sheet_of_a_tile_set_that_a_sprite_of_the_scene_shows_is_compiled()
+    {
+        using var build = new AssetBuild();
+        var (tileSet, sheet) = Props(build, ["grass", "water"], ["grass", "water"]);
+        var tileSetItem = build.Add("Tiles/Props", tileSet, root: false);
+        var map = TileMapAssetYamlTests.SmallMap();
+        map.Id = AssetId.New();
+        map.TileSets[0].TileSet = AttachedReferenceManager.CreateProxyObject<TileSet>(tileSetItem.Id, tileSetItem.Location);
+        var mapItem = build.Add("Maps/Town", map, root: false);
+
+        var scene = new SceneAsset { Id = AssetId.New() };
+        var mapEntity = new Entity("Map") { new TileMapComponent { Map = AttachedReferenceManager.CreateProxyObject<TileMap>(mapItem.Id, mapItem.Location) } };
+        var sprite = new SpriteFromSheet { Sheet = AttachedReferenceManager.CreateProxyObject<SpriteSheet>(sheet.Id, "Sheets/Props") };
+        var hero = new Entity("Hero") { new SpriteComponent { SpriteProvider = sprite } };
+        foreach (var entity in new[] { mapEntity, hero })
+        {
+            scene.Hierarchy.Parts.Add(new EntityDesign(entity));
+            scene.Hierarchy.RootParts.Add(entity);
+        }
+        build.Add("Scenes/Main", scene);
+
+        var result = build.Build();
+
+        Assert.True(result.Succeeded, string.Join("\n", result.Errors));
+        Assert.Contains(result.Commands, command => command.Url == "Sheets/Props");
     }
 
     // The pixel at the middle of a tile's region, in its texture as the build wrote it
