@@ -10,6 +10,8 @@ Hierarchy:
         - ref!! 8073f3c9-4e47-4cf6-a828-2a768531250d
         - ref!! 3997a7dc-f15e-4314-9138-0f872a4d6145
         - ref!! 0a26825e-e206-4c2f-b9e9-ae14fa88f469
+        - ref!! a9ae36c6-33e0-4193-88c8-5945dcdfb67f
+        - ref!! 23810786-3587-448b-b349-4e44cf2643f3
     Parts:
         -   Entity:
                 Id: 0a26825e-e206-4c2f-b9e9-ae14fa88f469
@@ -29,6 +31,31 @@ Hierarchy:
                         Sampler: Point
                         AnimationSpeed: 1.0
                         RenderGroup: Group0
+        -   Folder: null
+            Entity:
+                Id: 23810786-3587-448b-b349-4e44cf2643f3
+                Name: Walker
+                Components:
+                    d4d1fd71a87ac099048ffe388cf292ec: !TransformComponent
+                        Id: 04d24358-ddeb-4830-8030-4c7740de9aba
+                        Position: {X: 1.5, Y: 10.5, Z: -0.24}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    70bdcc79c4d2e0a19f5ca1b90e42f472: !FlipbookComponent
+                        Id: 645b1316-9276-48e0-81e8-beb9c28cf65d
+                        Flipbook: 83d98c64-662f-4abd-a142-d3407348bda8:HeroFlipbook
+                        Animation: walk
+                        Direction: Down
+                        PlayOnStart: true
+                        Speed: 1.0
+                        FlipX: false
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+                        Sampler: Point
+                        SortByY: true
+                        RenderGroup: Group0
+                    76598cf237a9c042d5a86365db9bcea9: !StudioCheck.Walker,StudioCheck.Game
+                        Id: a8fe4f83-a90f-48fd-a5e0-683081401f03
         -   Entity:
                 Id: 3997a7dc-f15e-4314-9138-0f872a4d6145
                 Name: Tile map
@@ -62,6 +89,28 @@ Hierarchy:
                         SpriteProvider: !SpriteFromSheet
                             Sheet: 8023ce6c-fa45-4632-8061-a51591e5769a:Sprites/Props
                         Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+        -   Entity:
+                Id: a9ae36c6-33e0-4193-88c8-5945dcdfb67f
+                Name: HeroFlipbook
+                Components:
+                    d4d1fd71a87ac099048ffe388cf292ec: !TransformComponent
+                        Id: b115b5a1-398b-4b99-a6b6-f39501b69e8b
+                        Position: {X: 2.5, Y: 9.5, Z: -0.24}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    70bdcc79c4d2e0a19f5ca1b90e42f472: !FlipbookComponent
+                        Id: 11cfb01e-3346-4f68-8ce6-29137537cfa8
+                        Flipbook: 83d98c64-662f-4abd-a142-d3407348bda8:HeroFlipbook
+                        Animation: idle
+                        Direction: Right
+                        PlayOnStart: true
+                        Speed: 1.0
+                        FlipX: false
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+                        Sampler: Point
+                        SortByY: true
+                        RenderGroup: Group0
         -   Entity:
                 Id: c123e63b-41b5-4fb8-bb54-879ceca0ec4e
                 Name: Camera

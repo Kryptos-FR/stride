@@ -1523,7 +1523,7 @@ The view, as section 9 draws it:
 - **Bottom**: `Message`, and the problems, as the two other editors show them.
 - Each button gives the focus back to the preview's canvas.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // FlipbookEditorViewTests: the editor of TestTown.Flipbook, shown in a window of 1000 by 700
@@ -1546,11 +1546,22 @@ The view, as section 9 draws it:
 [Fact] public async Task A_flipbook_command_cannot_run_without_a_flipbook_editor()
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: the view tests fail on the view the session does not find; the command tests on the ids.
-- [ ] **Step 3: Write the view and the commands.**
-- [ ] **Step 4: Run the tests of the two files.** Expected: PASS. If the headless pointer cannot drive `A_drag_along_the_strip_moves_a_frame`, test the view's method the pointer calls instead, and check the drag by hand in Task 17.
-- [ ] **Step 5: Gate: the editors.** Run the whole solution. Expected: PASS, none skipped. Write the counts in the ledger.
-- [ ] **Step 6: Commit and push**: `feat(tessera): the view of the flipbook editor`
+- [x] **Step 2: Run them to see them fail.** Expected: the view tests fail on the view the session does not find; the command tests on the ids.
+- [x] **Step 3: Write the view and the commands.**
+- [x] **Step 4: Run the tests of the two files.** Expected: PASS. If the headless pointer cannot drive `A_drag_along_the_strip_moves_a_frame`, test the view's method the pointer calls instead, and check the drag by hand in Task 17.
+- [x] **Step 5: Gate: the editors.** Run the whole solution. Expected: PASS, none skipped. Write the counts in the ledger.
+- [x] **Step 6: Commit and push**: `feat(tessera): the view of the flipbook editor`
+
+**Done differently** (fef6ff4bb). TestTown's tile 1:0,0 has four quarters, so the preview and strip tests read the red
+quarter, not `Flat(0, 0)`; the preview test uses frames of 2 s and nine ticks of a quarter of a second, as Task 12's did,
+since the canvas's own timer runs on real time. The test window routes Delete and F2 through an `EditCommandRouter`, as
+Game Studio's window does. A row of the Sheet bar picks from `SheetRowViewModel.Choices` (Skip, then the directions as the
+tree names them) through `Choice`, a small addition to the view model with its own test. The menu of `+ Direction` is made
+when the button is clicked, and that button keeps the focus while it is open. A press on a selected frame among several
+keeps them selected, so that they drag together; a click without a drag then selects it alone. The commands Sheet and
+Mirror can run only when the editor's own command is on. The drag along the strip is driven by the headless pointer. A
+headless picture of the view is `step3/headless-flipbook-editor.png`. Tests: view 11, commands 9; solution runtime 395,
+editor 362, views 63.
 
 ### Task 17: Game Studio by hand (risks R7 and R13)
 

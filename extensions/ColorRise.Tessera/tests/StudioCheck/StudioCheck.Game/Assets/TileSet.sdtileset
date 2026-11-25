@@ -40,4 +40,19 @@ Tiles:
         Kind: null
         Properties: {}
         Animation: {}
+    f0600d2402738f206a439ff365a2fa3c:
+        Tile: 1:2,0
+        Collision: None
+        Kind: null
+        Properties: {}
+        Animation:
+            70777300883a0707d28645d14add3423:
+                Tile: 1:2,0
+                Duration: 0.3
+            1fbfcf1e2dbe9dbed2cfec6c665b248f:
+                Tile: 1:0,2
+                Duration: 0.2
+            3f4329bfdcd4ffdf4092c3fde2c5f6ca:
+                Tile: 1:1,2
+                Duration: 0.2
 LastSourceId: 2

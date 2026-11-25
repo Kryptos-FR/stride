@@ -1,0 +1,149 @@
+!FlipbookAsset
+Id: 83d98c64-662f-4abd-a142-d3407348bda8
+SerializedVersion: {ColorRise.Tessera: 1.0.0.0}
+Tags: []
+TileSet: 765f0ecc-5b67-417b-b5cf-d2e7b490c64f:Hero
+Pivot: {X: 0.5, Y: 0.0}
+Animations:
+    0bde126cbecfab46fdec58f110a2e5a2:
+        Name: idle
+        LoopMode: Loop
+        Clips:
+            cced3d64aec70abd070e06e3966d09e6:
+                Direction: None
+                Frames:
+                    0effba5332c9acc6451bcdb8a493cc92:
+                        Duration: 0.1
+                        Cells:
+                            b9e5439e16314e9f0ef6bda5fe8ac003:
+                                Tile: 1:1,1
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+    dc96ffb6ce9a4e51fa2c26f1a7f94f41:
+        Name: walk
+        LoopMode: Loop
+        Clips:
+            af5306e88f79dfe3c08ab4af67b7a696:
+                Direction: Down
+                Frames:
+                    03f125d8415e270f2432c36a24fe487d:
+                        Duration: 0.2
+                        Cells:
+                            b9d3c9c7fc27191415b21347c7c1e470:
+                                Tile: 1:0,0
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    23f3ebd760a62f9e135c41f6bd7500e0:
+                        Duration: 0.15
+                        Cells:
+                            c99c7f52f49edf20093d4edb5fc59fc5:
+                                Tile: 1:1,0
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    fdb828bf7e10cf30a3715783b91103d1:
+                        Duration: 0.15
+                        Cells:
+                            b840b24fe0778f730d0d284c1256ae5c:
+                                Tile: 1:2,0
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    4aa9fbdd2bbeea3fc19367175510630c:
+                        Duration: 0.15
+                        Cells:
+                            640737cd000d3d31e6d977a1efb7a3e7:
+                                Tile: 1:1,0
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+            ddbd3d4baf560bf3e1743edc1f6bddad:
+                Direction: Left
+                Frames:
+                    316203cd7ec1a28256c36f355d0b1b76:
+                        Duration: 0.15
+                        Cells:
+                            e64e944478c9f96e313f400a61fb2154:
+                                Tile: 1:0,1
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    5f8597e1b9832a7209929e6043824472:
+                        Duration: 0.15
+                        Cells:
+                            bed73718de5f522c2910fdf5c92c5b28:
+                                Tile: 1:1,1
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    0c3bda5047b6a22476d65545ca55c133:
+                        Duration: 0.15
+                        Cells:
+                            613add96e7fedd772282ddc6d1c79036:
+                                Tile: 1:2,1
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    37cd347a69bbcefe0b300144acf12d3d:
+                        Duration: 0.15
+                        Cells:
+                            9e4f4348ad425c0c1a1f1216d2fc475f:
+                                Tile: 1:1,1
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+            2d03d126c99afdea9a6df765a84f0c3e:
+                Direction: Right
+                Frames:
+                    b92ee10ef5d2c3ca60c12c10696ac033:
+                        Duration: 0.15
+                        Cells:
+                            b53462315e8c0fb8a844d75d98b69a61:
+                                Tile: 1:0,2
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    9f581d9e12410796eff830317a424191:
+                        Duration: 0.15
+                        Cells:
+                            2182c79e25e81e747eefab6e4044b6b2:
+                                Tile: 1:1,2
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    03c25cb3548e92664b5bd47469665963:
+                        Duration: 0.15
+                        Cells:
+                            dbaf44f71177a1c72469e9d1fa937562:
+                                Tile: 1:2,2
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    06f14e25998ccf9a149a9d8de708664a:
+                        Duration: 0.15
+                        Cells:
+                            43afd7c573b4b1912ad613e866f0d9f8:
+                                Tile: 1:1,2
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+            0c14517a7f72e6930d1471a54602e0ec:
+                Direction: Up
+                Frames:
+                    9b8f1799f3a6453dce52ec32a53cdedd:
+                        Duration: 0.15
+                        Cells:
+                            516c5fefaaaa47fc4718af669a9c889f:
+                                Tile: 1:0,3
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    bb9f1bc3695101458f2f5a12e9935383:
+                        Duration: 0.15
+                        Cells:
+                            2a41d85e11b53e077af78e91386ddf01:
+                                Tile: 1:1,3
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    c761f9ceaff3c83ffc6ece62d236a1c3:
+                        Duration: 0.15
+                        Cells:
+                            963c733a0bd82041e163185beb7a304a:
+                                Tile: 1:2,3
+                                Offset: {X: 0, Y: 0}
+                                Flip: None
+                    3b1af283460928017fefd7852107cc92:
+                        Duration: 0.15
+                        Cells:
+                            9877e3bf1a201de49f4e04a07b364ccf:
+                                Tile: 1:1,3
+                                Offset: {X: 0, Y: 0}
+                                Flip: None

@@ -109,6 +109,10 @@ RenderFeatures:
         RenderStageSelectors:
             a7a615f373b54c49bec541dab133c441: !TileTransparentRenderStageSelector
                 TransparentRenderStage: ref!! 0fa30591-02ee-486d-9347-2b6aee83d035
+    0c3cad2c25d6c9c4909a83d3d165d991*: !FlipbookRenderFeature
+        RenderStageSelectors:
+            b0c9c6fc916f986714d0189bc18797a7: !TileTransparentRenderStageSelector
+                TransparentRenderStage: ref!! 0fa30591-02ee-486d-9347-2b6aee83d035
 SharedRenderers:
     60459475d3a3adaf2d1ba5d99913ca75: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine
         Id: 4d409a59-d3c6-4b55-a5c7-4bd9b8886ea5

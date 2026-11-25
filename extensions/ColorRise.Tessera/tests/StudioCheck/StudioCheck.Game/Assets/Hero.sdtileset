@@ -1,0 +1,17 @@
+!TileSetAsset
+Id: 765f0ecc-5b67-417b-b5cf-d2e7b490c64f
+SerializedVersion: {ColorRise.Tessera: 1.0.0.0}
+Tags: []
+TileSize: {X: 16, Y: 16}
+PixelsPerUnit: 16.0
+ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+Sources:
+    3731e9e2932981d52ee149655d9fbe7f: !GridTileSetSource
+        Id: 1
+        Name: hero
+        Image: !file ../Resources/hero.png
+        TileSize: {X: 16, Y: 24}
+        Margin: {X: 0, Y: 0}
+        Spacing: {X: 0, Y: 0}
+Tiles: {}
+LastSourceId: 1
