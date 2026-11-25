@@ -101,7 +101,7 @@ These keys work while the map's canvas has the focus, and not while a layer's na
 | I | Pick tool (an eyedropper: it goes back to Stamp) |
 | R | Select tool |
 | X, Y | Flip the stamp horizontally, vertically |
-| Z, Shift+Z | Turn the stamp clockwise, counterclockwise |
+| Z, Shift+Z | Turn the stamp clockwise, counterclockwise (only a stamp of square tiles) |
 | Delete | Empty the selected cells |
 | Escape | Cancel the stroke in progress, else clear the selection |
 

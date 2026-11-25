@@ -215,6 +215,26 @@ public sealed class TileMapToolsTests
     }
 
     [Fact]
+    public async Task A_stamp_of_tiles_that_are_not_square_is_not_turned()
+    {
+        var tileSet = TileSet();
+        tileSet.TileSize = new Int2(16, 32);
+        await using var map = await OpenAsync(tileSet, Map(tileSet, "Tiles/Town", ["."]));
+        var stamp = new TileStamp(new Int2(2, 1), [Cell(0, 0), Cell(1, 0)]);
+        map.Editor.Stamp = stamp;
+
+        Assert.True(Key(map.Editor, CanvasKey.Z));
+        Assert.Equal(stamp, map.Editor.Stamp);
+        Assert.Equal("Only a stamp of square tiles can be turned.", map.Editor.Message);
+        map.Editor.RotateStamp(clockwise: false);
+        Assert.Equal(stamp, map.Editor.Stamp);
+
+        // A mirror keeps the shape of a tile
+        Assert.True(Key(map.Editor, CanvasKey.X));
+        Assert.Equal(stamp.FlipX(), map.Editor.Stamp);
+    }
+
+    [Fact]
     public async Task The_tool_keys_choose_the_tool()
     {
         await using var map = await OpenAsync([["."]]);

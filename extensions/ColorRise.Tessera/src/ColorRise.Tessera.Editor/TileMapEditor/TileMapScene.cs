@@ -173,6 +173,13 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
     public Vector2 GridSize => new(CellPixels.X, CellPixels.Y);
 
     /// <summary>
+    /// Whether the tile of a cell is known to be wider than tall or taller than wide; a turn of a quarter would squash it,
+    /// as the diagonal flip swaps the axes inside the tile's own rectangle.
+    /// </summary>
+    public bool IsNotSquare(TileCell cell)
+        => slots.GetValueOrDefault(cell.Slot) is { } set && set.Find(cell.Tile) is { IsMissing: false } found && found.Region.Width != found.Region.Height;
+
+    /// <summary>
     /// Where a cell of the current layer is on the canvas: <c>(x * w, -(y + 1) * h, w, h)</c>, moved by the layer's offset.
     /// </summary>
     public RectangleF CellBounds(Int2 cell)

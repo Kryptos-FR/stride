@@ -476,9 +476,29 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
     public void FlipStampY() => Stamp = Stamp?.FlipY();
 
     /// <summary>
-    /// Turns the stamp a quarter, clockwise or not.
+    /// Turns the stamp a quarter, clockwise or not; a stamp with a tile that is not square stays as it is, with a
+    /// <see cref="Message"/>.
     /// </summary>
-    public void RotateStamp(bool clockwise) => Stamp = clockwise ? Stamp?.RotateClockwise() : Stamp?.RotateCounterClockwise();
+    public void RotateStamp(bool clockwise)
+    {
+        if (Stamp is not { } stamp)
+        {
+            return;
+        }
+        for (var y = 0; y < stamp.Size.Y; y++)
+        {
+            for (var x = 0; x < stamp.Size.X; x++)
+            {
+                if (!stamp[x, y].IsEmpty && Scene.IsNotSquare(stamp[x, y]))
+                {
+                    Message = "Only a stamp of square tiles can be turned.";
+                    return;
+                }
+            }
+        }
+        Message = null;
+        Stamp = clockwise ? stamp.RotateClockwise() : stamp.RotateCounterClockwise();
+    }
 
     /// <summary>
     /// Locks or unlocks a layer: no tool changes the cells of a locked layer. The lock is kept in the editor settings, by the
