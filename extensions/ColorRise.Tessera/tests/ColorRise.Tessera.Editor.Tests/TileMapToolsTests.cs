@@ -526,6 +526,26 @@ public sealed class TileMapToolsTests
     }
 
     [Fact]
+    public async Task A_fill_does_not_cross_a_chunk_that_cannot_be_read()
+    {
+        // Three chunks in a row, each with a tile at its bottom-left cell; the middle one's text is not a chunk
+        await using var map = await OpenAsync([Rows((0, 0, "0,0"), (16, 0, "0,0"), (32, 0, "0,0"))], asset =>
+        {
+            asset.Size = new Int2(48, 16);
+            asset.Layers[0].Chunks.Single(chunk => chunk.Position == new Int2(1, 0)).Cells = "x\n";
+        });
+        map.Editor.Tool = TileToolKind.Fill;
+        map.Editor.Stamp = TileStamp.Single(Cell(2, 0));
+
+        Click(map.Editor, 2, 2);
+
+        Assert.Equal(["Fill"], map.Session.Steps);
+        var saved = Readable(map, 0);
+        Assert.Equal(255, Tokens(saved, 0, 0, 15, 15).SelectMany(row => row.Split(' ')).Count(token => token == "2,0"));
+        Assert.All(Tokens(saved, 32, 0, 47, 15), row => Assert.DoesNotContain("2,0", row.Split(' ')));
+    }
+
+    [Fact]
     public async Task An_undo_in_the_middle_of_a_drag_ends_the_stroke()
     {
         await using var map = await OpenAsync([["."]]);
@@ -658,6 +678,9 @@ public sealed class TileMapToolsTests
 
     // A layer as the asset has it, read as the build reads it
     private static TileLayer Saved(OpenEditor map, int layer) => map.Session.MapAt(Location).Asset.ToTileMap(_ => null).Layers[layer];
+
+    // The chunks of a layer that the build can read, the others left out
+    private static TileLayer Readable(OpenEditor map, int layer) => map.Session.MapAt(Location).Asset.ToTileMap(_ => null, new List<string>()).Layers[layer];
 
     private static IObjectNode LayersNode(OpenEditor map) => map.Session.MapAt(Location).PropertyGraph.RootNode[nameof(TileMapAsset.Layers)].Target!;
 

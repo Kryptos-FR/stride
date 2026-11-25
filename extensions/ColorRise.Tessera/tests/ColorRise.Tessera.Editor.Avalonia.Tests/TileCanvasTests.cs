@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -37,6 +38,21 @@ public sealed class TileCanvasTests
         Assert.Equal(StrideColor.Red, CanvasProbe.Pixel(window, 7, 7));
         Assert.Equal(StrideColor.Yellow, CanvasProbe.Pixel(window, 8, 8));
         Assert.Equal(Background(canvas), CanvasProbe.Pixel(window, 40, 40));
+    }
+
+    [AvaloniaFact]
+    public void The_bitmap_of_a_picture_that_is_gone_is_disposed()
+    {
+        PictureBitmaps.Sweep();
+        var before = PictureBitmaps.LiveBitmaps;
+
+        DrawAPictureThatIsDropped();
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        PictureBitmaps.Sweep();
+
+        Assert.Equal(before, PictureBitmaps.LiveBitmaps);
     }
 
     [AvaloniaFact]
@@ -306,6 +322,18 @@ public sealed class TileCanvasTests
     }
 
     // What the input heard, without the moves
+    // A picture drawn once, then dropped with its window: nothing of this frame keeps it
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void DrawAPictureThatIsDropped()
+    {
+        var scene = new TestScene();
+        scene.Sprites.Add(new CanvasSprite(Quarters(), new Rectangle(0, 0, 2, 2), new RectangleF(0, 0, 2, 2)));
+        var (_, window) = Show(scene, zoom: 8);
+        Assert.Equal(StrideColor.Red, CanvasProbe.Pixel(window, 3, 3));
+        window.Close();
+        Dispatcher.UIThread.RunJobs();
+    }
+
     private static List<string> Kinds(RecordingInput input) => [.. input.Events.Select(e => e.Split(' ')[0]).Where(kind => kind != "move")];
 
     private static StackPanel Beside(Control first, Control second)

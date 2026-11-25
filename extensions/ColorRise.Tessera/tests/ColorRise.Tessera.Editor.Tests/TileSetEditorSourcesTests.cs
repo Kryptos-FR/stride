@@ -86,6 +86,31 @@ public sealed class TileSetEditorSourcesTests
         Assert.Equal(columns * rows, frame.Shapes.Count(shape => shape.Mark == CanvasMark.Outline));
     }
 
+    [Fact]
+    public async Task A_grid_of_too_many_tiles_is_counted_and_not_outlined()
+    {
+        await using var session = await OpenTownAsync();
+        var editor = await session.EditTileSetAsync("Tiles/Town");
+        editor.ProposeImage(session.WriteImage("Tiles/big.png", 512, 512, (_, _) => Color.White));
+        var pending = editor.PendingImage!;
+
+        pending.TileWidth = 2;
+        pending.TileHeight = 2;
+
+        Assert.Equal((256, 256), (pending.Columns, pending.Rows));
+        Assert.Null(pending.Problem);
+        var frame = new CanvasFrame();
+        pending.Scene.Collect(new RectangleF(0, 0, 512, 512), 1, frame);
+        Assert.Empty(frame.Shapes);
+
+        pending.TileWidth = 16;
+        pending.TileHeight = 16;
+
+        frame.Clear();
+        pending.Scene.Collect(new RectangleF(0, 0, 512, 512), 1, frame);
+        Assert.Equal(1024, frame.Shapes.Count(shape => shape.Mark == CanvasMark.Outline));
+    }
+
     [Theory]
     [InlineData(0, 16)]
     [InlineData(16, -1)]

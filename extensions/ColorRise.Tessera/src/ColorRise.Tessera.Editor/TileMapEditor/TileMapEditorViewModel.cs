@@ -756,9 +756,17 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
     {
         var problems = new List<string>(TileAssetChecks.Of(Asset.Asset));
         problems.AddRange(Document.Errors);
-        foreach (var item in tileSetItems.Where(item => item.IsMissing))
+        foreach (var item in tileSetItems)
         {
-            problems.Add(string.Create(CultureInfo.InvariantCulture, $"The tile set of the slot {item.Slot} is missing: its cells show as missing boxes."));
+            if (item.Pictures is null)
+            {
+                problems.Add(string.Create(CultureInfo.InvariantCulture, $"The tile set of the slot {item.Slot} is missing: its cells show as missing boxes."));
+            }
+            else if (!TileAssetChecks.HasPixelsPerUnit(item.Pictures.TileSet.Asset))
+            {
+                var pixelsPerUnit = item.Pictures.TileSet.Asset.PixelsPerUnit.ToString(CultureInfo.InvariantCulture);
+                problems.Add($"The tile set '{item.Name}' has a pixels per unit of {pixelsPerUnit}: its tiles show as missing boxes.");
+            }
         }
         if (!problems.SequenceEqual(Problems))
         {

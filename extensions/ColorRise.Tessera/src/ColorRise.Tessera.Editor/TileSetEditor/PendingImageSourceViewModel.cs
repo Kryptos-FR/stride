@@ -14,6 +14,11 @@ namespace ColorRise.Tessera.Editor.TileSetEditor;
 /// </summary>
 public sealed class PendingImageSourceViewModel : DispatcherViewModel
 {
+    /// <summary>
+    /// Above this many tiles the grid is counted, and its tiles are not outlined.
+    /// </summary>
+    public const int OutlineLimit = 16384;
+
     private static readonly Color TileOutline = new(255, 255, 255, 160);
 
     internal PendingImageSourceViewModel(IViewModelServiceProvider services, UFile image, TilePicture? picture, string? problem, string name, Int2 tileSize, Action<PendingImageSourceViewModel> confirm, Action cancel)
@@ -175,15 +180,19 @@ public sealed class PendingImageSourceViewModel : DispatcherViewModel
     // The regions of the tiles, as the build cuts them
     private List<Rectangle> Tiles { get; set; } = [];
 
-    // The grid as the build cuts it, and what keeps it from being added
+    // The grid as the build cuts it, and what keeps it from being added. The columns and the rows are counted; the grid is
+    // cut, for its outlines, only when it has at most OutlineLimit tiles
     private void Update()
     {
-        List<TileSlice> slices = ImageSize == Int2.Zero || TileWidth < 1 || TileHeight < 1 || MarginX < 0 || MarginY < 0 || SpacingX < 0 || SpacingY < 0
-            ? []
-            : TileSlicer.Grid(new GridTileSetSource { Id = 1, TileSize = TileSize, Margin = Margin, Spacing = Spacing }, TileSize, ImageSize);
-        Tiles = [.. slices.Select(slice => slice.Region)];
-        Columns = slices.Count == 0 ? 0 : slices.Max(slice => slice.Tile.Column) + 1;
-        Rows = slices.Count == 0 ? 0 : slices.Max(slice => slice.Tile.Row) + 1;
+        var valid = ImageSize != Int2.Zero && TileWidth >= 1 && TileHeight >= 1 && MarginX >= 0 && MarginY >= 0 && SpacingX >= 0 && SpacingY >= 0;
+        var (columns, rows) = valid
+            ? (Count(ImageSize.X, MarginX, TileWidth, SpacingX, TileId.MaxColumn + 1), Count(ImageSize.Y, MarginY, TileHeight, SpacingY, TileId.MaxRow + 1))
+            : (0, 0);
+        // A grid without a row has no column either, and the other way
+        (Columns, Rows) = columns == 0 || rows == 0 ? (0, 0) : (columns, rows);
+        Tiles = (long)Columns * Rows is > 0 and <= OutlineLimit
+            ? [.. TileSlicer.Grid(new GridTileSetSource { Id = 1, TileSize = TileSize, Margin = Margin, Spacing = Spacing }, TileSize, ImageSize).Select(slice => slice.Region)]
+            : [];
         Problem = ImageProblem
             ?? (TileWidth < 1 || TileHeight < 1 ? "A tile is at least 1 pixel wide and 1 pixel high." : null)
             ?? (MarginX < 0 || MarginY < 0 || SpacingX < 0 || SpacingY < 0 ? "The margins and the spacings are 0 or more." : null)
@@ -192,6 +201,13 @@ public sealed class PendingImageSourceViewModel : DispatcherViewModel
                 : null);
         ConfirmCommand.IsEnabled = Problem is null;
         ((GridScene)Scene).RaiseChanged();
+    }
+
+    // How many tiles of a size fit along a side after the margin, a spacing between two, as TileSlicer.Grid cuts them
+    private static int Count(int side, int margin, int size, int spacing, int max)
+    {
+        var room = (long)side - margin - size;
+        return room < 0 ? 0 : (int)Math.Min(room / ((long)size + spacing) + 1, max);
     }
 
     // The image and the outlines of its tiles

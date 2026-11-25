@@ -228,6 +228,26 @@ public sealed class TileSetEditorTilesTests
         }
     }
 
+    // The marks come from the editor's look-up of the definitions, which must follow the asset
+    [Fact]
+    public async Task The_solid_marks_follow_a_change_made_outside_the_editor()
+    {
+        await using var session = await OpenTownAsync();
+        var editor = await session.EditTileSetAsync("Tiles/Town");
+        var bounds = (RectangleF)editor.Scene.Layout!.SlotOf(TileId.Parse("1:2,0"))!.Bounds;
+
+        using (var transaction = session.UndoRedo.CreateTransaction())
+        {
+            TileSetGraph.SetSolid(session.TileSetAt("Tiles/Town"), TileId.Parse("1:2,0"), true);
+            session.UndoRedo.SetName(transaction, "Solid");
+        }
+        var hatch = Assert.Single(Collect(editor).Shapes, shape => shape.Mark == CanvasMark.Hatch);
+        Assert.Equal(bounds, hatch.Bounds);
+
+        session.UndoRedo.Undo();
+        Assert.DoesNotContain(Collect(editor).Shapes, shape => shape.Mark == CanvasMark.Hatch);
+    }
+
     [Fact]
     public async Task A_missing_tile_is_rebound_and_the_other_tile_goes_away()
     {
@@ -372,6 +392,13 @@ public sealed class TileSetEditorTilesTests
     }
 
     private static List<TileId> Tiles(params string[] tiles) => [.. tiles.Select(TileId.Parse)];
+
+    private static CanvasFrame Collect(TileSetEditorViewModel editor)
+    {
+        var frame = new CanvasFrame();
+        editor.Scene.Collect(new RectangleF(0, 0, 64, 32), 1, frame);
+        return frame;
+    }
 
     private static List<TileId> SolidTiles(TesseraSession session)
         => [.. TileSet(session).Tiles.Where(definition => (definition.Collision & TileCollision.Solid) != 0).Select(definition => definition.Tile)];

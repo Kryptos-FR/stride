@@ -308,7 +308,8 @@ internal sealed class FillTool(TileMapEditorViewModel editor) : TileTool(editor)
         }
         var layer = Editor.CurrentLayer;
         var bounds = TilePainting.FillBounds(Document.Map.Asset.Size, Document.UsedBounds(layer), cell);
-        if (TilePainting.Fill(Editor.Read, cell, bounds, Editor.Stamp!) is not { } cells)
+        // A chunk the document does not paint reads as empty: the fill goes round it, as round a wall
+        if (TilePainting.Fill(Editor.Read, cell, bounds, Editor.Stamp!, isWall: place => Document.IsUnreadable(layer, TileLayer.ChunkOf(place))) is not { } cells)
         {
             Editor.Message = "This fill would change more than 512 by 512 cells: close the area first, or fill it in parts.";
             return;

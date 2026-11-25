@@ -8,12 +8,26 @@ using ColorRise.Tessera.Editor.Pictures;
 namespace ColorRise.Tessera.Editor.Avalonia.Controls;
 
 /// <summary>
-/// One bitmap per picture, kept while the picture lives, and written again when the picture's version changed. Used on
-/// the UI thread.
+/// One bitmap per picture, kept while the picture lives, and written again when the picture's version changed. The bitmaps
+/// of pictures that are gone are disposed by <see cref="Sweep"/>, which also runs after each 64 bitmaps made. Used on the UI
+/// thread.
 /// </summary>
 internal static class PictureBitmaps
 {
+    private const int SweepEvery = 64;
+
     private static readonly ConditionalWeakTable<TilePicture, Entry> Entries = new();
+
+    // Every entry made and not disposed, with its picture held weakly: the table forgets an entry with its picture, this list
+    // is how its bitmap is found again to be disposed
+    private static readonly List<Entry> Live = [];
+
+    private static int madeSinceSweep;
+
+    /// <summary>
+    /// The bitmaps made and not disposed.
+    /// </summary>
+    internal static int LiveBitmaps => Live.Count;
 
     /// <summary>
     /// The bitmap of a picture, as its pixels are now; null for a picture without pixels.
@@ -24,13 +38,39 @@ internal static class PictureBitmaps
         {
             return null;
         }
-        var entry = Entries.GetValue(picture, made => new Entry(new WriteableBitmap(new PixelSize(made.Width, made.Height), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul)));
+        if (!Entries.TryGetValue(picture, out var entry))
+        {
+            if (++madeSinceSweep >= SweepEvery)
+            {
+                Sweep();
+            }
+            entry = new Entry(picture, new WriteableBitmap(new PixelSize(picture.Width, picture.Height), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul));
+            Entries.Add(picture, entry);
+            Live.Add(entry);
+        }
         if (entry.Version != picture.Version)
         {
             Write(entry.Bitmap, picture);
             entry.Version = picture.Version;
         }
         return entry.Bitmap;
+    }
+
+    /// <summary>
+    /// Disposes the bitmaps whose picture was collected.
+    /// </summary>
+    internal static void Sweep()
+    {
+        madeSinceSweep = 0;
+        Live.RemoveAll(entry =>
+        {
+            if (entry.Picture.TryGetTarget(out _))
+            {
+                return false;
+            }
+            entry.Bitmap.Dispose();
+            return true;
+        });
     }
 
     private static void Write(WriteableBitmap bitmap, TilePicture picture)
@@ -45,8 +85,10 @@ internal static class PictureBitmaps
         }
     }
 
-    private sealed class Entry(WriteableBitmap bitmap)
+    private sealed class Entry(TilePicture picture, WriteableBitmap bitmap)
     {
+        public WeakReference<TilePicture> Picture { get; } = new(picture);
+
         public WriteableBitmap Bitmap { get; } = bitmap;
 
         // Null until the pixels were written once

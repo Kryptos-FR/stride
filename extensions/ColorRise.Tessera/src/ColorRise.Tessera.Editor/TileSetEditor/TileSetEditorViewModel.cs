@@ -195,6 +195,10 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
 
     private ObservableList<TileSourceItemViewModel> Items { get; } = [];
 
+    // The definitions by tile, the first of each, made again when the asset changes: the marks of the visible tiles read it
+    // each frame
+    private IReadOnlyDictionary<TileId, TileDefinition> Definitions { get; set; } = new Dictionary<TileId, TileDefinition>();
+
     // The copies of the data of the selected tiles that the property grid shows
     private List<TileDataViewModel> TileData { get; } = [];
 
@@ -426,6 +430,7 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
     // The list follows the sources of the asset, the selection stays on its source, or goes to the one before when it is gone
     private void Follow()
     {
+        Definitions = DefinitionsOf(Asset.Asset);
         var sources = Asset.Asset.Sources;
         var selected = SelectedSource;
         var selectedIndex = selected is null ? -1 : Items.IndexOf(selected);
@@ -548,7 +553,18 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         UndoRedoService.SetName(transaction, "Rebind sprite");
     }
 
-    private bool IsSolid(TileId tile) => Asset.Asset.GetDefinition(tile) is { } definition && definition.Collision.HasFlag(TileCollision.Solid);
+    private bool IsSolid(TileId tile) => Definitions.TryGetValue(tile, out var definition) && definition.Collision.HasFlag(TileCollision.Solid);
+
+    private static Dictionary<TileId, TileDefinition> DefinitionsOf(TileSetAsset asset)
+    {
+        var definitions = new Dictionary<TileId, TileDefinition>(asset.Tiles.Count);
+        foreach (var definition in asset.Tiles)
+        {
+            // A file written by hand may have a tile twice: the first is the one the asset gives
+            definitions.TryAdd(definition.Tile, definition);
+        }
+        return definitions;
+    }
 
     // A solid tile is hatched; during a solid drag, the tiles it passed show the value they get at its release
     private CanvasMark? SolidMark(TileId tile)

@@ -333,6 +333,19 @@ public sealed class TileMapEditorTests
     }
 
     [Fact]
+    public async Task A_tile_set_whose_pixels_per_unit_is_not_above_zero_is_named()
+    {
+        // As a hand edit leaves it: the map editor draws its tiles as missing boxes
+        var tileSet = TileSet();
+        tileSet.PixelsPerUnit = 0;
+        var session = await TesseraSession.OpenAsync([("Tiles/Town", tileSet), (Location, Map(tileSet, "Tiles/Town", [["0,0"]]))]);
+        session.WriteImage("Tiles/town.png", 64, 32, Pixel);
+        await using var map = new OpenEditor(session, await session.EditMapAsync(Location));
+
+        Assert.Contains("The tile set 'Town' has a pixels per unit of 0: its tiles show as missing boxes.", map.Editor.Problems);
+    }
+
+    [Fact]
     public async Task A_tile_set_deleted_from_the_session_shows_as_missing()
     {
         await using var map = await OpenAsync([["0,0"]]);

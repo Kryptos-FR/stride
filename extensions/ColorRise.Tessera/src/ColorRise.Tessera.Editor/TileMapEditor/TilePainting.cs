@@ -86,13 +86,14 @@ internal static class TilePainting
     /// The stamp is anchored at the cell zero, so two fills next to each other line up. A hole of the stamp empties its
     /// cells. A start outside the bounds gives nothing, and so do the cells that already have their new value.
     /// </remarks>
+    /// <param name="isWall">The cells the fill never enters, whatever they read as, such as those of a chunk that cannot be read.</param>
     /// <returns>The new value of each changed cell; null when the area has more than <paramref name="limit"/> cells.</returns>
-    public static Dictionary<Int2, TileCell>? Fill(Func<Int2, TileCell> read, Int2 start, Rectangle bounds, TileStamp stamp, int limit = FillLimit)
+    public static Dictionary<Int2, TileCell>? Fill(Func<Int2, TileCell> read, Int2 start, Rectangle bounds, TileStamp stamp, int limit = FillLimit, Func<Int2, bool>? isWall = null)
     {
         ArgumentNullException.ThrowIfNull(read);
         ArgumentNullException.ThrowIfNull(stamp);
         var cells = new Dictionary<Int2, TileCell>();
-        if (!Contains(bounds, start))
+        if (!Contains(bounds, start) || isWall?.Invoke(start) == true)
         {
             return cells;
         }
@@ -114,7 +115,7 @@ internal static class TilePainting
             foreach (var side in (ReadOnlySpan<Int2>)[new(1, 0), new(-1, 0), new(0, 1), new(0, -1)])
             {
                 var neighbour = new Int2(cell.X + side.X, cell.Y + side.Y);
-                if (Contains(bounds, neighbour) && seen.Add(neighbour) && read(neighbour) == target)
+                if (Contains(bounds, neighbour) && seen.Add(neighbour) && isWall?.Invoke(neighbour) != true && read(neighbour) == target)
                 {
                     next.Enqueue(neighbour);
                 }

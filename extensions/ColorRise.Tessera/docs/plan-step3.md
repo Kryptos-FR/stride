@@ -140,14 +140,18 @@ What the tasks build, and who knows whom. The names are fixed here so that every
 **Interfaces:**
 - Produces: `dotnet` 10 on the `PATH`; the worktree `/home/user/stride-master` on the branch `feature/colorrise-tessera-flipbooks`; Stride's packages at `4.5.4-dev` in `/home/user/stride-master/bin/packages`; step 2's tests green; the Avalonia Game Studio built, for Task 17.
 
-- [ ] **Step 1: Set up the container as Task 0 of [plan-step2.md](plan-step2.md) says** (its steps 1 to 4, with the notes of what was done): the .NET 10 SDK in `~/.dotnet`; the worktree, this time `git worktree add -b feature/colorrise-tessera-flipbooks /home/user/stride-master origin/feature/colorrise-tessera-editor`; the author's two `git config` lines; `git lfs pull` and the restore of the one file it stages outside LFS; the three builds in the background with logs (the engine and the editor, the asset compiler, Game Studio).
-- [ ] **Step 2: See step 2's tests pass** before anything changes.
+- [x] **Step 1: Set up the container as Task 0 of [plan-step2.md](plan-step2.md) says** (its steps 1 to 4, with the notes of what was done): the .NET 10 SDK in `~/.dotnet`; the worktree, this time `git worktree add -b feature/colorrise-tessera-flipbooks /home/user/stride-master origin/feature/colorrise-tessera-editor`; the author's two `git config` lines; `git lfs pull` and the restore of the one file it stages outside LFS; the three builds in the background with logs (the engine and the editor, the asset compiler, Game Studio).
+- [x] **Step 2: See step 2's tests pass** before anything changes.
 
 Run: `dotnet test extensions/ColorRise.Tessera/ColorRise.Tessera.slnx`, then `extensions/ColorRise.Tessera/tests/PackagesCheck/run.sh`
 Expected: PASS, 537 tests (262, 239 and 36), none skipped, then `TESSERA-PACKAGES-CHECK OK`.
 
-- [ ] **Step 3: Copy this plan** to `extensions/ColorRise.Tessera/docs/plan-step3.md`, start the ledger with the three answers of Nicolas, commit (`docs(tessera): the plan of step 3`) and push with `git push -u origin feature/colorrise-tessera-flipbooks`.
-- [ ] **Step 4: Gate.** If the engine or Game Studio cannot be built in the container, stop and tell Nicolas what failed, with the end of the log.
+- [x] **Step 3: Copy this plan** to `extensions/ColorRise.Tessera/docs/plan-step3.md`, start the ledger with the three answers of Nicolas, commit (`docs(tessera): the plan of step 3`) and push with `git push -u origin feature/colorrise-tessera-flipbooks`.
+- [x] **Step 4: Gate.** If the engine or Game Studio cannot be built in the container, stop and tell Nicolas what failed, with the end of the log.
+
+**Done (2026-11-25).** .NET SDK 10.0.404. The engine and editor build took 4 min 6 s, the asset compiler 1 min 7 s, Game Studio 35 s, all in the container and without an error. The baseline: 262, 239 and 36 tests pass, none skipped, and `TESSERA-PACKAGES-CHECK OK` (23 s). The ledger is `/mnt/project-files/tilemap/2026-11-25-tessera-step3-ledger.md`.
+
+**Done differently.** The plan was committed and pushed while the builds ran, to learn early that the push works, as in step 2.
 
 ### Task 1: Six deferred fixes of step 2's review (decision 1)
 
@@ -204,10 +208,14 @@ internal static void Sweep();               // disposes the bitmaps of pictures 
     // "chunk 1 is empty", and no exception leaves the compiler
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Run each test project with a filter on the six names. Expected: FAIL, each for its reason (the look-up test passes already if the marks are right today: then it is the net of the refactoring, say so in the ledger).
-- [ ] **Step 3: Write the fixes.** M5: `IsSolid` and every look-up of a visible tile read `Definitions`. M9: an entry keeps a weak reference to its picture; `Sweep` disposes the bitmaps whose picture was collected. M1: the fill reads an unreadable chunk's cells as a wall. M6: above `OutlineLimit` slices, the columns and rows come from arithmetic, not from slicing.
-- [ ] **Step 4: Run the tests of the six files.** Expected: PASS, with step 2's.
-- [ ] **Step 5: Commit and push**: `fix(tessera): six deferred minors of step 2's review`
+- [x] **Step 2: Run them to see them fail.** Run each test project with a filter on the six names. Expected: FAIL, each for its reason (the look-up test passes already if the marks are right today: then it is the net of the refactoring, say so in the ledger).
+- [x] **Step 3: Write the fixes.** M5: `IsSolid` and every look-up of a visible tile read `Definitions`. M9: an entry keeps a weak reference to its picture; `Sweep` disposes the bitmaps whose picture was collected. M1: the fill reads an unreadable chunk's cells as a wall. M6: above `OutlineLimit` slices, the columns and rows come from arithmetic, not from slicing.
+- [x] **Step 4: Run the tests of the six files.** Expected: PASS, with step 2's.
+- [x] **Step 5: Commit and push**: `fix(tessera): six deferred minors of step 2's review`
+
+**Done (2026-11-25).** Red: the look-up test passed already (the net of M5's refactoring, as foreseen); the map editor's problems were empty (M3); the fill wrote 2,0 into the far chunk (M1); the 512 by 512 grid of 2 pixel tiles gave 65,536 outlines (M6); the empty chunk item threw in the command ("Exception in command"); `LiveBitmaps` and `Sweep` did not compile (M9). Green: the six pass, and the whole solution passes, 263, 243 and 37.
+
+**Done differently.** `Definitions` has a private setter: `Follow()` makes a new dictionary at each change of the asset, the first definition of a tile winning as in `TileSetAsset.GetDefinition`. `TilePainting.Fill` takes the wall as an optional `isWall` function, which the fill tool gives as "the document does not paint the chunk of this cell" (`TileMapDocument.IsUnreadable`, so a chunk given twice is a wall too). M6 counts the columns and rows always by arithmetic (the same rule as `TileSlicer.Grid`), and cuts the grid only for its outlines, up to `OutlineLimit` tiles. The empty chunk item is named "Layer 'Ground': the chunk 1 is empty." (counted from 1).
 
 ### Task 2: The data of a flipbook, and which frame a time shows
 

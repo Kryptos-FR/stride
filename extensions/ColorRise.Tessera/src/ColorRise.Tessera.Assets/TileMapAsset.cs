@@ -1,3 +1,4 @@
+using System.Globalization;
 using Stride.Core;
 using Stride.Core.Assets;
 using Stride.Core.Mathematics;
@@ -122,8 +123,14 @@ public sealed class TileMapAsset : Asset
             var layer = layerAsset.ToTileLayer();
             map.Layers.Insert(map.Layers.Count, layer);
             var seen = new HashSet<Int2>();
-            foreach (var chunk in layerAsset.Chunks)
+            for (var index = 0; index < layerAsset.Chunks.Count; index++)
             {
+                // A hand edit or a merge can leave "- ~" in the list
+                if (layerAsset.Chunks[index] is not { } chunk)
+                {
+                    Report(string.Create(CultureInfo.InvariantCulture, $"Layer '{layerAsset.Name}': the chunk {index + 1} is empty."));
+                    continue;
+                }
                 var where = $"Layer '{layerAsset.Name}', chunk ({chunk.Position.X}, {chunk.Position.Y})";
                 if (chunk.Position.X is < MinChunk or > MaxChunk || chunk.Position.Y is < MinChunk or > MaxChunk)
                 {

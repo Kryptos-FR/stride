@@ -46,6 +46,24 @@ public sealed class TileMapCompilerTests
     }
 
     [Fact]
+    public void An_empty_chunk_item_fails_the_build_with_its_layer()
+    {
+        // As a hand edit or a merge leaves "- ~" in the list of chunks
+        using var build = new AssetBuild();
+        var asset = new TileMapAsset { Id = AssetId.New() };
+        var layer = new TileLayerAsset { Name = "Ground" };
+        layer.Chunks.Add(null!);
+        asset.Layers.Add(layer);
+        build.Add("Maps/Town", asset);
+
+        var result = build.Build();
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Errors, error => error.Contains("Ground", StringComparison.Ordinal) && error.Contains("chunk 1 is empty", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Errors, error => error.Contains("Exception", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void A_cell_of_a_slot_the_map_does_not_have_is_kept()
     {
         using var build = new AssetBuild();
