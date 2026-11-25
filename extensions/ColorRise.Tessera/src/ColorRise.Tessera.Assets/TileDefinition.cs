@@ -1,4 +1,5 @@
 using Stride.Core;
+using Stride.Core.Annotations;
 
 namespace ColorRise.Tessera.Assets;
 
@@ -30,8 +31,12 @@ public sealed class TileDefinition
     [DataMember(40)]
     public Dictionary<string, TileProperty> Properties { get; } = [];
 
-    /// <userdoc>The frames the tile shows in turn, with their durations in seconds.</userdoc>
+    /// <summary>
+    /// The frames the tile shows in turn. The property grid cannot add or remove one: Animation mode of the tile set editor does.
+    /// </summary>
+    /// <userdoc>The frames the tile shows in turn, with their durations in seconds. Animation mode adds and removes them.</userdoc>
     [DataMember(50)]
+    [MemberCollection(ReadOnly = true)]
     public List<TileAnimationFrame> Animation { get; } = [];
 
     /// <summary>

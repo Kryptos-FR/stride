@@ -959,7 +959,7 @@ The rules, beyond decision 8:
 - After every change of the asset (`Follow()`): the frames are made again; `SelectedFrame` stays at its index, or the last frame, or null; an animated tile the pictures no longer have is let go.
 - `Problems` gains, for each animated tile of the set with a frame the set does not have: `The animation of the tile 1:3,0 uses the tile 1:9,9, which the tile set does not have.`
 
-- [ ] **Step 1: Try R11 first, as a test.** Before anything else of this task, with only `showAnimation` written:
+- [x] **Step 1: Try R11 first, as a test.** Before anything else of this task, with only `showAnimation` written:
 
 ```csharp
 // TileSetEditorAnimationTests
@@ -973,7 +973,7 @@ The rules, beyond decision 8:
 
 If the first cannot pass (a struct in a list of a copy cannot be edited through its node): stop the grid's part here. The fallback of R11: `TileFrameItemViewModel.Duration` becomes settable and writes through `SetAnimation` (step name `Frame duration`, one more fixed name), Task 11's bar gets a number box per frame, `showAnimation` goes away, and the note under this task says what was seen. The rest of the task does not change.
 
-- [ ] **Step 2: Write the other failing tests**
+- [x] **Step 2: Write the other failing tests**
 
 ```csharp
 [Fact] public async Task The_first_click_picks_the_tile_to_animate_and_adds_no_frame()       // AnimatedTile set, Frames empty, no step
@@ -997,10 +997,14 @@ If the first cannot pass (a struct in a list of a copy cannot be edited through 
 [Fact] public async Task A_frame_whose_tile_is_gone_is_marked_and_named_and_kept()           // IsMissing, Picture null, the line of Problems, the asset still has the frame
 ```
 
-- [ ] **Step 3: Run them to see them fail.** Filter: `FullyQualifiedName~TileSetEditorAnimationTests`. Expected: FAIL to compile.
-- [ ] **Step 4: Write `SetAnimation`, the mode, the frames and the commands.**
-- [ ] **Step 5: Run the tests.** Expected: PASS, with `TileSetEditorTilesTests` and `TileSetEditorSourcesTests` of step 2.
-- [ ] **Step 6: Commit and push**: `feat(tessera): Animation mode of the tile set editor`
+- [x] **Step 3: Run them to see them fail.** Filter: `FullyQualifiedName~TileSetEditorAnimationTests`. Expected: FAIL to compile.
+- [x] **Step 4: Write `SetAnimation`, the mode, the frames and the commands.**
+- [x] **Step 5: Run the tests.** Expected: PASS, with `TileSetEditorTilesTests` and `TileSetEditorSourcesTests` of step 2.
+- [x] **Step 6: Commit and push**: `feat(tessera): Animation mode of the tile set editor`
+
+**Done (2026-11-25).** R11 holds: with only `showAnimation` and the attribute written, both spike tests passed at once after a red that did not compile. The grid edits `Duration` inside a frame of the copy, the listener hears it, `ToDefinition()` has it, and `[MemberCollection(ReadOnly = true)]` takes away the grid's add, remove and move of frames; the tile set golden file of step 1 is unchanged (runtime tests 395). Red: the 17 other tests did not compile (`AnimatedTile`, `TileSetEditorMode.Animation` not found). Green: 19 of the filter, editor project 278, views project 43.
+
+**Done differently.** The spike test writes the copy as the editor writes tile data (`TileSetGraph.SetDefinition` in a step `Tile data`), since the mode did not exist yet; the editor's own write of a duration set in the grid is checked by `A_click_adds_a_frame_at_the_end_that_lasts_as_the_one_before`. `SetAnimation` writes only the frames that differ (the frames shared at the start and the end stay), so an added or removed frame is one item of the list and the selection never sees a list emptied on the way. An animated tile is also let go as soon as its source is gone from the asset, before the pictures are made again (they are made on a later turn). `Problems` has one line per animated tile and missing frame tile, and none for the tiles of a source whose image cannot be read, which has its own line. The frames are made again only when a frame or its picture changed. In Animation mode, `SelectedTiles` keeps the selection of Select mode, which the scene and the grid show again when the mode ends.
 
 ### Task 11: The view of Animation mode, and a control that shows one picture
 

@@ -133,6 +133,62 @@ internal static class TileSetGraph
     }
 
     /// <summary>
+    /// Writes the frames of a tile and keeps its other data. A definition left with nothing is removed; a tile without one
+    /// gets one, at its place in the order of the tiles. Only the frames that differ are written: the frames the old and the
+    /// new list share at their start and at their end stay as they are.
+    /// </summary>
+    public static void SetAnimation(TileSetViewModel tileSet, TileId tile, IReadOnlyList<TileAnimationFrame> frames)
+    {
+        ArgumentNullException.ThrowIfNull(frames);
+        var asset = tileSet.Asset;
+        var tiles = Root(tileSet)[nameof(TileSetAsset.Tiles)].Target!;
+        var index = asset.Tiles.FindIndex(existing => existing.Tile == tile);
+        if (index < 0)
+        {
+            if (frames.Count > 0)
+            {
+                var added = new TileDefinition { Tile = tile };
+                added.Animation.AddRange(frames);
+                tiles.Add(added, new NodeIndex(PlaceOf(asset, tile)));
+            }
+            return;
+        }
+        var definition = asset.Tiles[index];
+        if (frames.Count == 0 && definition.Collision == TileCollision.None && string.IsNullOrEmpty(definition.Kind) && definition.Properties.Count == 0)
+        {
+            tiles.Remove(definition, new NodeIndex(index));
+            return;
+        }
+        var old = definition.Animation;
+        var animation = tiles.IndexedTarget(new NodeIndex(index))![nameof(TileDefinition.Animation)].Target!;
+        var start = 0;
+        while (start < old.Count && start < frames.Count && old[start].Equals(frames[start]))
+        {
+            start++;
+        }
+        var end = 0;
+        while (end < old.Count - start && end < frames.Count - start && old[old.Count - 1 - end].Equals(frames[frames.Count - 1 - end]))
+        {
+            end++;
+        }
+        var (oldMiddle, newMiddle) = (old.Count - start - end, frames.Count - start - end);
+        var updated = Math.Min(oldMiddle, newMiddle);
+        for (var i = 0; i < updated; i++)
+        {
+            animation.Update(frames[start + i], new NodeIndex(start + i));
+        }
+        for (var i = updated; i < newMiddle; i++)
+        {
+            animation.Add(frames[start + i], new NodeIndex(start + i));
+        }
+        // From the end, so that the indices that remain are still right
+        for (var i = oldMiddle - 1; i >= updated; i--)
+        {
+            animation.Remove(old[start + i], new NodeIndex(start + i));
+        }
+    }
+
+    /// <summary>
     /// Sets or clears the solid flag of a tile, and keeps its other data; false when the tile already was so. A definition
     /// that says nothing more goes away.
     /// </summary>

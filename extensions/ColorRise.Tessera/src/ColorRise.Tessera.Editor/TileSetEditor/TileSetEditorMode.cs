@@ -13,4 +13,8 @@ public enum TileSetEditorMode
     /// A press sets a tile solid when it was not, and clears it when it was; the tiles the drag passes get the same value.
     /// </summary>
     Solid,
+    /// <summary>
+    /// The first click picks the tile to animate; each click after it adds the clicked tile as a frame of that tile.
+    /// </summary>
+    Animation,
 }

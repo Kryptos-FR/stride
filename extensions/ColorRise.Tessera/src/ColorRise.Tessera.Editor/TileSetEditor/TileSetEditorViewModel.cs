@@ -25,11 +25,17 @@ using Stride.Graphics;
 namespace ColorRise.Tessera.Editor.TileSetEditor;
 
 /// <summary>
-/// The editor of a tile set: its sources (images cut on a grid, and sprite sheets) and the data of its tiles.
+/// The editor of a tile set: its sources (images cut on a grid, and sprite sheets), the data of its tiles, and their
+/// animations. Every animated tile of the source shown plays in place, in the three modes.
 /// </summary>
 [AssetEditorViewModel<TileSetViewModel>]
 public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewModel>, IAddChildViewModel
 {
+    // The duration of the first frame of a tile, in seconds; each frame after it lasts as the one before it
+    private const float FirstFrameDuration = 0.2f;
+    // The numbers written on a frame's tile: beyond this many, an ellipsis
+    private const int ShownFrameNumbers = 3;
+
     // The tiles a solid drag passed, in order, and the value they get at its release; null when no drag is open
     private List<TileId>? solidDrag;
     private bool solidValue;
@@ -52,7 +58,20 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         RemoveSourceCommand = new AnonymousTaskCommand(ServiceProvider, RemoveSourceAsync);
         RefreshCommand = new AnonymousCommand(ServiceProvider, Pictures.Refresh);
         RebindSpriteCommand = new AnonymousTaskCommand<string>(ServiceProvider, RebindSpriteAsync) { IsEnabled = false };
+        RemoveFrameCommand = new AnonymousCommand(ServiceProvider, RemoveFrame) { IsEnabled = false };
+        MoveFrameLeftCommand = new AnonymousCommand(ServiceProvider, () => MoveSelectedFrame(-1)) { IsEnabled = false };
+        MoveFrameRightCommand = new AnonymousCommand(ServiceProvider, () => MoveSelectedFrame(1)) { IsEnabled = false };
+        ClearFramesCommand = new AnonymousCommand(ServiceProvider, ClearFrames) { IsEnabled = false };
+        DoneAnimationCommand = new AnonymousCommand(ServiceProvider, () => Animate(null)) { IsEnabled = false };
         Scene.Mode = TilePickMode.Many;
+        // The animated tiles play in the three modes
+        Scene.Plays = true;
+        Scene.IsAnimated = tile => Definitions.TryGetValue(tile, out var definition) && definition.Animation.Count > 0;
+        Scene.FrameOf = (tile, time) => Definitions.TryGetValue(tile, out var definition) && definition.Animation.Count > 0
+            ? Pictures.Find(ColorRise.Tessera.Tile.FrameAt(definition.Animation, tile, time))
+            : null;
+        Scene.LabelOf = FrameNumbers;
+        Scene.KeyHandler = AnimationKeyPressed;
     }
 
     /// <summary>
@@ -85,21 +104,91 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
     }
 
     /// <summary>
-    /// What a press on a tile does: select it, or set it solid.
+    /// What a press on a tile does: select it, set it solid, or animate it. Entering Animation mode with one tile selected
+    /// animates that tile; leaving it lets go of the animated tile, and the grid shows the selection again.
     /// </summary>
     public TileSetEditorMode Mode
     {
         get;
         set
         {
+            var left = field;
             if (SetValue(ref field, value))
             {
                 // The scene forgets the press in progress
                 EndSolidDrag();
-                Scene.Mode = value == TileSetEditorMode.Solid ? TilePickMode.Paint : TilePickMode.Many;
+                Scene.Mode = value switch
+                {
+                    TileSetEditorMode.Solid => TilePickMode.Paint,
+                    TileSetEditorMode.Animation => TilePickMode.One,
+                    _ => TilePickMode.Many,
+                };
+                if (value == TileSetEditorMode.Animation)
+                {
+                    Animate(SelectedTiles is [var only] ? only : null);
+                }
+                else if (left == TileSetEditorMode.Animation)
+                {
+                    LeaveAnimation();
+                }
             }
         }
     }
+
+    /// <summary>
+    /// The tile whose frames Animation mode edits; null before the first click, and out of Animation mode.
+    /// </summary>
+    public TileId? AnimatedTile
+    {
+        get;
+        private set => SetValue(ref field, value);
+    }
+
+    /// <summary>
+    /// The frames of <see cref="AnimatedTile"/>, in order; made again after each change of the asset.
+    /// </summary>
+    public IReadOnlyObservableList<TileFrameItemViewModel> Frames => FrameItems;
+
+    /// <summary>
+    /// The frame a click adds after, that Delete removes and that the move commands move; null for none: a click then adds
+    /// at the end.
+    /// </summary>
+    public TileFrameItemViewModel? SelectedFrame
+    {
+        get;
+        set
+        {
+            if (SetValue(ref field, value))
+            {
+                UpdateFrameCommands();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Removes the selected frame, then selects the frame that took its place, or the last.
+    /// </summary>
+    public ICommandBase RemoveFrameCommand { get; }
+
+    /// <summary>
+    /// Moves the selected frame one place earlier.
+    /// </summary>
+    public ICommandBase MoveFrameLeftCommand { get; }
+
+    /// <summary>
+    /// Moves the selected frame one place later.
+    /// </summary>
+    public ICommandBase MoveFrameRightCommand { get; }
+
+    /// <summary>
+    /// Removes all the frames of the animated tile.
+    /// </summary>
+    public ICommandBase ClearFramesCommand { get; }
+
+    /// <summary>
+    /// Lets go of the animated tile: the next click picks another.
+    /// </summary>
+    public ICommandBase DoneAnimationCommand { get; }
 
     /// <summary>
     /// The selected tiles of the selected source, in the order of their ids; the property grid shows their data.
@@ -195,6 +284,11 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
 
     private ObservableList<TileSourceItemViewModel> Items { get; } = [];
 
+    private ObservableList<TileFrameItemViewModel> FrameItems { get; } = [];
+
+    // The numbers of the animated tile's frames, by the tile each one shows: "2, 4" for a tile that is the frames 2 and 4
+    private IReadOnlyDictionary<TileId, string> FrameLabels { get; set; } = new Dictionary<TileId, string>();
+
     // The definitions by tile, the first of each, made again when the asset changes: the marks of the visible tiles read it
     // each frame
     private IReadOnlyDictionary<TileId, TileDefinition> Definitions { get; set; } = new Dictionary<TileId, TileDefinition>();
@@ -247,6 +341,10 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         {
             item.Destroy();
         }
+        foreach (var frame in FrameItems)
+        {
+            frame.Destroy();
+        }
         base.Destroy();
     }
 
@@ -288,6 +386,23 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         Select(added);
         Message = null;
         return true;
+    }
+
+    /// <summary>
+    /// Moves a frame of the animated tile to another place, in one step; the moved frame is selected.
+    /// </summary>
+    public void MoveFrame(int from, int to)
+    {
+        var frames = CurrentFrames();
+        if (from < 0 || from >= frames.Count || to < 0 || to >= frames.Count || from == to)
+        {
+            return;
+        }
+        var frame = frames[from];
+        frames.RemoveAt(from);
+        frames.Insert(to, frame);
+        WriteFrames(frames, "Move frame");
+        SelectedFrame = to < FrameItems.Count ? FrameItems[to] : null;
     }
 
     /// <inheritdoc/>
@@ -431,6 +546,11 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
     private void Follow()
     {
         Definitions = DefinitionsOf(Asset.Asset);
+        // An animated tile whose source is gone is let go
+        if (AnimatedTile is { } animated && (!Asset.Asset.Sources.Any(source => source.Id == animated.Source) || Pictures.Find(animated) is null))
+        {
+            Animate(null);
+        }
         var sources = Asset.Asset.Sources;
         var selected = SelectedSource;
         var selectedIndex = selected is null ? -1 : Items.IndexOf(selected);
@@ -465,9 +585,11 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         SelectionFollows(show: false);
         UpdateRebind();
         TileDataFollows();
+        FramesFollow();
         UpdateProblems();
-        // The marks of the solid tiles are drawn again
+        // The marks of the solid tiles are drawn again, and the animated tiles found again
         Scene.MarkOf = SolidMark;
+        Scene.Refresh();
     }
 
     // The scene forgets a press when its source changes: the solid drag in progress ends with it. The pictures of the same
@@ -481,9 +603,19 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         Scene.Layout = layout;
     }
 
-    // The selected tiles are the scene's; the property grid shows them when they change, or when asked
+    // The selected tiles are the scene's; the property grid shows them when they change, or when asked. In Animation mode,
+    // the scene's selection is the animated tile, and the selected tiles wait for the end of the mode
     private void SelectionFollows(bool show)
     {
+        if (Mode == TileSetEditorMode.Animation)
+        {
+            ShowAnimatedTile();
+            if (show)
+            {
+                ShowProperties();
+            }
+            return;
+        }
         if (SelectedTiles.SequenceEqual(Scene.Selection))
         {
             if (show)
@@ -573,7 +705,183 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         return solid ? CanvasMark.Hatch : null;
     }
 
-    private void SceneSelectionChanged(object? sender, EventArgs e) => SelectionFollows(show: false);
+    private void SceneSelectionChanged(object? sender, EventArgs e)
+    {
+        if (Mode != TileSetEditorMode.Animation)
+        {
+            SelectionFollows(show: false);
+            return;
+        }
+        // A click in Animation mode: the first picks the tile to animate, each one after it adds a frame
+        if (Scene.Selection is [var clicked])
+        {
+            if (AnimatedTile is null)
+            {
+                Animate(clicked);
+            }
+            else
+            {
+                AddFrame(clicked);
+            }
+        }
+        ShowAnimatedTile();
+    }
+
+    // Animates a tile, or lets go of the animated tile: the frames, the scene's selection and the grid follow
+    private void Animate(TileId? tile)
+    {
+        AnimatedTile = tile;
+        SelectedFrame = null;
+        FramesFollow();
+        ShowAnimatedTile();
+        ShowProperties();
+    }
+
+    // Out of Animation mode: the scene and the grid show the selection of Select mode again
+    private void LeaveAnimation()
+    {
+        AnimatedTile = null;
+        SelectedFrame = null;
+        FramesFollow();
+        Scene.Select(SelectedTiles);
+        SelectionFollows(show: true);
+    }
+
+    // The animated tile is the scene's selection, when the source shown has it
+    private void ShowAnimatedTile()
+    {
+        IReadOnlyList<TileId> shown = AnimatedTile is { } tile && Scene.Layout?.SlotOf(tile) is not null ? [tile] : [];
+        if (!Scene.Selection.SequenceEqual(shown))
+        {
+            Scene.Select(shown);
+        }
+    }
+
+    // The frames of the animated tile, made again when they or their pictures changed; the selected frame stays at its
+    // place, or goes to the last frame
+    private void FramesFollow()
+    {
+        IReadOnlyList<TileAnimationFrame> frames = AnimatedTile is { } tile && Definitions.TryGetValue(tile, out var definition) ? definition.Animation : [];
+        var slots = frames.Select(frame => Pictures.Find(frame.Tile)).ToList();
+        var same = frames.Count == FrameItems.Count && FrameItems.Select((item, index) =>
+            item.Tile == frames[index].Tile && item.Duration == frames[index].Duration && item.Picture == slots[index]?.Picture && item.Region == (slots[index]?.Region ?? default)).All(equal => equal);
+        if (!same)
+        {
+            var selected = SelectedFrame is { } frame && FrameItems.Contains(frame) ? frame.Index : -1;
+            foreach (var item in FrameItems)
+            {
+                item.Destroy();
+            }
+            FrameItems.Clear();
+            for (var index = 0; index < frames.Count; index++)
+            {
+                FrameItems.Add(new TileFrameItemViewModel(ServiceProvider, index, frames[index], slots[index]));
+            }
+            SelectedFrame = selected < 0 || FrameItems.Count == 0 ? null : FrameItems[Math.Min(selected, FrameItems.Count - 1)];
+            FrameLabels = LabelsOf(frames);
+            // The numbers on the tiles are written again
+            Scene.LabelOf = FrameNumbers;
+        }
+        UpdateFrameCommands();
+    }
+
+    private static Dictionary<TileId, string> LabelsOf(IReadOnlyList<TileAnimationFrame> frames)
+    {
+        var labels = new Dictionary<TileId, string>();
+        foreach (var group in frames.Select((frame, index) => (frame.Tile, Number: index + 1)).GroupBy(frame => frame.Tile))
+        {
+            var numbers = group.Select(frame => frame.Number.ToString(CultureInfo.InvariantCulture)).ToList();
+            labels[group.Key] = string.Join(", ", numbers.Take(ShownFrameNumbers)) + (numbers.Count > ShownFrameNumbers ? "\u2026" : "");
+        }
+        return labels;
+    }
+
+    private string? FrameNumbers(TileId tile) => FrameLabels.GetValueOrDefault(tile);
+
+    private void UpdateFrameCommands()
+    {
+        var selected = SelectedFrame is { } frame && FrameItems.Contains(frame) ? frame.Index : -1;
+        RemoveFrameCommand.IsEnabled = selected >= 0;
+        MoveFrameLeftCommand.IsEnabled = selected > 0;
+        MoveFrameRightCommand.IsEnabled = selected >= 0 && selected < FrameItems.Count - 1;
+        ClearFramesCommand.IsEnabled = FrameItems.Count > 0;
+        DoneAnimationCommand.IsEnabled = AnimatedTile is not null;
+    }
+
+    // In Animation mode, Delete removes the selected frame and Escape lets go of the animated tile; in the other modes, the
+    // scene uses no key
+    private bool AnimationKeyPressed(CanvasKey key, CanvasModifiers modifiers)
+    {
+        if (Mode != TileSetEditorMode.Animation)
+        {
+            return false;
+        }
+        switch (key)
+        {
+            case CanvasKey.Delete:
+                RemoveFrame();
+                return true;
+            case CanvasKey.Escape:
+                Animate(null);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    // The frames of the animated tile as the asset has them
+    private List<TileAnimationFrame> CurrentFrames()
+        => AnimatedTile is { } tile && Definitions.TryGetValue(tile, out var definition) ? [.. definition.Animation] : [];
+
+    // A frame of the clicked tile after the selected frame, or at the end, that lasts as the frame before it
+    private void AddFrame(TileId tile)
+    {
+        var frames = CurrentFrames();
+        var at = SelectedFrame is { } selected && FrameItems.Contains(selected) ? selected.Index + 1 : frames.Count;
+        var duration = at > 0 ? frames[at - 1].Duration : FirstFrameDuration;
+        frames.Insert(at, new TileAnimationFrame { Tile = tile, Duration = duration });
+        WriteFrames(frames, "Add frame");
+        SelectedFrame = at < FrameItems.Count ? FrameItems[at] : null;
+    }
+
+    private void RemoveFrame()
+    {
+        if (SelectedFrame is not { } selected || !FrameItems.Contains(selected))
+        {
+            return;
+        }
+        var index = selected.Index;
+        var frames = CurrentFrames();
+        frames.RemoveAt(index);
+        WriteFrames(frames, "Remove frame");
+        SelectedFrame = FrameItems.Count == 0 ? null : FrameItems[Math.Min(index, FrameItems.Count - 1)];
+    }
+
+    private void MoveSelectedFrame(int by)
+    {
+        if (SelectedFrame is { } selected && FrameItems.Contains(selected))
+        {
+            MoveFrame(selected.Index, selected.Index + by);
+        }
+    }
+
+    private void ClearFrames()
+    {
+        WriteFrames([], "Clear frames");
+        SelectedFrame = null;
+    }
+
+    // The frames of the animated tile in one step; none when they are the same
+    private void WriteFrames(List<TileAnimationFrame> frames, string step)
+    {
+        if (AnimatedTile is not { } tile || CurrentFrames().SequenceEqual(frames))
+        {
+            return;
+        }
+        using var transaction = UndoRedoService.CreateTransaction();
+        TileSetGraph.SetAnimation(Asset, tile, frames);
+        UndoRedoService.SetName(transaction, step);
+    }
 
     // The first tile of a drag gives the value: solid when it was not, not solid when it was
     private void ScenePainted(object? sender, TileId tile)
@@ -727,9 +1035,32 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
                 }
             }
         }
+        problems.AddRange(MissingFrames());
         if (!problems.SequenceEqual(Problems))
         {
             Problems = problems;
+        }
+    }
+
+    // A line for each frame of an animated tile whose tile the set does not have; a source whose image cannot be read has
+    // its own line
+    private IEnumerable<string> MissingFrames()
+    {
+        var unread = Pictures.Sources.Where(layout => layout.Problem is not null).Select(layout => layout.Source.Id).ToHashSet();
+        var seen = new HashSet<TileId>();
+        foreach (var definition in Asset.Asset.Tiles)
+        {
+            if (!seen.Add(definition.Tile))
+            {
+                continue;
+            }
+            foreach (var frame in definition.Animation.Select(frame => frame.Tile).Distinct())
+            {
+                if (Pictures.Find(frame) is null && !unread.Contains(frame.Source))
+                {
+                    yield return $"The animation of the tile {definition.Tile} uses the tile {frame}, which the tile set does not have.";
+                }
+            }
         }
     }
 
@@ -740,6 +1071,20 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
             return;
         }
         DropTileData();
+        if (Mode == TileSetEditorMode.Animation)
+        {
+            // The animated tile's data, with the durations of its frames; nothing without an animated tile
+            if (AnimatedTile is { } tile)
+            {
+                var data = new TileDataViewModel(ServiceProvider, Session.AssetNodeContainer, tile, Asset.Asset.GetDefinition(tile), showAnimation: true);
+                data.Changed += TileDataChanged;
+                TileData.Add(data);
+                EditorProperties.TypeDescription = "Animated tile";
+                EditorProperties.Name = tile.ToString();
+            }
+            EditorProperties.GenerateSelectionPropertiesAsync(TileData.ToList()).Forget();
+            return;
+        }
         if (SelectedTiles.Count > 0)
         {
             foreach (var tile in SelectedTiles)
