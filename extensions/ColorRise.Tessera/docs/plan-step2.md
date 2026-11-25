@@ -903,7 +903,7 @@ internal static class CanvasProbe
 internal sealed class RecordingInput : ICanvasInput { public List<string> Events { get; } }   // "press 20,40 Left None", "move ...", "key B None"; KeyPressed returns Handles
 ```
 
-- [ ] **Step 1: Write the failing tests of `CanvasView`**
+- [x] **Step 1: Write the failing tests of `CanvasView`**
 
 ```csharp
 [Fact]
@@ -933,7 +933,7 @@ public void Fit_shows_all_of_the_bounds_at_the_largest_step_centred()
 [Fact] public void Changed_is_raised_once_per_change()
 ```
 
-- [ ] **Step 2: Write the failing tests of `TileCanvas`.** Each shows a canvas of 64 by 64 pixels in a window, with a scene made in the test (`TestScene`: a list of sprites and shapes it gives back, a `GridSize`).
+- [x] **Step 2: Write the failing tests of `TileCanvas`.** Each shows a canvas of 64 by 64 pixels in a window, with a scene made in the test (`TestScene`: a list of sprites and shapes it gives back, a `GridSize`).
 
 ```csharp
 [AvaloniaFact]
@@ -968,17 +968,25 @@ public void A_key_reaches_the_input_only_while_the_canvas_has_the_focus()
 [AvaloniaFact] public void A_key_the_input_did_not_use_is_not_marked_handled()   // a KeyDown handler on the window sees Handled false for I when the input returns false, true when it returns true
 ```
 
-- [ ] **Step 3: Run them to see them fail.** Filters: `FullyQualifiedName~CanvasViewTests` in the editor tests, `FullyQualifiedName~TileCanvasTests` in the Avalonia tests. Expected: FAIL to compile.
+- [x] **Step 3: Run them to see them fail.** Filters: `FullyQualifiedName~CanvasViewTests` in the editor tests, `FullyQualifiedName~TileCanvasTests` in the Avalonia tests. Expected: FAIL to compile.
 
-- [ ] **Step 4: Write `CanvasView` and the interfaces, then `TileCanvas`.**
+- [x] **Step 4: Write `CanvasView` and the interfaces, then `TileCanvas`.**
   - The canvas draws in this order: its background, the sprites, the grid, the shapes. A sprite is a bitmap drawn with `BitmapInterpolationMode.None`. Lines and outlines are one screen pixel wide at every zoom. The grid is drawn only while a cell is at least 4 screen pixels.
   - `PictureBitmaps` keeps one `WriteableBitmap` per `TilePicture`, weakly, and writes it again when the picture's `Version` changed.
   - The canvas can take the focus, and takes it on a pointer press. The key of an event is the key as the keyboard layout names it (`KeyEventArgs.Key`), so that Z is the key marked Z.
   - While Space is down or the middle button is held, the input hears nothing.
 
-- [ ] **Step 5: Run the tests.** Expected: PASS, 7 and 11 tests. If Skia cannot draw without a window in the container, stop and write what failed: the pixel tests of the views depend on it (its fallback is to test the frame a scene gives, without pixels, and to look at screenshots by hand).
+- [x] **Step 5: Run the tests.** Expected: PASS, 7 and 11 tests. If Skia cannot draw without a window in the container, stop and write what failed: the pixel tests of the views depend on it (its fallback is to test the frame a scene gives, without pixels, and to look at screenshots by hand).
 
-- [ ] **Step 6: Commit and push**: `feat(tessera): the tile canvas: zoom, pan, pictures with hard pixels, grid and shapes`
+- [x] **Step 6: Commit and push**: `feat(tessera): the tile canvas: zoom, pan, pictures with hard pixels, grid and shapes`
+
+**Done (2026-11-25).** Gates: the tests fail to compile without the canvas, then 7 and 11 pass. Skia draws without a window in the container (the headless platform with `UseHeadlessDrawing = false`), so the pixel tests read real frames. The hatch test failed once, on lines that did not go through the corner of the shape, before it passed. The whole editor test project passes (35), and the Avalonia test project (11), with no compiler warning.
+
+**Done differently.**
+- `TileCanvas` has a `Background` brush (dark grey by default), so that the tests know the colour behind the sprites.
+- `The_middle_button_pans` runs at zoom 2, so that "over the zoom" is checked. `The_pointer_reaches_the_input_in_canvas_units` uses a canvas of 100 by 100, as the press at (40, 80) is outside 64 by 64; a border beside it is where the pointer goes to leave.
+- The hatch lines are 6 screen pixels apart, and one goes through the top left corner of the shape.
+- Whether the canvas is in a window is read with Avalonia's `IsAttachedToVisualTree()` extension.
 
 ### Task 7: Stamps, the scene of a source, and the palette
 

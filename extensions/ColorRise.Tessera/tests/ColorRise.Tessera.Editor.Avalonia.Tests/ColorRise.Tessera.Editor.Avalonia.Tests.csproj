@@ -14,6 +14,8 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="Avalonia.Headless.XUnit" Version="$(TesseraAvaloniaVersion)" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="$(TesseraAvaloniaVersion)" />
+    <!-- Skia draws the frames of the tests for real, so that a test reads their pixels -->
+    <PackageReference Include="Avalonia.Skia" Version="$(TesseraAvaloniaVersion)" />
     <!-- Stride's test kit for the view models of editor plugins: the views of these tests show the editors of its session -->
     <PackageReference Include="Stride.Assets.Editor.Testing" Version="$(TesseraStrideVersion)" />
   </ItemGroup>
