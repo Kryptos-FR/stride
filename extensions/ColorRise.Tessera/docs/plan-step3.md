@@ -1581,8 +1581,8 @@ What the check game gains:
 - `town.png` gains a third row: two more waters, with their waves moved, and two spare tiles. The ids of the tiles already there do not change.
 - `Walker`, a `SyncScript` on the entity of the flipbook: it walks around a square of 2 units a side, 2 seconds a side (down, right, up, left), sets `Direction` with `FlipbookDirections.FromVector` and plays `walk`. No key is read.
 
-- [ ] **Step 1: Draw the two images, write the script,** and build the check game from the command line. Expected: the build succeeds.
-- [ ] **Step 2: Open it in Game Studio and go through the list.** Each line gets "seen", "not as planned: ..." or "could not be checked: ..." in `docs/studio-check.md`.
+- [x] **Step 1: Draw the two images, write the script,** and build the check game from the command line. Expected: the build succeeds.
+- [x] **Step 2: Open it in Game Studio and go through the list.** Each line gets "seen", "not as planned: ..." or "could not be checked: ..." in `docs/studio-check.md`.
   1. The plugin loads with no error about Tessera in the log. *Add asset* has `Flipbook` in the group `Sprite`, with its icon, and it makes a flipbook with the animation `idle`.
   2. **Animation mode.** In the tile set `TileSet`: the button; a click on the water, then on the three waters: the bar has three frames with their pictures, and the water plays in place on the canvas (two pictures a moment apart). A duration changed in the property grid changes the speed (R11 by hand). `<`, `>`, `x`, Delete and `Clear` do what they say, undo and redo work from the Edit menu, and the corner mark stays in Select mode.
   3. **The map editor plays.** The water of the map plays (two pictures); the button of the tool bar stops it on its first frame; the setting is in Game Studio's settings under Tessera; a stamp painted while it plays lands where it should. With a map without animated tiles in view, Game Studio's CPU is what it was (`top`, before and after): write both numbers.
@@ -1601,9 +1601,25 @@ What the check game gains:
   16. **A flipbook edited while its scene is open (R13).** With the scene open, a frame's tile changed in the flipbook editor, then a save: the scene view shows the new frame without the scene being opened again. If it does not: a finding, and the README says to open the scene again.
   17. **The game.** With `Walker` on the figure: `dotnet run` under Xvfb, four pictures two seconds apart show the four directions, the water is not the same in two of them, and the walker passes behind the standing figure on the top side of its square and in front of it on the bottom side.
   18. The WPF Game Studio is not checked, as in step 2: say so.
-- [ ] **Step 3: Fix what the list found** in the task that owns it, each fix with a test that would have caught it where a test can, and each gap of the plugin model as a row of `docs/plugin-findings.md`. A line "not as planned" that is not fixed is in the report with its reason.
-- [ ] **Step 4: Give the packages check a flipbook.** The game `run.sh` writes outside the checkout gains a flipbook asset on its tile set and an entity that shows it beside the map; its build compiles the flipbook with the asset compiler, and the game reads one more pixel of its one frame, inside the flipbook's frame, before it prints its line. Run `tests/PackagesCheck/run.sh`. Expected: `TESSERA-PACKAGES-CHECK OK`.
-- [ ] **Step 5: Commit and push**: `test(tessera): flipbooks and animated tiles in the check game, and what was seen`
+- [x] **Step 3: Fix what the list found** in the task that owns it, each fix with a test that would have caught it where a test can, and each gap of the plugin model as a row of `docs/plugin-findings.md`. A line "not as planned" that is not fixed is in the report with its reason.
+- [x] **Step 4: Give the packages check a flipbook.** The game `run.sh` writes outside the checkout gains a flipbook asset on its tile set and an entity that shows it beside the map; its build compiles the flipbook with the asset compiler, and the game reads one more pixel of its one frame, inside the flipbook's frame, before it prints its line. Run `tests/PackagesCheck/run.sh`. Expected: `TESSERA-PACKAGES-CHECK OK`.
+- [x] **Step 5: Commit and push**: `test(tessera): flipbooks and animated tiles in the check game, and what was seen`
+
+**Done differently** (16a72c65e, 863255f6b, 2843773e4, da3cc6ca1, 576d3e65b, 0756d4567, d00357b2e). The flipbook of the
+check game is `HeroFlipbook`: Game Studio refuses two assets of one name in a folder, and the tile set is `Hero`. The
+check game and what was seen were committed first, then each fix in a commit of its own, and the lines of
+`studio-check.md` were updated once the fixes were seen in Game Studio. Line 16's change of a frame's tile was made by
+adding the new frame and removing the old one: the editor has no command to change a frame's tile. Four things the list
+found were fixed, each with a test that failed first: the preview of a clip selected while empty now waits for a frame
+to fit (`FlipbookPreviewScene.Bounds` is null until then); the directions have a `Display` name each and every text
+Tessera writes names them with `FlipbookDirections.NameOf` ("Any direction", "Down left"); the selector both features
+share is named "Tiles in the transparent stage"; and `TileFlip` and `TileCollision` have an editor of their own in the
+Avalonia property grid, `FlagsBox`, a check box for each flag (finding 19), since Game Studio's writes nothing. Not
+fixed: the property grid still lists the directions by their names in the code, as it does Stride's own enums (finding
+20, Stride's gap, only a label); and line 6's preview, once still after the first `Make`, which did not happen again.
+The packages check's game is 96 by 64 pixels, with the flipbook `Lamp` (one frame, the yellow tile) on the right of the
+map, and reads its pixel (80, 32): without the entity it reads the clear colour and fails. Tests: runtime 403, editor
+364, views 69.
 
 ### Task 18: The write-up and the gates
 
