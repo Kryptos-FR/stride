@@ -17,6 +17,10 @@
     <ProjectReference Include="..\..\src\ColorRise.Tessera.Editor\ColorRise.Tessera.Editor.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The PNG writer of the runtime tests, for the images the tile sets of these tests cut -->
+    <Compile Include="..\ColorRise.Tessera.Tests\Assets\TestImages.cs" Link="TestImages.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 </Project>

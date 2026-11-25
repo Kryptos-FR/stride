@@ -1,0 +1,9 @@
+!TemplateAssetFactory
+Id: 0d0fbc70-453c-40f5-b6d3-d181003f308d
+AssetTypeName: TileSetAsset
+Name: Tile set
+Scope: Asset
+Description: Tiles cut from images on a grid, or taken from sprite sheets, for tile maps
+Group: Sprite
+DefaultOutputName: TileSet
+Icon: .sdtpl/TileSet.png

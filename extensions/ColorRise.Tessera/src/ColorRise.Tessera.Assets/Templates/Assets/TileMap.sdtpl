@@ -1,0 +1,10 @@
+!TemplateAssetFactory
+Id: eb9c4c56-59cf-4411-8076-6d5717d33c8d
+AssetTypeName: TileMapAsset
+Name: Tile map
+Scope: Asset
+Description: A map of layers painted with the tiles of one or several tile sets
+Group: Sprite
+DefaultOutputName: TileMap
+FactoryTypeName: TileMapAssetFactory
+Icon: .sdtpl/TileMap.png

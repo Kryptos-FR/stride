@@ -39,7 +39,7 @@ public sealed class TileSetAsset : Asset
     /// </summary>
     /// <userdoc>How many pixels of a tile make one unit of the world. With 16, a tile of 16 pixels is one unit wide.</userdoc>
     [DataMember(20)]
-    [DataMemberRange(0.01, 2)]
+    [DataMemberRange(minimum: 0.01, decimalPlaces: 2)]
     [Display("Pixels per unit")]
     public float PixelsPerUnit { get; set; } = 16;
 

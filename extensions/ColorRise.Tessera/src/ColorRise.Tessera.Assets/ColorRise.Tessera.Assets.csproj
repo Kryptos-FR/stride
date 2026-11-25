@@ -15,4 +15,9 @@
     <PackageReference Include="Stride.AssetCompiler" Version="$(TesseraStrideVersion)" IncludeAssets="build;buildTransitive" />
     <ProjectReference Include="..\ColorRise.Tessera\ColorRise.Tessera.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Templates\**" />
+    <None Remove="Resources\*.png" />
+    <EmbeddedResource Include="Resources\*.png" />
+  </ItemGroup>
 </Project>

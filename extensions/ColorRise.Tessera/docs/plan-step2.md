@@ -437,7 +437,7 @@ internal sealed class TesseraSession : IAsyncDisposable
 
 Model for `Template` and `RunTemplateAsync`: `ProjectTemplate()` and `RunAsync` in Skein's `SkeinCommandsTests.cs`.
 
-- [ ] **Step 1: Write the failing tests** in `TemplateTests.cs`
+- [x] **Step 1: Write the failing tests** in `TemplateTests.cs`
 
 ```csharp
 [Fact]
@@ -488,12 +488,12 @@ public void The_images_are_declared_and_embedded()
 }
 ```
 
-- [ ] **Step 2: Run them to see them fail**
+- [x] **Step 2: Run them to see them fail**
 
 Run: `dotnet test extensions/ColorRise.Tessera/tests/ColorRise.Tessera.Editor.Tests --filter "FullyQualifiedName~TemplateTests"`
 Expected: FAIL to compile, `TesseraSession` does not exist.
 
-- [ ] **Step 3: Write the templates.** The two files, exactly (the tile set needs no factory: a new `TileSetAsset` is the empty one):
+- [x] **Step 3: Write the templates.** The two files, exactly (the tile set needs no factory: a new `TileSetAsset` is the empty one):
 
 ```yaml
 !TemplateAssetFactory
@@ -533,14 +533,22 @@ TemplateFolders:
 
 In the project file, as Skein's `Assets` project: `<None Include="Templates\**" />`, `<None Remove="Resources\*.png" />`, `<EmbeddedResource Include="Resources\*.png" />`. Check that `dotnet pack` puts the templates in the package (`unzip -l` on the `.nupkg`).
 
-- [ ] **Step 4: Draw the images** with `Resources/draw-icons.py` (Python with Pillow, as Skein's script, whose sizes and colours it keeps): a tile set is a block of three by three squares with a gap between them, a tile map is the same grid with some squares left out, like a small map. White on a transparent ground at 128 pixels for the two thumbnails, the same in blue at 48 pixels for the templates, a dark glyph with a light edge at 16 pixels for the component. `EditorImages.cs` declares them (`[assembly: StaticThumbnail(...)]`, `[assembly: TypeImage(typeof(TileMapComponent), "TileMapComponent.png")]`). Commit the script and the pictures.
+- [x] **Step 4: Draw the images** with `Resources/draw-icons.py` (Python with Pillow, as Skein's script, whose sizes and colours it keeps): a tile set is a block of three by three squares with a gap between them, a tile map is the same grid with some squares left out, like a small map. White on a transparent ground at 128 pixels for the two thumbnails, the same in blue at 48 pixels for the templates, a dark glyph with a light edge at 16 pixels for the component. `EditorImages.cs` declares them (`[assembly: StaticThumbnail(...)]`, `[assembly: TypeImage(typeof(TileMapComponent), "TileMapComponent.png")]`). Commit the script and the pictures.
 
-- [ ] **Step 5: Write the two view models, the factory and `TesseraSession`**, then run the tests.
+- [x] **Step 5: Write the two view models, the factory and `TesseraSession`**, then run the tests.
 
 Run: the command of step 2, then the whole editor test project.
 Expected: PASS, 5 new tests, and step 1's editor tests.
 
-- [ ] **Step 6: Commit and push**: `feat(tessera): tile set and tile map templates, images and view models`
+- [x] **Step 6: Commit and push**: `feat(tessera): tile set and tile map templates, images and view models`
+
+**Done (2026-11-25).** Gates: the 5 template tests fail to compile without the view models, then pass; the whole editor test project passes (11), the view test project builds, the asset tests of the runtime project pass (99). `dotnet pack` of the assets project puts `stride/Templates/Assets/TileSet.sdtpl`, `TileMap.sdtpl` and the two pictures of `.sdtpl/` in the package.
+
+**Done differently.**
+- `RunTemplateAsync` registers the generators of Stride's asset templates (`StrideAssetTemplates.Register`, with prompts that refuse, since only scripts and models use them): both Game Studios register them when they start, and the kit's session does not, so "Add asset" found no generator for a template of an asset factory. Finding 11. Skein did not meet it: its tests run the template of a Yarn project, whose generator Skein registers itself (Skein's finding 18).
+- `RunTemplateAsync` makes the folder when the package has none of that name (`GetOrCreateDirectory`, not a step of the history), as a person makes it in the solution explorer before adding an asset there: the sessions of these tests start empty.
+- The component icon is drawn on whole pixels, not scaled down from a large drawing: at 16 pixels the scaled grid was a blur.
+- `TileSetAsset.PixelsPerUnit` takes `[DataMemberRange(minimum: 0.01, decimalPlaces: 2)]` with named arguments: Task 2's positional form is obsolete (`CS0618`).
 
 ### Task 4: The scene editor's pieces: the feature provider, the entity factory, the asset drop
 
