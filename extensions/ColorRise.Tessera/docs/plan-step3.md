@@ -1238,7 +1238,7 @@ The rules, beyond decision 9:
 - **Problems**: the lines of `FlipbookAssetChecks.Of`; `The tile set of the flipbook cannot be found.` for a reference to an asset the session does not have; and for each cell whose tile the set lacks, `The frame 2 of the clip Left of 'walk' uses the tile 1:9,9, which the tile set does not have.`
 - **Following the asset.** After every change of the asset the items are made again. A selected item whose animation, clip or frame is still in the asset stays selected; frames that are gone leave the selection; a clip or an animation that is gone gives the selection to the first clip of the first animation, or to nothing.
 
-- [ ] **Step 1: Write the failing tests.** `TestTown.Flipbook(tileSetLocation)` is a flipbook asset on `TestTown.TileSet()` with `walk` (Loop; the clips Down of three frames `1:0,0`, `1:1,0`, `1:2,0` and Left of two) and `idle` (one clip None of one frame). `TesseraSession.EditFlipbookAsync(location)` opens its editor as `EditMapAsync` does.
+- [x] **Step 1: Write the failing tests.** `TestTown.Flipbook(tileSetLocation)` is a flipbook asset on `TestTown.TileSet()` with `walk` (Loop; the clips Down of three frames `1:0,0`, `1:1,0`, `1:2,0` and Left of two) and `idle` (one clip None of one frame). `TesseraSession.EditFlipbookAsync(location)` opens its editor as `EditMapAsync` does.
 
 ```csharp
 public sealed class FlipbookGraphTests
@@ -1285,10 +1285,19 @@ public sealed class FlipbookEditorTests
 }
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~FlipbookGraphTests|FullyQualifiedName~FlipbookEditorTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the graph.** Run `FlipbookGraphTests`. Expected: PASS.
-- [ ] **Step 4: Write the editor and its items.** Run `FlipbookEditorTests`. Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): the flipbook editor's tree, strip and palette`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~FlipbookGraphTests|FullyQualifiedName~FlipbookEditorTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the graph.** Run `FlipbookGraphTests`. Expected: PASS.
+- [x] **Step 4: Write the editor and its items.** Run `FlipbookEditorTests`. Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): the flipbook editor's tree, strip and palette`
+
+**Done differently** (c8d3174b7). `TestTown.Flipbook(tileSet, tileSetLocation)` takes the tile set, as `Map` does, to name
+it by id (null: no tile set). The editor follows the asset once a transaction, an undo or a redo is over (`Done`, `Undone`,
+`Redone`), not at each change of a node: a move takes its frames out before it puts them back, and they stay selected.
+Items are kept while their animation, clip or frame is in the asset, so the tree keeps its selection and the grid is not
+made again for a change of a duration. `SelectedFrames` keeps the order of the strip. Removing selects the clip after the
+one removed, else the one before, else its animation; the animation after, else the one before. When the first animation
+has no clip, the selection that follows a removed one is that animation. `HasMissing` is false without pictures (the
+problems name the tile set). Tests: graph 4, editor 21; solution runtime 395, editor 315, views 52.
 
 ### Task 14: The pictures of the frames, and the preview
 

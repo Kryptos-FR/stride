@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.Globalization;
 using ColorRise.Tessera.Assets;
+using ColorRise.Tessera.Editor.Canvas;
 using ColorRise.Tessera.Editor.Palette;
 using ColorRise.Tessera.Editor.Pictures;
 using ColorRise.Tessera.Editor.ViewModels;
@@ -33,6 +34,8 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
 
     private readonly ObservableList<FlipbookAnimationItemViewModel> animationItems = [];
     private readonly ObservableList<FlipbookFrameItemViewModel> frameItems = [];
+    // The pictures of the frames, made once and kept until the asset or the pictures of the tile set change
+    private readonly Dictionary<FlipbookFrame, FlipbookFramePicture?> framePictures = new(ReferenceEqualityComparer.Instance);
     // A change of the asset came during a transaction, an undo or a redo: the editor follows it once that is over
     private bool followPending;
     private bool initialized;
@@ -50,6 +53,11 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         RemoveFramesCommand = new AnonymousCommand(ServiceProvider, RemoveFrames);
         MoveFramesLeftCommand = new AnonymousCommand(ServiceProvider, () => MoveFramesBy(-1));
         MoveFramesRightCommand = new AnonymousCommand(ServiceProvider, () => MoveFramesBy(1));
+        PlayPauseCommand = new AnonymousCommand(ServiceProvider, () => IsPlaying = !IsPlaying);
+        Preview.PictureOf = PictureOf;
+        Preview.IsPlaying = true;
+        Preview.IsRunningChanged += PreviewRunningChanged;
+        Preview.FrameIndexChanged += PreviewFrameChanged;
         Follow();
         SelectedItem = FirstClip();
         UpdateCommands();
@@ -125,6 +133,12 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
                 SetValue(ref field, frames);
                 UpdateCommands();
                 ShowProperties();
+                // One frame selected: the preview pauses on it
+                if (frames is [var only])
+                {
+                    IsPlaying = false;
+                    Preview.Time = StartOf(only.Index);
+                }
             }
         }
     } = [];
@@ -165,6 +179,74 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         get;
         private set => SetValue(ref field, value);
     }
+
+    /// <summary>
+    /// The preview, which plays <see cref="SelectedClip"/> as its animation's loop mode says.
+    /// </summary>
+    public FlipbookPreviewScene Preview { get; } = new();
+
+    /// <summary>
+    /// The zoom and the pan of the preview.
+    /// </summary>
+    public CanvasView PreviewView { get; } = new();
+
+    /// <summary>
+    /// Whether the preview plays; true when the editor opens. A clip played once stops at its end.
+    /// </summary>
+    public bool IsPlaying
+    {
+        get => Preview.IsPlaying;
+        set
+        {
+            if (Preview.IsPlaying != value)
+            {
+                Preview.IsPlaying = value;
+                OnPropertyChanged(nameof(IsPlaying));
+            }
+        }
+    }
+
+    /// <summary>
+    /// The speeds the preview can play at.
+    /// </summary>
+    public IReadOnlyList<float> PreviewSpeeds { get; } = [0.25f, 0.5f, 1, 2];
+
+    /// <summary>
+    /// The speed the preview plays at; 1 as the game plays it.
+    /// </summary>
+    public float PreviewSpeed
+    {
+        get => Preview.Speed;
+        set
+        {
+            if (Preview.Speed != value)
+            {
+                Preview.Speed = value;
+                OnPropertyChanged(nameof(PreviewSpeed));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether the preview starts again at the end of the clip, whatever the animation's loop mode.
+    /// </summary>
+    public bool LoopPreview
+    {
+        get => Preview.Loop;
+        set
+        {
+            if (Preview.Loop != value)
+            {
+                Preview.Loop = value;
+                OnPropertyChanged(nameof(LoopPreview));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Plays or pauses the preview.
+    /// </summary>
+    public ICommandBase PlayPauseCommand { get; }
 
     /// <summary>
     /// Picks a tile set in the session, and makes it the flipbook's.
@@ -230,6 +312,9 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         UndoRedoService.Redone -= HistoryMoved;
         UndoRedoService.TransactionDiscarded -= HistoryMoved;
         Session.DeletedAssetsChanged -= DeletedAssetsChanged;
+        Preview.IsRunningChanged -= PreviewRunningChanged;
+        Preview.FrameIndexChanged -= PreviewFrameChanged;
+        Preview.IsPlaying = false;
         SetPictures(null);
         foreach (var item in frameItems)
         {
@@ -432,6 +517,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
             return;
         }
         followPending = false;
+        framePictures.Clear();
         SetPictures(TilePictureService.Of(Session).Get(Asset.Asset.TileSet));
         var wanted = new List<FlipbookAnimationItemViewModel>();
         foreach (var animation in Asset.Asset.Animations)
@@ -467,6 +553,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
             SelectionFollows();
         }
         UpdateProblems();
+        Preview.Refresh();
     }
 
     // The animation, the clip, the free directions and the frames of the selected item
@@ -480,6 +567,8 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         };
         SelectedAnimation = animation;
         SelectedClip = clip;
+        Preview.LoopMode = animation?.Animation.LoopMode ?? FlipbookLoopMode.Loop;
+        Preview.Clip = clip?.Clip;
         var free = animation is null
             ? []
             : Enum.GetValues<FlipbookDirection>().Where(direction => !animation.Animation.Clips.Any(other => other?.Direction == direction)).ToList();
@@ -507,7 +596,8 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
                 }
                 var item = frameItems.FirstOrDefault(existing => existing.Frame == frame && existing.Clip == clipItem)
                     ?? new FlipbookFrameItemViewModel(this, clipItem, frame);
-                item.Follow(index, ++number, HasMissing(frame));
+                item.Follow(index, ++number, PictureOf(frame));
+                item.IsCurrent = index == Preview.FrameIndex;
                 wanted.Add(item);
             }
         }
@@ -515,8 +605,46 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         SelectedFrames = SelectedFrames;
     }
 
-    private bool HasMissing(FlipbookFrame frame)
-        => Pictures is { } pictures && frame.Cells.Any(cell => cell is not null && pictures.Find(cell.Tile) is not { IsMissing: false });
+    // The picture of a frame, made once; none without the pictures of the tile set
+    private FlipbookFramePicture? PictureOf(FlipbookFrame frame)
+    {
+        if (Pictures is not { } pictures)
+        {
+            return null;
+        }
+        if (!framePictures.TryGetValue(frame, out var picture))
+        {
+            picture = FlipbookFrameComposer.Compose(frame, Asset.Asset.Pivot, pictures.Find, pictures.TileSet.Asset.TileSize);
+            framePictures.Add(frame, picture);
+        }
+        return picture;
+    }
+
+    // The time the preview shows a frame of the selected clip from: the durations of the frames before it
+    private double StartOf(int index)
+    {
+        var frames = SelectedClip?.Clip.Frames ?? [];
+        var start = 0.0;
+        for (var i = 0; i < index && i < frames.Count; i++)
+        {
+            if (frames[i] is { Duration: > 0 } frame)
+            {
+                start += frame.Duration;
+            }
+        }
+        return start;
+    }
+
+    private void PreviewRunningChanged(object? sender, EventArgs e) => OnPropertyChanged(nameof(IsPlaying));
+
+    // The strip marks the frame the preview shows
+    private void PreviewFrameChanged(object? sender, EventArgs e)
+    {
+        foreach (var item in frameItems)
+        {
+            item.IsCurrent = item.Index == Preview.FrameIndex;
+        }
+    }
 
     // The pictures and the palette are made again when the flipbook names another tile set
     private void SetPictures(TileSetPictures? pictures)

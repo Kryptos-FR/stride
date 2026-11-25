@@ -1,4 +1,5 @@
 using System.Globalization;
+using ColorRise.Tessera.Editor.Pictures;
 using Stride.Core.Assets.Presentation.Components.Properties;
 using Stride.Core.Assets.Presentation.ViewModels;
 using Stride.Core.Presentation.Quantum;
@@ -65,6 +66,24 @@ public sealed class FlipbookFrameItemViewModel : DispatcherViewModel, IAssetProp
     }
 
     /// <summary>
+    /// The frame's picture, as the game draws it; null for a frame without a cell, or without a tile set.
+    /// </summary>
+    public TilePicture? Picture
+    {
+        get;
+        private set => SetValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Whether the preview shows this frame.
+    /// </summary>
+    public bool IsCurrent
+    {
+        get;
+        internal set => SetValue(ref field, value);
+    }
+
+    /// <summary>
     /// The item of the clip the frame is in.
     /// </summary>
     internal FlipbookClipItemViewModel Clip { get; }
@@ -74,13 +93,14 @@ public sealed class FlipbookFrameItemViewModel : DispatcherViewModel, IAssetProp
     AssetViewModel IAssetPropertyProviderViewModel.RelatedAsset => editor.Asset;
 
     /// <summary>
-    /// Follows the frame: its place among the frames of the clip, its number, and whether a tile of it is missing.
+    /// Follows the frame: its place among the frames of the clip, its number, and its picture.
     /// </summary>
-    internal void Follow(int index, int number, bool hasMissing)
+    internal void Follow(int index, int number, FlipbookFramePicture? picture)
     {
         Index = index;
         Label = number.ToString(CultureInfo.InvariantCulture);
-        HasMissing = hasMissing;
+        Picture = picture?.Picture;
+        HasMissing = picture?.HasMissing ?? false;
         OnPropertyChanged(nameof(Duration), nameof(Tile));
     }
 
