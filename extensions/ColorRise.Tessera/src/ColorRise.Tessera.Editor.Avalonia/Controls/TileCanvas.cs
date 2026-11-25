@@ -1,5 +1,8 @@
+using System.Diagnostics;
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -15,7 +18,8 @@ namespace ColorRise.Tessera.Editor.Avalonia.Controls;
 
 /// <summary>
 /// Draws a scene with hard pixels, zooms around the cursor with the wheel, pans with the middle button or with Space and
-/// the left button, and tells the rest of the pointer and the keys to its input.
+/// the left button, and tells the rest of the pointer and the keys to its input. A scene that time changes gets the time
+/// thirty times a second while it runs and the canvas is shown.
 /// </summary>
 public sealed class TileCanvas : Control
 {
@@ -58,6 +62,14 @@ public sealed class TileCanvas : Control
     private const double HatchSpacing = 6;
     // The smallest cell of the grid that is drawn, in screen pixels
     private const double SmallestGridCell = 4;
+    // The size of the text of a label, the gap around it on its backing, and the smallest bounds it is written on, in screen pixels
+    private const double LabelTextSize = 11;
+    private const double LabelPadding = 2;
+    private const double SmallestLabelBounds = 14;
+    // The most time one tick gives a scene, in seconds: after a pause, the scene goes on rather than jumping
+    private const double LongestTick = 0.25;
+
+    private static readonly IBrush LabelBacking = new ImmutableSolidColorBrush(Color.FromArgb(200, 0, 0, 0));
 
     private readonly CanvasView ownView = new();
     private readonly CanvasFrame frame = new();
@@ -71,6 +83,9 @@ public sealed class TileCanvas : Control
     // A fit asked by Fit, or a centring asked by Centre, done once the scene has bounds and the canvas a size
     private bool fitAsked;
     private bool centreAsked;
+    // Gives a running clock its time; the real time since the last tick is measured, not taken from the interval
+    private readonly DispatcherTimer timer = new(DispatcherPriority.Normal) { Interval = TimeSpan.FromSeconds(1.0 / 30) };
+    private readonly Stopwatch sinceTick = new();
 
     static TileCanvas()
     {
@@ -85,6 +100,7 @@ public sealed class TileCanvas : Control
     public TileCanvas()
     {
         CoerceValue(ViewProperty);
+        timer.Tick += TimerTicked;
     }
 
     /// <inheritdoc cref="SceneProperty"/>
@@ -137,6 +153,11 @@ public sealed class TileCanvas : Control
     }
 
     /// <summary>
+    /// Whether the timer runs: the canvas is in the visual tree, and its scene is a clock that runs.
+    /// </summary>
+    internal bool IsTicking => timer.IsEnabled;
+
+    /// <summary>
     /// Shows all of the scene: now, or as soon as the scene has bounds and the canvas a size.
     /// </summary>
     public void Fit()
@@ -156,7 +177,7 @@ public sealed class TileCanvas : Control
     }
 
     /// <summary>
-    /// Draws the background, the sprites, the grid, then the shapes.
+    /// Draws the background, the sprites, the grid, the shapes, then the labels.
     /// </summary>
     public override void Render(DrawingContext context)
     {
@@ -188,6 +209,22 @@ public sealed class TileCanvas : Control
                 DrawShape(context, view, shape);
             }
         }
+        // Text keeps its smooth edges
+        foreach (var label in frame.Labels)
+        {
+            DrawLabel(context, view, label);
+        }
+    }
+
+    /// <summary>
+    /// Gives the scene, when it is a clock, the real time since the last tick: at most a quarter of a second.
+    /// </summary>
+    internal void Tick(TimeSpan elapsed)
+    {
+        if (Scene is ICanvasClock clock)
+        {
+            clock.Advance(Math.Clamp(elapsed.TotalSeconds, 0, LongestTick));
+        }
     }
 
     /// <inheritdoc />
@@ -200,10 +237,19 @@ public sealed class TileCanvas : Control
             {
                 old.Changed -= SceneChanged;
             }
+            if (change.OldValue is ICanvasClock oldClock)
+            {
+                oldClock.IsRunningChanged -= ClockRunningChanged;
+            }
             if (change.NewValue is ICanvasScene scene && this.IsAttachedToVisualTree())
             {
                 scene.Changed += SceneChanged;
             }
+            if (change.NewValue is ICanvasClock clock && this.IsAttachedToVisualTree())
+            {
+                clock.IsRunningChanged += ClockRunningChanged;
+            }
+            UpdateTimer();
             TryFit();
         }
         else if (change.Property == ViewProperty)
@@ -231,7 +277,12 @@ public sealed class TileCanvas : Control
         {
             scene.Changed += SceneChanged;
         }
+        if (Scene is ICanvasClock clock)
+        {
+            clock.IsRunningChanged += ClockRunningChanged;
+        }
         View.Changed += ViewChanged;
+        UpdateTimer();
     }
 
     /// <inheritdoc />
@@ -241,7 +292,12 @@ public sealed class TileCanvas : Control
         {
             scene.Changed -= SceneChanged;
         }
+        if (Scene is ICanvasClock clock)
+        {
+            clock.IsRunningChanged -= ClockRunningChanged;
+        }
         View.Changed -= ViewChanged;
+        timer.Stop();
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -401,7 +457,7 @@ public sealed class TileCanvas : Control
         spaceDown = false;
     }
 
-    private static void DrawSprite(DrawingContext context, CanvasView view, CanvasSprite sprite)
+    private void DrawSprite(DrawingContext context, CanvasView view, CanvasSprite sprite)
     {
         if (sprite.Opacity <= 0 || PictureBitmaps.Get(sprite.Picture) is not { } bitmap)
         {
@@ -409,6 +465,10 @@ public sealed class TileCanvas : Control
         }
         var source = new Rect(sprite.Source.X, sprite.Source.Y, sprite.Source.Width, sprite.Source.Height);
         var destination = ToScreen(view, sprite.Destination);
+        if (sprite.Replace && Background is { } background)
+        {
+            context.FillRectangle(background, destination);
+        }
         if (sprite.Opacity < 1)
         {
             using (context.PushOpacity(sprite.Opacity))
@@ -485,6 +545,38 @@ public sealed class TileCanvas : Control
                 }
                 break;
             }
+            case CanvasMark.Corner:
+            {
+                var side = Math.Max(Math.Round(Math.Min(rect.Width, rect.Height) / 3), 1);
+                var triangle = new StreamGeometry();
+                using (var figure = triangle.Open())
+                {
+                    figure.BeginFigure(rect.TopLeft, isFilled: true);
+                    figure.LineTo(new Point(rect.Left + side, rect.Top));
+                    figure.LineTo(new Point(rect.Left, rect.Top + side));
+                    figure.EndFigure(isClosed: true);
+                }
+                context.DrawGeometry(brush, null, triangle);
+                break;
+            }
+        }
+    }
+
+    // The text at the top-left of the bounds, on its backing, both kept inside the bounds
+    private void DrawLabel(DrawingContext context, CanvasView view, CanvasLabel label)
+    {
+        var rect = ToScreen(view, label.Bounds);
+        if (rect.Height < SmallestLabelBounds || rect.Width <= 0 || string.IsNullOrEmpty(label.Text))
+        {
+            return;
+        }
+        var color = label.Color;
+        var text = new FormattedText(label.Text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(TextElement.GetFontFamily(this)), LabelTextSize,
+            new ImmutableSolidColorBrush(Color.FromArgb(color.A, color.R, color.G, color.B)));
+        using (context.PushClip(rect))
+        {
+            context.FillRectangle(LabelBacking, new Rect(rect.Left, rect.Top, Math.Ceiling(text.Width + 2 * LabelPadding), Math.Ceiling(text.Height)));
+            context.DrawText(text, new Point(rect.Left + LabelPadding, rect.Top));
         }
     }
 
@@ -546,6 +638,40 @@ public sealed class TileCanvas : Control
     }
 
     private void ViewChanged(object? sender, EventArgs e) => Dispatcher.UIThread.Post(InvalidateVisual);
+
+    private void ClockRunningChanged(object? sender, EventArgs e)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            UpdateTimer();
+        }
+        else
+        {
+            Dispatcher.UIThread.Post(UpdateTimer);
+        }
+    }
+
+    // The timer runs while the canvas is shown and its scene is a clock that runs; a tick asks for no redraw, the scene's Changed does
+    private void UpdateTimer()
+    {
+        var runs = this.IsAttachedToVisualTree() && Scene is ICanvasClock { IsRunning: true };
+        if (runs && !timer.IsEnabled)
+        {
+            sinceTick.Restart();
+            timer.Start();
+        }
+        else if (!runs && timer.IsEnabled)
+        {
+            timer.Stop();
+        }
+    }
+
+    private void TimerTicked(object? sender, EventArgs e)
+    {
+        var elapsed = sinceTick.Elapsed;
+        sinceTick.Restart();
+        Tick(elapsed);
+    }
 
     private void TryFit()
     {

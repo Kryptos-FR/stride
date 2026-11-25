@@ -32,15 +32,18 @@ public enum TilePickMode
 }
 
 /// <summary>
-/// One source of a tile set on a canvas: its picture, an outline per tile, its marks and its selection.
+/// One source of a tile set on a canvas: its picture, an outline per tile, its marks, its texts and its selection. While it
+/// plays, each animated tile shows the frame of the scene's time.
 /// </summary>
-public sealed class TileSourceScene : ICanvasScene, ICanvasInput
+public sealed class TileSourceScene : ICanvasScene, ICanvasInput, ICanvasClock
 {
     private static readonly Color TileOutline = new(255, 255, 255, 40);
     private static readonly Color MissingCross = new(230, 50, 50, 255);
     private static readonly Color MarkColor = new(255, 170, 30, 220);
     private static readonly Color SelectedFill = new(80, 160, 255, 80);
     private static readonly Color SelectedOutline = new(130, 200, 255, 255);
+    private static readonly Color AnimatedCorner = new(120, 220, 90, 235);
+    private static readonly Color LabelText = new(255, 255, 255, 255);
 
     // The tiles painted since the left button went down, in Paint mode
     private readonly HashSet<TileId> painted = [];
@@ -48,6 +51,8 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
     private (Vector2 Start, Vector2 Current)? press;
     // The grid positions the selection was picked in: the stamp of a grid source has this size
     private Rectangle? block;
+    // The tiles of the layout that IsAnimated says have frames
+    private HashSet<TileId> animated = [];
 
     /// <summary>
     /// The source shown; the selected tiles it does not have are dropped when it changes.
@@ -73,6 +78,7 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
                 Selection = kept;
                 block = BlockOf(kept);
             }
+            FindAnimated();
             RaiseChanged();
         }
     }
@@ -112,6 +118,80 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
         }
     }
 
+    /// <summary>
+    /// Whether a tile has frames. The animated tiles of the layout are found again when the layout or this is set, and by
+    /// <see cref="Refresh"/>.
+    /// </summary>
+    public Func<TileId, bool>? IsAnimated
+    {
+        get;
+        set
+        {
+            field = value;
+            FindAnimated();
+            RaiseChanged();
+        }
+    }
+
+    /// <summary>
+    /// The slot of the frame an animated tile shows at a time; null shows the tile itself.
+    /// </summary>
+    public Func<TileId, double, TileSlot?>? FrameOf
+    {
+        get;
+        set
+        {
+            field = value;
+            RaiseChanged();
+        }
+    }
+
+    /// <summary>
+    /// The text written on a tile, or null for none.
+    /// </summary>
+    public Func<TileId, string?>? LabelOf
+    {
+        get;
+        set
+        {
+            field = value;
+            RaiseChanged();
+        }
+    }
+
+    /// <summary>
+    /// What <see cref="KeyPressed"/> asks; without it, a key is not used.
+    /// </summary>
+    public Func<CanvasKey, CanvasModifiers, bool>? KeyHandler { get; set; }
+
+    /// <summary>
+    /// Whether the animated tiles shown play; when false, the source is shown as it is. False at first.
+    /// </summary>
+    public bool Plays
+    {
+        get;
+        set
+        {
+            if (field == value)
+            {
+                return;
+            }
+            var wasRunning = IsRunning;
+            field = value;
+            RaiseIsRunningChanged(wasRunning);
+            RaiseChanged();
+        }
+    }
+
+    /// <summary>
+    /// The scene's time, in seconds, which <see cref="Advance"/> moves.
+    /// </summary>
+    public double Time { get; private set; }
+
+    /// <inheritdoc/>
+    /// <remarks>The scene runs while it plays and the layout has an animated tile.</remarks>
+    public bool IsRunning => Plays && animated.Count > 0;
+
     /// <inheritdoc/>
     public RectangleF? Bounds => Layout is { Size: { X: > 0, Y: > 0 } size } ? new RectangleF(0, 0, size.X, size.Y) : null;
 
@@ -121,6 +201,9 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
 
     /// <inheritdoc/>
     public event EventHandler? Changed;
+
+    /// <inheritdoc/>
+    public event EventHandler? IsRunningChanged;
 
     /// <summary>
     /// Raised when a click or a drag of the person picked: at its release, when it selected a tile, or cleared in
@@ -143,6 +226,34 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
     /// tiles painted since the press are not kept.
     /// </summary>
     public event EventHandler? PaintCancelled;
+
+    /// <summary>
+    /// Finds the animated tiles again, after the answers of <see cref="IsAnimated"/> changed, and draws the scene again.
+    /// </summary>
+    public void Refresh()
+    {
+        FindAnimated();
+        RaiseChanged();
+    }
+
+    /// <inheritdoc/>
+    public void Advance(double seconds)
+    {
+        var before = Time;
+        Time += seconds;
+        if (!Plays || FrameOf is not { } frameOf)
+        {
+            return;
+        }
+        foreach (var tile in animated)
+        {
+            if (frameOf(tile, before) != frameOf(tile, Time))
+            {
+                RaiseChanged();
+                return;
+            }
+        }
+    }
 
     /// <summary>
     /// Selects tiles of the source; the others are left out.
@@ -195,7 +306,7 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
             frame.Sprites.Add(new CanvasSprite(image, new Rectangle(0, 0, image.Width, image.Height), new RectangleF(0, 0, image.Width, image.Height)));
         }
 
-        var shown = Shown();
+        var selected = Shown();
         foreach (var slot in layout.Slots)
         {
             var bounds = (RectangleF)slot.Bounds;
@@ -203,9 +314,16 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
             {
                 continue;
             }
-            if (!layout.IsGrid && slot.Picture is { } picture)
+            var isAnimated = animated.Contains(slot.Tile);
+            // While it plays, the frame of the time is drawn over the tile, in its bounds
+            var shown = Plays && isAnimated && FrameOf?.Invoke(slot.Tile, Time) is { Picture: not null } frameSlot ? frameSlot : null;
+            if (!layout.IsGrid && slot.Picture is { } picture && shown is null)
             {
                 frame.Sprites.Add(new CanvasSprite(picture, slot.Region, bounds));
+            }
+            if (shown is { Picture: { } framePicture })
+            {
+                frame.Sprites.Add(new CanvasSprite(framePicture, shown.Region, bounds, Replace: true));
             }
             frame.Shapes.Add(new CanvasShape(CanvasMark.Outline, bounds, TileOutline));
             if (slot.IsMissing)
@@ -216,10 +334,18 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
             {
                 frame.Shapes.Add(new CanvasShape(mark, bounds, MarkColor));
             }
-            if (shown.Contains(slot.Tile))
+            if (isAnimated)
+            {
+                frame.Shapes.Add(new CanvasShape(CanvasMark.Corner, bounds, AnimatedCorner));
+            }
+            if (selected.Contains(slot.Tile))
             {
                 frame.Shapes.Add(new CanvasShape(CanvasMark.Fill, bounds, SelectedFill));
                 frame.Shapes.Add(new CanvasShape(CanvasMark.Outline, bounds, SelectedOutline));
+            }
+            if (LabelOf?.Invoke(slot.Tile) is { Length: > 0 } text)
+            {
+                frame.Labels.Add(new CanvasLabel(text, bounds, LabelText));
             }
         }
     }
@@ -313,7 +439,7 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
     }
 
     /// <inheritdoc/>
-    public bool KeyPressed(CanvasKey key, CanvasModifiers modifiers) => false;
+    public bool KeyPressed(CanvasKey key, CanvasModifiers modifiers) => KeyHandler?.Invoke(key, modifiers) ?? false;
 
     private void PickMany(TileSourceLayout layout, Vector2 start, Vector2 end, CanvasModifiers modifiers)
     {
@@ -440,6 +566,22 @@ public sealed class TileSourceScene : ICanvasScene, ICanvasInput
         }
         var (left, top) = (tiles.Min(tile => tile.Column), tiles.Min(tile => tile.Row));
         return new Rectangle(left, top, tiles.Max(tile => tile.Column) - left + 1, tiles.Max(tile => tile.Row) - top + 1);
+    }
+
+    // The tiles of the layout that have frames; IsRunningChanged when the scene starts or stops running
+    private void FindAnimated()
+    {
+        var wasRunning = IsRunning;
+        animated = Layout is { } layout && IsAnimated is { } isAnimated ? layout.Slots.Select(slot => slot.Tile).Where(isAnimated).ToHashSet() : [];
+        RaiseIsRunningChanged(wasRunning);
+    }
+
+    private void RaiseIsRunningChanged(bool wasRunning)
+    {
+        if (IsRunning != wasRunning)
+        {
+            IsRunningChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);

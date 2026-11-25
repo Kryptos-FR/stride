@@ -313,8 +313,110 @@ public sealed class TileCanvasTests
         window.Close();
     }
 
+    [AvaloniaFact]
+    public void A_replacing_sprite_hides_what_is_under_it()
+    {
+        foreach (var replace in new[] { true, false })
+        {
+            var scene = new TestScene();
+            var red = new TilePicture(1, 1);
+            red[0, 0] = StrideColor.Red;
+            // Left half transparent, right half blue
+            var half = new TilePicture(2, 1);
+            (half[0, 0], half[1, 0]) = (StrideColor.Transparent, StrideColor.Blue);
+            scene.Sprites.Add(new CanvasSprite(red, new Rectangle(0, 0, 1, 1), new RectangleF(0, 0, 4, 4)));
+            scene.Sprites.Add(new CanvasSprite(half, new Rectangle(0, 0, 2, 1), new RectangleF(0, 0, 4, 4), Replace: replace));
+            var (canvas, window) = Show(scene, zoom: 8);
+
+            Assert.Equal(replace ? Background(canvas) : StrideColor.Red, CanvasProbe.Pixel(window, 8, 16));
+            Assert.Equal(StrideColor.Blue, CanvasProbe.Pixel(window, 24, 16));
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void A_corner_mark_is_a_triangle_in_the_top_left()
+    {
+        var scene = new TestScene();
+        scene.Shapes.Add(new CanvasShape(CanvasMark.Corner, new RectangleF(0, 0, 4, 4), StrideColor.Red));
+        var (canvas, window) = Show(scene, zoom: 8);
+
+        // Its sides are a third of the 32 pixels of the bounds
+        Assert.Equal(StrideColor.Red, CanvasProbe.Pixel(window, 1, 1));
+        Assert.Equal(StrideColor.Red, CanvasProbe.Pixel(window, 8, 1));
+        Assert.Equal(StrideColor.Red, CanvasProbe.Pixel(window, 1, 8));
+        Assert.Equal(Background(canvas), CanvasProbe.Pixel(window, 8, 8));
+        Assert.Equal(Background(canvas), CanvasProbe.Pixel(window, 16, 16));
+    }
+
+    [AvaloniaFact]
+    public void A_label_is_written_in_the_corner_of_its_bounds()
+    {
+        var scene = new TestScene();
+        scene.Labels.Add(new CanvasLabel("2, 4", new RectangleF(0, 0, 16, 16), StrideColor.White));
+        var (canvas, window) = Show(scene, zoom: 8);
+
+        var background = Background(canvas);
+        var corner = CanvasProbe.Pixel(window, 0, 0);
+        Assert.True(corner.R < background.R && corner.G < background.G && corner.B < background.B, $"The corner is {corner}, not darker than the background.");
+        Assert.True(TextPixels(window) > 0, "No pixel of the text.");
+
+        // 8 pixels high: too small for a text
+        canvas.View.Zoom = 0.5f;
+        Assert.Equal(background, CanvasProbe.Pixel(window, 0, 0));
+        Assert.Equal(0, TextPixels(window));
+    }
+
+    [AvaloniaFact]
+    public void A_tick_gives_the_scene_the_time_and_at_most_a_quarter_of_a_second()
+    {
+        var scene = new TestClock();
+        var (canvas, _) = Show(scene, zoom: 1);
+
+        canvas.Tick(TimeSpan.FromSeconds(0.1));
+        canvas.Tick(TimeSpan.FromSeconds(3));
+
+        Assert.Equal([0.1, 0.25], scene.Advances);
+    }
+
+    [AvaloniaFact]
+    public void The_timer_runs_only_for_a_clock_that_runs()
+    {
+        var (canvas, window) = Show(new TestScene(), zoom: 1);
+        Assert.False(canvas.IsTicking);
+
+        var clock = new TestClock();
+        canvas.Scene = clock;
+        Assert.False(canvas.IsTicking);
+        clock.IsRunning = true;
+        Assert.True(canvas.IsTicking);
+        clock.IsRunning = false;
+        Assert.False(canvas.IsTicking);
+
+        clock.IsRunning = true;
+        window.Content = null;
+        Assert.False(canvas.IsTicking);
+        window.Content = canvas;
+        Assert.True(canvas.IsTicking);
+        canvas.Scene = new TestScene();
+        Assert.False(canvas.IsTicking);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task The_canvas_ticks_by_itself()
+    {
+        var scene = new TestClock { IsRunning = true };
+        var (_, window) = Show(scene, zoom: 1);
+
+        await CanvasProbe.WaitUntilAsync(() => scene.Advances.Count > 0, "a tick of the canvas");
+
+        Assert.InRange(scene.Advances[0], 0, 0.25);
+        window.Close();
+    }
+
     // A canvas of 64 by 64 pixels filling its window, at a zoom, without the grid
-    private static (TileCanvas Canvas, Window Window) Show(TestScene scene, float zoom)
+    private static (TileCanvas Canvas, Window Window) Show(ICanvasScene scene, float zoom)
     {
         var canvas = new TileCanvas { Scene = scene, ShowGrid = false };
         canvas.View.Zoom = zoom;
@@ -338,6 +440,24 @@ public sealed class TileCanvasTests
         GC.WaitForPendingFinalizers();
         GC.Collect();
         PictureBitmaps.Sweep();
+    }
+
+    // The pixels of the top-left 32 by 16 pixels that are almost white, as the text of a label is
+    private static int TextPixels(Window window)
+    {
+        var count = 0;
+        for (var y = 0; y < 16; y++)
+        {
+            for (var x = 0; x < 32; x++)
+            {
+                var pixel = CanvasProbe.Pixel(window, x, y);
+                if (pixel.R > 160 && pixel.G > 160 && pixel.B > 160)
+                {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     private static List<string> Kinds(RecordingInput input) => [.. input.Events.Select(e => e.Split(' ')[0]).Where(kind => kind != "move")];
@@ -368,6 +488,8 @@ public sealed class TileCanvasTests
 
         public List<CanvasShape> Shapes { get; } = [];
 
+        public List<CanvasLabel> Labels { get; } = [];
+
         public RectangleF? Bounds { get; set; }
 
         public Vector2 GridSize { get; set; }
@@ -378,8 +500,48 @@ public sealed class TileCanvasTests
         {
             frame.Sprites.AddRange(Sprites);
             frame.Shapes.AddRange(Shapes);
+            frame.Labels.AddRange(Labels);
         }
 
         public void RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// A scene that time changes, which writes down the time each tick gives it.
+    /// </summary>
+    private sealed class TestClock : ICanvasScene, ICanvasClock
+    {
+        public List<double> Advances { get; } = [];
+
+        public RectangleF? Bounds => null;
+
+        public Vector2 GridSize => Vector2.Zero;
+
+        public bool IsRunning
+        {
+            get;
+            set
+            {
+                if (field != value)
+                {
+                    field = value;
+                    IsRunningChanged?.Invoke(this, EventArgs.Empty);
+                }
+            }
+        }
+
+        public event EventHandler? Changed;
+
+        public event EventHandler? IsRunningChanged;
+
+        public void Collect(RectangleF visible, float zoom, CanvasFrame frame)
+        {
+        }
+
+        public void Advance(double seconds)
+        {
+            Advances.Add(seconds);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
     }
 }

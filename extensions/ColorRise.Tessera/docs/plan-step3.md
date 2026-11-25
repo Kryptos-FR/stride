@@ -859,7 +859,7 @@ The rules:
 - The palette of step 2 sets none of this and stays still.
 - `TileCanvas` has a `DispatcherTimer` of a 30th of a second. It runs while the canvas is in the visual tree and its scene is an `ICanvasClock` whose `IsRunning` is true; it follows `IsRunningChanged` and a change of `Scene`. A tick does not ask for a redraw: the scene's `Changed` does, as before.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // TileSourceSceneTests: a layout of TestTown's grid source through TilePictureService, hooks set by the test
@@ -890,10 +890,14 @@ public sealed class TileSourceSceneTests
 [AvaloniaFact] public async Task The_canvas_ticks_by_itself()                       // CanvasProbe.WaitUntilAsync(() => scene.Advanced > 0): the one test that waits
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filters: `FullyQualifiedName~TileSourceSceneTests` and `FullyQualifiedName~TileCanvasTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the types, the scene's hooks and the canvas's drawing and timer.**
-- [ ] **Step 4: Run the tests.** Expected: PASS, with step 2's `TilePaletteTests` and `TileCanvasTests` unchanged. If `The_canvas_ticks_by_itself` cannot pass under the headless platform (no timer runs there), keep `Tick` and `IsTicking`, drop that test with a line in the ledger, and see the tick by hand in Task 17. If a timer in a control proves wrong for another reason, R12's fallback: the view model runs it through the session's dispatcher.
-- [ ] **Step 5: Commit and push**: `feat(tessera): a canvas that plays, writes text and replaces what is under a sprite`
+- [x] **Step 2: Run them to see them fail.** Filters: `FullyQualifiedName~TileSourceSceneTests` and `FullyQualifiedName~TileCanvasTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the types, the scene's hooks and the canvas's drawing and timer.**
+- [x] **Step 4: Run the tests.** Expected: PASS, with step 2's `TilePaletteTests` and `TileCanvasTests` unchanged. If `The_canvas_ticks_by_itself` cannot pass under the headless platform (no timer runs there), keep `Tick` and `IsTicking`, drop that test with a line in the ledger, and see the tick by hand in Task 17. If a timer in a control proves wrong for another reason, R12's fallback: the view model runs it through the session's dispatcher.
+- [x] **Step 5: Commit and push**: `feat(tessera): a canvas that plays, writes text and replaces what is under a sprite`
+
+**Done (2026-11-25).** Red: neither test project compiled (`IsAnimated`, `CanvasLabel`, `ICanvasClock` not found). Green: the 8 scene tests and the palette's 11, and the canvas's 22 (6 new). The timer runs under the headless platform: `The_canvas_ticks_by_itself` passes, with its wait. Editor project 259, views project 43.
+
+**Done differently.** A replacing frame of a sheet source is drawn instead of the tile's own sprite, not over it (the same picture, one sprite less). `Advance` moves the time whether the scene plays or not; only a playing scene compares its frames. The labels are drawn after the aliased shapes, with the smooth edges of text, in the font the canvas inherits.
 
 ### Task 10: Animation mode of the tile set editor (risk R11)
 
