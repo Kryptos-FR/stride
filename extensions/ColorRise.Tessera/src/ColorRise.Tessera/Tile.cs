@@ -55,40 +55,19 @@ public sealed class Tile
     /// frame whose duration is not above 0 is not shown.
     /// </summary>
     /// <returns>The tile itself when it has no frames; the first frame's when no frame lasts, or the time is not finite.</returns>
-    public TileId FrameAt(double time)
+    public TileId FrameAt(double time) => FrameAt(Animation, Id, time);
+
+    /// <summary>
+    /// The tile shown at a time by a tile with these frames, as <see cref="FrameAt(double)"/> finds it: for the editors,
+    /// which have the frames of a tile's data and no <see cref="Tile"/>.
+    /// </summary>
+    /// <param name="frames">The frames of the tile.</param>
+    /// <param name="own">The tile itself, shown when it has no frames.</param>
+    /// <param name="time">In seconds.</param>
+    public static TileId FrameAt(IReadOnlyList<TileAnimationFrame> frames, TileId own, double time)
     {
-        if (Animation.Count == 0)
-        {
-            return Id;
-        }
-
-        var loop = 0.0;
-        foreach (var frame in Animation)
-        {
-            loop += Math.Max(frame.Duration, 0);
-        }
-        if (!(loop > 0) || !double.IsFinite(time))
-        {
-            return Animation[0].Tile;
-        }
-
-        var left = time % loop;
-        if (left < 0)
-        {
-            left += loop;
-        }
-        foreach (var frame in Animation)
-        {
-            if (frame.Duration > 0)
-            {
-                if (left < frame.Duration)
-                {
-                    return frame.Tile;
-                }
-                left -= frame.Duration;
-            }
-        }
-        // Rounding left a sliver past the last frame
-        return Animation.FindLast(frame => frame.Duration > 0).Tile;
+        ArgumentNullException.ThrowIfNull(frames);
+        var index = FrameTimeline.IndexAt(frames, static frame => frame.Duration, time, FlipbookLoopMode.Loop);
+        return index < 0 ? own : frames[index].Tile;
     }
 }

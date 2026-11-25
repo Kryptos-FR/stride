@@ -78,6 +78,39 @@ public sealed class ContentTests
     }
 
     [Fact]
+    public void A_flipbook_comes_back_as_it_was_saved()
+    {
+        using var build = new AssetBuild();
+        build.Save("Tiles/Hero", new TileSet { PixelsPerUnit = 8 });
+        var flipbook = new Flipbook { TileSet = Reference("Tiles/Hero"), Pivot = new Vector2(0.25f, 0.5f) };
+        var walk = new FlipbookAnimation { Name = "walk", LoopMode = FlipbookLoopMode.PingPong };
+        var down = new FlipbookClip { Direction = FlipbookDirection.Down };
+        var frame = new FlipbookFrame { Duration = 0.15f };
+        frame.Cells.Add(new FlipbookCell { Tile = TileId.Parse("1:0,0") });
+        frame.Cells.Add(new FlipbookCell { Tile = TileId.Parse("1:1,0"), Offset = new Int2(0, 16), Flip = TileFlip.Horizontal });
+        down.Frames.Add(frame);
+        walk.Clips.Add(down);
+        walk.Clips.Add(new FlipbookClip { Direction = FlipbookDirection.Left });
+        flipbook.Animations.Add(walk);
+
+        build.Save("Flipbooks/Hero", flipbook);
+        var loaded = build.Load<Flipbook>("Flipbooks/Hero");
+
+        Assert.NotSame(flipbook, loaded);
+        Assert.Equal(new Vector2(0.25f, 0.5f), loaded.Pivot);
+        Assert.Equal(8, loaded.TileSet!.PixelsPerUnit);
+        var back = Assert.Single(loaded.Animations);
+        Assert.Equal(("walk", FlipbookLoopMode.PingPong), (back.Name, back.LoopMode));
+        Assert.Equal([FlipbookDirection.Down, FlipbookDirection.Left], back.Clips.Select(clip => clip.Direction));
+        Assert.Empty(back.Clips[1].Frames);
+        var backFrame = Assert.Single(back.Clips[0].Frames);
+        Assert.Equal(0.15f, backFrame.Duration);
+        Assert.Equal(
+            [(TileId.Parse("1:0,0"), Int2.Zero, TileFlip.None), (TileId.Parse("1:1,0"), new Int2(0, 16), TileFlip.Horizontal)],
+            backFrame.Cells.Select(cell => (cell.Tile, cell.Offset, cell.Flip)));
+    }
+
+    [Fact]
     public void A_map_read_again_keeps_its_object_and_tells()
     {
         using var build = new AssetBuild();

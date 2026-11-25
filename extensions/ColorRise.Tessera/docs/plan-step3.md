@@ -176,7 +176,7 @@ internal static int LiveBitmaps { get; }    // bitmaps made and not disposed
 internal static void Sweep();               // disposes the bitmaps of pictures that are gone; also run after each 64 bitmaps made
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // M5, TileSetEditorTilesTests: the marks come from the look-up, which must follow the asset
@@ -299,7 +299,7 @@ public static TileId FrameAt(IReadOnlyList<TileAnimationFrame> frames, TileId ow
 
 `FrameAt` in `Once`: a time at or after the pass length shows the last frame that lasts; a negative time shows the first. In `Loop` and `PingPong` a negative time counts back from the end of the pass, as `Tile.FrameAt` does. `Module.cs` gains `[assembly: AssetFileExtension(".sdflipbook", typeof(Flipbook))]`. Each member the property grid shows has a `<userdoc>`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 public sealed class FlipbookClipTests
@@ -346,10 +346,14 @@ public sealed class FlipbookTests
     // Tile.FrameAt(frames, own, t) equals the instance's FrameAt(t) at 0, 0.3, 0.8 and -0.1, and gives own for no frame
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Run: `dotnet test extensions/ColorRise.Tessera/tests/ColorRise.Tessera.Tests --filter "FullyQualifiedName~Flipbook|FullyQualifiedName~ContentTests|FullyQualifiedName~TileAnimationTests"`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the types.** `Tile.FrameAt(double)` calls the new static one.
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): the data of a flipbook, and the frame a time shows`
+- [x] **Step 2: Run them to see them fail.** Run: `dotnet test extensions/ColorRise.Tessera/tests/ColorRise.Tessera.Tests --filter "FullyQualifiedName~Flipbook|FullyQualifiedName~ContentTests|FullyQualifiedName~TileAnimationTests"`. Expected: FAIL to compile.
+- [x] **Step 3: Write the types.** `Tile.FrameAt(double)` calls the new static one.
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): the data of a flipbook, and the frame a time shows`
+
+**Done (2026-11-25).** Red: the test project did not compile. Green: the 59 tests of the filter pass, and the runtime project's 305.
+
+**Done differently.** The arithmetic of both `Tile.FrameAt` and `FlipbookClip.FrameAt` is one internal class, `FrameTimeline`. It counts a time within a microsecond of the end of a frame as past it: a duration is a float, and the plan's rows (0.1, 0.3 and 0.6 s) land on the ends of frames whose float durations are a little more than those doubles, so a plain comparison showed the frame before. Step 1's tile tests use times on exact binary fractions and pass as before. A `Once` before 0 shows its first frame that lasts. `FlipbookDirections` has two internal helpers, `HorizontalPart` and `VerticalPart`, for the fallback of a diagonal.
 
 ### Task 3: The flipbook component, and what plays
 

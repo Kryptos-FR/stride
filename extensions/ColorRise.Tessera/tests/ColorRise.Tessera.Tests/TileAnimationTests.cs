@@ -42,6 +42,18 @@ public sealed class TileAnimationTests
     public void A_time_that_is_not_a_number_shows_the_first_frame(double time)
         => Assert.Equal(TileId.FromGrid(1, 1, 0), Animated((TileId.FromGrid(1, 1, 0), 0.25f), (TileId.FromGrid(1, 2, 0), 0.5f)).FrameAt(time));
 
+    // The editors have the frames of a definition and no Tile
+    [Fact]
+    public void The_frames_of_a_definition_give_the_same_tile_as_the_tile()
+    {
+        var tile = Animated((TileId.FromGrid(1, 1, 0), 0.25f), (TileId.FromGrid(1, 2, 0), 0.5f));
+        foreach (var time in new[] { 0, 0.3, 0.8, -0.1 })
+        {
+            Assert.Equal(tile.FrameAt(time), Tile.FrameAt(tile.Animation, tile.Id, time));
+        }
+        Assert.Equal(TileId.FromGrid(1, 0, 0), Tile.FrameAt([], TileId.FromGrid(1, 0, 0), 0.3));
+    }
+
     private static Tile Animated(params (TileId Tile, float Duration)[] frames)
     {
         var tile = new Tile { Id = TileId.FromGrid(1, 0, 0) };
