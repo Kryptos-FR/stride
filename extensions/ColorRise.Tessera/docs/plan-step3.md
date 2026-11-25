@@ -1031,7 +1031,7 @@ The command `Tessera.TileSet.Mode.Animation`, "Animation mode", in the scope of 
 
 The view: a third toggle button `Animation` beside `Select` and `Solid`. Under the canvas, in this mode only, a bar: the frames in a row (a `ListBox` laid out horizontally, its selected item bound to `SelectedFrame`), each with its picture in a `PictureView` of 48 pixels, its number and its duration (`0.2 s`); then `<`, `>`, `x`, `Clear`, `Done`. With no animated tile the bar says `Click the tile to animate.`; with one and no frame, `Click the tiles of its frames, in order.` Each button gives the focus back to the canvas.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // PictureViewTests
@@ -1054,10 +1054,14 @@ The view: a third toggle button `Animation` beside `Select` and `Solid`. Under t
 // The_tile_set_commands_reach_the_tile_set_editor: gains Tessera.TileSet.Mode.Animation and its checked state
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: FAIL to compile (`PictureView`), then the view tests fail on the button they do not find.
-- [ ] **Step 3: Write the control, the bar and the command.**
-- [ ] **Step 4: Run the tests of the three files.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): the bar of frames of Animation mode`
+- [x] **Step 2: Run them to see them fail.** Expected: FAIL to compile (`PictureView`), then the view tests fail on the button they do not find.
+- [x] **Step 3: Write the control, the bar and the command.**
+- [x] **Step 4: Run the tests of the three files.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): the bar of frames of Animation mode`
+
+**Done (2026-11-25).** Red: the views project did not compile (`PictureView` not found), and three command tests failed on the id they did not find. Green: the 16 tests of `PictureViewTests` and `TileSetEditorViewTests`, the command tests; views project 51, editor project 278. A render of the mode with five frames, one of them missing, is in `/mnt/project-files/tilemap/step3/headless-tileset-animation-bar.png`.
+
+**Done differently.** `TilePicture` gains a `Touched` event raised by `Touch()`: `PictureView` follows it while it is shown, so a picture written in place is drawn again without a scene to say so. The bar's sentence is a property of the view model, `AnimationHint` (null once the animated tile has a frame), rather than two bindings on the list's count. The list of frames binds Delete to `Remove frame`, as the list of sources does, for when it has the focus. `An_animated_tile_plays_on_the_canvas` uses frames of 2 s and nine ticks of a quarter of a second: the canvas's own timer runs on real time during the test, and 0.2 s frames could change before the first read.
 
 ### Task 12: The map editor plays animated tiles (decision 2)
 

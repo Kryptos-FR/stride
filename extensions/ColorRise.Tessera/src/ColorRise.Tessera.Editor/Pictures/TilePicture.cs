@@ -49,7 +49,16 @@ public sealed class TilePicture
     public int Version { get; private set; }
 
     /// <summary>
+    /// Raised by <see cref="Touch"/>, on the thread that wrote the pixels: a view that shows the picture draws it again.
+    /// </summary>
+    public event EventHandler? Touched;
+
+    /// <summary>
     /// Says that <see cref="Pixels"/> were written.
     /// </summary>
-    public void Touch() => Version++;
+    public void Touch()
+    {
+        Version++;
+        Touched?.Invoke(this, EventArgs.Empty);
+    }
 }

@@ -32,6 +32,7 @@ internal static class TesseraCommands
         Map("Tessera.Map.AddLayer", "Add layer", ["layer", "new"], editor => editor.AddLayerCommand.Execute()),
         TileSet("Tessera.TileSet.Mode.Select", "Select tiles", ["mode"], editor => editor.Mode = TileSetEditorMode.Select, editor => editor.Mode == TileSetEditorMode.Select),
         TileSet("Tessera.TileSet.Mode.Solid", "Set tiles solid", ["mode", "collision"], editor => editor.Mode = TileSetEditorMode.Solid, editor => editor.Mode == TileSetEditorMode.Solid),
+        TileSet("Tessera.TileSet.Mode.Animation", "Animation mode", ["mode", "animate", "frames"], editor => editor.Mode = TileSetEditorMode.Animation, editor => editor.Mode == TileSetEditorMode.Animation),
         TileSet("Tessera.TileSet.AddImage", "Add image source", ["image", "source"], editor => editor.AddImageAsync()),
         TileSet("Tessera.TileSet.AddSpriteSheet", "Add sprite sheet source", ["sprite sheet", "source"], editor => editor.AddSpriteSheetAsync()),
     ];

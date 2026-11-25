@@ -166,6 +166,16 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
     }
 
     /// <summary>
+    /// What the bar of Animation mode tells the person to do: pick the tile to animate, or click its frames; null once the
+    /// animated tile has a frame.
+    /// </summary>
+    public string? AnimationHint
+    {
+        get;
+        private set => SetValue(ref field, value);
+    } = "Click the tile to animate.";
+
+    /// <summary>
     /// Removes the selected frame, then selects the frame that took its place, or the last.
     /// </summary>
     public ICommandBase RemoveFrameCommand { get; }
@@ -806,6 +816,7 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
         MoveFrameRightCommand.IsEnabled = selected >= 0 && selected < FrameItems.Count - 1;
         ClearFramesCommand.IsEnabled = FrameItems.Count > 0;
         DoneAnimationCommand.IsEnabled = AnimatedTile is not null;
+        AnimationHint = AnimatedTile is null ? "Click the tile to animate." : FrameItems.Count == 0 ? "Click the tiles of its frames, in order." : null;
     }
 
     // In Animation mode, Delete removes the selected frame and Escape lets go of the animated tile; in the other modes, the

@@ -25,7 +25,7 @@ public sealed class TesseraCommandsTests
         "Tessera.Map.ToggleGrid", "Tessera.Map.ToggleDimOtherLayers", "Tessera.Map.AddLayer",
     ];
 
-    private static readonly string[] TileSetIds = ["Tessera.TileSet.Mode.Select", "Tessera.TileSet.Mode.Solid", "Tessera.TileSet.AddImage", "Tessera.TileSet.AddSpriteSheet"];
+    private static readonly string[] TileSetIds = ["Tessera.TileSet.Mode.Select", "Tessera.TileSet.Mode.Solid", "Tessera.TileSet.Mode.Animation", "Tessera.TileSet.AddImage", "Tessera.TileSet.AddSpriteSheet"];
 
     [Fact]
     public void Every_command_has_its_id_a_scope_and_no_default_gesture()
@@ -45,6 +45,8 @@ public sealed class TesseraCommandsTests
         Assert.Contains("B", Command("Tessera.Map.Tool.Stamp").Keywords);
         Assert.Contains("Shift+Z", Command("Tessera.Map.RotateStampCounterClockwise").Keywords);
         Assert.All(MapIds.Take(6), id => Assert.NotNull(Command(id).IsChecked));
+        Assert.Equal(18, commands.Count);
+        Assert.Equal("Animation mode", Command("Tessera.TileSet.Mode.Animation").Title());
     }
 
     [Fact]
@@ -123,6 +125,12 @@ public sealed class TesseraCommandsTests
         Assert.True(solid.IsChecked!(context));
         await Command("Tessera.TileSet.Mode.Select").ExecuteAsync(context);
         Assert.Equal(TileSetEditorMode.Select, editor.Mode);
+        var animation = Command("Tessera.TileSet.Mode.Animation");
+        Assert.False(animation.IsChecked!(context));
+        await animation.ExecuteAsync(context);
+        Assert.Equal(TileSetEditorMode.Animation, editor.Mode);
+        Assert.True(animation.IsChecked!(context));
+        Assert.False(solid.IsChecked!(context));
 
         var asked = false;
         session.Dialogs.PickFile = _ =>

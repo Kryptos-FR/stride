@@ -10,7 +10,8 @@ using Stride.Core.IO;
 namespace ColorRise.Tessera.Editor.Avalonia.Views;
 
 /// <summary>
-/// The view of the tile set editor: the sources on the left, the selected one on a canvas, and the tool bar.
+/// The view of the tile set editor: the sources on the left, the selected one on a canvas, the tool bar, and in Animation
+/// mode the bar of frames under the canvas.
 /// </summary>
 [AssetEditorView<TileSetEditorViewModel>]
 public sealed partial class TileSetEditorView : UserControl, IAssetEditorView
@@ -25,6 +26,8 @@ public sealed partial class TileSetEditorView : UserControl, IAssetEditorView
     {
         InitializeComponent();
         FileDropBehavior.SetCommand(CanvasArea, new ProposeFirstFile(this));
+        // A button of the bar of frames gives the keys back to the canvas
+        AnimationBar.AddHandler(Button.ClickEvent, (_, _) => Canvas.Focus(), RoutingStrategies.Bubble, handledEventsToo: true);
     }
 
     /// <inheritdoc/>

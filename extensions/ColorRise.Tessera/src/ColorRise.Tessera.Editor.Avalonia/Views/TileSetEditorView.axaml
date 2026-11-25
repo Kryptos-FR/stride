@@ -24,6 +24,9 @@
     <Style Selector="ToggleButton.mode:checked">
       <Setter Property="IsHitTestVisible" Value="False"/>
     </Style>
+    <Style Selector="ListBox#FrameList ListBoxItem">
+      <Setter Property="Padding" Value="4,2"/>
+    </Style>
     <Style Selector="TextBlock.problem">
       <Setter Property="Foreground" Value="#FFB040"/>
       <Setter Property="TextWrapping" Value="Wrap"/>
@@ -41,6 +44,9 @@
       <ToggleButton x:Name="SolidModeButton" Classes="mode" Content="Solid"
                     ToolTip.Tip="A press sets a tile solid, or clears it; the tiles of the drag get the same value"
                     IsChecked="{Binding Mode, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileSetEditorMode.Solid}}"/>
+      <ToggleButton x:Name="AnimationModeButton" Classes="mode" Content="Animation"
+                    ToolTip.Tip="A click picks the tile to animate, then each click adds a frame; durations are in the property grid"
+                    IsChecked="{Binding Mode, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileSetEditorMode.Animation}}"/>
       <TextBlock x:Name="ZoomText" VerticalAlignment="Center" MinWidth="48" Margin="12,0,0,0" TextAlignment="Right"
                  Text="{Binding View.Zoom, StringFormat='{}{0:0%}'}"/>
       <Button x:Name="RefreshButton" Content="Refresh" Command="{Binding RefreshCommand}" Margin="12,0,0,0"
@@ -115,6 +121,42 @@
           </DataTemplate>
         </ContentControl.ContentTemplate>
       </ContentControl>
+
+      <!-- Animation mode: the frames of the animated tile, in order, and what can be done with the selected one -->
+      <Border x:Name="AnimationBar" DockPanel.Dock="Bottom" Classes="bar"
+              IsVisible="{Binding Mode, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileSetEditorMode.Animation}}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0" VerticalAlignment="Center">
+            <Button x:Name="MoveFrameLeftButton" Content="&lt;" Command="{Binding MoveFrameLeftCommand}" ToolTip.Tip="Moves the selected frame one place earlier"/>
+            <Button x:Name="MoveFrameRightButton" Content="&gt;" Command="{Binding MoveFrameRightCommand}" ToolTip.Tip="Moves the selected frame one place later"/>
+            <Button x:Name="RemoveFrameButton" Content="x" Command="{Binding RemoveFrameCommand}" ToolTip.Tip="Removes the selected frame (Delete)"/>
+            <Button x:Name="ClearFramesButton" Content="Clear" Command="{Binding ClearFramesCommand}" ToolTip.Tip="Removes all the frames"/>
+            <Button x:Name="DoneAnimationButton" Content="Done" Command="{Binding DoneAnimationCommand}" ToolTip.Tip="Lets go of the animated tile (Escape)"/>
+          </StackPanel>
+          <TextBlock x:Name="AnimationHintText" DockPanel.Dock="Left" Text="{Binding AnimationHint}" Margin="0,0,8,0"
+                     IsVisible="{Binding AnimationHint, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <ListBox x:Name="FrameList" ItemsSource="{Binding Frames}" SelectedItem="{Binding SelectedFrame}" Background="Transparent"
+                   ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+            <sd:EditCommands.Bindings>
+              <sd:EditCommandBinding Kind="Delete" Command="{Binding RemoveFrameCommand}"/>
+            </sd:EditCommands.Bindings>
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="2"/>
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="editor:TileFrameItemViewModel">
+                <StackPanel Spacing="1" ToolTip.Tip="{Binding Tile}">
+                  <controls:PictureView Width="48" Height="48" Picture="{Binding Picture}" Region="{Binding Region}" IsMissing="{Binding IsMissing}"/>
+                  <TextBlock HorizontalAlignment="Center" Text="{Binding Label}"/>
+                  <TextBlock HorizontalAlignment="Center" Opacity="0.7" Text="{Binding Duration, StringFormat='{}{0:0.###} s'}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
 
       <!-- One missing tile of a sprite sheet selected: the sprite it names is gone, and it can take another -->
       <Border DockPanel.Dock="Bottom" Classes="bar"

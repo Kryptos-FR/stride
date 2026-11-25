@@ -214,6 +214,148 @@ public sealed class TileSetEditorViewTests
         }
     }
 
+    [AvaloniaFact]
+    public async Task The_animation_button_enters_the_mode_and_shows_the_bar()
+    {
+        await using var session = await OpenTownAsync();
+        var editor = await session.EditTileSetAsync("Tiles/Town");
+        var (view, window) = Show(editor);
+        try
+        {
+            Assert.False(view.FindControl<Control>("AnimationBar")!.IsEffectivelyVisible);
+
+            Click(window, view.FindControl<ToggleButton>("AnimationModeButton")!);
+
+            Assert.Equal(TileSetEditorMode.Animation, editor.Mode);
+            Assert.True(view.FindControl<Control>("AnimationBar")!.IsEffectivelyVisible);
+            Assert.Contains("Click the tile to animate.", Texts(view));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Clicks_on_the_canvas_pick_the_tile_then_add_frames_to_the_bar()
+    {
+        await using var session = await OpenTownAsync();
+        var editor = await session.EditTileSetAsync("Tiles/Town");
+        var (view, window) = Show(editor);
+        try
+        {
+            Click(window, view.FindControl<ToggleButton>("AnimationModeButton")!);
+
+            ClickTile(view, window, 0, 0);
+            Assert.Contains("Click the tiles of its frames, in order.", Texts(view));
+            ClickTile(view, window, 1, 0);
+            ClickTile(view, window, 2, 0);
+
+            var list = view.FindControl<ListBox>("FrameList")!;
+            Assert.Equal(2, list.GetVisualDescendants().OfType<ListBoxItem>().Count());
+            Assert.Equal(2, list.GetVisualDescendants().OfType<PictureView>().Count(picture => picture.Picture is not null));
+            Assert.Contains("0.2 s", Texts(list));
+            Assert.Contains("2", Texts(list));
+            Assert.DoesNotContain("Click the tiles of its frames, in order.", Texts(view));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task An_animated_tile_plays_on_the_canvas()
+    {
+        // Frames of 2 s, so that the canvas's own ticks, which follow the clock of the test, do not change the frame read first
+        var tileSet = TestTown.TileSet();
+        tileSet.Tiles.Add(new TileDefinition
+        {
+            Tile = TileId.Parse("1:0,0"),
+            Animation = { new TileAnimationFrame { Tile = TileId.Parse("1:1,0"), Duration = 2 }, new TileAnimationFrame { Tile = TileId.Parse("1:2,0"), Duration = 2 } },
+        });
+        await using var session = await OpenTownAsync(tileSet);
+        var editor = await session.EditTileSetAsync("Tiles/Town");
+        var (view, window) = Show(editor);
+        try
+        {
+            var canvas = view.FindControl<TileCanvas>("Canvas")!;
+            var middle = At(view, window, 0, 0);
+            Assert.True(canvas.IsTicking);
+            Assert.Equal(TestTown.Flat(1, 0), CanvasProbe.Pixel(window, (int)middle.X, (int)middle.Y));
+
+            for (var tick = 0; tick < 9; tick++)
+            {
+                canvas.Tick(TimeSpan.FromSeconds(0.25));
+            }
+
+            Assert.Equal(TestTown.Flat(2, 0), CanvasProbe.Pixel(window, (int)middle.X, (int)middle.Y));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task The_bar_removes_and_moves_the_selected_frame_and_the_canvas_has_the_focus_again()
+    {
+        await using var session = await OpenTownAsync(Animated());
+        var editor = await session.EditTileSetAsync("Tiles/Town");
+        var (view, window) = Show(editor);
+        try
+        {
+            var canvas = view.FindControl<TileCanvas>("Canvas")!;
+            Click(window, view.FindControl<ToggleButton>("AnimationModeButton")!);
+            ClickTile(view, window, 0, 0);
+            Assert.Equal(3, editor.Frames.Count);
+
+            Click(window, view.FindControl<ListBox>("FrameList")!.GetVisualDescendants().OfType<ListBoxItem>().First());
+            Assert.Same(editor.Frames[0], editor.SelectedFrame);
+            Click(window, view.FindControl<Button>("MoveFrameRightButton")!);
+            Assert.Equal(Tiles("1:2,0", "1:1,0", "1:3,0"), FrameTiles(session));
+            Assert.True(canvas.IsFocused);
+
+            Click(window, view.FindControl<Button>("RemoveFrameButton")!);
+            Assert.Equal(Tiles("1:2,0", "1:3,0"), FrameTiles(session));
+            Assert.True(canvas.IsFocused);
+
+            Click(window, view.FindControl<Button>("ClearFramesButton")!);
+            Assert.Empty(FrameTiles(session));
+            Click(window, view.FindControl<Button>("DoneAnimationButton")!);
+            Assert.Null(editor.AnimatedTile);
+            Assert.True(canvas.IsFocused);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Delete_on_the_canvas_removes_the_selected_frame()
+    {
+        await using var session = await OpenTownAsync(Animated());
+        var editor = await session.EditTileSetAsync("Tiles/Town");
+        var (view, window) = Show(editor);
+        try
+        {
+            Click(window, view.FindControl<ToggleButton>("AnimationModeButton")!);
+            ClickTile(view, window, 0, 0);
+            editor.SelectedFrame = editor.Frames[1];
+            Assert.True(view.FindControl<TileCanvas>("Canvas")!.IsFocused);
+
+            window.KeyPress(Key.Delete, RawInputModifiers.None, PhysicalKey.Delete, null);
+            window.KeyRelease(Key.Delete, RawInputModifiers.None, PhysicalKey.Delete, null);
+
+            Assert.Equal(Tiles("1:1,0", "1:3,0"), FrameTiles(session));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     private static (TileSetEditorView View, Window Window) Show(TileSetEditorViewModel editor)
     {
         var view = new TileSetEditorView { DataContext = editor };
@@ -226,6 +368,32 @@ public sealed class TileSetEditorViewTests
         var canvas = view.FindControl<TileCanvas>("Canvas")!;
         var screen = canvas.View.ToScreen(new Vector2(column * 16 + 8, row * 16 + 8));
         return canvas.TranslatePoint(new Point(screen.X, screen.Y), window)!.Value;
+    }
+
+    private static void ClickTile(TileSetEditorView view, Window window, int column, int row)
+    {
+        var tile = At(view, window, column, row);
+        window.MouseDown(tile, MouseButton.Left);
+        window.MouseUp(tile, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    private static List<TileId> Tiles(params string[] tiles) => [.. tiles.Select(TileId.Parse)];
+
+    private static List<TileId> FrameTiles(TesseraSession session)
+        => [.. session.TileSetAt("Tiles/Town").Asset.GetDefinition(TileId.Parse("1:0,0"))?.Animation.Select(frame => frame.Tile) ?? []];
+
+    // The town set, whose tile 1:0,0 has the frames 1:1,0, 1:2,0 and 1:3,0
+    private static TileSetAsset Animated()
+    {
+        var tileSet = TestTown.TileSet();
+        var definition = new TileDefinition { Tile = TileId.Parse("1:0,0") };
+        foreach (var frame in new[] { "1:1,0", "1:2,0", "1:3,0" })
+        {
+            definition.Animation.Add(new TileAnimationFrame { Tile = TileId.Parse(frame), Duration = 0.2f });
+        }
+        tileSet.Tiles.Add(definition);
+        return tileSet;
     }
 
     private static void Click(Window window, Control control)
@@ -246,10 +414,10 @@ public sealed class TileSetEditorViewTests
         return [.. root.GetVisualDescendants().OfType<TextBlock>().Where(block => block.IsEffectivelyVisible).Select(block => block.Text ?? "")];
     }
 
-    private static async Task<TesseraSession> OpenTownAsync()
+    private static async Task<TesseraSession> OpenTownAsync(TileSetAsset? tileSet = null)
     {
         var options = new StrideEditorTestSessionOptions { Dispatcher = DispatcherService.Create(), Plugins = [new TesseraEditorAvaloniaPlugin()] };
-        var session = await TesseraSession.OpenAsync(options, ("Tiles/Town", TestTown.TileSet()));
+        var session = await TesseraSession.OpenAsync(options, ("Tiles/Town", tileSet ?? TestTown.TileSet()));
         session.WriteImage("Tiles/town.png", 64, 32, TestTown.Pixel);
         return session;
     }
