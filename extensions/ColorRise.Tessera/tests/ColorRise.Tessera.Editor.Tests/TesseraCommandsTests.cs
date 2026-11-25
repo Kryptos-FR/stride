@@ -22,7 +22,7 @@ public sealed class TesseraCommandsTests
     [
         "Tessera.Map.Tool.Stamp", "Tessera.Map.Tool.Rectangle", "Tessera.Map.Tool.Fill", "Tessera.Map.Tool.Erase", "Tessera.Map.Tool.Pick", "Tessera.Map.Tool.Select",
         "Tessera.Map.FlipStampX", "Tessera.Map.FlipStampY", "Tessera.Map.RotateStampClockwise", "Tessera.Map.RotateStampCounterClockwise",
-        "Tessera.Map.ToggleGrid", "Tessera.Map.ToggleDimOtherLayers", "Tessera.Map.AddLayer",
+        "Tessera.Map.ToggleGrid", "Tessera.Map.ToggleDimOtherLayers", "Tessera.Map.ToggleAnimations", "Tessera.Map.AddLayer",
     ];
 
     private static readonly string[] TileSetIds = ["Tessera.TileSet.Mode.Select", "Tessera.TileSet.Mode.Solid", "Tessera.TileSet.Mode.Animation", "Tessera.TileSet.AddImage", "Tessera.TileSet.AddSpriteSheet"];
@@ -45,7 +45,7 @@ public sealed class TesseraCommandsTests
         Assert.Contains("B", Command("Tessera.Map.Tool.Stamp").Keywords);
         Assert.Contains("Shift+Z", Command("Tessera.Map.RotateStampCounterClockwise").Keywords);
         Assert.All(MapIds.Take(6), id => Assert.NotNull(Command(id).IsChecked));
-        Assert.Equal(18, commands.Count);
+        Assert.Equal(19, commands.Count);
         Assert.Equal("Animation mode", Command("Tessera.TileSet.Mode.Animation").Title());
     }
 
@@ -142,6 +142,30 @@ public sealed class TesseraCommandsTests
         Assert.True(asked);
         await Command("Tessera.TileSet.AddSpriteSheet").ExecuteAsync(context);
         Assert.Single(session.Dialogs.AssetPickers);
+    }
+
+    [Fact]
+    public async Task The_play_command_toggles_the_focused_map_editor_and_is_checked()
+    {
+        await using var session = await OpenAsync();
+        var editor = await session.EditMapAsync(MapLocation);
+        var context = In(session, editor);
+        var play = Command("Tessera.Map.ToggleAnimations");
+        try
+        {
+            Assert.Equal("Play the animated tiles", play.Title());
+            Assert.True(play.IsChecked!(context));
+
+            await play.ExecuteAsync(context);
+            Assert.False(editor.PlayAnimations);
+            Assert.False(play.IsChecked!(context));
+            await play.ExecuteAsync(context);
+            Assert.True(editor.PlayAnimations);
+        }
+        finally
+        {
+            TesseraEditorSettings.PlayAnimations.SetValue(true);
+        }
     }
 
     private static CommandDescriptor Command(string id) => TesseraCommands.Create().Single(command => command.Id == id);

@@ -29,6 +29,7 @@ internal static class TesseraCommands
         Map("Tessera.Map.RotateStampCounterClockwise", "Rotate stamp counterclockwise", ["Shift+Z", "turn"], editor => editor.RotateStamp(clockwise: false)),
         Map("Tessera.Map.ToggleGrid", "Show grid", ["grid", "cells"], editor => editor.ShowGrid = !editor.ShowGrid, editor => editor.ShowGrid),
         Map("Tessera.Map.ToggleDimOtherLayers", "Dim other layers", ["layers", "fade"], editor => editor.DimOtherLayers = !editor.DimOtherLayers, editor => editor.DimOtherLayers),
+        Map("Tessera.Map.ToggleAnimations", "Play the animated tiles", ["animation", "play"], editor => editor.PlayAnimations = !editor.PlayAnimations, editor => editor.PlayAnimations),
         Map("Tessera.Map.AddLayer", "Add layer", ["layer", "new"], editor => editor.AddLayerCommand.Execute()),
         TileSet("Tessera.TileSet.Mode.Select", "Select tiles", ["mode"], editor => editor.Mode = TileSetEditorMode.Select, editor => editor.Mode == TileSetEditorMode.Select),
         TileSet("Tessera.TileSet.Mode.Solid", "Set tiles solid", ["mode", "collision"], editor => editor.Mode = TileSetEditorMode.Solid, editor => editor.Mode == TileSetEditorMode.Solid),

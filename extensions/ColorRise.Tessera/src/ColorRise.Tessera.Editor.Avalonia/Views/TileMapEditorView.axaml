@@ -47,6 +47,7 @@
       <Button Content="Rotate" ToolTip.Tip="Turn the stamp clockwise (Z), or the other way (Shift+Z)" Click="OnRotate"/>
       <ToggleButton x:Name="GridButton" Content="Grid" ToolTip.Tip="Show the grid of the cells" Margin="12,0,0,0" IsChecked="{Binding ShowGrid}"/>
       <ToggleButton x:Name="DimButton" Content="Dim other layers" ToolTip.Tip="Draw the other layers faded" IsChecked="{Binding DimOtherLayers}"/>
+      <ToggleButton x:Name="PlayButton" Content="Play" ToolTip.Tip="Play the animated tiles" IsChecked="{Binding PlayAnimations}"/>
     </StackPanel>
 
     <!-- The status line: the cell, the layer, the tile and the zoom, then why the last press did nothing -->

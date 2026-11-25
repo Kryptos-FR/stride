@@ -59,6 +59,7 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
         Scene = new TileMapScene(Document, TilePictureService.Of(asset.Session))
         {
             DimOthers = DimOtherLayers,
+            PlayAnimations = PlayAnimations,
             DimOpacity = Math.Clamp(TesseraEditorSettings.DimOpacity.GetValue(), 0, 1),
         };
         Input = new TileMapInput(this);
@@ -260,6 +261,23 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
             }
         }
     } = TesseraEditorSettings.DimOtherLayers.GetValue();
+
+    /// <summary>
+    /// Whether the canvas plays the animated tiles; kept in the editor settings.
+    /// </summary>
+    public bool PlayAnimations
+    {
+        get;
+        set
+        {
+            if (SetValue(ref field, value))
+            {
+                Scene.PlayAnimations = value;
+                TesseraEditorSettings.PlayAnimations.SetValue(value);
+                TesseraEditorSettings.Save();
+            }
+        }
+    } = TesseraEditorSettings.PlayAnimations.GetValue();
 
     /// <summary>
     /// The cell under the pointer, such as "cell 12, 7"; empty when the pointer is not over the canvas.

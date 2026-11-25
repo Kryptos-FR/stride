@@ -12,9 +12,11 @@ namespace ColorRise.Tessera.Editor.TileMapEditor;
 /// </summary>
 /// <remarks>
 /// The canvas has Y down and the map Y up: the cell (0, 0) is just above the origin of the canvas. A picture is made at the
-/// scale 1, 1/2, 1/4 or 1/8, the smallest that is at least the zoom, from the tiles. Used on the session's dispatcher.
+/// scale 1, 1/2, 1/4 or 1/8, the smallest that is at least the zoom, from the tiles. An animated tile draws the frame of
+/// <see cref="Time"/> while <see cref="PlayAnimations"/> is set, else its first frame; a picture with animated tiles is
+/// drawn again into itself when its frames change. Used on the session's dispatcher.
 /// </remarks>
-public sealed class TileMapScene : ICanvasScene, IDisposable
+public sealed class TileMapScene : ICanvasScene, ICanvasClock, IDisposable
 {
     private const int Size = TileChunk.Size;
     private const int Levels = 4;
@@ -30,6 +32,8 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
     private readonly Dictionary<ushort, TileSetPictures?> slots = [];
     // The chunks the document does not paint, by layer
     private readonly List<(int Layer, Int2 Chunk)> unreadable = [];
+    // The pictures with animated tiles that the last frame gave to the canvas
+    private readonly List<Composed> shown = [];
     // How many chunks the largest tile reaches into, beyond its own, to the right and up
     private Int2 reach;
     private long frameNumber;
@@ -57,6 +61,47 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
 
     /// <inheritdoc/>
     public event EventHandler? Changed;
+
+    /// <inheritdoc/>
+    public event EventHandler? IsRunningChanged;
+
+    /// <summary>
+    /// Whether the animated tiles play; when not, each shows its first frame.
+    /// </summary>
+    public bool PlayAnimations
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                RedrawShown();
+                IsRunning = value && shown.Count > 0;
+                RaiseChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// The time of the animations, in seconds: how far the scene was advanced.
+    /// </summary>
+    public double Time { get; private set; }
+
+    /// <inheritdoc/>
+    /// <remarks>While <see cref="PlayAnimations"/> is set and the last frame showed an animated tile.</remarks>
+    public bool IsRunning
+    {
+        get;
+        private set
+        {
+            if (field != value)
+            {
+                field = value;
+                IsRunningChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
 
     /// <summary>
     /// The size of a cell in canvas units: the map's cell size times the largest pixels per unit of its tile sets (16 for a
@@ -221,6 +266,22 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
     public void Invalidate() => RaiseChanged();
 
     /// <inheritdoc/>
+    /// <remarks>Draws again the pictures shown that have animated tiles whose frames changed; raises one
+    /// <see cref="Changed"/> when there was one.</remarks>
+    public void Advance(double seconds)
+    {
+        if (disposed)
+        {
+            return;
+        }
+        Time += seconds;
+        if (PlayAnimations && RedrawShown())
+        {
+            RaiseChanged();
+        }
+    }
+
+    /// <inheritdoc/>
     public void Collect(RectangleF visible, float zoom, CanvasFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
@@ -229,6 +290,7 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
             return;
         }
         frameNumber++;
+        shown.Clear();
         if (SlotsMoved())
         {
             Resolve();
@@ -275,6 +337,7 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
         }
         frame.Shapes.AddRange(Overlay);
         Trim();
+        IsRunning = PlayAnimations && shown.Count > 0;
     }
 
     /// <summary>
@@ -295,6 +358,7 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
             set.Changed -= TileSetChanged;
         }
         DropAll();
+        IsRunning = false;
     }
 
     // The smallest scale that is at least the zoom, as a level: 0 for 1, 3 for 1/8
@@ -390,21 +454,75 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
         var key = new PictureKey(layer, chunk, level);
         if (!composed.TryGetValue(key, out var entry))
         {
-            entry = new Composed(Compose(document.GetLayer(layer), chunk, level));
+            var scale = 1f / (1 << level);
+            entry = new Composed(key, new TilePicture(Math.Max(1, (int)MathF.Round(Size * CellPixels.X * scale)), Math.Max(1, (int)MathF.Round(Size * CellPixels.Y * scale))));
+            Compose(entry);
             composed.Add(key, entry);
             PictureBytes += entry.Bytes;
             ComposedCount++;
         }
+        else if (IsStale(entry))
+        {
+            // Out of view while the time went on
+            Redraw(entry);
+        }
         entry.LastFrame = frameNumber;
+        if (entry.Frames is not null)
+        {
+            shown.Add(entry);
+        }
         return entry.Picture;
+    }
+
+    // Draws again the pictures shown whose animated tiles no longer show the frames of the time; whether there was one
+    private bool RedrawShown()
+    {
+        var drawn = false;
+        foreach (var entry in shown)
+        {
+            if (composed.GetValueOrDefault(entry.Key) == entry && IsStale(entry))
+            {
+                Redraw(entry);
+                drawn = true;
+            }
+        }
+        return drawn;
+    }
+
+    // Whether a picture drew a frame of an animated tile that is not the one of the time
+    private bool IsStale(Composed entry)
+    {
+        if (entry.Frames is not { } frames)
+        {
+            return false;
+        }
+        var time = PlayAnimations ? Time : 0;
+        foreach (var ((slot, tile), drawn) in frames)
+        {
+            var animation = slots.GetValueOrDefault(slot)?.AnimationOf(tile);
+            if ((animation is null ? tile : Tile.FrameAt(animation, tile, time)) != drawn)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Draws a picture again into its own pixels: no new picture, so the canvas keeps its bitmap
+    private void Redraw(Composed entry)
+    {
+        Array.Clear(entry.Picture.Pixels);
+        Compose(entry);
     }
 
     // The picture of a chunk: its cells and the large tiles of the chunks to its left and below that reach into it, in the
     // order of the runtime: row by row from the bottom, each from the left
-    private TilePicture Compose(TileLayer layer, Int2 chunk, int level)
+    private void Compose(Composed entry)
     {
-        var scale = 1f / (1 << level);
-        var picture = new TilePicture(Math.Max(1, (int)MathF.Round(Size * CellPixels.X * scale)), Math.Max(1, (int)MathF.Round(Size * CellPixels.Y * scale)));
+        var (layer, chunk, picture) = (document.GetLayer(entry.Key.Layer), entry.Key.Chunk, entry.Picture);
+        var scale = 1f / (1 << entry.Key.Level);
+        var time = PlayAnimations ? Time : 0;
+        entry.Frames = null;
         var (firstRow, lastRow) = ((chunk.Y - reach.Y) * Size, chunk.Y * Size + Size - 1);
         for (var row = firstRow; row <= lastRow; row++)
         {
@@ -422,13 +540,12 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
                     if (!cell.IsEmpty)
                     {
                         var corner = new Vector2((x * Size + column - chunk.X * Size) * CellPixels.X, (Size - (row - chunk.Y * Size)) * CellPixels.Y);
-                        DrawCell(picture, cell, corner, scale, layer.Tint);
+                        DrawCell(picture, cell, corner, scale, layer.Tint, time, entry);
                     }
                 }
             }
         }
         picture.Touch();
-        return picture;
     }
 
     private TilePicture ComposeGhost(TileStamp stamp)
@@ -441,7 +558,7 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
             {
                 if (!stamp[x, y].IsEmpty)
                 {
-                    DrawCell(picture, stamp[x, y], new Vector2(x * CellPixels.X, (stamp.Size.Y - y) * CellPixels.Y), 1, tint);
+                    DrawCell(picture, stamp[x, y], new Vector2(x * CellPixels.X, (stamp.Size.Y - y) * CellPixels.Y), 1, tint, 0, null);
                 }
             }
         }
@@ -449,13 +566,23 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
         return picture;
     }
 
-    // Draws the tile of a cell from the bottom-left corner of the cell, in the pixels of the scale 1, to the right and up
-    private void DrawCell(TilePicture picture, TileCell cell, Vector2 corner, float scale, Color tint)
+    // Draws the tile of a cell from the bottom-left corner of the cell, in the pixels of the scale 1, to the right and up;
+    // an animated tile draws its frame of the time, which the picture's entry remembers
+    private void DrawCell(TilePicture picture, TileCell cell, Vector2 corner, float scale, Color tint, double time, Composed? entry)
     {
         var size = new Vector2(CellPixels.X, CellPixels.Y);
         TileSlot? tile = null;
-        if (slots.GetValueOrDefault(cell.Slot) is { } set && set.TileSet.Asset.PixelsPerUnit is var unit && unit > 0
-            && set.Find(cell.Tile) is { IsMissing: false } found)
+        var set = slots.GetValueOrDefault(cell.Slot);
+        var shownTile = cell.Tile;
+        if (set?.AnimationOf(cell.Tile) is { } animation)
+        {
+            shownTile = Tile.FrameAt(animation, cell.Tile, time);
+            if (entry is not null)
+            {
+                (entry.Frames ??= [])[(cell.Slot, cell.Tile)] = shownTile;
+            }
+        }
+        if (set is not null && set.TileSet.Asset.PixelsPerUnit is var unit && unit > 0 && set.Find(shownTile) is { IsMissing: false } found)
         {
             tile = found;
             var cellSize = CellSize();
@@ -569,6 +696,7 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
     private void DropAll()
     {
         composed.Clear();
+        shown.Clear();
         PictureBytes = 0;
         ghostPicture = null;
     }
@@ -637,12 +765,17 @@ public sealed class TileMapScene : ICanvasScene, IDisposable
 
     private readonly record struct PictureKey(int Layer, Int2 Chunk, int Level);
 
-    private sealed class Composed(TilePicture picture)
+    private sealed class Composed(PictureKey key, TilePicture picture)
     {
+        public PictureKey Key { get; } = key;
+
         public TilePicture Picture { get; } = picture;
 
         public long Bytes { get; } = 4L * picture.Width * picture.Height;
 
         public long LastFrame { get; set; }
+
+        // The frame each animated tile was drawn with, by slot and tile; null for a picture without one
+        public Dictionary<(ushort Slot, TileId Tile), TileId>? Frames { get; set; }
     }
 }

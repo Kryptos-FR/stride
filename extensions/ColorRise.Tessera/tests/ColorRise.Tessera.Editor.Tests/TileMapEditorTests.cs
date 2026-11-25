@@ -410,6 +410,31 @@ public sealed class TileMapEditorTests
         }
     }
 
+    [Fact]
+    public async Task The_play_toggle_follows_its_setting_and_writes_it()
+    {
+        await using var map = await OpenAsync([["0,0"]]);
+        try
+        {
+            Assert.True(TesseraEditorSettings.PlayAnimations.GetValue());
+            Assert.True(map.Editor.PlayAnimations);
+            Assert.True(map.Editor.Scene.PlayAnimations);
+
+            map.Editor.PlayAnimations = false;
+
+            Assert.False(map.Editor.Scene.PlayAnimations);
+            Assert.False(TesseraEditorSettings.PlayAnimations.GetValue());
+            var second = await map.Session.EditMapAsync(Location);
+            Assert.False(second.PlayAnimations);
+            Assert.False(second.Scene.PlayAnimations);
+        }
+        finally
+        {
+            // The settings live as long as the process: the other tests open with the defaults
+            TesseraEditorSettings.PlayAnimations.SetValue(true);
+        }
+    }
+
     private static async DispatcherTask<OpenEditor> OpenAsync(string[][] layers, Action<TileMapAsset>? change = null)
     {
         var tileSet = TileSet();

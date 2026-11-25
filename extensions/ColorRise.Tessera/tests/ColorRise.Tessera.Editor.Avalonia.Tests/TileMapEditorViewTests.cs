@@ -313,6 +313,43 @@ public sealed class TileMapEditorViewTests
     }
 
     // The editor's view in a window of 1280 by 720
+    [AvaloniaFact]
+    public async Task The_map_plays_on_the_canvas_and_the_button_stops_it()
+    {
+        // The tile 1:0,0 shows 1:1,0 for 2 s, then 1:2,0: the canvas's own ticks, on the clock of the test, do not reach the second frame
+        await using var session = await OpenAsync([["0,0"], ["."]], tileSet: tiles => tiles.Tiles.Add(new TileDefinition
+        {
+            Tile = TileId.Parse("1:0,0"),
+            Animation = { new TileAnimationFrame { Tile = TileId.Parse("1:1,0"), Duration = 2 }, new TileAnimationFrame { Tile = TileId.Parse("1:2,0"), Duration = 2 } },
+        }));
+        var editor = await session.EditMapAsync(Location);
+        var (view, window) = Show(editor);
+        try
+        {
+            var canvas = view.FindControl<TileCanvas>("Canvas")!;
+            var cell = At(view, window, 0, 0);
+            Assert.Equal(TestTown.Flat(1, 0), CanvasProbe.Pixel(window, (int)cell.X, (int)cell.Y));
+            Assert.True(canvas.IsTicking);
+
+            for (var tick = 0; tick < 9; tick++)
+            {
+                canvas.Tick(TimeSpan.FromSeconds(0.25));
+            }
+            Assert.Equal(TestTown.Flat(2, 0), CanvasProbe.Pixel(window, (int)cell.X, (int)cell.Y));
+
+            Click(window, view.FindControl<ToggleButton>("PlayButton")!);
+
+            Assert.False(editor.PlayAnimations);
+            Assert.Equal(TestTown.Flat(1, 0), CanvasProbe.Pixel(window, (int)cell.X, (int)cell.Y));
+            Assert.False(canvas.IsTicking);
+        }
+        finally
+        {
+            window.Close();
+            TesseraEditorSettings.PlayAnimations.SetValue(true);
+        }
+    }
+
     private static (TileMapEditorView View, Window Window) Show(TileMapEditorViewModel editor)
     {
         var view = new TileMapEditorView { DataContext = editor };
@@ -383,14 +420,15 @@ public sealed class TileMapEditorViewTests
         return [.. root.GetVisualDescendants().OfType<TextBlock>().Where(block => block.IsEffectivelyVisible).Select(block => block.Text ?? "")];
     }
 
-    private static async Task<TesseraSession> OpenAsync(string[][] layers, Action<TileMapAsset>? change = null)
+    private static async Task<TesseraSession> OpenAsync(string[][] layers, Action<TileMapAsset>? change = null, Action<TileSetAsset>? tileSet = null)
     {
         var options = new StrideEditorTestSessionOptions { Dispatcher = DispatcherService.Create(), Plugins = [new TesseraEditorAvaloniaPlugin()] };
-        var tileSet = TestTown.TileSet();
-        var asset = TestTown.Map(tileSet, "Tiles/Town", layers);
+        var tiles = TestTown.TileSet();
+        tileSet?.Invoke(tiles);
+        var asset = TestTown.Map(tiles, "Tiles/Town", layers);
         asset.Layers[1].Name = "Details";
         change?.Invoke(asset);
-        var session = await TesseraSession.OpenAsync(options, ("Tiles/Town", tileSet), (Location, asset));
+        var session = await TesseraSession.OpenAsync(options, ("Tiles/Town", tiles), (Location, asset));
         session.WriteImage("Tiles/town.png", 64, 32, TestTown.Pixel);
         return session;
     }

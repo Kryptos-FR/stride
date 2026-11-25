@@ -45,6 +45,14 @@ internal static class TesseraEditorSettings
     };
 
     /// <summary>
+    /// Whether the map editor plays the animated tiles.
+    /// </summary>
+    public static SettingsKey<bool> PlayAnimations { get; } = new("Tessera/PlayAnimations", EditorSettings.SettingsContainer, true)
+    {
+        DisplayName = "Tessera/Play the animated tiles of a map",
+    };
+
+    /// <summary>
     /// The zoom a map editor opens at; 0 until a zoom was chosen, and the editor then fits the map. Not shown in the settings.
     /// </summary>
     public static SettingsKey<float> LastZoom { get; } = new("Tessera/LastZoom", InternalSettings.SettingsContainer, 0f);

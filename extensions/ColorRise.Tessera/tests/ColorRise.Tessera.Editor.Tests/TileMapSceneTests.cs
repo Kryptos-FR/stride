@@ -4,6 +4,7 @@ using ColorRise.Tessera.Editor.Canvas;
 using ColorRise.Tessera.Editor.Palette;
 using ColorRise.Tessera.Editor.Pictures;
 using ColorRise.Tessera.Editor.TileMapEditor;
+using ColorRise.Tessera.Editor.TileSetEditor;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Testing;
 using Stride.Core.Mathematics;
@@ -297,6 +298,171 @@ public sealed class TileMapSceneTests(ITestOutputHelper output)
         Assert.Equal(1025, map.Scene.ComposedCount);
     }
 
+    [Fact]
+    public async Task An_animated_tile_shows_its_first_frame_when_the_map_does_not_play()
+    {
+        await using var map = await OpenAnimatedAsync([["0,0"]], ("1:1,0", 0.2f), ("1:2,0", 0.2f));
+        var changes = 0;
+        map.Scene.Changed += (_, _) => changes++;
+        Assert.False(map.Scene.PlayAnimations);
+
+        Assert.Equal(Flat(1, 0), PixelAt(Assert.Single(Collect(map.Scene, Everything).Sprites), Middle(map.Scene, 0, 0)));
+        map.Scene.Advance(1);
+
+        Assert.Equal(0, changes);
+        Assert.False(map.Scene.IsRunning);
+        Assert.Equal(Flat(1, 0), PixelAt(Assert.Single(Collect(map.Scene, Everything).Sprites), Middle(map.Scene, 0, 0)));
+    }
+
+    [Fact]
+    public async Task An_animated_tile_plays_in_its_chunk()
+    {
+        await using var map = await OpenAnimatedAsync([["0,0"]]);
+        map.Scene.PlayAnimations = true;
+        var changes = 0;
+        map.Scene.Changed += (_, _) => changes++;
+
+        Assert.Equal(Color.Red, PixelAt(Assert.Single(Collect(map.Scene, Everything).Sprites), TopLeft(map.Scene, 0, 0)));
+        map.Scene.Advance(0.3);
+
+        Assert.Equal(1, changes);
+        Assert.Equal(0.3, map.Scene.Time, 6);
+        Assert.Equal(Flat(1, 0), PixelAt(Assert.Single(Collect(map.Scene, Everything).Sprites), TopLeft(map.Scene, 0, 0)));
+    }
+
+    [Fact]
+    public async Task A_tick_that_changes_no_frame_asks_no_redraw()
+    {
+        await using var map = await OpenAnimatedAsync([["0,0"]]);
+        map.Scene.PlayAnimations = true;
+        var picture = Assert.Single(Collect(map.Scene, Everything).Sprites).Picture;
+        var version = picture.Version;
+        var changes = 0;
+        map.Scene.Changed += (_, _) => changes++;
+
+        map.Scene.Advance(0.05);
+
+        Assert.Equal(0, changes);
+        Assert.Equal(version, picture.Version);
+    }
+
+    [Fact]
+    public async Task A_chunk_that_plays_keeps_its_picture()
+    {
+        await using var map = await OpenAnimatedAsync([["0,0"]]);
+        map.Scene.PlayAnimations = true;
+        var picture = Assert.Single(Collect(map.Scene, Everything).Sprites).Picture;
+        var (version, bytes, composed) = (picture.Version, map.Scene.PictureBytes, map.Scene.ComposedCount);
+
+        map.Scene.Advance(0.3);
+
+        var again = Assert.Single(Collect(map.Scene, Everything).Sprites).Picture;
+        Assert.Same(picture, again);
+        Assert.True(again.Version > version);
+        Assert.Equal(bytes, map.Scene.PictureBytes);
+        Assert.Equal(composed, map.Scene.ComposedCount);
+    }
+
+    [Fact]
+    public async Task A_chunk_without_an_animated_tile_is_left_alone()
+    {
+        await using var map = await OpenAnimatedAsync([Rows((0, 0, "0,0"), (16, 0, "2,0"))]);
+        map.Scene.PlayAnimations = true;
+        var still = Collect(map.Scene, Everything).Sprites.Single(sprite => sprite.Destination.Contains(Middle(map.Scene, 16, 0))).Picture;
+        var version = still.Version;
+
+        map.Scene.Advance(0.3);
+        map.Scene.Advance(1);
+        Collect(map.Scene, Everything);
+
+        Assert.Equal(version, still.Version);
+    }
+
+    [Fact]
+    public async Task The_scene_runs_only_while_a_visible_chunk_has_an_animated_tile()
+    {
+        await using var map = await OpenAnimatedAsync([Rows((0, 0, "0,0"), (16, 0, "2,0"))]);
+        var running = new List<bool>();
+        map.Scene.IsRunningChanged += (_, _) => running.Add(map.Scene.IsRunning);
+        map.Scene.PlayAnimations = true;
+        Assert.False(map.Scene.IsRunning);
+
+        Collect(map.Scene, Everything);
+        Assert.Equal([true], running);
+        Collect(map.Scene, SecondChunk);
+        Assert.Equal([true, false], running);
+        Collect(map.Scene, Everything);
+        Assert.Equal([true, false, true], running);
+        map.Scene.PlayAnimations = false;
+        Assert.Equal([true, false, true, false], running);
+    }
+
+    [Fact]
+    public async Task A_chunk_that_was_out_of_view_shows_the_frame_of_the_time_when_it_comes_back()
+    {
+        await using var map = await OpenAnimatedAsync([Rows((0, 0, "0,0"), (16, 0, "2,0"))]);
+        map.Scene.PlayAnimations = true;
+        var picture = Collect(map.Scene, Everything).Sprites.Single(sprite => sprite.Destination.Contains(Middle(map.Scene, 0, 0))).Picture;
+        Collect(map.Scene, SecondChunk);
+        var version = picture.Version;
+
+        map.Scene.Advance(0.3);
+        Assert.Equal(version, picture.Version);
+
+        var back = Collect(map.Scene, Everything).Sprites.Single(sprite => sprite.Destination.Contains(Middle(map.Scene, 0, 0)));
+        Assert.Same(picture, back.Picture);
+        Assert.Equal(Flat(1, 0), PixelAt(back, TopLeft(map.Scene, 0, 0)));
+    }
+
+    [Fact]
+    public async Task A_flipped_cell_plays_flipped()
+    {
+        // The tile 1:1,0 shows itself, then the quarters tile; its cell is flipped left to right
+        await using var map = await OpenAnimatedAsync([["1,0h"]], tile: "1:1,0", ("1:1,0", 0.2f), ("1:0,0", 0.2f));
+        map.Scene.PlayAnimations = true;
+        Collect(map.Scene, Everything);
+
+        map.Scene.Advance(0.3);
+
+        var sprite = Assert.Single(Collect(map.Scene, Everything).Sprites);
+        Assert.Equal(Color.Lime, PixelAt(sprite, TopLeft(map.Scene, 0, 0)));
+        Assert.Equal(Color.Red, PixelAt(sprite, map.Scene.CellBounds(Int2.Zero).TopRight + new Vector2(-3, 2)));
+    }
+
+    [Fact]
+    public async Task Frames_changed_in_the_tile_set_show_in_the_map()
+    {
+        await using var map = await OpenAsync([["0,0"]]);
+        map.Scene.PlayAnimations = true;
+        Assert.Equal(Color.Red, PixelAt(Assert.Single(Collect(map.Scene, Everything).Sprites), TopLeft(map.Scene, 0, 0)));
+
+        using (var transaction = map.Session.UndoRedo.CreateTransaction())
+        {
+            TileSetGraph.SetAnimation(map.Session.TileSetAt("Tiles/Town"), TileId.Parse("1:0,0"), [new TileAnimationFrame { Tile = TileId.Parse("1:2,0"), Duration = 0.2f }]);
+            map.Session.UndoRedo.SetName(transaction, "Add frame");
+        }
+        await ExclusiveDispatcherService.WaitUntilAsync(
+            () => PixelAt(Assert.Single(Collect(map.Scene, Everything).Sprites), TopLeft(map.Scene, 0, 0)) == Flat(2, 0), "the frame in the map");
+
+        map.Session.UndoRedo.Undo();
+        await ExclusiveDispatcherService.WaitUntilAsync(
+            () => PixelAt(Assert.Single(Collect(map.Scene, Everything).Sprites), TopLeft(map.Scene, 0, 0)) == Color.Red, "the tile itself in the map again");
+    }
+
+    [Fact]
+    public async Task A_frame_whose_tile_is_gone_is_a_marked_box_for_its_time()
+    {
+        await using var map = await OpenAnimatedAsync([["0,0"]], ("1:1,0", 0.2f), ("1:9,9", 0.2f));
+        map.Scene.PlayAnimations = true;
+        Assert.Equal(Flat(1, 0), PixelAt(Assert.Single(Collect(map.Scene, Everything).Sprites), Middle(map.Scene, 0, 0)));
+
+        map.Scene.Advance(0.3);
+
+        Assert.True(IsMarked(PixelAt(Assert.Single(Collect(map.Scene, Everything).Sprites), Middle(map.Scene, 0, 0))));
+        map.Scene.Advance(0.2);
+        Assert.Equal(Flat(1, 0), PixelAt(Assert.Single(Collect(map.Scene, Everything).Sprites), Middle(map.Scene, 0, 0)));
+    }
+
     private static async DispatcherTask<OpenScene> OpenAsync(string[][] layers, Action<TileMapAsset>? change = null, params (string Location, Asset Asset)[] others)
     {
         var tileSet = TileSet();
@@ -312,6 +478,28 @@ public sealed class TileMapSceneTests(ITestOutputHelper output)
         var document = new TileMapDocument(session.MapAt(Location));
         return new OpenScene(session, document, new TileMapScene(document, TilePictureService.Of(session.Session)));
     }
+
+    // The town set with the tile 1:0,0 animated (by default itself for 0.2 s, then 1:1,0 for 0.2 s), and a map of it
+    private static DispatcherTask<OpenScene> OpenAnimatedAsync(string[][] layers, params (string Tile, float Duration)[] frames)
+        => OpenAnimatedAsync(layers, "1:0,0", frames);
+
+    private static DispatcherTask<OpenScene> OpenAnimatedAsync(string[][] layers, string tile, params (string Tile, float Duration)[] frames)
+    {
+        var tileSet = TileSet();
+        var definition = new TileDefinition { Tile = TileId.Parse(tile) };
+        foreach (var (frame, duration) in frames.Length > 0 ? frames : [("1:0,0", 0.2f), ("1:1,0", 0.2f)])
+        {
+            definition.Animation.Add(new TileAnimationFrame { Tile = TileId.Parse(frame), Duration = duration });
+        }
+        tileSet.Tiles.Add(definition);
+        return OpenAsync(tileSet, Map(tileSet, "Tiles/Town", layers));
+    }
+
+    // Only the chunk (1, 0) of the layer
+    private static readonly RectangleF SecondChunk = new(266, -200, 100, 100);
+
+    // A pixel near the top-left corner of a cell: in the red quarter of the tile 1:0,0
+    private static Vector2 TopLeft(TileMapScene scene, int x, int y) => scene.CellBounds(new Int2(x, y)).TopLeft + new Vector2(2, 2);
 
     private static CanvasFrame Collect(TileMapScene scene, RectangleF visible, float zoom = 1)
     {

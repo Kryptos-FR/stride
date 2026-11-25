@@ -22,6 +22,8 @@ public sealed class TileSetPictures
     private readonly TilePictureService service;
     // Replaced, never changed: read on the threads that raise the session's asset changes
     private volatile IReadOnlySet<AssetId> sheets = new HashSet<AssetId>();
+    // The frames of the animated tiles, copied from the asset when the pictures are made
+    private Dictionary<TileId, TileAnimationFrame[]> animations = [];
     private bool detached;
 
     internal TileSetPictures(TilePictureService service, TileSetViewModel tileSet)
@@ -66,6 +68,12 @@ public sealed class TileSetPictures
         }
         return null;
     }
+
+    /// <summary>
+    /// The frames of an animated tile, from its first definition; null for a tile without frames. Made again with the
+    /// pictures, so <see cref="Changed"/> is raised when the frames of a tile change.
+    /// </summary>
+    public IReadOnlyList<TileAnimationFrame>? AnimationOf(TileId tile) => animations.GetValueOrDefault(tile);
 
     /// <summary>
     /// Makes the pictures again, from the files as they are now.
@@ -117,6 +125,17 @@ public sealed class TileSetPictures
         }
         sheets = watched;
         Sources = layouts;
+        var frames = new Dictionary<TileId, TileAnimationFrame[]>();
+        var defined = new HashSet<TileId>();
+        foreach (var definition in asset.Tiles)
+        {
+            // A file written by hand may have a tile twice: the first is the one the asset gives
+            if (definition is not null && defined.Add(definition.Tile) && definition.Animation.Count > 0)
+            {
+                frames.Add(definition.Tile, [.. definition.Animation]);
+            }
+        }
+        animations = frames;
         var drawn = layouts.SelectMany(layout => layout.Slots).Where(slot => !slot.IsMissing).ToList();
         LargestTile = drawn.Count == 0 ? asset.TileSize : new Int2(drawn.Max(slot => slot.Region.Width), drawn.Max(slot => slot.Region.Height));
     }
