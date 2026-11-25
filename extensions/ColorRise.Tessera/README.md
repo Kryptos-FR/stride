@@ -113,6 +113,7 @@ In the runtime and the build:
 - Renaming: a renamed animation is not renamed in the scenes and scripts that name it.
 - Frames of several cells are drawn, but made by hand in the file: the editor adds frames of one cell.
 - A drop from the palette onto the strip: the palette adds frames by a click or a drag inside it.
+- Changing the tile of a frame: add a frame with the new tile from the palette and remove the old one.
 - Painting in the scene view: a map is painted in its own editor.
 - Thumbnails that show the tiles: the asset view shows an icon for tile sets, maps and flipbooks.
 - Rebinding the map editor's keys: the commands can get shortcuts, but the single keys stay as they are (finding 13).
