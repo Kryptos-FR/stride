@@ -286,6 +286,25 @@ public sealed class TileMapToolsTests
     }
 
     [Fact]
+    public async Task A_move_stops_where_its_tiles_could_not_land()
+    {
+        await using var map = await OpenAsync([["0,0 1,0 . ."]], asset => asset.Size = new Int2(4, 1));
+        map.Editor.Tool = TileToolKind.Select;
+        Drag(map.Editor, (0, 0), (1, 0));
+
+        // At (3, 0), the tile 1,0 would land outside the map's frame: the tiles stay where the last move put them
+        Press(map.Editor, 0, 0);
+        Move(map.Editor, 2, 0);
+        Move(map.Editor, 3, 0);
+        Assert.Equal("The tiles cannot go there: a cell is outside the map, or in a chunk the editor does not paint.", map.Editor.Message);
+        Release(map.Editor, 3, 0);
+
+        Assert.Equal(["Move"], map.Session.Steps);
+        Assert.Equal([". . 0,0 1,0"], Tokens(Saved(map, 0), 0, 0, 3, 0));
+        Assert.Equal(new Rectangle(2, 0, 2, 1), map.Editor.SelectedCells);
+    }
+
+    [Fact]
     public async Task Copy_and_paste_make_the_selection_the_stamp()
     {
         await using var map = await OpenAsync([["0,1 .", "0,0 1,0"]]);

@@ -476,7 +476,18 @@ internal sealed class SelectTool(TileMapEditorViewModel editor) : TileStrokeTool
         return true;
     }
 
-    // The stroke of a move by the offset from the press to the cell, and the selection where the tiles are
+    // Whether the document refusing a cell of the move would lose a tile there, or leave a tile that should have gone
+    private bool Loses(Rectangle from, Int2 cell, TileCell value)
+    {
+        if (Document.CanWrite(Editor.CurrentLayer, cell, value))
+        {
+            return false;
+        }
+        return !value.IsEmpty || (TilePainting.Contains(from, cell) && !moving![cell.X - from.X, cell.Y - from.Y].IsEmpty);
+    }
+
+    // The stroke of a move by the offset from the press to the cell, and the selection where the tiles are. A move that would
+    // lose a tile stays where the last one put the tiles, with a message
     private void MoveTo(Int2 cell)
     {
         var from = before!.Value;
@@ -499,6 +510,12 @@ internal sealed class SelectTool(TileMapEditorViewModel editor) : TileStrokeTool
                 }
             }
         }
+        if (cells.Any(pair => Loses(from, pair.Key, pair.Value)))
+        {
+            Editor.Message = "The tiles cannot go there: a cell is outside the map, or in a chunk the editor does not paint.";
+            return;
+        }
+        Editor.Message = null;
         Document.SetStrokeCells(cells);
         Editor.SelectedCells = new Rectangle(from.X + offset.X, from.Y + offset.Y, from.Width, from.Height);
     }
