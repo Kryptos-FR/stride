@@ -456,6 +456,29 @@ public sealed class TileMapToolsTests
     }
 
     [Fact]
+    public async Task A_fill_that_would_reach_too_many_cells_changes_nothing()
+    {
+        // Two tiles far apart: the used bounds of the layer are 1101 by 1101 cells, and empty
+        var tileSet = TileSet();
+        var tiles = new TileMap();
+        var layer = tiles.Layers.Add("Layer0");
+        layer.SetCell(new Int2(0, 0), Cell(0, 0));
+        layer.SetCell(new Int2(1100, 1100), Cell(0, 0));
+        var asset = TileMapAsset.FromTileMap(tiles);
+        asset.TileSets.Add(new TileSetSlot { Slot = 1, TileSet = Stride.Core.Serialization.AttachedReferenceManager.CreateProxyObject<TileSet>(tileSet.Id, "Tiles/Town") });
+        asset.LastSlot = 1;
+        await using var map = await OpenAsync(tileSet, asset);
+        map.Editor.Tool = TileToolKind.Fill;
+        map.Editor.Stamp = TileStamp.Single(Cell(2, 0));
+
+        Click(map.Editor, 500, 500);
+
+        Assert.Empty(map.Session.Steps);
+        Assert.Equal(2, Count(Saved(map, 0)));
+        Assert.Equal("This fill would change more than 512 by 512 cells: close the area first, or fill it in parts.", map.Editor.Message);
+    }
+
+    [Fact]
     public async Task A_fill_with_nothing_to_stop_it_stays_in_its_bounds()
     {
         // A ring of tiles from (0, 0) to (9, 9) with a gap at (9, 5)

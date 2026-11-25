@@ -515,6 +515,9 @@ Two controls are shared by the three editors:
 - The eye of a layer is the asset's `Visible`: an undo step, and the game hides the layer too. Lock and dimming are the editor's own.
 - A tile whose sprite is gone is rebound by taking the sprite of another tile of the same sheet source (`Rebind sprite`), and a sprite sheet dropped on the tile set's canvas adds a sheet source.
 - Skein's finding 17 no longer holds: *Add component* adds `Tile map` to an entity in the cross-platform Game Studio, besides the entity factory and the drop.
+- A fill changes at most 512 by 512 cells. A larger area is refused with a message, before anything is written: the used bounds of a sparse layer can be huge, and such a fill would hold the editor for many seconds in one undo step.
+- A stamp with a tile that is not square is not turned, as section 7 says of the diagonal flip; it can still be mirrored.
+- When the canvas loses the pointer in the middle of a drag (another window, a dialog), the drag is dropped as Escape drops it.
 
 ### WPF Game Studio
 

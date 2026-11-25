@@ -72,7 +72,7 @@ public sealed class TilePaintingTests
         // A at (0, 0), (1, 0) and (2, 1), which touches (1, 0) by a corner only; B elsewhere
         var a = new HashSet<Int2> { new(0, 0), new(1, 0), new(2, 1) };
 
-        var cells = TilePainting.Fill(cell => a.Contains(cell) ? A : B, new Int2(0, 0), new Rectangle(0, 0, 4, 4), TileStamp.Single(C));
+        var cells = TilePainting.Fill(cell => a.Contains(cell) ? A : B, new Int2(0, 0), new Rectangle(0, 0, 4, 4), TileStamp.Single(C))!;
 
         Assert.Equal(new Dictionary<Int2, TileCell> { [new Int2(0, 0)] = C, [new Int2(1, 0)] = C }, cells);
     }
@@ -80,11 +80,11 @@ public sealed class TilePaintingTests
     [Fact]
     public void A_fill_stops_at_its_bounds()
     {
-        var cells = TilePainting.Fill(_ => TileCell.Empty, new Int2(3, 3), new Rectangle(0, 0, 16, 16), TileStamp.Single(C));
+        var cells = TilePainting.Fill(_ => TileCell.Empty, new Int2(3, 3), new Rectangle(0, 0, 16, 16), TileStamp.Single(C))!;
 
         Assert.Equal(256, cells.Count);
         Assert.All(cells.Keys, cell => Assert.True(cell.X is >= 0 and < 16 && cell.Y is >= 0 and < 16, $"{cell}"));
-        Assert.Empty(TilePainting.Fill(_ => TileCell.Empty, new Int2(16, 3), new Rectangle(0, 0, 16, 16), TileStamp.Single(C)));
+        Assert.Empty(TilePainting.Fill(_ => TileCell.Empty, new Int2(16, 3), new Rectangle(0, 0, 16, 16), TileStamp.Single(C))!);
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public sealed class TilePaintingTests
         // The bottom row A B C, the top row D C B
         var stamp = new TileStamp(new Int2(3, 2), [A, B, C, D, C, B]);
 
-        var cells = TilePainting.Fill(_ => TileCell.Empty, new Int2(-1, -1), new Rectangle(-3, -2, 6, 4), stamp);
+        var cells = TilePainting.Fill(_ => TileCell.Empty, new Int2(-1, -1), new Rectangle(-3, -2, 6, 4), stamp)!;
 
         Assert.Equal(24, cells.Count);
         Assert.Equal(A, cells[new Int2(-3, -2)]);
@@ -106,7 +106,7 @@ public sealed class TilePaintingTests
     [Fact]
     public void A_fill_over_the_same_tile_as_the_stamp_changes_nothing()
     {
-        Assert.Empty(TilePainting.Fill(_ => A, new Int2(3, 3), new Rectangle(0, 0, 16, 16), TileStamp.Single(A)));
+        Assert.Empty(TilePainting.Fill(_ => A, new Int2(3, 3), new Rectangle(0, 0, 16, 16), TileStamp.Single(A))!);
     }
 
     // A used width of 0: the layer has no tile

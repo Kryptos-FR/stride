@@ -338,7 +338,7 @@ public sealed class TileMapEditorViewModel : AssetEditorViewModel<TileMapViewMod
     public string? Message
     {
         get;
-        private set => SetValue(ref field, value);
+        internal set => SetValue(ref field, value);
     }
 
     /// <summary>

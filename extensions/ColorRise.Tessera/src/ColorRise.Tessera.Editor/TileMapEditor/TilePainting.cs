@@ -9,6 +9,12 @@ namespace ColorRise.Tessera.Editor.TileMapEditor;
 internal static class TilePainting
 {
     /// <summary>
+    /// The most cells one fill changes, 512 by 512: a larger area would hold the editor for many seconds and make one huge
+    /// undo step.
+    /// </summary>
+    public const int FillLimit = 512 * 512;
+
+    /// <summary>
     /// Every cell of the line between two cells, both ends included, each one step from the one before.
     /// </summary>
     public static IEnumerable<Int2> Line(Int2 from, Int2 to)
@@ -80,7 +86,8 @@ internal static class TilePainting
     /// The stamp is anchored at the cell zero, so two fills next to each other line up. A hole of the stamp empties its
     /// cells. A start outside the bounds gives nothing, and so do the cells that already have their new value.
     /// </remarks>
-    public static Dictionary<Int2, TileCell> Fill(Func<Int2, TileCell> read, Int2 start, Rectangle bounds, TileStamp stamp)
+    /// <returns>The new value of each changed cell; null when the area has more than <paramref name="limit"/> cells.</returns>
+    public static Dictionary<Int2, TileCell>? Fill(Func<Int2, TileCell> read, Int2 start, Rectangle bounds, TileStamp stamp, int limit = FillLimit)
     {
         ArgumentNullException.ThrowIfNull(read);
         ArgumentNullException.ThrowIfNull(stamp);
@@ -95,6 +102,10 @@ internal static class TilePainting
         next.Enqueue(start);
         while (next.TryDequeue(out var cell))
         {
+            if (seen.Count > limit)
+            {
+                return null;
+            }
             var value = stamp[Modulo(cell.X, stamp.Size.X), Modulo(cell.Y, stamp.Size.Y)];
             if (value != target)
             {

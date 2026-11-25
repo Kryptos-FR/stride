@@ -308,7 +308,12 @@ internal sealed class FillTool(TileMapEditorViewModel editor) : TileTool(editor)
         }
         var layer = Editor.CurrentLayer;
         var bounds = TilePainting.FillBounds(Document.Map.Asset.Size, Document.UsedBounds(layer), cell);
-        Document.Write(layer, TilePainting.Fill(Editor.Read, cell, bounds, Editor.Stamp!), "Fill");
+        if (TilePainting.Fill(Editor.Read, cell, bounds, Editor.Stamp!) is not { } cells)
+        {
+            Editor.Message = "This fill would change more than 512 by 512 cells: close the area first, or fill it in parts.";
+            return;
+        }
+        Document.Write(layer, cells, "Fill");
     }
 }
 
