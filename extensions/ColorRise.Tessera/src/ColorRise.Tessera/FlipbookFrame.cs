@@ -1,4 +1,5 @@
 using Stride.Core;
+using Stride.Core.Annotations;
 
 namespace ColorRise.Tessera;
 
@@ -20,5 +21,6 @@ public sealed class FlipbookFrame
     /// </summary>
     /// <userdoc>The tiles of the frame, each at its offset from the first.</userdoc>
     [DataMember(20)]
+    [MemberCollection(ReadOnly = true)]
     public List<FlipbookCell> Cells { get; } = [];
 }

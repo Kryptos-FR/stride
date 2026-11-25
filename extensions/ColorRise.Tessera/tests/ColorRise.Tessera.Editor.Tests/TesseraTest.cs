@@ -1,3 +1,4 @@
+using ColorRise.Tessera.Editor.FlipbookEditor;
 using ColorRise.Tessera.Editor.TileMapEditor;
 using ColorRise.Tessera.Editor.TileSetEditor;
 using ColorRise.Tessera.Editor.ViewModels;
@@ -111,6 +112,17 @@ internal sealed class TesseraSession : IAsyncDisposable
     public async Task<TileMapEditorViewModel> EditMapAsync(string location)
     {
         var editor = new TileMapEditorViewModel(MapAt(location));
+        editors.Add(editor);
+        Assert.True(await editor.Initialize());
+        return editor;
+    }
+
+    /// <summary>
+    /// Makes the editor of a flipbook as Game Studio does, and initializes it; the session destroys it when it closes.
+    /// </summary>
+    public async Task<FlipbookEditorViewModel> EditFlipbookAsync(string location)
+    {
+        var editor = new FlipbookEditorViewModel(FlipbookAt(location));
         editors.Add(editor);
         Assert.True(await editor.Initialize());
         return editor;

@@ -91,6 +91,50 @@ internal static class TestTown
     }
 
     /// <summary>
+    /// A flipbook on the tile set (none when null): "walk", which loops, with the clips Down (1:0,0, 1:1,0, 1:2,0) and Left
+    /// (1:0,1, 1:1,1), and "idle", with one clip for any direction (1:3,0). Every frame has one cell and lasts 0.1 s.
+    /// </summary>
+    public static FlipbookAsset Flipbook(TileSetAsset? tileSet, string tileSetLocation)
+    {
+        var asset = new FlipbookAsset();
+        if (tileSet is not null)
+        {
+            asset.TileSet = AttachedReferenceManager.CreateProxyObject<TileSet>(tileSet.Id, tileSetLocation);
+        }
+        var walk = new FlipbookAnimation { Name = "walk", LoopMode = FlipbookLoopMode.Loop };
+        walk.Clips.Add(Clip(FlipbookDirection.Down, "1:0,0", "1:1,0", "1:2,0"));
+        walk.Clips.Add(Clip(FlipbookDirection.Left, "1:0,1", "1:1,1"));
+        var idle = new FlipbookAnimation { Name = "idle" };
+        idle.Clips.Add(Clip(FlipbookDirection.None, "1:3,0"));
+        asset.Animations.Add(walk);
+        asset.Animations.Add(idle);
+        return asset;
+    }
+
+    /// <summary>
+    /// A clip of frames of one cell each, of the given tiles, that last 0.1 s.
+    /// </summary>
+    public static FlipbookClip Clip(FlipbookDirection direction, params string[] tiles)
+    {
+        var clip = new FlipbookClip { Direction = direction };
+        foreach (var tile in tiles)
+        {
+            clip.Frames.Add(Frame(tile));
+        }
+        return clip;
+    }
+
+    /// <summary>
+    /// A frame of one cell, with no offset, that lasts 0.1 s.
+    /// </summary>
+    public static FlipbookFrame Frame(string tile, TileFlip flip = TileFlip.None)
+    {
+        var frame = new FlipbookFrame { Duration = 0.1f };
+        frame.Cells.Add(new FlipbookCell { Tile = TileId.Parse(tile), Flip = flip });
+        return frame;
+    }
+
+    /// <summary>
     /// The rows of a layer for <see cref="Map"/> with the given tokens at the given cells, and "." elsewhere, from (0, 0).
     /// </summary>
     public static string[] Rows(params (int X, int Y, string Token)[] cells)

@@ -1099,7 +1099,7 @@ The rules:
 - `IsRunning` is `PlayAnimations` and at least one picture of the last `Collect` with animated cells. A map without animated tiles never ticks.
 - A picture without animated cells is never touched by the time.
 
-- [ ] **Step 1: Write the failing tests.** The tile set of these tests is `TestTown.TileSet()` with the tile `1:0,0` animated: itself for 0.2 s, then `1:1,0` for 0.2 s.
+- [x] **Step 1: Write the failing tests.** The tile set of these tests is `TestTown.TileSet()` with the tile `1:0,0` animated: itself for 0.2 s, then `1:1,0` for 0.2 s.
 
 ```csharp
 // TileMapSceneTests
@@ -1128,11 +1128,17 @@ The rules:
     // the pixel of the animated cell after the canvas's Tick(0.25 s) is the second frame's; the button pressed: the first frame's, and the canvas no longer ticks
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
-- [ ] **Step 3: Write `AnimationOf`, the scene's clock, the setting, the toggle and the command.**
-- [ ] **Step 4: Run the tests of the four files and `LargeMapTests`.** Expected: PASS. `A_large_map_is_composed_once` must still pass as it is: a map without animated tiles composes nothing more.
-- [ ] **Step 5: Gate: the tile set and the map.** Run the whole solution. Expected: PASS, none skipped. Write the counts of the three projects in the ledger.
-- [ ] **Step 6: Commit and push**: `feat(tessera): the map editor plays animated tiles`
+- [x] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
+- [x] **Step 3: Write `AnimationOf`, the scene's clock, the setting, the toggle and the command.**
+- [x] **Step 4: Run the tests of the four files and `LargeMapTests`.** Expected: PASS. `A_large_map_is_composed_once` must still pass as it is: a map without animated tiles composes nothing more.
+- [x] **Step 5: Gate: the tile set and the map.** Run the whole solution. Expected: PASS, none skipped. Write the counts of the three projects in the ledger.
+- [x] **Step 6: Commit and push**: `feat(tessera): the map editor plays animated tiles`
+
+**Done** (9517bd265). As planned. The scene keeps, per picture, the frame drawn for each animated (slot, tile), and the
+list of pictures with animated tiles given by the last `Collect`; `Advance` and the `PlayAnimations` setter draw those again
+into themselves when a frame differs, `Collect` does it for a picture that comes back. `AnimationOf` copies the frames of
+the first definition of a tile when the pictures are made. The ghost of a stamp shows the first frame. Gate: runtime 395,
+editor 290, views 52, none skipped.
 
 ### Task 13: The flipbook editor: its graph, its tree, its strip and the palette
 
