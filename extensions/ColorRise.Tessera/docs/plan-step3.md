@@ -1618,7 +1618,7 @@ Avalonia property grid, `FlagsBox`, a check box for each flag (finding 19), sinc
 fixed: the property grid still lists the directions by their names in the code, as it does Stride's own enums (finding
 20, Stride's gap, only a label); and line 6's preview, once still after the first `Make`, which did not happen again.
 The packages check's game is 96 by 64 pixels, with the flipbook `Lamp` (one frame, the yellow tile) on the right of the
-map, and reads its pixel (80, 32): without the entity it reads the clear colour and fails. Tests: runtime 403, editor
+map, and reads its pixel (80, 32): without the entity it reads the clear colour and fails. Tests: runtime 404, editor
 364, views 69.
 
 ### Task 18: The write-up and the gates
