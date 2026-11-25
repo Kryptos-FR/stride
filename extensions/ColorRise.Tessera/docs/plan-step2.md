@@ -638,15 +638,22 @@ public async Task A_dropped_tile_map_becomes_a_component_that_names_it()
 
 Model for the scene editor in a test: `Add_entity_makes_a_dialogue_runner_in_the_scene` in Skein's `SkeinCommandsTests.cs`.
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~SceneEditorTests`. Expected: FAIL to compile.
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~SceneEditorTests`. Expected: FAIL to compile.
 
-- [ ] **Step 3: Write the three classes.** The factory names its entity with `ComputeNewName(parent, "Tile map")` and makes it with `CreateEntityWithComponent`. The policy's component has `Map = ContentReferenceHelper.CreateReference<TileMap>(asset)`.
+- [x] **Step 3: Write the three classes.** The factory names its entity with `ComputeNewName(parent, "Tile map")` and makes it with `CreateEntityWithComponent`. The policy's component has `Map = ContentReferenceHelper.CreateReference<TileMap>(asset)`.
 
-- [ ] **Step 4: Run the tests.** Expected: PASS, 5 tests.
+- [x] **Step 4: Run the tests.** Expected: PASS, 5 tests.
 
-- [ ] **Step 5: Findings.** A row: a provider gives render features but cannot set what a feature needs from a stage, here the sort mode of Task 1; the game sets it by hand. (Whether *Add package features* and a new compositor take the feature is seen in Task 17.)
+- [x] **Step 5: Findings.** A row: a provider gives render features but cannot set what a feature needs from a stage, here the sort mode of Task 1; the game sets it by hand. (Whether *Add package features* and a new compositor take the feature is seen in Task 17.)
 
-- [ ] **Step 6: Commit and push**: `feat(tessera): tile maps in the scene editor: render feature provider, entity factory and asset drop`
+- [x] **Step 6: Commit and push**: `feat(tessera): tile maps in the scene editor: render feature provider, entity factory and asset drop`
+
+**Done (2026-11-25).** Gates: the 5 tests fail to compile without the three classes, then the drop test fails while the scene editor has no policy of Tessera, then all pass; the whole editor test project passes (16). Findings 10 and 11.
+
+**Done differently.**
+- The drop test asks the scene editor for its policy (`editor.AddAssetPolicies`) instead of making one, and asks it with the type of the asset (`map.AssetType`, as `EntityHierarchyItemViewModel` does). The kit's scene editor had none: Game Studio's editor plugin (`StrideEditorPlugin`) registers the drop policies of each asset assembly, and the kit does not load it. Loading it in the test found the policy, but the session then did not end within the kit's 30 seconds. The test registers Tessera's editor assembly with `AddAssetPolicyRegistry.RegisterAssembly`, as that plugin does. Finding 11 now says so too.
+- The factory test also checks that the assembly's scan index lists the factory, which is how "Add entity" finds it.
+- The provider's remarks name the sort mode it cannot set (finding 10).
 
 ### Task 5: The pictures of a tile set
 
