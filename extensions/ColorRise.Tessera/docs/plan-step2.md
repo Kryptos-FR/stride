@@ -1594,7 +1594,7 @@ How it draws:
 - **A frame** has, bottom layer first, one sprite per visible chunk of each layer whose `Visible` is set, with the opacity of the layer (times `DimOpacity` for the layers that are not the current one, when `DimOthers`); the ghost as one sprite; then the shapes: a red `Hatch` on each unreadable chunk, an `Outline` of the map's frame, and the overlay.
 - `Bounds` is the frame, or the used bounds of all layers, or one chunk at the origin for an empty map. `GridSize` is `CellPixels`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // TileComposerTests: `quarters` is the tile (0, 0) of the town's picture, pixels named TL, TR, BL, BR
@@ -1640,11 +1640,22 @@ public void A_flipped_tile_has_the_corners_the_runtime_gives_it(string flip, str
     // followed by a rendered frame: the mean time per frame goes to the output and is under 100 ms
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filters: `FullyQualifiedName~TileComposerTests|FullyQualifiedName~TileMapSceneTests`, and `FullyQualifiedName~LargeMapTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the composer and the scene.** What the runtime does with a diagonal flip of a tile that is not square is what the composer does: read `TileQuads.Uvs` and the feature's corners, and pin it with one more case in `TileComposerTests`.
-- [ ] **Step 4: Run the tests.** Expected: PASS. Write the three numbers of R4 (first collect, second collect, mean frame of the pan) in the "Done differently" note of this task; they go into the README's table in Task 18.
-- [ ] **Step 5: If the pan is over 33 ms a frame**, the fallback of R4 is the next thing to do, before the tools: one picture per chunk for all the layers under the current one. If that does not hold either, stop and report.
-- [ ] **Step 6: Commit and push**: `feat(tessera): a map on the canvas: a picture per chunk and layer, composed once`
+- [x] **Step 2: Run them to see them fail.** Filters: `FullyQualifiedName~TileComposerTests|FullyQualifiedName~TileMapSceneTests`, and `FullyQualifiedName~LargeMapTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the composer and the scene.** What the runtime does with a diagonal flip of a tile that is not square is what the composer does: read `TileQuads.Uvs` and the feature's corners, and pin it with one more case in `TileComposerTests`.
+- [x] **Step 4: Run the tests.** Expected: PASS. Write the three numbers of R4 (first collect, second collect, mean frame of the pan) in the "Done differently" note of this task; they go into the README's table in Task 18.
+- [x] **Step 5: If the pan is over 33 ms a frame**, the fallback of R4 is the next thing to do, before the tools: one picture per chunk for all the layers under the current one. If that does not hold either, stop and report.
+- [x] **Step 6: Commit and push**: `feat(tessera): a map on the canvas: a picture per chunk and layer, composed once`
+
+**Done (2026-11-25).** Gates: the tests fail to compile without the composer and the scene, then they pass: 13 cases of the composer (with the one more of a tile that is not square), 14 of the scene (with two more: the frame of the map outlined, and the first test's cell (0, 0) placed from both sides) and the pan. R4 holds, so no fallback: the first collect of the large map (1024 pictures at the zoom 0.125) takes 130 ms, the second 1.1 ms, and a frame of the pan 29.7 ms on average (headless Skia, on the CPU of the container). Mutation checks: no reach of large tiles, no trim of the cache, no drop of the picture of a changed chunk, one level only, or flips undone in the wrong order, each make their tests fail. The whole editor test project passes (161), and the Avalonia test project (21), with no compiler warning.
+
+**Done differently.**
+- `CellBounds` and `CellAt` are moved by the current layer's offset, so that they are inverse of each other and the ghost and the tools' shapes are where the tiles go; with no offset, they are the plan's `(x * w, -(y + 1) * h, w, h)`.
+- The missing box is filled with `MissingColor` and its cross is black.
+- The scene finds the tile set of each slot again at each frame (a few look-ups): a tile set deleted, or brought back by an undo, shows at the next frame. The session's `DeletedAssetsChanged` only asks for a frame.
+- The chunks the document does not paint (`IsUnreadable`) are found from the asset's chunk items, as the document has no list of them.
+- An animated tile shows its own tile, not its first frame.
+- `Bounds` counts the cells with tiles, not the area a large tile reaches into.
+- `TestTown` gained `Rows`, the rows of a layer from given cells (moved from the document tests), and `LargeMap`, the map of R4 written as chunk texts.
 
 ### Task 13: The tools of the map editor
 
