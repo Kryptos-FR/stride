@@ -319,10 +319,11 @@ internal sealed class HarnessGame : Game
 
         if (options.Picking)
         {
-            // The stage the scene editor makes, with the selector the editor's picking service gives the tile feature for it
+            // The stage the scene editor makes, with the selectors the editor's picking service gives the two features for it
             var stage = new RenderStage("Picking", "Picking");
             compositor.RenderStages.Add(stage);
             tiles.RenderStageSelectors.Add(new TileTransparentRenderStageSelector { TransparentRenderStage = stage });
+            flipbooks.RenderStageSelectors.Add(new TileTransparentRenderStageSelector { TransparentRenderStage = stage });
             picking = new PickingRenderer { Stage = stage };
             view = new SceneRendererCollection { view, picking };
         }

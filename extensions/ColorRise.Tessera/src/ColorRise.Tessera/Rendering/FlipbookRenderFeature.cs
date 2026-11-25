@@ -7,7 +7,9 @@ namespace ColorRise.Tessera.Rendering;
 
 /// <summary>
 /// Draws the frames of flipbook components in the render stage that its selector picks, in the order of the stage: in the
-/// transparent stage, by depth, so that the flipbooks go between the layers, the sprites and the other maps by their z.
+/// transparent stage, by depth, so that the flipbooks go between the layers, the sprites and the other maps by their z. In the
+/// scene editor's picking stage, each cell is drawn in the id of its component: the whole rectangle of a frame answers a
+/// click, as a tile does.
 /// </summary>
 /// <remarks>
 /// A root render feature draws one exact type of render object, so the chunks of maps and the frames of flipbooks have a
@@ -73,7 +75,9 @@ public sealed class FlipbookRenderFeature : RootRenderFeature
     {
         base.Draw(context, renderView, renderViewStage, startIndex, endIndex);
         var stage = RenderSystem.RenderStages[renderViewStage.Index];
-        var run = new TileBatchRun(batches!.Value!, context, renderView.ViewProjection, TileBatchRun.Rasterizer(stage.Output), null);
+        // The picking stage draws the same quads, white, in the id of the component
+        var picking = stage.Name == TileRenderFeature.PickingStageName ? Context.GraphicsDevice.GetSharedWhiteTexture() : null;
+        var run = new TileBatchRun(batches!.Value!, context, renderView.ViewProjection, TileBatchRun.Rasterizer(stage.Output), picking);
 
         for (var index = startIndex; index < endIndex; index++)
         {
@@ -82,6 +86,7 @@ public sealed class FlipbookRenderFeature : RootRenderFeature
             {
                 continue;
             }
+            var color = picking is null ? render.Color : new Color4(RuntimeIdHelper.ToRuntimeId(render.Component), 0, 0, 1);
             for (var cell = 0; cell < frame.Cells.Count; cell++)
             {
                 if (!FlipbookQuads.TryCell(flipbook, frame, cell, render.World, render.FlipX, out var quad, out var tile))
@@ -89,7 +94,7 @@ public sealed class FlipbookRenderFeature : RootRenderFeature
                     continue;
                 }
                 Context.StreamingManager?.StreamResources(tile.Texture!);
-                run.Draw(tile.Texture!, quad, render.Color, render.Sampler, set.PremultipliedAlpha);
+                run.Draw(tile.Texture!, quad, color, render.Sampler, set.PremultipliedAlpha);
             }
         }
         run.End();

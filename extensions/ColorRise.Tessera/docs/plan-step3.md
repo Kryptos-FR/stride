@@ -716,7 +716,7 @@ public sealed class FlipbookOrderTests
 - Consumes: Task 5; `TileRenderFeature.PickingStageName`, `TileBatch.BeginPicking`, `HarnessOptions.Picking` and `Frame.PickedId` (step 2, Task 16).
 - Produces: `TileRenderFeatureProvider.CreateRenderFeatures` gives a `TileRenderFeature` and a `FlipbookRenderFeature`, each with a `TileTransparentRenderStageSelector` on the transparent stage. `TilePickingService.AddPickingSelector(compositor)` gives each of the two features the compositor has a selector for the picking stage, once, and is true when there is a picking stage and at least one of the features.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 [Collection(GraphicsCollection.Name)]
@@ -736,11 +736,15 @@ public sealed class FlipbookPickingTests
 [Fact] public void The_provider_gives_both_features_for_the_transparent_stage()
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: the picking tests read 0 inside the frame; the two others FAIL on the count of features.
-- [ ] **Step 3: Write the picking draw, the provider's second feature and the service's loop.**
-- [ ] **Step 4: Run the tests.** Expected: PASS, with step 2's picking tests.
-- [ ] **Step 5: Write finding 18**: a root render feature draws one exact type of render object (`RenderSystem.AddRenderObject`), so a plugin with two kinds needs two features, and a game's compositor two entries; what would close it: a look-up that accepts a base type. Finding 16's row gains the second feature.
-- [ ] **Step 6: Commit and push**: `feat(tessera): flipbooks in compositors and under a click in the scene view`
+- [x] **Step 2: Run them to see them fail.** Expected: the picking tests read 0 inside the frame; the two others FAIL on the count of features.
+- [x] **Step 3: Write the picking draw, the provider's second feature and the service's loop.**
+- [x] **Step 4: Run the tests.** Expected: PASS, with step 2's picking tests.
+- [x] **Step 5: Write finding 18**: a root render feature draws one exact type of render object (`RenderSystem.AddRenderObject`), so a plugin with two kinds needs two features, and a game's compositor two entries; what would close it: a look-up that accepts a base type. Finding 16's row gains the second feature.
+- [x] **Step 6: Commit and push**: `feat(tessera): flipbooks in compositors and under a click in the scene view`
+
+**Done (2026-11-25).** Red: the picking tests read 0 inside the frame (the frame drawn in its colour, blue), and the three editor tests failed on the count of features. Green: the 10 picking tests (with step 2's), the 10 of the service and the scene editor, and the whole solution: 395, 245 and 37.
+
+**Done differently.** The harness's picking stage gets a selector on the flipbook feature as well, as the service gives it. `AddPickingSelector` takes the first feature of each of the two types the compositor has. `SceneEditorTests.The_provider_gives_the_tile_feature_for_the_transparent_stage` became `The_provider_gives_both_features_for_the_transparent_stage`.
 
 ### Task 8: A flipbook in Game Studio: its view model, template, images, entity factory and drop
 

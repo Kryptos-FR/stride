@@ -31,6 +31,37 @@ public sealed class TilePickingServiceTests
     }
 
     [Fact]
+    public void Both_features_get_their_selector_once()
+    {
+        var transparent = new RenderStage("Transparent", "Main");
+        var picking = new RenderStage("Picking", "Picking");
+        var tiles = new TileRenderFeature { RenderStageSelectors = { new TileTransparentRenderStageSelector { TransparentRenderStage = transparent } } };
+        var flipbooks = new FlipbookRenderFeature { RenderStageSelectors = { new TileTransparentRenderStageSelector { TransparentRenderStage = transparent } } };
+        var compositor = new GraphicsCompositor { RenderStages = { transparent, picking }, RenderFeatures = { tiles, flipbooks } };
+
+        Assert.True(TilePickingService.AddPickingSelector(compositor));
+        Assert.True(TilePickingService.AddPickingSelector(compositor));
+
+        foreach (var feature in new RootRenderFeature[] { tiles, flipbooks })
+        {
+            var stages = feature.RenderStageSelectors.Cast<TileTransparentRenderStageSelector>().Select(selector => selector.TransparentRenderStage);
+            Assert.Equal([transparent, picking], stages);
+        }
+    }
+
+    [Fact]
+    public void A_compositor_with_the_flipbook_feature_alone_gets_its_selector()
+    {
+        var picking = new RenderStage("Picking", "Picking");
+        var flipbooks = new FlipbookRenderFeature();
+        var compositor = new GraphicsCompositor { RenderStages = { picking }, RenderFeatures = { flipbooks } };
+
+        Assert.True(TilePickingService.AddPickingSelector(compositor));
+
+        Assert.Same(picking, Assert.IsType<TileTransparentRenderStageSelector>(Assert.Single(flipbooks.RenderStageSelectors)).TransparentRenderStage);
+    }
+
+    [Fact]
     public void Without_a_picking_stage_or_a_feature_nothing_is_added()
     {
         var transparent = new RenderStage("Transparent", "Main");

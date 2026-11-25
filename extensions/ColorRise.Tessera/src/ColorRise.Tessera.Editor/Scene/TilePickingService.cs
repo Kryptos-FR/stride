@@ -6,8 +6,8 @@ using Stride.Rendering.Compositing;
 namespace ColorRise.Tessera.Editor.Scene;
 
 /// <summary>
-/// Lets a click in the scene view select the entity of a tile map: puts the maps in the picking stage of the scene and prefab
-/// editors, which their selection service makes for meshes and sprites only.
+/// Lets a click in the scene view select the entity of a tile map or a flipbook: puts the maps and the flipbooks in the
+/// picking stage of the scene and prefab editors, which their selection service makes for meshes and sprites only.
 /// </summary>
 [EditorGameService(typeof(EntityHierarchyEditorController), Order = 210)]
 public sealed class TilePickingService : EditorGameServiceBase
@@ -27,22 +27,26 @@ public sealed class TilePickingService : EditorGameServiceBase
     protected override Task<bool> Initialize(EditorServiceGame editorGame) => Task.FromResult(true);
 
     /// <summary>
-    /// Gives the compositor's tile feature a selector for the picking stage, unless it has one; false when the compositor has
-    /// no picking stage or no tile feature.
+    /// Gives the compositor's tile feature and flipbook feature a selector for the picking stage, each unless it has one;
+    /// false when the compositor has no picking stage or neither feature.
     /// </summary>
     internal static bool AddPickingSelector(GraphicsCompositor compositor)
     {
         // The selection service adds its stage at the end
         var stage = compositor.RenderStages.LastOrDefault(stage => stage.Name == TileRenderFeature.PickingStageName);
-        var feature = compositor.RenderFeatures.OfType<TileRenderFeature>().FirstOrDefault();
-        if (stage is null || feature is null)
+        if (stage is null)
         {
             return false;
         }
-        if (!feature.RenderStageSelectors.OfType<TileTransparentRenderStageSelector>().Any(selector => selector.TransparentRenderStage == stage))
+        var features = compositor.RenderFeatures.Where(feature => feature is TileRenderFeature or FlipbookRenderFeature)
+            .GroupBy(feature => feature.GetType()).Select(group => group.First()).ToList();
+        foreach (var feature in features)
         {
-            feature.RenderStageSelectors.Add(new TileTransparentRenderStageSelector { TransparentRenderStage = stage });
+            if (!feature.RenderStageSelectors.OfType<TileTransparentRenderStageSelector>().Any(selector => selector.TransparentRenderStage == stage))
+            {
+                feature.RenderStageSelectors.Add(new TileTransparentRenderStageSelector { TransparentRenderStage = stage });
+            }
         }
-        return true;
+        return features.Count > 0;
     }
 }

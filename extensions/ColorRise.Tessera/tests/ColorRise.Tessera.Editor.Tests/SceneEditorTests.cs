@@ -17,18 +17,23 @@ using Stride.Rendering;
 namespace ColorRise.Tessera.Editor.Tests;
 
 /// <summary>
-/// What the scene editor gets from Tessera: the feature that draws maps in its compositors, the "Tile map" entity of
+/// What the scene editor gets from Tessera: the features that draw maps and flipbooks in its compositors, the "Tile map" entity of
 /// "Add entity", and a map asset dropped in a scene.
 /// </summary>
 public sealed class SceneEditorTests
 {
     [Fact]
-    public void The_provider_gives_the_tile_feature_for_the_transparent_stage()
+    public void The_provider_gives_both_features_for_the_transparent_stage()
     {
         var (opaque, transparent) = (new RenderStage("Opaque", "Main"), new RenderStage("Transparent", "Main"));
-        var feature = Assert.IsType<TileRenderFeature>(Assert.Single(new TileRenderFeatureProvider().CreateRenderFeatures(opaque, transparent)));
-        var selector = Assert.IsType<TileTransparentRenderStageSelector>(Assert.Single(feature.RenderStageSelectors));
-        Assert.Same(transparent, selector.TransparentRenderStage);
+        var features = new TileRenderFeatureProvider().CreateRenderFeatures(opaque, transparent).ToList();
+
+        Assert.Equal([typeof(TileRenderFeature), typeof(FlipbookRenderFeature)], features.Select(feature => feature.GetType()));
+        foreach (var feature in features)
+        {
+            var selector = Assert.IsType<TileTransparentRenderStageSelector>(Assert.Single(feature.RenderStageSelectors));
+            Assert.Same(transparent, selector.TransparentRenderStage);
+        }
     }
 
     [Fact]
