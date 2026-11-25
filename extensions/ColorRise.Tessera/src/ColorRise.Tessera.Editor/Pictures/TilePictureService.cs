@@ -78,21 +78,22 @@ public sealed class TilePictureService : IDisposable
     }
 
     /// <summary>
-    /// The picture of an image file with the color key applied, or null and why, with the file's name.
+    /// The picture of an image file, an absolute path, with the color key applied; or null and why, with the file's name. Read
+    /// again when the file changed.
     /// </summary>
-    internal TilePicture? Picture(UFile path, Color? key, out string? problem)
+    public TilePicture? Load(UFile absolutePath, Color? colorKey, out string? problem)
     {
         problem = null;
-        var name = path.GetFileName();
-        if (!File.Exists(path))
+        var name = absolutePath.GetFileName();
+        if (!File.Exists(absolutePath))
         {
-            problem = $"The image '{name}' is not there ({path}).";
+            problem = $"The image '{name}' is not there ({absolutePath}).";
             return null;
         }
         Image? image;
         try
         {
-            image = images.RetrieveImage(path);
+            image = images.RetrieveImage(absolutePath);
         }
         catch (Exception exception)
         {
@@ -105,12 +106,12 @@ public sealed class TilePictureService : IDisposable
             return null;
         }
 
-        var entry = (path.FullPath, key);
+        var entry = (absolutePath.FullPath, colorKey);
         if (pictures.TryGetValue(entry, out var made) && ReferenceEquals(made.Image, image))
         {
             return made.Picture;
         }
-        var picture = ToPicture(image, key);
+        var picture = ToPicture(image, colorKey);
         pictures[entry] = (image, picture);
         return picture;
     }

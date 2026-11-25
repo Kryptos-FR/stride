@@ -1225,7 +1225,7 @@ What the editor does:
 - **Drops.** `CanAddChildren` accepts `SpriteSheetViewModel`s, and `AddChildren` calls `AddSpriteSheet` for each. A dropped image file calls `ProposeImage` (the view of Task 10 reads the files with `AssetDragDropHelper.GetFiles`).
 - **The property grid** shows the selected source: the item gives the node of its `TileSetSource` (`Session.AssetNodeContainer.GetNode(Source)`), as `SpriteInfoViewModel` does for a sprite, and hides `Id`, `Bindings` and `LastNumber` (`ShouldConstructMember`). With no source, `ShowAssetProperties()`.
 
-- [ ] **Step 1: Write the failing tests.** Each opens the town set with its image, and `await session.EditTileSetAsync("Tiles/Town")`. `TestTown.Objects()` is a `SpriteSheetAsset` over `town.png` with the sprites `grass` (0, 0, 16, 16), `water` (16, 0, 16, 16) and `wall` (32, 0, 16, 16).
+- [x] **Step 1: Write the failing tests.** Each opens the town set with its image, and `await session.EditTileSetAsync("Tiles/Town")`. `TestTown.Objects()` is a `SpriteSheetAsset` over `town.png` with the sprites `grass` (0, 0, 16, 16), `water` (16, 0, 16, 16) and `wall` (32, 0, 16, 16).
 
 ```csharp
 [Fact] public async Task The_editor_opens_on_the_first_source_and_makes_no_step()
@@ -1281,10 +1281,21 @@ public async Task A_grid_with_no_tile_is_a_problem_and_cannot_be_added(int width
     // SelectedSource null: the asset's properties (PixelsPerUnit is there)
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileSetEditorSourcesTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write `TileSetGraph`, the three view models and the helpers of the session.** The lists follow the asset by listening to its graph (`Asset.PropertyGraph`, its `Changed` and `ItemChanged`), not by being told by the commands, so that an undo and an edit in the property grid show the same way.
-- [ ] **Step 4: Run the tests.** Expected: PASS (26 cases).
-- [ ] **Step 5: Commit and push**: `feat(tessera): the tile set editor: image and sprite sheet sources`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileSetEditorSourcesTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write `TileSetGraph`, the three view models and the helpers of the session.** The lists follow the asset by listening to its graph (`Asset.PropertyGraph`, its `Changed` and `ItemChanged`), not by being told by the commands, so that an undo and an edit in the property grid show the same way.
+- [x] **Step 4: Run the tests.** Expected: PASS (26 cases).
+- [x] **Step 5: Commit and push**: `feat(tessera): the tile set editor: image and sprite sheet sources`
+
+**Done (2026-11-25).** Gates: the 24 cases pass (the plan counts 26; its list has 18 facts and two theories of 3). The run that should have shown them fail to compile was skipped; mutation checks stand for it: without the binding at the opening, without the listener of the sheets, or without the removal of the tile data, the tests of these fail. The whole editor test project passes (98), and the Avalonia test project (12), with no compiler warning.
+
+**Done differently.**
+- The session writes the image path relative to the asset's folder by itself, as `Image: !file cave.png` (the tag of a file); the test checks that line, and `TileSetGraph.AddImage` keeps the absolute path it is given.
+- `Id`, `Bindings` and `LastNumber` are hidden by their `[Display(Browsable = false)]` from step 1, so the source item asks the asset's `ShouldConstructMember` and hides nothing itself. The property grid names the member `Name` as `Name_`.
+- The editor learns that a sheet changed from the session's `AssetPropertiesChanged` (a sheet among the assets), and binds on the dispatcher. An undo of `Bind sprites` changes the tile set only, so it does not bind again.
+- The list follows the asset by reconciling it with `Sources` on each change of the graph and of the pictures. When the selected source goes, the one before it is selected (the first when it was the first).
+- `TilePictureService.Picture` became the public `Load`. `TesseraSession` gives the kit a `TestEditorDialogService` (the test's own when it has one in its services).
+- A new source over the 255th id is refused with a `Message`. The file picker of Add image proposes the common image types, from the folder of the tile set.
+- Problems name a sprite that is gone: "The sprite 'water' of the source 'Objects' is not in its sheet: its tile #2 shows as missing."
 
 ### Task 9: The tile set editor: tiles and their data
 

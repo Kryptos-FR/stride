@@ -1,4 +1,5 @@
 using ColorRise.Tessera.Assets;
+using Stride.Assets.Sprite;
 using Stride.Core.IO;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization;
@@ -45,6 +46,19 @@ internal static class TestTown
         asset.AddSource<GridTileSetSource>("Town").Image = new UFile(image);
         return asset;
     }
+
+    /// <summary>
+    /// A sprite sheet over "town.png" with the sprites "grass" (0, 0), "water" (16, 0) and "wall" (32, 0), of one tile each.
+    /// </summary>
+    public static SpriteSheetAsset Objects() => new()
+    {
+        Sprites =
+        {
+            new SpriteInfo { Name = "grass", Source = new UFile("town.png"), TextureRegion = new Rectangle(0, 0, 16, 16) },
+            new SpriteInfo { Name = "water", Source = new UFile("town.png"), TextureRegion = new Rectangle(16, 0, 16, 16) },
+            new SpriteInfo { Name = "wall", Source = new UFile("town.png"), TextureRegion = new Rectangle(32, 0, 16, 16) },
+        },
+    };
 
     /// <summary>
     /// A map whose slot 1 is the tile set, with one layer per array ("Layer0", "Layer1", ...). A layer is rows of tokens,

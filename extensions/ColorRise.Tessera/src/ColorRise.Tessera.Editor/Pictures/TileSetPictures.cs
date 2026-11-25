@@ -127,7 +127,7 @@ public sealed class TileSetPictures
         {
             return new TileSourceLayout(source, true, Int2.Zero, null, $"The source '{source.Name}' has no image.", [], []);
         }
-        if (service.Picture(UPath.Combine(folder, source.Image), key, out var problem) is not { } image)
+        if (service.Load(UPath.Combine(folder, source.Image), key, out var problem) is not { } image)
         {
             return new TileSourceLayout(source, true, Int2.Zero, null, problem, [], []);
         }
@@ -173,7 +173,7 @@ public sealed class TileSetPictures
             }
             if (bySlice.TryGetValue(tile, out var slice))
             {
-                var picture = service.Picture(slice.Image, key, out var problem);
+                var picture = service.Load(slice.Image, key, out var problem);
                 if (problem is not null && !problems.Contains(problem))
                 {
                     problems.Add(problem);

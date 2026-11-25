@@ -1,3 +1,4 @@
+using ColorRise.Tessera.Editor.TileSetEditor;
 using ColorRise.Tessera.Editor.ViewModels;
 using ColorRise.Tessera.Tests.Assets;
 using Stride.Assets.Editor.Templates;
@@ -37,9 +38,13 @@ internal static class TesseraTest
 /// </summary>
 internal sealed class TesseraSession : IAsyncDisposable
 {
-    private TesseraSession(EditorTestSession kit)
+    // The editors the test made, destroyed before the session closes
+    private readonly List<AssetEditorViewModel> editors = [];
+
+    private TesseraSession(EditorTestSession kit, TestEditorDialogService dialogs)
     {
         Kit = kit;
+        Dialogs = dialogs;
         UndoRedo.Done += (_, e) =>
         {
             // A transaction that made no change completes too, and is no step of the history
@@ -57,6 +62,11 @@ internal sealed class TesseraSession : IAsyncDisposable
     public IUndoRedoService UndoRedo => Kit.Session.ServiceProvider.Get<IUndoRedoService>();
 
     /// <summary>
+    /// The dialogs of the session: the answers they give, and the questions they were asked.
+    /// </summary>
+    public TestEditorDialogService Dialogs { get; }
+
+    /// <summary>
     /// The names of the undo steps made since the session opened.
     /// </summary>
     public List<string?> Steps { get; } = [];
@@ -70,15 +80,28 @@ internal sealed class TesseraSession : IAsyncDisposable
     /// </summary>
     public static async DispatcherTask<TesseraSession> OpenAsync(StrideEditorTestSessionOptions options, params (string Location, Asset Asset)[] assets)
     {
+        // The dialogs the test gives, or a dialog service that answers OK and picks nothing
+        var dialogs = options.Services.OfType<TestEditorDialogService>().FirstOrDefault() ?? new TestEditorDialogService();
         var withTessera = new StrideEditorTestSessionOptions
         {
             Plugins = [new TesseraEditorPlugin(), .. options.Plugins],
             InitializeSession = true,
             StandInEditors = options.StandInEditors,
-            Services = options.Services,
+            Services = [dialogs, .. options.Services.Where(service => service != dialogs)],
             Dispatcher = options.Dispatcher,
         };
-        return new TesseraSession(await StrideEditorTestSession.OpenAsync(withTessera, assets));
+        return new TesseraSession(await StrideEditorTestSession.OpenAsync(withTessera, assets), dialogs);
+    }
+
+    /// <summary>
+    /// Makes the editor of a tile set as Game Studio does, and initializes it; the session destroys it when it closes.
+    /// </summary>
+    public async Task<TileSetEditorViewModel> EditTileSetAsync(string location)
+    {
+        var editor = new TileSetEditorViewModel(TileSetAt(location));
+        editors.Add(editor);
+        Assert.True(await editor.Initialize());
+        return editor;
     }
 
     /// <summary>
@@ -154,7 +177,14 @@ internal sealed class TesseraSession : IAsyncDisposable
         throw new FileNotFoundException(relativePath);
     }
 
-    public ValueTask DisposeAsync() => Kit.DisposeAsync();
+    public ValueTask DisposeAsync()
+    {
+        foreach (var editor in editors)
+        {
+            editor.Destroy();
+        }
+        return Kit.DisposeAsync();
+    }
 
     private string AssetsFolder => Path.Combine(Kit.Directory, Kit.PackageName, "Assets");
 
