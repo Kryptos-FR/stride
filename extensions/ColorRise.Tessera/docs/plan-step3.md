@@ -1359,7 +1359,7 @@ The rules:
 - The editor composes the picture of a frame once and keeps it until the flipbook's graph or the tile set's pictures change. `Preview.Clip` follows `SelectedClip`, and `LoopMode` the animation's.
 - Exactly one frame selected in the strip pauses the preview on that frame. `IsCurrent` follows the preview.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // FlipbookFrameComposerTests: no session; tiles of 16 by 16 and of 16 by 24 as TileSlots over pictures made by the test
@@ -1392,10 +1392,16 @@ The rules:
     // the sprite is at (-8, -24, 16, 24), and the picture's bottom-left pixel is red
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
-- [ ] **Step 3: Write the composer.** Run `FlipbookFrameComposerTests`. Expected: PASS.
-- [ ] **Step 4: Write the scene, and the editor's part.** Run `FlipbookPreviewTests`. Expected: PASS, with `FlipbookEditorTests`.
-- [ ] **Step 5: Commit and push**: `feat(tessera): the pictures of a flipbook's frames and its preview`
+- [x] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
+- [x] **Step 3: Write the composer.** Run `FlipbookFrameComposerTests`. Expected: PASS.
+- [x] **Step 4: Write the scene, and the editor's part.** Run `FlipbookPreviewTests`. Expected: PASS, with `FlipbookEditorTests`.
+- [x] **Step 5: Commit and push**: `feat(tessera): the pictures of a flipbook's frames and its preview`
+
+**Done differently** (856eff470). The composer and the scene were written before the first green run, as the test project
+builds them together. `Bounds` of the preview take in the cross of the pivot (3 pixels around the origin), not only the
+origin, so a clip without frames still fits. The preview moves its time only while it plays. `HasMissing` of a frame item
+now comes from its composed picture. One frame selected sets the preview's time to the start of that frame (the
+durations before it). Tests: composer 7, preview 12; solution runtime 395, editor 334, views 52.
 
 ### Task 15: Sheet and Mirror
 

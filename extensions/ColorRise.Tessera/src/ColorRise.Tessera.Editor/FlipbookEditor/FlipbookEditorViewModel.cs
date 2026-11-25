@@ -10,6 +10,7 @@ using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.ViewModels;
 using Stride.Core.Assets.Quantum;
 using Stride.Core.Extensions;
+using Stride.Core.Mathematics;
 using Stride.Core.Presentation.Collections;
 using Stride.Core.Presentation.Commands;
 using Stride.Core.Presentation.Quantum;
@@ -29,6 +30,10 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
     // The duration of a frame put first in a clip
     private const float FirstFrameDuration = 0.1f;
     private const string NewAnimationName = "animation";
+    // The name Sheet proposes when no animation is selected
+    private const string SheetAnimationName = "walk";
+    // The width of a tile when the flipbook has no tile set, as a tile set's tiles are at first
+    private const int DefaultTileWidth = 16;
     // The slot the palette gives its cells; a flipbook has one tile set
     private const ushort PaletteSlot = 1;
 
@@ -54,6 +59,8 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         MoveFramesLeftCommand = new AnonymousCommand(ServiceProvider, () => MoveFramesBy(-1));
         MoveFramesRightCommand = new AnonymousCommand(ServiceProvider, () => MoveFramesBy(1));
         PlayPauseCommand = new AnonymousCommand(ServiceProvider, () => IsPlaying = !IsPlaying);
+        SheetCommand = new AnonymousCommand(ServiceProvider, OpenSheet);
+        MirrorCommand = new AnonymousTaskCommand(ServiceProvider, MirrorAsync);
         Preview.PictureOf = PictureOf;
         Preview.IsPlaying = true;
         Preview.IsRunningChanged += PreviewRunningChanged;
@@ -181,6 +188,15 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
     }
 
     /// <summary>
+    /// The bar of Sheet while it is open: the block of the palette it cuts, and how; null when it is closed.
+    /// </summary>
+    public PendingSheetViewModel? PendingSheet
+    {
+        get;
+        private set => SetValue(ref field, value);
+    }
+
+    /// <summary>
     /// The preview, which plays <see cref="SelectedClip"/> as its animation's loop mode says.
     /// </summary>
     public FlipbookPreviewScene Preview { get; } = new();
@@ -283,6 +299,18 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
     /// </summary>
     public ICommandBase MoveFramesRightCommand { get; }
 
+    /// <summary>
+    /// Opens the bar of Sheet, with the palette's pick as its block when it has several cells; while the bar is open, a pick
+    /// in the palette sets its block and adds no frame. On with a palette.
+    /// </summary>
+    public ICommandBase SheetCommand { get; }
+
+    /// <summary>
+    /// Copies the selected clip to the clip of the other side, each cell flipped, after a question when that clip has frames.
+    /// On for a clip whose direction has another side.
+    /// </summary>
+    public ICommandBase MirrorCommand { get; }
+
     private IEditorDialogService Dialogs => ServiceProvider.Get<IEditorDialogService>();
 
     /// <summary>
@@ -315,6 +343,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         Preview.IsRunningChanged -= PreviewRunningChanged;
         Preview.FrameIndexChanged -= PreviewFrameChanged;
         Preview.IsPlaying = false;
+        CloseSheet();
         SetPictures(null);
         foreach (var item in frameItems)
         {
@@ -553,6 +582,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
             SelectionFollows();
         }
         UpdateProblems();
+        PendingSheet?.Refresh();
         Preview.Refresh();
     }
 
@@ -663,6 +693,9 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         Palette = pictures is null ? null : new TilePaletteViewModel(ServiceProvider, pictures, PaletteSlot);
         Palette?.PickedChanged += PalettePicked;
         Pictures?.Changed += PicturesChanged;
+        // The block of an open sheet names tiles of the palette that is gone
+        CloseSheet();
+        UpdateCommands();
     }
 
     private void UpdateProblems()
@@ -707,6 +740,8 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         MoveFramesRightCommand.IsEnabled = sorted.Count > 0 && sorted[0] < count - sorted.Count;
         AddClipCommand.IsEnabled = SelectedAnimation is not null && FreeDirections.Count > 0;
         RemoveSelectedCommand.IsEnabled = SelectedItem is not null;
+        SheetCommand.IsEnabled = Palette is not null;
+        MirrorCommand.IsEnabled = SelectedClip is { } clip && clip.Direction.Mirrored() != clip.Direction;
     }
 
     // The grid shows the selected frames; without them the selected clip or animation; else nothing, as the flipbook's own
@@ -892,10 +927,149 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
 
     private void PalettePicked(object? sender, EventArgs e)
     {
-        if (sender is TilePaletteViewModel { Picked: { } picked })
+        if (sender is not TilePaletteViewModel { Picked: { } picked })
+        {
+            return;
+        }
+        if (PendingSheet is { } sheet)
+        {
+            sheet.SetBlock(picked);
+        }
+        else
         {
             AddFrames(picked);
         }
+    }
+
+    private void OpenSheet()
+    {
+        if (Palette is not { } palette || PendingSheet is not null)
+        {
+            return;
+        }
+        var block = palette.Picked is { } picked && picked.Size.X * picked.Size.Y > 1 ? picked : null;
+        PendingSheet = new PendingSheetViewModel(ServiceProvider, Asset.Asset, block, SelectedAnimation?.Name ?? SheetAnimationName, MakeSheet, CloseSheet);
+    }
+
+    private void CloseSheet()
+    {
+        if (PendingSheet is { } sheet)
+        {
+            PendingSheet = null;
+            sheet.Destroy();
+        }
+    }
+
+    // One step: the animation of the name, or a new one without a clip, gets a clip for each row, made when it lacks it, whose
+    // frames become the row's; its other clips stay
+    private void MakeSheet(PendingSheetViewModel sheet)
+    {
+        if (sheet != PendingSheet || sheet.Problem is not null)
+        {
+            return;
+        }
+        var name = sheet.AnimationName.Trim();
+        var clips = sheet.MakeClips();
+        FlipbookAnimation animation;
+        using (var transaction = UndoRedoService.CreateTransaction())
+        {
+            animation = Asset.Asset.Animations.FirstOrDefault(other => other is not null && other.Name == name)
+                ?? FlipbookGraph.AddAnimation(Asset, name, withClip: false);
+            foreach (var (direction, frames) in clips)
+            {
+                var clip = animation.Clips.FirstOrDefault(other => other is not null && other.Direction == direction)
+                    ?? FlipbookGraph.AddClip(Asset, animation, direction);
+                FlipbookGraph.ReplaceFrames(Asset, clip, frames);
+            }
+            UndoRedoService.SetName(transaction, "Sheet");
+        }
+        CloseSheet();
+        Message = null;
+        SelectedItem = animationItems.FirstOrDefault(item => item.Animation == animation);
+    }
+
+    // The selected clip copied to the clip of the mirrored direction, in one step
+    private async Task MirrorAsync()
+    {
+        if (SelectedClip is not { } item || !IsInAsset(item))
+        {
+            return;
+        }
+        var direction = item.Direction;
+        var mirrored = direction.Mirrored();
+        var animation = item.Animation.Animation;
+        if (mirrored == direction)
+        {
+            return;
+        }
+        if (ClipOf(animation, mirrored) is { Frames.Count: > 0 })
+        {
+            var question = $"Replace the clip {mirrored} of '{animation.Name}'?";
+            if (await Dialogs.MessageBoxAsync(question, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+        // The clip may have gone, or turned, while the question was open
+        if (IsDestroyed || !IsInAsset(item) || item.Direction != direction)
+        {
+            return;
+        }
+        var frames = Mirror(item.Clip, WidthOf);
+        FlipbookClip target;
+        using (var transaction = UndoRedoService.CreateTransaction())
+        {
+            target = ClipOf(animation, mirrored) ?? FlipbookGraph.AddClip(Asset, animation, mirrored);
+            FlipbookGraph.ReplaceFrames(Asset, target, frames);
+            UndoRedoService.SetName(transaction, "Mirror clip");
+        }
+        Message = null;
+        SelectedItem = item.Animation.Clips.FirstOrDefault(clip => clip.Clip == target);
+    }
+
+    // The clip played for a direction: the first of that direction
+    private static FlipbookClip? ClipOf(FlipbookAnimation animation, FlipbookDirection direction)
+        => animation.Clips.FirstOrDefault(clip => clip is not null && clip.Direction == direction);
+
+    // The width of a tile in the pictures of the set; the set's tile width for a tile it lacks
+    private int WidthOf(TileId tile)
+    {
+        if (Pictures is not { } pictures)
+        {
+            return DefaultTileWidth;
+        }
+        return pictures.Find(tile) is { IsMissing: false } slot ? Math.Max(slot.Region.Width, 1) : Math.Max(pictures.TileSet.Asset.TileSize.X, 1);
+    }
+
+    /// <summary>
+    /// Copies of the frames of a clip mirrored left to right: the same durations and tiles, each cell's horizontal flip
+    /// toggled, and its offset mirrored around the middle of the first cell: x becomes the first cell's width minus x and the
+    /// cell's width; y stays.
+    /// </summary>
+    internal static List<FlipbookFrame> Mirror(FlipbookClip clip, Func<TileId, int> widthOf)
+    {
+        var frames = new List<FlipbookFrame>();
+        foreach (var frame in clip.Frames)
+        {
+            if (frame is null)
+            {
+                continue;
+            }
+            var copy = new FlipbookFrame { Duration = frame.Duration };
+            var cells = frame.Cells.Where(cell => cell is not null).ToList();
+            var firstWidth = cells.Count > 0 ? widthOf(cells[0].Tile) : 0;
+            foreach (var cell in cells)
+            {
+                copy.Cells.Add(new FlipbookCell
+                {
+                    Tile = cell.Tile,
+                    Offset = new Int2(firstWidth - (cell.Offset.X + widthOf(cell.Tile)), cell.Offset.Y),
+                    Flip = cell.Flip ^ TileFlip.Horizontal,
+                });
+            }
+            frames.Add(copy);
+        }
+        return frames;
     }
 
     // During a transaction, an undo or a redo, the asset is followed once it is over: a move takes its frames out before it
