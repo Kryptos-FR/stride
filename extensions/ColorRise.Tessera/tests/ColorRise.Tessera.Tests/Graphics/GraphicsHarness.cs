@@ -261,7 +261,7 @@ internal sealed class HarnessGame : Game
     private GraphicsCompositor CreateCompositor(SceneCameraSlot slot)
     {
         var opaque = new RenderStage("Opaque", "Main") { SortMode = new StateChangeSortMode() };
-        var transparent = new RenderStage("Transparent", "Main") { SortMode = new BackToFrontSortMode() };
+        var transparent = new RenderStage("Transparent", "Main") { SortMode = options.TransparentSortMode ?? new BackToFrontSortMode() };
 
         ISceneRenderer view = options.CustomDraw is { } customDraw
             ? new SceneRendererCollection

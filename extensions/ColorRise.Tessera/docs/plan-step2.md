@@ -192,7 +192,7 @@ public sealed class TileAxisSortMode : SortMode
 internal sealed class HarnessOptions { public SortMode? TransparentSortMode { get; init; }   /* null: BackToFrontSortMode */ }
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 [Collection(GraphicsCollection.Name)]
@@ -237,12 +237,12 @@ public sealed class SortModeYamlTests
 
 `Draw(y, sortMode)` builds the scene with `HarnessOptions { TransparentSortMode = sortMode }`. Model for the tilted camera: `A_tilted_camera_keeps_the_order_of_the_layers` in `TileMapDrawTests.cs`.
 
-- [ ] **Step 2: Run them to see them fail**
+- [x] **Step 2: Run them to see them fail**
 
 Run: `dotnet test extensions/ColorRise.Tessera/tests/ColorRise.Tessera.Tests --filter "FullyQualifiedName~AxisSortTests|FullyQualifiedName~SortModeYamlTests"`
 Expected: FAIL to compile, `TileAxisSortMode` does not exist.
 
-- [ ] **Step 3: Write `TileAxisSortMode`**, and give the harness its option. The key has the layout of `BackToFrontSortMode`, so that other features and `StateSortKey` (the Y sort of step 3's flipbooks) keep their meaning:
+- [x] **Step 3: Write `TileAxisSortMode`**, and give the harness its option. The key has the layout of `BackToFrontSortMode`, so that other features and `StateSortKey` (the Y sort of step 3's flipbooks) keep their meaning:
 
 ```csharp
 Matrix.Invert(ref renderView.View, out var viewInverse);
@@ -264,14 +264,18 @@ for (var i = 0; i < renderNodes.Count; i++)
 
 Model: `sources/engine/Stride.Rendering/Rendering/SortModeDistance.cs`.
 
-- [ ] **Step 4: See that the test bites.** Run the theory once with `TransparentSortMode = null`: both rows must fail (W at (24, 32) for y = 2, K at (40, 32) for y = 14). If a row passes with the default sort, the scene does not show the problem: move the sprite further from the row 8 until it does. Then run with the sort mode.
+- [x] **Step 4: See that the test bites.** Run the theory once with `TransparentSortMode = null`: both rows must fail (W at (24, 32) for y = 2, K at (40, 32) for y = 14). If a row passes with the default sort, the scene does not show the problem: move the sprite further from the row 8 until it does. Then run with the sort mode.
 
 Run: the command of step 2.
 Expected: PASS, 5 tests.
 
-- [ ] **Step 5: Write it up.** `README.md`, in the part on compositors: a sprite or a flipbook goes between two layers by its z under any camera once the transparent stage of the game's compositor has the sort mode "Back to front along an axis"; without it, only under a camera that looks straight at the map. Finding 8: the workaround is now this sort mode, and the suggested change keeps its first half (a render feature cannot give the stage the distance to sort by). Where the compositor editor sets it is checked in Task 17.
+- [x] **Step 5: Write it up.** `README.md`, in the part on compositors: a sprite or a flipbook goes between two layers by its z under any camera once the transparent stage of the game's compositor has the sort mode "Back to front along an axis"; without it, only under a camera that looks straight at the map. Finding 8: the workaround is now this sort mode, and the suggested change keeps its first half (a render feature cannot give the stage the distance to sort by). Where the compositor editor sets it is checked in Task 17.
 
-- [ ] **Step 6: Commit and push**: `feat(tessera): a sort mode that keeps flat things in order under a tilted camera`
+- [x] **Step 6: Commit and push**: `feat(tessera): a sort mode that keeps flat things in order under a tilted camera`
+
+**Done (2026-11-25).** Gate: `AxisSortTests` and `SortModeYamlTests` pass, 5 tests. With the default sort, both rows of the theory fail as expected (W at (24, 32) for y = 2, K at (40, 32) for y = 14). A sort mode that always takes the axis away from a camera looking down -Z fails `The_layers_keep_their_order_from_behind`, so that test pins the turn toward the camera.
+
+**Done differently.** In `The_layers_keep_their_order_from_behind` the sprite stays in the scene, at (8, 8), between the layers: seen from behind, Layer0 covers it too, which makes the check stronger. The pixel checked is (40, 32), whose ray meets the column 7 of the map, since the view from behind mirrors x. The README says where the sort mode goes; finding 8 has the workaround and keeps the first half of its suggested change. Where the compositor editor sets it is checked in Task 17.
 
 ### Task 2: Warnings for what a merge or a hand edit leaves (M3, M4), and the small cleanups (M11, M12, M13)
 

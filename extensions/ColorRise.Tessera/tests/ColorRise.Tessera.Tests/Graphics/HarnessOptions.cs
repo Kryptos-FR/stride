@@ -23,6 +23,11 @@ internal sealed class HarnessOptions
     public int Msaa { get; init; } = 1;
 
     /// <summary>
+    /// The sort mode of the transparent stage; null for the engine's <see cref="BackToFrontSortMode"/>.
+    /// </summary>
+    public SortMode? TransparentSortMode { get; init; }
+
+    /// <summary>
     /// Draws in place of the scene, after the clear. The matrix is the camera's view times its projection.
     /// </summary>
     public Action<RenderDrawContext, Matrix>? CustomDraw { get; init; }
