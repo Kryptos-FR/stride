@@ -222,6 +222,7 @@ public sealed class TileSetEditorTilesTests
         Click(editor, "2:#2");
 
         Assert.Equal(Tiles("2:#2"), editor.SelectedTiles);
+        Assert.Equal("water", editor.MissingSpriteName);
         Assert.Contains("sea", editor.RebindCandidates);
         Assert.True(editor.RebindSpriteCommand.IsEnabled);
         session.Dialogs.Answers.Enqueue(MessageBoxResult.Yes);
@@ -269,6 +270,7 @@ public sealed class TileSetEditorTilesTests
         Click(editor, "2:#4");
         Assert.Empty(editor.RebindCandidates);
         Assert.False(editor.RebindSpriteCommand.IsEnabled);
+        Assert.Null(editor.MissingSpriteName);
     }
 
     // Review Focus 5

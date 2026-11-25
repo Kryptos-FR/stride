@@ -60,6 +60,21 @@ public sealed class CanvasViewTests
     }
 
     [Fact]
+    public void Bindings_hear_of_the_zoom_and_the_origin()
+    {
+        var view = new CanvasView();
+        var changed = new List<string?>();
+        ((System.ComponentModel.INotifyPropertyChanged)view).PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        view.ZoomAt(new Vector2(100, 50), 1);
+        Assert.Equal([nameof(CanvasView.Zoom), nameof(CanvasView.Origin)], changed);
+
+        changed.Clear();
+        view.Pan(new Vector2(4, 0));
+        Assert.Equal([nameof(CanvasView.Origin)], changed);
+    }
+
+    [Fact]
     public void Fit_shows_all_of_the_bounds_at_the_largest_step_centred()
     {
         var view = new CanvasView();

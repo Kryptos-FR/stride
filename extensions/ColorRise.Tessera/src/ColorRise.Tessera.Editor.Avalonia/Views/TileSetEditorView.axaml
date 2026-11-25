@@ -1,0 +1,149 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+             xmlns:dd="using:Stride.Core.Assets.Editor.Avalonia.DragDrop"
+             xmlns:sys="using:System"
+             xmlns:controls="using:ColorRise.Tessera.Editor.Avalonia.Controls"
+             xmlns:views="using:ColorRise.Tessera.Editor.Avalonia.Views"
+             xmlns:editor="using:ColorRise.Tessera.Editor.TileSetEditor"
+             x:Class="ColorRise.Tessera.Editor.Avalonia.Views.TileSetEditorView"
+             x:DataType="editor:TileSetEditorViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.bar">
+      <Setter Property="Background" Value="#22FFFFFF"/>
+      <Setter Property="Padding" Value="6,4"/>
+    </Style>
+    <Style Selector="Border.bar TextBlock">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.bar TextBox">
+      <Setter Property="MinWidth" Value="0"/>
+      <Setter Property="Width" Value="48"/>
+    </Style>
+    <!-- The mode that is on stays on: a click on it does nothing -->
+    <Style Selector="ToggleButton.mode:checked">
+      <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style Selector="TextBlock.problem">
+      <Setter Property="Foreground" Value="#FFB040"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <!-- The tool bar -->
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="6,4">
+      <Button Content="+ Image" Command="{Binding AddImageCommand}"/>
+      <Button Content="+ Sprite sheet" Command="{Binding AddSpriteSheetCommand}"/>
+      <ToggleButton x:Name="SelectModeButton" Classes="mode" Content="Select" Margin="12,0,0,0"
+                    ToolTip.Tip="A click selects a tile, Ctrl adds one, a drag selects the tiles it covers"
+                    IsChecked="{Binding Mode, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileSetEditorMode.Select}}"/>
+      <ToggleButton x:Name="SolidModeButton" Classes="mode" Content="Solid"
+                    ToolTip.Tip="A press sets a tile solid, or clears it; the tiles of the drag get the same value"
+                    IsChecked="{Binding Mode, Converter={x:Static views:IsParameterConverter.Instance}, ConverterParameter={x:Static editor:TileSetEditorMode.Solid}}"/>
+      <TextBlock x:Name="ZoomText" VerticalAlignment="Center" MinWidth="48" Margin="12,0,0,0" TextAlignment="Right"
+                 Text="{Binding View.Zoom, StringFormat='{}{0:0%}'}"/>
+      <Button x:Name="RefreshButton" Content="Refresh" Command="{Binding RefreshCommand}" Margin="12,0,0,0"
+              ToolTip.Tip="Reads the image files again"/>
+    </StackPanel>
+
+    <!-- What is wrong in the tile set, and why the last thing asked was not done -->
+    <StackPanel DockPanel.Dock="Bottom" Margin="6,2,6,4">
+      <ItemsControl x:Name="ProblemList" ItemsSource="{Binding Problems}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="sys:String">
+            <TextBlock Classes="problem" Text="{Binding}"/>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Classes="problem" Text="{Binding Message}" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+    </StackPanel>
+
+    <!-- The sources: Delete removes the selected one -->
+    <ListBox x:Name="SourceList" DockPanel.Dock="Left" Width="200" Margin="6,0,0,0"
+             ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}">
+      <sd:EditCommands.Bindings>
+        <sd:EditCommandBinding Kind="Delete" Command="{Binding RemoveSourceCommand}"/>
+      </sd:EditCommands.Bindings>
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="editor:TileSourceItemViewModel">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Text="{Binding Id}" Opacity="0.6" MinWidth="24"/>
+            <TextBlock DockPanel.Dock="Right" Text="⚠" Classes="problem" Margin="4,0,0,0"
+                       IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}"
+                       ToolTip.Tip="{Binding Problem}"/>
+            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+          </DockPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <DockPanel Margin="6,0">
+      <!-- An image that waits for its Add: its name, its grid, and what the grid gives -->
+      <ContentControl DockPanel.Dock="Top" Content="{Binding PendingImage}">
+        <ContentControl.ContentTemplate>
+          <DataTemplate x:DataType="editor:PendingImageSourceViewModel">
+            <Border Classes="bar">
+              <WrapPanel>
+                <TextBox Text="{Binding Name}" Width="140" Margin="0,0,8,0"/>
+                <TextBlock Text="Tile" Margin="0,0,4,0"/>
+                <TextBox x:Name="TileWidthBox" Text="{Binding TileWidth, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="x" Margin="4,0"/>
+                <TextBox x:Name="TileHeightBox" Text="{Binding TileHeight, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="Margin" Margin="12,0,4,0"/>
+                <TextBox Text="{Binding MarginX, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="x" Margin="4,0"/>
+                <TextBox Text="{Binding MarginY, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="Spacing" Margin="12,0,4,0"/>
+                <TextBox Text="{Binding SpacingX, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="x" Margin="4,0"/>
+                <TextBox Text="{Binding SpacingY, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Margin="12,0" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNull}}">
+                  <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0} x {1} tiles">
+                      <Binding Path="Columns"/>
+                      <Binding Path="Rows"/>
+                    </MultiBinding>
+                  </TextBlock.Text>
+                </TextBlock>
+                <TextBlock Classes="problem" Margin="12,0" Text="{Binding Problem}"
+                           IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <Button x:Name="AddPendingButton" Content="Add" Command="{Binding ConfirmCommand}"/>
+                <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="4,0,0,0"/>
+              </WrapPanel>
+            </Border>
+          </DataTemplate>
+        </ContentControl.ContentTemplate>
+      </ContentControl>
+
+      <!-- One missing tile of a sprite sheet selected: the sprite it names is gone, and it can take another -->
+      <Border DockPanel.Dock="Bottom" Classes="bar"
+              IsVisible="{Binding MissingSpriteName, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock>
+            <Run Text="The sprite '"/><Run Text="{Binding MissingSpriteName}"/><Run Text="' is gone."/>
+          </TextBlock>
+          <ComboBox x:Name="RebindChoice" ItemsSource="{Binding RebindCandidates}" MinWidth="120"/>
+          <Button Content="Rebind" Command="{Binding RebindSpriteCommand}" CommandParameter="{Binding #RebindChoice.SelectedItem}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- The selected source, or the grid of the image that waits; sheets and image files can be dropped here -->
+      <Panel x:Name="CanvasArea">
+        <controls:TileCanvas x:Name="Canvas" Scene="{Binding Scene}" Input="{Binding Scene}" View="{Binding View}" FitOnFirstLayout="True"
+                             IsVisible="{Binding PendingImage, Converter={x:Static ObjectConverters.IsNull}}">
+          <Interaction.Behaviors>
+            <dd:AddChildDropBehavior/>
+          </Interaction.Behaviors>
+        </controls:TileCanvas>
+        <ContentControl Content="{Binding PendingImage}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate x:DataType="editor:PendingImageSourceViewModel">
+              <controls:TileCanvas Scene="{Binding Scene}" FitOnFirstLayout="True"/>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
+      </Panel>
+    </DockPanel>
+  </DockPanel>
+</UserControl>

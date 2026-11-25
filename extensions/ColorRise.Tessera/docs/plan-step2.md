@@ -1402,7 +1402,7 @@ The layout is section 9's sketch, without the Animation mode:
 - At the bottom, the lines of `Problems`, and `Message`.
 - Every text of the view is plain English in the XAML; no string table in step 2.
 
-- [ ] **Step 1: Write the failing tests** (the session has the Avalonia plugin too, and no stand-in editor)
+- [x] **Step 1: Write the failing tests** (the session has the Avalonia plugin too, and no stand-in editor)
 
 ```csharp
 [AvaloniaFact] public async Task The_editor_opens_from_the_session_with_its_view()
@@ -1417,11 +1417,21 @@ The layout is section 9's sketch, without the Animation mode:
 [AvaloniaFact] public async Task A_problem_shows_at_the_bottom()              // the image deleted and Refresh clicked: a text with "town.png"
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileSetEditorViewTests`. Expected: FAIL to compile.
-- [ ] **Step 3: Write the plugin class and the view.** The view's code-behind has no logic of the editor: it gives the focus, fits the canvas, and passes dropped files on.
-- [ ] **Step 4: Run the tests.** Expected: PASS (7 cases).
-- [ ] **Step 5: Save a picture** of the view over the town set, with one solid tile and one selected (`CanvasProbe.Show` then `CaptureRenderedFrame().Save`), to `/mnt/project-files/tilemap/step2/tile-set-editor.png`, and look at it: texts readable, nothing clipped.
-- [ ] **Step 6: Commit and push**: `feat(tessera): the view of the tile set editor`
+- [x] **Step 2: Run them to see them fail.** Filter: `FullyQualifiedName~TileSetEditorViewTests`. Expected: FAIL to compile.
+- [x] **Step 3: Write the plugin class and the view.** The view's code-behind has no logic of the editor: it gives the focus, fits the canvas, and passes dropped files on.
+- [x] **Step 4: Run the tests.** Expected: PASS (7 cases).
+- [x] **Step 5: Save a picture** of the view over the town set, with one solid tile and one selected (`CanvasProbe.Show` then `CaptureRenderedFrame().Save`), to `/mnt/project-files/tilemap/step2/tile-set-editor.png`, and look at it: texts readable, nothing clipped.
+- [x] **Step 6: Commit and push**: `feat(tessera): the view of the tile set editor`
+
+**Done (2026-11-25).** Gates: the view tests fail to compile without the plugin and the view, then the 7 cases pass, with a test of `TileCanvas.Fit` and one of the zoom's change notice (also seen failing first). The picture is saved and readable, with nothing clipped. The whole editor test project passes (115), and the Avalonia test project (20), with no compiler warning.
+
+**Done differently.**
+- The first test opens the editor with `EditorCollection.OpenAssetEditor`, and makes its view with Game Studio's `EditorViewSelector` in a `ContentControl`, as the editor area does.
+- Typing 32 as the tile width gives "2 x 2 tiles" (the height stays 16); the test then types 32 as the height for "2 x 1 tiles". The six number boxes write to the editor at each key, so the grid follows the typing.
+- `FileDropBehavior` is an attached property (`Command`) on the panel around the canvas. Its handlers see the events that the canvas's `AddChildDropBehavior` marked handled: that behaviour takes the editor's own items, and refuses files. The view's code-behind gives it a command that proposes the first file dropped. No test drops files: the headless platform makes no file items; checked by hand in Task 17.
+- Two small additions for the view: `TileCanvas.Fit()` (a fit now, or once the scene has bounds), which the view calls when the source changes, and `CanvasView` tells bindings of its `Zoom` and `Origin`, for the zoom shown as text. The editor gained `MissingSpriteName`, the text of the bar of a missing sprite.
+- The pending image shows on a second canvas, made by a template for each image, over the canvas of the source, which is hidden meanwhile.
+- The two modes are toggle buttons with a converter of their own (`IsParameterConverter`); the one that is on ignores clicks.
 
 ### Task 11: The map document: cells in memory, strokes, and the asset
 

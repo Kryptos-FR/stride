@@ -108,6 +108,16 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
     } = [];
 
     /// <summary>
+    /// The name of the sprite that the selected tile has and its sheet has not, when one missing tile of a sprite sheet source
+    /// is selected; null otherwise.
+    /// </summary>
+    public string? MissingSpriteName
+    {
+        get;
+        private set => SetValue(ref field, value);
+    }
+
+    /// <summary>
     /// The names of the sprites that the selected tile can take, when it is one missing tile of a sprite sheet source: the
     /// sprites of the sheet that other tiles have.
     /// </summary>
@@ -488,6 +498,9 @@ public sealed class TileSetEditorViewModel : AssetEditorViewModel<TileSetViewMod
 
     private void UpdateRebind()
     {
+        MissingSpriteName = SelectedTiles is [var tile] && Scene.Layout is { Source: SpriteSheetTileSetSource } layout && layout.SlotOf(tile) is { IsMissing: true } slot
+            ? slot.SpriteName
+            : null;
         RebindCandidates = RebindCandidatesOf(SelectedTiles);
         RebindSpriteCommand.IsEnabled = RebindCandidates.Count > 0;
     }

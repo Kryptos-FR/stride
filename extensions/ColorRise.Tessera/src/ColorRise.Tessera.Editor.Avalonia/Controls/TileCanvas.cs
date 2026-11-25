@@ -64,6 +64,8 @@ public sealed class TileCanvas : Control
     private (Vector2 Last, MouseButton Button)? pan;
     private bool spaceDown;
     private bool fitted;
+    // A fit asked by Fit, done once the scene has bounds and the canvas a size
+    private bool fitAsked;
 
     static TileCanvas()
     {
@@ -127,6 +129,15 @@ public sealed class TileCanvas : Control
     {
         get => GetValue(BackgroundProperty);
         set => SetValue(BackgroundProperty, value);
+    }
+
+    /// <summary>
+    /// Shows all of the scene: now, or as soon as the scene has bounds and the canvas a size.
+    /// </summary>
+    public void Fit()
+    {
+        fitAsked = true;
+        TryFit();
     }
 
     /// <summary>
@@ -512,11 +523,12 @@ public sealed class TileCanvas : Control
 
     private void TryFit()
     {
-        if (!FitOnFirstLayout || fitted || Scene?.Bounds is not { } bounds || Bounds.Width <= 0 || Bounds.Height <= 0)
+        if (!(FitOnFirstLayout && !fitted || fitAsked) || Scene?.Bounds is not { } bounds || Bounds.Width <= 0 || Bounds.Height <= 0)
         {
             return;
         }
         fitted = true;
+        fitAsked = false;
         View.Fit(bounds, new Vector2((float)Bounds.Width, (float)Bounds.Height));
     }
 }

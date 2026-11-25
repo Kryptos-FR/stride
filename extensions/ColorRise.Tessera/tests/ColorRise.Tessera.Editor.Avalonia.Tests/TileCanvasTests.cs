@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 using ColorRise.Tessera.Editor.Avalonia.Controls;
 using ColorRise.Tessera.Editor.Canvas;
 using ColorRise.Tessera.Editor.Pictures;
@@ -220,6 +221,26 @@ public sealed class TileCanvasTests
 
         Assert.Equal([false, true], handled);
         Assert.Equal(["key I None", "key I None"], input.Events);
+    }
+
+    [AvaloniaFact]
+    public void Fit_shows_the_whole_scene_now_or_once_it_has_bounds()
+    {
+        var scene = new TestScene { Bounds = new RectangleF(0, 0, 16, 8) };
+        var (canvas, window) = Show(scene, zoom: 1);
+
+        canvas.Fit();
+        // 6 would need 96 pixels
+        Assert.Equal(4, canvas.View.Zoom);
+
+        scene.Bounds = null;
+        canvas.Fit();
+        Assert.Equal(4, canvas.View.Zoom);
+        scene.Bounds = new RectangleF(0, 0, 32, 32);
+        scene.RaiseChanged();
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(2, canvas.View.Zoom);
+        window.Close();
     }
 
     // A canvas of 64 by 64 pixels filling its window, at a zoom, without the grid

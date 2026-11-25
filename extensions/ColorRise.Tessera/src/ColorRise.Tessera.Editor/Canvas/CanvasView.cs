@@ -1,14 +1,17 @@
+using System.ComponentModel;
 using Stride.Core.Mathematics;
 
 namespace ColorRise.Tessera.Editor.Canvas;
 
 /// <summary>
-/// The zoom and the pan of a canvas. One canvas unit is one pixel of a tile image, and Y grows down.
+/// The zoom and the pan of a canvas. One canvas unit is one pixel of a tile image, and Y grows down. A view binds to its
+/// <see cref="Zoom"/> and <see cref="Origin"/>.
 /// </summary>
-public sealed class CanvasView
+public sealed class CanvasView : INotifyPropertyChanged
 {
     private int updating;
-    private bool changedWhileUpdating;
+    // The properties changed by the change in progress, in the order of their first change
+    private readonly List<string> changedWhileUpdating = [];
 
     /// <summary>
     /// The zooms the wheel goes through, in screen pixels per canvas unit.
@@ -27,7 +30,7 @@ public sealed class CanvasView
             if (field != zoom)
             {
                 field = zoom;
-                RaiseChanged();
+                RaiseChanged(nameof(Zoom));
             }
         }
     } = 1;
@@ -43,7 +46,7 @@ public sealed class CanvasView
             if (field != value)
             {
                 field = value;
-                RaiseChanged();
+                RaiseChanged(nameof(Origin));
             }
         }
     }
@@ -52,6 +55,9 @@ public sealed class CanvasView
     /// Raised once for each change of the zoom or the origin, or of both together.
     /// </summary>
     public event EventHandler? Changed;
+
+    /// <inheritdoc/>
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>
     /// The canvas point at a point of the view, in screen pixels from its top-left corner.
@@ -126,22 +132,32 @@ public sealed class CanvasView
         {
             updating--;
         }
-        if (updating == 0 && changedWhileUpdating)
+        if (updating == 0 && changedWhileUpdating.Count > 0)
         {
-            changedWhileUpdating = false;
-            Changed?.Invoke(this, EventArgs.Empty);
+            var changed = changedWhileUpdating.ToList();
+            changedWhileUpdating.Clear();
+            Raise(changed);
         }
     }
 
-    private void RaiseChanged()
+    private void RaiseChanged(string property)
     {
-        if (updating > 0)
+        if (updating == 0)
         {
-            changedWhileUpdating = true;
+            Raise([property]);
         }
-        else
+        else if (!changedWhileUpdating.Contains(property))
         {
-            Changed?.Invoke(this, EventArgs.Empty);
+            changedWhileUpdating.Add(property);
         }
+    }
+
+    private void Raise(IReadOnlyList<string> properties)
+    {
+        foreach (var property in properties)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
+        }
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 }
