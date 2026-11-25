@@ -43,15 +43,15 @@ public sealed class TileCanvasTests
     [AvaloniaFact]
     public void The_bitmap_of_a_picture_that_is_gone_is_disposed()
     {
-        PictureBitmaps.Sweep();
+        // The bitmaps of the pictures of earlier tests that are gone are disposed first, so that only this one can change
+        // the count; no window holds the picture, so that nothing but the picture's own life decides
+        CollectAndSweep();
         var before = PictureBitmaps.LiveBitmaps;
 
-        DrawAPictureThatIsDropped();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        PictureBitmaps.Sweep();
+        var picture = MakeTheBitmapOfAPictureThatIsDropped(before);
+        CollectAndSweep();
 
+        Assert.False(picture.TryGetTarget(out _), "The picture is still alive.");
         Assert.Equal(before, PictureBitmaps.LiveBitmaps);
     }
 
@@ -324,14 +324,20 @@ public sealed class TileCanvasTests
     // What the input heard, without the moves
     // A picture drawn once, then dropped with its window: nothing of this frame keeps it
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void DrawAPictureThatIsDropped()
+    private static WeakReference<TilePicture> MakeTheBitmapOfAPictureThatIsDropped(int before)
     {
-        var scene = new TestScene();
-        scene.Sprites.Add(new CanvasSprite(Quarters(), new Rectangle(0, 0, 2, 2), new RectangleF(0, 0, 2, 2)));
-        var (_, window) = Show(scene, zoom: 8);
-        Assert.Equal(StrideColor.Red, CanvasProbe.Pixel(window, 3, 3));
-        window.Close();
-        Dispatcher.UIThread.RunJobs();
+        var picture = Quarters();
+        Assert.NotNull(PictureBitmaps.Get(picture));
+        Assert.Equal(before + 1, PictureBitmaps.LiveBitmaps);
+        return new WeakReference<TilePicture>(picture);
+    }
+
+    private static void CollectAndSweep()
+    {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        PictureBitmaps.Sweep();
     }
 
     private static List<string> Kinds(RecordingInput input) => [.. input.Events.Select(e => e.Split(' ')[0]).Where(kind => kind != "move")];
