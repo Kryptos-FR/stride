@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:ColorRise.Tessera.Editor.Avalonia.Controls"
+             xmlns:palette="using:ColorRise.Tessera.Editor.Palette"
+             xmlns:pictures="using:ColorRise.Tessera.Editor.Pictures"
+             x:Class="ColorRise.Tessera.Editor.Avalonia.Controls.TilePalette"
+             x:DataType="palette:TilePaletteViewModel">
+  <DockPanel>
+    <!-- The choice of source, when the tile set has more than one -->
+    <ComboBox DockPanel.Dock="Top" HorizontalAlignment="Stretch" Margin="0,0,0,4"
+              IsVisible="{Binding HasSeveralSources}"
+              ItemsSource="{Binding Sources}"
+              SelectedItem="{Binding SelectedSource}">
+      <ComboBox.ItemTemplate>
+        <DataTemplate x:DataType="pictures:TileSourceLayout">
+          <TextBlock Text="{Binding Source.Name}" />
+        </DataTemplate>
+      </ComboBox.ItemTemplate>
+    </ComboBox>
+    <controls:TileCanvas Scene="{Binding Scene}" Input="{Binding Scene}" View="{Binding View}" FitOnFirstLayout="True" />
+  </DockPanel>
+</UserControl>

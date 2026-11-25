@@ -26,6 +26,7 @@
     <!-- The session of the view model tests, with Tessera's plugin -->
     <Compile Include="..\ColorRise.Tessera.Editor.Tests\TesseraTest.cs" Link="TesseraTest.cs" />
     <Compile Include="..\ColorRise.Tessera.Editor.Tests\TestAssemblies.cs" Link="TestAssemblies.cs" />
+    <Compile Include="..\ColorRise.Tessera.Editor.Tests\TestTown.cs" Link="TestTown.cs" />
     <Compile Include="..\ColorRise.Tessera.Tests\Assets\TestImages.cs" Link="TestImages.cs" />
   </ItemGroup>
   <ItemGroup>

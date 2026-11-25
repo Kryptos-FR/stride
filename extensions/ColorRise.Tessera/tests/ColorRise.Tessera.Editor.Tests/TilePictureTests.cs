@@ -145,7 +145,7 @@ public sealed class TilePictureTests
 
         using (var transaction = session.UndoRedo.CreateTransaction())
         {
-            var source = tileSet.PropertyGraph.RootNode[nameof(TileSetAsset.Sources)].Target!.IndexedTarget(new NodeIndex(0));
+            var source = tileSet.PropertyGraph.RootNode[nameof(TileSetAsset.Sources)].Target!.IndexedTarget(new NodeIndex(0))!;
             source[nameof(GridTileSetSource.TileSize)].Update(new Int2(32, 32));
             session.UndoRedo.SetName(transaction, "Tile size");
         }

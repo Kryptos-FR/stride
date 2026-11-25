@@ -1063,7 +1063,7 @@ How a source scene picks:
 - The scene gives: the picture (the image of a grid source as one sprite, or one sprite per box of a sheet), an `Outline` per visible tile, a red `Cross` on a missing tile, the owner's marks, and a `Fill` and an `Outline` on each selected tile. Its `GridSize` is zero: margins and spacings make the grid of a source uneven, so the outlines are its grid.
 - A block of a grid source becomes a stamp with its top row on top: the stamp's cell (x, y) is the tile at the column `c0 + x` and the row `r1 - y`, and a position without a tile is an empty cell.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // TileStampTests: `Stamp` is 3 by 2 with six different tiles; `flips` are the eight values of TileFlip
@@ -1117,13 +1117,25 @@ public async Task A_drag_in_the_palette_makes_a_stamp()
 
 The session of a view test is opened with `Dispatcher = DispatcherService.Create()` in its options, so that the test stays on Avalonia's UI thread ("Testing a plugin's view models" in `docs/build/plugins.md`). If Task 0 found that this does not work, use Skein's way (`tests/ColorRise.Skein.Editor.Avalonia.Tests/ScriptView.cs`).
 
-- [ ] **Step 2: Run them to see them fail.** Filters: `FullyQualifiedName~TileStampTests|FullyQualifiedName~TilePaletteTests`, and `FullyQualifiedName~TilePaletteViewTests`. Expected: FAIL to compile.
+- [x] **Step 2: Run them to see them fail.** Filters: `FullyQualifiedName~TileStampTests|FullyQualifiedName~TilePaletteTests`, and `FullyQualifiedName~TilePaletteViewTests`. Expected: FAIL to compile.
 
-- [ ] **Step 3: Write the stamp, the scene and the palette's view model**, then the `TilePalette` view: a row to choose the source, shown when the tile set has more than one, over a `TileCanvas` bound to the view model's `Scene` (as scene and as input) and `View`, fitted once.
+- [x] **Step 3: Write the stamp, the scene and the palette's view model**, then the `TilePalette` view: a row to choose the source, shown when the tile set has more than one, over a `TileCanvas` bound to the view model's `Scene` (as scene and as input) and `View`, fitted once.
 
-- [ ] **Step 4: Run the tests.** Expected: PASS (29 cases in the editor tests with the theories, 1 in the Avalonia tests).
+- [x] **Step 4: Run the tests.** Expected: PASS (29 cases in the editor tests with the theories, 1 in the Avalonia tests).
 
-- [ ] **Step 5: Commit and push**: `feat(tessera): stamps and the tile palette`
+- [x] **Step 5: Commit and push**: `feat(tessera): stamps and the tile palette`
+
+**Done (2026-11-25).** Gates: the tests fail to compile without the stamp, the scene and the palette, then pass: 39 cases in the editor tests (30 of the stamp, 9 of the palette) and 1 in the Avalonia tests. With the rows of a block read from the top, the drag test fails. The whole editor test project passes (74), and the Avalonia test project (12), with no compiler warning.
+
+**Done differently.**
+- The stamp tests have two more facts, for `FlipY` and the counter-clockwise turn, so 30 cases rather than the 29 the plan counts for both files.
+- `TileSourceScene.ToStamp(slot)` turns the selection into the stamp: the scene keeps the rectangle of grid positions a block was picked in, which the selection alone does not tell (a position without a tile is a hole). `Select` takes the rectangle the tiles span.
+- `SelectionChanged` is raised by the person's picks only, at the release of a click or a drag that selected a tile (or cleared, in Many mode); `Select` does not raise it. So `Show` leaves `Picked` alone, and the same drag twice raises `PickedChanged` twice. A Block or One pick on no tile changes nothing.
+- One mode picks the tile under the press. Many mode tells a click from a drag by the tile under the press and the release; a drag selects the tiles whose boxes the rectangle touches, added to the selection with Control.
+- While the button is held, the scene draws as selected what the release would pick.
+- The grid position under a point comes from the source's margin and spacing and the size of its tiles, and is kept inside the grid, so a drag that leaves the image stops at its edge.
+- `TilePaletteViewModel.HasSeveralSources` shows the choice of source. The palette follows its source by reference, then by id, then takes the first. `Destroy` stops it following the pictures.
+- The Avalonia tests link `TestTown.cs`. A nullable warning of `TilePictureTests` (Task 5) is fixed.
 
 
 ### Task 8: The tile set editor: its sources
