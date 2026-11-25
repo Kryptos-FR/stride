@@ -6,11 +6,11 @@ using Stride.Rendering;
 namespace ColorRise.Tessera.Rendering;
 
 /// <summary>
-/// Puts the chunks of tile maps in the transparent stage, where they are sorted by depth with the sprites: tiles have
-/// edges that blend, and the order of the layers is the order of their z.
+/// Puts the tiles of tile maps and flipbooks in the transparent stage, where they are sorted by depth with the sprites:
+/// tiles have edges that blend, and the order of the layers is the order of their z.
 /// </summary>
 [DataContract("TileTransparentRenderStageSelector")]
-[Display("Tile maps in the transparent stage")]
+[Display("Tiles in the transparent stage")]
 public sealed class TileTransparentRenderStageSelector : RenderStageSelector
 {
     private const string EffectName = "TileMap";

@@ -1,6 +1,8 @@
+using System.Reflection;
 using System.Text;
 using ColorRise.Tessera.Rendering;
 using Stride.Assets.Rendering;
+using Stride.Core;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Serializers;
 using Stride.Core.IO;
@@ -10,6 +12,11 @@ namespace ColorRise.Tessera.Tests.Assets;
 
 public sealed class TileRenderFeatureYamlTests
 {
+    // Studio check, step 3, line 13: the flipbook feature uses the selector too, which said "Tile maps" there
+    [Fact]
+    public void The_selector_is_named_for_the_tiles_of_both_features()
+        => Assert.Equal("Tiles in the transparent stage", typeof(TileTransparentRenderStageSelector).GetCustomAttribute<DisplayAttribute>()?.Name);
+
     // As Stride's own features: the base class's runtime members (render data, objects, nodes, Enabled) are not saved, and
     // Enabled cannot be set back
     [Fact]
