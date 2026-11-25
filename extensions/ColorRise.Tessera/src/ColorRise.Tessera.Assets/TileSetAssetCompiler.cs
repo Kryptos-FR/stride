@@ -22,7 +22,8 @@ namespace ColorRise.Tessera.Assets;
 /// </summary>
 /// <remarks>
 /// An image that cannot be read fails the build. A source without a tile, sprites that are bound and missing, sprites that are
-/// not bound, a sprite name used twice, and an animation frame of a tile the set does not have are warnings.
+/// not bound, a sprite name used twice, an animation frame of a tile the set does not have, two sources with one id (the first
+/// is built) and a pixels per unit that is not above 0 (16 is used) are warnings.
 /// </remarks>
 [AssetCompiler(typeof(TileSetAsset), typeof(AssetCompilationContext))]
 public sealed class TileSetAssetCompiler : AssetCompilerBase
@@ -54,9 +55,14 @@ public sealed class TileSetAssetCompiler : AssetCompilerBase
             ColorSpace = context.GetColorSpace(),
         };
 
+        foreach (var line in TileAssetChecks.Of(asset))
+        {
+            result.Warning($"{targetUrlInStorage}: {line}");
+        }
+
         // Paths on disk, as sprite sheets resolve theirs: relative to the folder of the asset that names them
         var folder = assetItem.FullPath.GetParent();
-        foreach (var source in asset.Sources)
+        foreach (var source in FirstOfEachId(asset.Sources))
         {
             switch (source)
             {
@@ -88,6 +94,13 @@ public sealed class TileSetAssetCompiler : AssetCompilerBase
         result.BuildSteps.Add(new TileSetCommand(targetUrlInStorage, parameters, assetItem.Package!));
     }
 
+    // The sources that the build reads: of two sources with one id, the first (TileAssetChecks names the others)
+    private static IEnumerable<TileSetSource> FirstOfEachId(IEnumerable<TileSetSource> sources)
+    {
+        var ids = new HashSet<int>();
+        return sources.Where(source => ids.Add(source.Id));
+    }
+
     // The build engine serializes a command only to run it in another process, which this one never asks for
 #pragma warning disable STRDIAG010
     private sealed class TileSetCommand : AssetCommand<TileSetBuildParameters>
@@ -97,7 +110,7 @@ public sealed class TileSetAssetCompiler : AssetCompilerBase
             : base(url, parameters, assetFinder)
         {
             // To raise when the content of a tile set changes for the same asset
-            Version = 2;
+            Version = 3;
         }
 
         /// <summary>
@@ -142,7 +155,7 @@ public sealed class TileSetAssetCompiler : AssetCompilerBase
                 }
 
                 var slices = new List<TileSlice>();
-                foreach (var source in asset.Sources)
+                foreach (var source in FirstOfEachId(asset.Sources))
                 {
                     switch (source)
                     {
@@ -176,7 +189,7 @@ public sealed class TileSetAssetCompiler : AssetCompilerBase
 
                 using (atlas)
                 {
-                    foreach (var source in asset.Sources.Where(source => !atlas.Placements.Keys.Any(tile => tile.Source == source.Id)))
+                    foreach (var source in FirstOfEachId(asset.Sources).Where(source => !atlas.Placements.Keys.Any(tile => tile.Source == source.Id)))
                     {
                         logger.Warning($"{Url}: the source '{source.Name}' gives no tile.");
                     }
@@ -256,7 +269,8 @@ public sealed class TileSetAssetCompiler : AssetCompilerBase
                 logger.Warning($"{Url}: the data of {Count(absent.Count, "tile")} is left out, as the set does not have {(absent.Count == 1 ? "it" : "them")}: {string.Join(", ", absent)}.");
             }
 
-            var set = new TileSet { PixelsPerUnit = asset.PixelsPerUnit, TileSize = asset.TileSize, PremultipliedAlpha = asset.PremultiplyAlpha };
+            var pixelsPerUnit = TileAssetChecks.HasPixelsPerUnit(asset) ? asset.PixelsPerUnit : TileAssetChecks.DefaultPixelsPerUnit;
+            var set = new TileSet { PixelsPerUnit = pixelsPerUnit, TileSize = asset.TileSize, PremultipliedAlpha = asset.PremultiplyAlpha };
             foreach (var (id, (texture, region)) in atlas.Placements.OrderBy(placement => placement.Key))
             {
                 var tile = new Tile { Id = id, Texture = textures[texture], Region = region };

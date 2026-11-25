@@ -7,7 +7,8 @@ namespace ColorRise.Tessera.Assets;
 
 /// <summary>
 /// Compiles a tile map asset to a <see cref="TileMap"/> at the asset's URL, whose tile sets are references to their own
-/// content. A chunk whose text is not a chunk fails the build, with the map, the layer, the chunk and the line.
+/// content. A chunk whose text is not a chunk fails the build, with the map, the layer, the chunk and the line; a slot given
+/// twice is a warning, and the map keeps its first tile set.
 /// </summary>
 [AssetCompiler(typeof(TileMapAsset), typeof(AssetCompilationContext))]
 public sealed class TileMapAssetCompiler : AssetCompilerBase
@@ -22,8 +23,14 @@ public sealed class TileMapAssetCompiler : AssetCompilerBase
 
     protected override void Prepare(AssetCompilerContext context, AssetItem assetItem, string targetUrlInStorage, AssetCompilerResult result)
     {
+        var asset = (TileMapAsset)assetItem.Asset;
+        // A slot out of range fails the build in the command; a slot given twice builds with its first tile set
+        foreach (var line in TileAssetChecks.SlotsGivenTwice(asset))
+        {
+            result.Warning($"{targetUrlInStorage}: {line}");
+        }
         result.BuildSteps = new AssetBuildStep(assetItem);
-        result.BuildSteps.Add(new TileMapCommand(targetUrlInStorage, (TileMapAsset)assetItem.Asset, assetItem.Package!));
+        result.BuildSteps.Add(new TileMapCommand(targetUrlInStorage, asset, assetItem.Package!));
     }
 
     // The build engine serializes a command only to run it in another process, which this one never asks for
@@ -35,7 +42,7 @@ public sealed class TileMapAssetCompiler : AssetCompilerBase
             : base(url, parameters, assetFinder)
         {
             // To raise when the content of a map changes for the same asset
-            Version = 1;
+            Version = 2;
         }
 
         protected override Task<ResultStatus> DoCommandOverride(ICommandContext commandContext)

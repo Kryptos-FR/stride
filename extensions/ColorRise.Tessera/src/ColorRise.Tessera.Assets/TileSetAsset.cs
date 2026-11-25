@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Stride.Assets.Textures;
 using Stride.Core;
+using Stride.Core.Annotations;
 using Stride.Core.Assets;
 using Stride.Core.Mathematics;
 
@@ -35,6 +36,7 @@ public sealed class TileSetAsset : Asset
     /// </summary>
     /// <userdoc>How many pixels of a tile make one unit of the world. With 16, a tile of 16 pixels is one unit wide.</userdoc>
     [DataMember(20)]
+    [DataMemberRange(0.01, 2)]
     [Display("Pixels per unit")]
     public float PixelsPerUnit { get; set; } = 16;
 

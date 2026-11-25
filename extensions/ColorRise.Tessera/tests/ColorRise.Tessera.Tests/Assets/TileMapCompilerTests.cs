@@ -99,6 +99,26 @@ public sealed class TileMapCompilerTests
         Assert.Equal(TileId.FromGrid(1, 7, 7), build.Load<TileMap>("Maps/Town").Layers["Details"].GetCell(Int2.Zero).Tile);
     }
 
+    [Fact]
+    public void A_slot_given_twice_builds_with_the_first_and_warns()
+    {
+        using var build = new AssetBuild();
+        var asset = new TileMapAsset { Id = AssetId.New(), LastSlot = 1 };
+        asset.TileSets.Add(new TileSetSlot { Slot = 1, TileSet = AttachedReferenceManager.CreateProxyObject<TileSet>(AssetId.New(), "Tiles/A") });
+        asset.TileSets.Add(new TileSetSlot { Slot = 1, TileSet = AttachedReferenceManager.CreateProxyObject<TileSet>(AssetId.New(), "Tiles/B") });
+        asset.Layers.Add(new TileLayerAsset { Name = "Ground" });
+        build.Add("Maps/Town", asset);
+
+        var result = build.Build();
+
+        Assert.True(result.Succeeded, string.Join("\n", result.Errors));
+        Assert.Contains(result.Warnings, warning => warning.Contains("Maps/Town", StringComparison.Ordinal)
+            && warning.Contains("slot 1", StringComparison.Ordinal) && warning.Contains("twice", StringComparison.Ordinal));
+        build.Save("Tiles/A", new TileSet { PixelsPerUnit = 4 });
+        build.Save("Tiles/B", new TileSet { PixelsPerUnit = 8 });
+        Assert.Equal(4, build.Load<TileMap>("Maps/Town").TileSets[1].PixelsPerUnit);
+    }
+
     // The small map of the YAML tests, whose slot 1 names the tile set at Tiles/Town
     private static TileMapAsset TownWithTileSet()
     {

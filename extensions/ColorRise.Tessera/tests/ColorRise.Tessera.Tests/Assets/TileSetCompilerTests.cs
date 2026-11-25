@@ -258,6 +258,41 @@ public sealed class TileSetCompilerTests
     }
 
     // "tiles.png", 32 by 16, a red tile and a blue tile, in a grid source "Town" of a tile set of 8 pixels per unit
+    [Fact]
+    public void Two_sources_with_one_id_build_the_first_and_warn()
+    {
+        using var build = new AssetBuild();
+        var red = build.WriteFile("red.png", TestImages.Png(16, 16, (_, _) => Red));
+        var blue = build.WriteFile("blue.png", TestImages.Png(16, 16, (_, _) => Blue));
+        var asset = new TileSetAsset { Id = AssetId.New(), LastSourceId = 1 };
+        asset.Sources.Add(new GridTileSetSource { Id = 1, Name = "Town", Image = new UFile(red) });
+        asset.Sources.Add(new GridTileSetSource { Id = 1, Name = "Town copy", Image = new UFile(blue) });
+        build.Add("Tiles/Town", asset);
+
+        var result = build.Build();
+
+        Assert.True(result.Succeeded, string.Join("\n", result.Errors));
+        Assert.Contains(result.Warnings, warning => warning.Contains("Tiles/Town", StringComparison.Ordinal)
+            && warning.Contains("'Town'", StringComparison.Ordinal) && warning.Contains("'Town copy'", StringComparison.Ordinal));
+        var set = build.LoadAlone<TileSet>("Tiles/Town");
+        Assert.Equal(Red, Middle(build, set.GetTile(TileId.FromGrid(1, 0, 0))!));
+    }
+
+    [Fact]
+    public void A_pixels_per_unit_of_zero_builds_with_16_and_warns()
+    {
+        using var build = new AssetBuild();
+        var asset = RedAndBlue(build);
+        asset.PixelsPerUnit = 0;
+        build.Add("Tiles/Town", asset);
+
+        var result = build.Build();
+
+        Assert.True(result.Succeeded, string.Join("\n", result.Errors));
+        Assert.Contains(result.Warnings, warning => warning.Contains("PixelsPerUnit", StringComparison.Ordinal));
+        Assert.Equal(16, build.LoadAlone<TileSet>("Tiles/Town").PixelsPerUnit);
+    }
+
     private static TileSetAsset RedAndBlue(AssetBuild build)
     {
         var path = build.WriteFile("tiles.png", TestImages.Png(32, 16, (x, _) => x < 16 ? Red : Blue));

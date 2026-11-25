@@ -68,7 +68,8 @@ public sealed class TileMapAsset : Asset
     }
 
     /// <summary>
-    /// Makes the runtime map: decodes the chunks, and takes the tile set of each slot from <paramref name="resolve"/>.
+    /// Makes the runtime map: decodes the chunks, and takes the tile set of each slot from <paramref name="resolve"/>. A slot
+    /// given twice keeps its first tile set.
     /// </summary>
     /// <param name="resolve">The tile set of a slot, or null to leave the slot empty.</param>
     /// <param name="errors">Where each error goes, with the layer and the chunk; the rest of the map still loads. When null,
@@ -97,6 +98,8 @@ public sealed class TileMapAsset : Asset
             Report($"The cell size {CellSize} or the size {Size} of the map is out of range: a cell size is above 0, a size is 0 or above.");
         }
 
+        // A slot given twice keeps its first tile set (TileAssetChecks names the others)
+        var slots = new HashSet<int>();
         foreach (var slot in TileSets)
         {
             if (slot.Slot is < 1 or > ushort.MaxValue)
@@ -104,7 +107,7 @@ public sealed class TileMapAsset : Asset
                 Report($"The slot {slot.Slot} is out of range: a slot is from 1 to {ushort.MaxValue}.");
                 continue;
             }
-            if (resolve(slot) is { } tileSet)
+            if (slots.Add(slot.Slot) && resolve(slot) is { } tileSet)
             {
                 map.SetTileSet((ushort)slot.Slot, tileSet);
             }
