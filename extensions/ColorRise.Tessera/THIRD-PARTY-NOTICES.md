@@ -11,3 +11,8 @@ The sample game, Thornwick, uses art from three packs by Kenney (www.kenney.nl),
 | Tiny Town 1.1, by Kenney (www.kenney.nl), Creative Commons Zero (CC0 1.0) | `Tilemap/tilemap_packed.png`, `License.txt` | `sample/Thornwick/Thornwick.Game/Resources/Kenney/TinyTown/` |
 | Tiny Dungeon 1.0, by Kenney (www.kenney.nl), Creative Commons Zero (CC0 1.0) | `Tilemap/tilemap_packed.png`, `License.txt` | `sample/Thornwick/Thornwick.Game/Resources/Kenney/TinyDungeon/` |
 | RPG Urban Pack 1.0, by Kenney (www.kenney.nl), Creative Commons Zero (CC0 1.0) | `Tilemap/tilemap_packed.png`, `License.txt` | `sample/Thornwick/Thornwick.Game/Resources/Kenney/RpgUrbanPack/` |
+
+Two pictures beside the sheets are derived from them by scripts of the sample, and are under the same licence:
+
+- `sample/Thornwick/Thornwick.Game/Resources/Kenney/RpgUrbanPack/people.png`, derived from the RPG Urban Pack's sheet by `sample/Thornwick/tools/draw-people.sh`: the pack's six people, laid out a row for each side they face, their outer line in the colour of Tiny Town's outlines.
+- `sample/Thornwick/Thornwick.Game/Resources/Kenney/TinyTown/water.png`, derived from Tiny Town's sheet by `sample/Thornwick/tools/draw-water.sh`: a pond made of the pack's patch of earth and its grass banks, the earth turned to the blue of the pack's well, with waves.

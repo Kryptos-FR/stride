@@ -36,3 +36,8 @@ The tests read the game's files from the folder beside them.
 ## The art
 
 The art is by Kenney (www.kenney.nl), under Creative Commons Zero (CC0 1.0): Tiny Town, Tiny Dungeon and the RPG Urban Pack. Each pack's sheet without spacing and its licence are in `Thornwick.Game/Resources/Kenney/<Pack>/`. See [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md).
+
+Two pictures are drawn from the sheets by scripts, with ImageMagick (`convert`); each script writes the same bytes every time it runs:
+
+- `tools/draw-people.sh` draws `RpgUrbanPack/people.png`, the figures. The pack has a column for each side a person faces and a row for each step; the flipbook editor's `Sheet` makes a clip of each row, so the script lays the six people side by side, each a block of three columns (a step, standing, the other step) by four rows (facing down, left, right and up). It also gives the outer line of each figure the colour of Tiny Town's outlines.
+- `tools/draw-water.sh` draws `TinyTown/water.png`, the pond, as Tiny Town has no water: the pack's patch of earth with its grass banks, in nine pieces, the earth turned blue. The middle piece has short waves, and two more copies of it with the waves lower make the frames of the animated water.
