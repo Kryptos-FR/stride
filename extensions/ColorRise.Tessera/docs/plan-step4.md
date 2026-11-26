@@ -610,7 +610,7 @@ public static class CameraFraming
 
 The numbers: `Zoom` is the whole part of `viewHeight / (pixelsPerUnit * CellsHigh)`, at least 1. `OrthographicSize` is `viewHeight / (pixelsPerUnit * Zoom)`, and the view is `viewPixels / (pixelsPerUnit * Zoom)` units. A view height under 1 counts as 1, a width under 1 as 1, and a pixels per unit that is not a number above 0 as 16.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 [Theory] [InlineData(720, 3)] [InlineData(1080, 5)] [InlineData(480, 2)] [InlineData(192, 1)] [InlineData(100, 1)]
@@ -630,10 +630,14 @@ public void The_zoom_is_the_largest_whole_number_that_shows_twelve_cells(int hei
     // above 0, Center is finite
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
-- [ ] **Step 3: Write `CameraFraming`.**
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): Thornwick's camera frame, at a whole zoom`
+- [x] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
+- [x] **Step 3: Write `CameraFraming`.**
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): Thornwick's camera frame, at a whole zoom`
+
+**Done (2026-11-26).** The tests failed first to compile (`CameraFraming` did not exist), then the sample's 40 tests passed (14 of them `CameraFramingTests`, the theory counting eight).
+
+**Done differently.** Nothing. The numbers are worked in doubles and given as floats, so that the corner of the view lands on a whole pixel within the float's precision.
 
 ### Task 6: Brambles and doors, read from tile data
 
