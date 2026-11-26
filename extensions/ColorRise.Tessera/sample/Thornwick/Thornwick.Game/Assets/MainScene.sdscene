@@ -7,7 +7,99 @@ Offset: {X: 0.0, Y: 0.0, Z: 0.0}
 Hierarchy:
     RootParts:
         - ref!! 661b745c-0aab-4837-8abb-e32fb9705db0
+        - ref!! c8b54ab6-0942-48e8-bded-25375191ca1d
+        - ref!! 007b6834-7e02-4569-84f5-d8f6b2a49d3d
+        - ref!! 40990e7e-1a4a-42ed-9b65-e9f068442ac4
+        - ref!! 306d69a4-fb8e-49c6-81f1-b47a6dd963d8
+        - ref!! d0b7737f-a798-4b3d-84be-162e35cfed0d
+        - ref!! e6abe49e-d72b-4173-9a40-da3d2291a3ef
+        - ref!! 22b47d05-2bed-4e77-886a-a49d1b97cf65
     Parts:
+        -   Entity:
+                Id: 007b6834-7e02-4569-84f5-d8f6b2a49d3d
+                Name: House
+                Components:
+                    45be7664452ea680bf1b691c1ca3cce4: !TransformComponent
+                        Id: a6373c38-c516-48b6-bad8-25a31b64956d
+                        Position: {X: 100.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    1250dd19f9e73b39321df59af829cd02: !TileMapComponent
+                        Id: 8009c259-cbd2-496b-b0b2-36b99e9386eb
+                        Map: null
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+                        LayerSpacing: 0.1
+                        Sampler: Point
+                        AnimationSpeed: 1.0
+                        RenderGroup: Group0
+        -   Entity:
+                Id: 22b47d05-2bed-4e77-886a-a49d1b97cf65
+                Name: Villager3
+                Components:
+                    248eed8eab833bded77a34ac71827b5d: !TransformComponent
+                        Id: 7250cf88-d1e8-4411-b4c9-1a39933a23be
+                        Position: {X: 32.5, Y: 17.0, Z: 0.15}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    dc1a411eab208420308770b7786dcf23: !FlipbookComponent
+                        Id: 949344bc-724f-4f5a-a2df-b10f094c0a1f
+                        Flipbook: cdf7641e-0786-4f4f-b2a0-510755750ca5:Flipbooks/Villager3
+                        Animation: idle
+                        Direction: None
+                        PlayOnStart: true
+                        Speed: 1.0
+                        FlipX: false
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+                        Sampler: Point
+                        SortByY: true
+                        RenderGroup: Group0
+                    859979eb5f191d4ff8ded85b7a87eece: !Thornwick.Wanderer,Thornwick.Game
+                        Id: 84f4a3bb-9337-4140-959f-b759ce3ab66a
+                        Place: Town
+                        Radius: 4
+                        Seed: 3
+                        StepSeconds: 0.4
+        -   Entity:
+                Id: 306d69a4-fb8e-49c6-81f1-b47a6dd963d8
+                Name: Hero
+                Components:
+                    776c6a38766705f8af3ffb785f4ba662: !TransformComponent
+                        Id: e7e19c55-afee-4359-b7d1-9776d0a2460a
+                        Position: {X: 28.5, Y: 23.0, Z: 0.15}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    d83ad36f97fe4ecd169bbd0c13535320: !FlipbookComponent
+                        Id: 7c78e4f8-c0cd-46c5-8539-d1417419594c
+                        Flipbook: 7eaa6dd6-6209-4f07-a42d-bc8c41328346:Flipbooks/Hero
+                        Animation: idle
+                        Direction: None
+                        PlayOnStart: true
+                        Speed: 1.0
+                        FlipX: false
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+                        Sampler: Point
+                        SortByY: true
+                        RenderGroup: Group0
+                    95822fb42f8301c67db23ae90ad36ef7: !Thornwick.PlayerController,Thornwick.Game
+                        Id: 2c688179-8fa9-49e3-914f-14a8dcdcfedb
+                        Place: Town
+                        ComesFrom: House
+                        StepSeconds: 0.2
+        -   Entity:
+                Id: 40990e7e-1a4a-42ed-9b65-e9f068442ac4
+                Name: World
+                Components:
+                    63a7f8690b4f6e475b201fbe71823cd9: !TransformComponent
+                        Id: fe0519d2-62bc-4316-bdd5-60075e75d6de
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    7ddd5e8fc999c747bb89009a72fe461e: !Thornwick.World,Thornwick.Game
+                        Id: cbc9faf5-a6b6-42f5-9037-4ddde918242b
         -   Entity:
                 Id: 661b745c-0aab-4837-8abb-e32fb9705db0
                 Name: Camera
@@ -21,5 +113,84 @@ Hierarchy:
                     32d9051f69ad490284026eb20d1117af: !CameraComponent
                         Id: 2d71ba3d-db35-40d1-a6a9-2ead9b99e2ee
                         Name: null
-                        Projection: Perspective
+                        Projection: Orthographic
                         Slot: d0a6bf72-b3cd-4bd4-94ca-69952999d537
+                    bdbe4cc92aafd78c4f9bb9d6e6c501d0: !Thornwick.FollowCamera,Thornwick.Game
+                        Id: a2c7e881-9371-4355-9e4a-0b918738d1b8
+                        Priority: 100
+                        Target: ref!! 306d69a4-fb8e-49c6-81f1-b47a6dd963d8
+                        PixelsPerUnit: 16.0
+        -   Entity:
+                Id: c8b54ab6-0942-48e8-bded-25375191ca1d
+                Name: Town
+                Components:
+                    4ddf8b5f831f928559471f6743cf0087: !TransformComponent
+                        Id: d56f57a3-8573-4641-9862-3e46c46703db
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    f7d6324d41e834cfe8e479719e9588f9: !TileMapComponent
+                        Id: 731c1a12-7762-4e50-bd4e-ed8d8bf81e14
+                        Map: ad262249-c264-5b03-8726-9b961c033e0d:Maps/Town
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+                        LayerSpacing: 0.1
+                        Sampler: Point
+                        AnimationSpeed: 1.0
+                        RenderGroup: Group0
+        -   Entity:
+                Id: d0b7737f-a798-4b3d-84be-162e35cfed0d
+                Name: Villager1
+                Components:
+                    def4eb6f0c073da764dbd8a281a1aaf2: !TransformComponent
+                        Id: 2f5c2d07-a8ce-41f2-a4ee-461e24d96f8c
+                        Position: {X: 25.5, Y: 18.0, Z: 0.15}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    74c1d507367db45c5d7c7342222602d7: !FlipbookComponent
+                        Id: c5b7c3ab-75fb-4aab-b61a-b00c57e0e7b6
+                        Flipbook: 2bdc377c-7735-4d58-a27d-186812c190b4:Flipbooks/Villager1
+                        Animation: idle
+                        Direction: None
+                        PlayOnStart: true
+                        Speed: 1.0
+                        FlipX: false
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+                        Sampler: Point
+                        SortByY: true
+                        RenderGroup: Group0
+                    3ad131c4252f5152f6a2ab38551da6d9: !Thornwick.Wanderer,Thornwick.Game
+                        Id: e05901f5-2064-45e4-9fe9-9e52582a1ffc
+                        Place: Town
+                        Radius: 4
+                        Seed: 1
+                        StepSeconds: 0.4
+        -   Entity:
+                Id: e6abe49e-d72b-4173-9a40-da3d2291a3ef
+                Name: Villager2
+                Components:
+                    bcc239b8278ea50ce7a1e024b41c92fc: !TransformComponent
+                        Id: da989257-e66f-464e-9c61-f01e6061d7bc
+                        Position: {X: 29.5, Y: 20.0, Z: 0.15}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    e6ec22034391c7cf0456e39a61748fd2: !FlipbookComponent
+                        Id: 3ef01af5-7fa0-4c4a-9142-343dc744f77c
+                        Flipbook: 2ccabf3b-3049-4857-884a-29b4e4fa102d:Flipbooks/Villager2
+                        Animation: idle
+                        Direction: None
+                        PlayOnStart: true
+                        Speed: 1.0
+                        FlipX: false
+                        Color: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+                        Sampler: Point
+                        SortByY: true
+                        RenderGroup: Group0
+                    3b6fb81f4191037021c18486a81391ba: !Thornwick.Wanderer,Thornwick.Game
+                        Id: 7d91de7b-ac30-4e77-941a-20286c911522
+                        Place: Town
+                        Radius: 4
+                        Seed: 2
+                        StepSeconds: 0.4

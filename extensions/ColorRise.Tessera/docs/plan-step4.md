@@ -1158,7 +1158,7 @@ public override void Update()
 - **`Wanderer`.** `Start` makes its walker on the cell under its entity, with the same error line when that cell is not free, and a `WanderPlan` around it over `new Random(Seed)`. `Update` advances the walker; while it stands, a pause counts down, and at its end the plan gives a side among the cells that are open ground (`Doors.IsOpenGround`), the walker steps there, and the next pause is drawn. It shows its walker as the hero does.
 - **`FollowCamera`.** `Update` asks `CameraFraming.Fit` with the target's position, half a unit up (the middle of its cell), the frame of the place its `PlayerController` walks in (none when the target has no such script), and the size of the back buffer; it sets `OrthographicSize` and moves its entity to the centre, keeping its z. Without a target it does nothing.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // HeroKeysTests
@@ -1180,17 +1180,25 @@ public void A_frame_counts_for_a_tenth_of_a_second_at_most(int milliseconds, flo
 public void The_title_counts_the_brambles(int brambles, string title)
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
-- [ ] **Step 3: Write the six files.** Run the tests of the three files. Expected: PASS. Then `dotnet build sample/Thornwick/Thornwick.Game`: Game Studio lists a script once its assembly is built.
-- [ ] **Step 4: Make the scene and the compositor in Game Studio** (lines 12 to 16).
+- [x] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
+- [x] **Step 3: Write the six files.** Run the tests of the three files. Expected: PASS. Then `dotnet build sample/Thornwick/Thornwick.Game`: Game Studio lists a script once its assembly is built.
+- [x] **Step 4: Make the scene and the compositor in Game Studio** (lines 12 to 16).
   12. **The scripts show (R17).** *Add component > Scripts* lists `FollowCamera`, `PlayerController`, `Wanderer` and `World`, and the property grid shows the properties of each, with the text of their `<userdoc>`.
   13. **The places and the world.** The asset `Maps/Town` dropped in the scene view makes an entity `Town` with the map; its position is set to (0, 0, 0), and the scene view draws the town, its water playing. *Create entity > 2D > Tile map* makes a second one, renamed `House`, at (100, 0, 0), its map left empty. An empty entity, `World`, gets the script `World`.
   14. **The hero and the villagers.** `Flipbooks/Hero` dropped in the scene makes `Hero`, showing `idle`; it gets `PlayerController`. The three villagers' flipbooks, dropped on three cells of the square, make three entities; each gets `Wanderer`, with the seeds 1, 2 and 3. The z of the four figures is set to 0.15, so that the scene view shows them over the ground and under the roofs, as the game will.
   15. **The camera.** The scene's camera is set to `Orthographic`, at z 10. It gets `FollowCamera`, with `Target` set to `Hero` in the property grid (R17) and `Priority` set to 100, so that it runs after the hero moved.
   16. **The compositor, and the root asset.** In the compositor editor: *Add package features* adds `TileRenderFeature` and `FlipbookRenderFeature` with their selectors; the sort mode of the transparent stage is set to "Back to front along an axis"; the post effects of the game's renderer are taken off *(check: how the property grid empties them; if it cannot, the file gets `PostEffects: null` by hand, and a finding)*; the clear colour is black, which is what shows around the house. In the asset view, *Include in build as root asset* on `Maps/House` (R18; the command `Stride.Asset.ToggleRoot` of the asset view's menu): `Thornwick.Game.sdpkg` gains its line under `RootAssets`. Save all.
-- [ ] **Step 5: Close Game Studio, build and start the game.** Run: `dotnet build sample/Thornwick/Thornwick.Linux`, then the game under Xvfb for 10 seconds, its output in a log file. Expected: the assets compile with no warning that names an asset of Thornwick; the window's title is "Thornwick: 12 brambles left" (`xdotool getwindowname`); a picture shows the town, the hero under the house's door and the three villagers; the log has no error.
-- [ ] **Step 6: Fix what the lines found**, as "The by-hand list" says.
-- [ ] **Step 7: Write the lines** 12 to 16 in `docs/studio-check.md`, then commit and push: `feat(tessera): Thornwick's scripts, its scene and its compositor`
+- [x] **Step 5: Close Game Studio, build and start the game.** Run: `dotnet build sample/Thornwick/Thornwick.Linux`, then the game under Xvfb for 10 seconds, its output in a log file. Expected: the assets compile with no warning that names an asset of Thornwick; the window's title is "Thornwick: 12 brambles left" (`xdotool getwindowname`); a picture shows the town, the hero under the house's door and the three villagers; the log has no error.
+- [x] **Step 6: Fix what the lines found**, as "The by-hand list" says.
+- [x] **Step 7: Write the lines** 12 to 16 in `docs/studio-check.md`, then commit and push: `feat(tessera): Thornwick's scripts, its scene and its compositor`
+
+**Done (2026-11-26).** The three small tests failed to compile first, then pass (19 cases); the six files build with no warning. Game Studio made the scene and the compositor (lines 12 to 16, seen). Under Xvfb the game's title is "Thornwick: 12 brambles left", the camera centres the hero under the house's door at zoom 3, the villagers walk, and the log has no error. The sample's 105 tests pass.
+
+**Done differently.**
+- `Thornwick.Game.csproj` sets `GenerateDocumentationFile` (Step 6, line 12): without it the game has no documentation file and the property grid shows none of the scripts' `<userdoc>`. Game Studio reads that file beside the output of the startup project, so the text shows once `Thornwick.Linux` is built.
+- Line 16's compositor was done before the rest of line 13: the scene view draws the map only once the compositor has Tessera's features.
+- Game Studio wrote the package's `Version` as `0.1.0-dev` (the version `Directory.Build.props` gives every project of the extension); kept.
+- Remarks on Game Studio, for the report: the property grid's title keeps an entity's first name after a rename; the focus button of a map centres its origin; the tooltips of an entity field speak of an asset; the menu item *Include in build as root asset (in ...)* is cut; and a solution that references Tessera's projects shows no `<userdoc>` of Tessera's components, as Game Studio looks only at the startup project's direct dependencies.
 
 ### Task 11: The game, played by hand
 

@@ -2,7 +2,7 @@
 SerializedVersion: {Assets: 3.1.0.0}
 Meta:
     Name: Thornwick
-    Version: 1.0.0
+    Version: 0.1.0-dev
     Authors: []
     Owners: []
     Dependencies: null
@@ -10,4 +10,5 @@ AssetFolders:
     -   Path: !dir Assets
 ResourceFolders:
     - !dir Resources
-RootAssets: []
+RootAssets:
+    - b320c08b-f125-4306-b981-6ddc74a3b35a:/Thornwick/Maps/House

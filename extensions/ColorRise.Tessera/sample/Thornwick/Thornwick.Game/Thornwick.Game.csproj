@@ -2,6 +2,9 @@
   <PropertyGroup>
     <RootNamespace>Thornwick</RootNamespace>
     <IsPackable>false</IsPackable>
+    <!-- Stride.Core's targets write the <userdoc> tags to a .usrdoc file beside the assembly: Game Studio shows them under the
+         property grid -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Stride.Engine" Version="$(TesseraStrideVersion)" />
