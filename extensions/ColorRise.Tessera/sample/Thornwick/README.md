@@ -18,12 +18,33 @@ On Linux without a display or a GPU, run it under Xvfb with Lavapipe, as the che
 
 ## Run the game
 
+On Linux, from this folder:
+
 ```bash
 cd Thornwick.Linux
 dotnet run
 ```
 
-The build compiles the assets first (`Bin/Linux/Debug/data`).
+On Windows, the same with the other head (not tried yet: the sample was made and played on Linux):
+
+```bash
+cd Thornwick.Windows
+dotnet run
+```
+
+The build compiles the assets first (`Bin/Linux/Debug/data`, or `Bin/Windows/Debug/data`). On Linux without a display or a GPU, the game runs under Xvfb with Lavapipe, as Game Studio does.
+
+## Play
+
+The window's title counts the brambles left, twelve at the start.
+
+| Key | What it does |
+|---|---|
+| The arrows, or W, A, S and D | Walk one cell that way; hold the key to keep walking. The hero turns to a wall, a tree, the water, a fence or a villager and stays. |
+| Space | Cut the bramble the hero faces: a sprout takes its place, and the hero can walk over it. |
+| Escape | Close the game. |
+
+The hero starts under the door of their house. Stepping onto a door goes through it: the house's door, in the town, leads into the house, and the mat inside leads back out. The three brambles across the lane, in the north-west, keep the garden behind them until they are cut.
 
 ## Test it
 

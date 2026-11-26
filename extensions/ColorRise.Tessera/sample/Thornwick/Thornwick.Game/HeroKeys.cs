@@ -1,4 +1,5 @@
 using ColorRise.Tessera;
+using Stride.Input;
 
 namespace Thornwick;
 
@@ -23,4 +24,21 @@ public static class HeroKeys
         }
         return FlipbookDirection.None;
     }
+
+    /// <summary>
+    /// The side a keyboard's arrows and W, A, S and D ask for; None without a keyboard. A key asks when it is down, or was
+    /// pressed since the last frame: a tap shorter than a frame is let go before the frame reads it, and still moves the
+    /// hero.
+    /// </summary>
+    public static FlipbookDirection Wanted(IKeyboardDevice? keyboard)
+    {
+        if (keyboard is null)
+        {
+            return FlipbookDirection.None;
+        }
+        return Wanted(Asks(keyboard, Keys.Left, Keys.A), Asks(keyboard, Keys.Right, Keys.D), Asks(keyboard, Keys.Up, Keys.W), Asks(keyboard, Keys.Down, Keys.S));
+    }
+
+    private static bool Asks(IKeyboardDevice keyboard, Keys key, Keys other)
+        => keyboard.IsKeyDown(key) || keyboard.IsKeyPressed(key) || keyboard.IsKeyDown(other) || keyboard.IsKeyPressed(other);
 }

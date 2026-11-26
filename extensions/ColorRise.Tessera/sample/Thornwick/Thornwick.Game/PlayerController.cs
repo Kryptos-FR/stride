@@ -89,15 +89,13 @@ public sealed class PlayerController : SyncScript
             }
             else
             {
-                walker.TryStep(HeroKeys.Wanted(IsDown(Keys.Left, Keys.A), IsDown(Keys.Right, Keys.D), IsDown(Keys.Up, Keys.W), IsDown(Keys.Down, Keys.S)));
+                walker.TryStep(HeroKeys.Wanted(Input.Keyboard));
             }
         }
         Entity.Transform.Position = walker.Place.ToWorld(walker.Position);
         flipbook?.Direction = walker.Facing;
         flipbook?.Play(walker.IsMoving ? "walk" : "idle");
     }
-
-    private bool IsDown(Keys key, Keys other) => Input.IsKeyDown(key) || Input.IsKeyDown(other);
 
     // The cell of the place under the entity, as the scene has it
     private Int2 CellUnder(Place place)

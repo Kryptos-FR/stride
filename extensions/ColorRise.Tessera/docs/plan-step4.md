@@ -1214,8 +1214,8 @@ The run by hand of section 14, over the sample: the game under Xvfb with Lavapip
 
 A key pressed and let go within one step's time moves the hero one cell: a way through the town is a list of taps, read from `tools/maps/Town.txt` (`xdotool key Right`, then 0.25 s, once for each cell).
 
-- [ ] **Step 1: The keys reach the game (R16).** Start the game, give its window the focus (`xdotool search --name "^Thornwick"`, `windowfocus`), and tap Down once. Expected: two pictures show the hero one cell lower. If no key arrives by any of `xdotool`'s ways, take R16's fallback and say so in line 17.
-- [ ] **Step 2: Go through the lines.**
+- [x] **Step 1: The keys reach the game (R16).** Start the game, give its window the focus (`xdotool search --name "^Thornwick"`, `windowfocus`), and tap Down once. Expected: two pictures show the hero one cell lower. If no key arrives by any of `xdotool`'s ways, take R16's fallback and say so in line 17.
+- [x] **Step 2: Go through the lines.**
   17. **The start.** The hero stands under the door of the house and faces down, as if stepping out. The title says "Thornwick: 12 brambles left". The pond plays: two pictures half a second apart differ on the water, and only there and on the villagers.
   18. **Four ways.** A tap of each arrow, and of W, A, S and D, moves the hero one cell that way, facing it. While a key is held, two pictures 0.1 s apart show two frames of `walk`; once let go, the hero stands on a cell, in the `idle` of that side. Ten cells with the key held take two seconds, within a frame or two.
   19. **Blocked.** A wall, the water, a trunk, a fence and a villager stop the hero, who turns to them and stays. At the edge of the town, the hero stops on the last cell of the frame.
@@ -1228,9 +1228,17 @@ A key pressed and let go within one step's time moves the hero one cell: a way t
   26. **The camera.** It follows the hero. In the corner of the town the rules made reachable, the view stops at the frame: the picture's edge is the map's edge, and nothing of the clear colour shows. A tile takes 48 by 48 pixels of a picture. Across ten pictures taken while walking, the tiles keep their size and no line shows between them (R19). The window resized to 1536 by 864 (`xdotool windowsize`; the screen of the check is 1600 by 1000) shows tiles of 64 pixels, and to 640 by 360, of 16.
   27. **Colours, and a minute of play.** A pixel in the middle of a grass tile of a picture has the colour of that pixel in the pack's PNG. After a minute of walking, cutting and doors, the log has no error and no warning from Thornwick or Tessera.
   28. **The end.** Escape closes the game, and its process ends with the code 0. The WPF Game Studio and Windows are not checked, as in steps 2 and 3: say so.
-- [ ] **Step 3: Fix what the lines found**, as "The by-hand list" says.
-- [ ] **Step 4: The sample's README** says how to build and run the game, on Linux and on Windows (not tried), and its keys.
-- [ ] **Step 5: Write the lines** 17 to 28 in `docs/studio-check.md`, then commit and push: `test(tessera): Thornwick played by hand, and what was seen`
+- [x] **Step 3: Fix what the lines found**, as "The by-hand list" says.
+- [x] **Step 4: The sample's README** says how to build and run the game, on Linux and on Windows (not tried), and its keys.
+- [x] **Step 5: Write the lines** 17 to 28 in `docs/studio-check.md`, then commit and push: `test(tessera): Thornwick played by hand, and what was seen`
+
+**Done (2026-11-26).** The game was played under Xvfb, driven with `xdotool`, read from pictures (lines 17 to 28, seen). The keys reach the game, so R16's fallback was not taken. A tap shorter than a frame was lost; fixed in `HeroKeys` and `PlayerController`, its two tests seen failing first. R18 and R19 hold. The sample's 117 tests pass.
+
+**Done differently.**
+- Step 3 fixed one defect, a short tap lost (line 18): `HeroKeys.Wanted(IKeyboardDevice)` counts a key that was pressed since the last frame as well as a key that is down, and `HeroKeys` gains 12 test cases, with Stride's simulated keyboard.
+- Two parts of the lines cannot be seen as written, and are said so in the lines: the hero is not drawn over the house's wall (line 20), and no figure is drawn behind another (line 25). The figures are one cell high, and walkers never share a cell, so they overlap neither the wall nor each other.
+- The pictures were read by scripts rather than by eye: where the view is, in the town drawn at zoom 3; which figure stands on a cell; and whether a picture is the town to the pixel. The scripts are in `/mnt/project-files/tilemap/step4-rig/`, not in the repository. `ffmpeg`'s `x11grab` took the pictures of a held key.
+- The README's part on running the game gained Windows (not tried) and a part "Play" with the keys; Task 12 writes the rest of it.
 
 ### Task 12: The guide, the READMEs and the notes
 
