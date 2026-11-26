@@ -943,7 +943,7 @@ internal static class MapPicture
 6. A square of 8 by 6 free cells or more near the house, where Task 10 puts the villagers, and paths from the door to the square, the pond and the lane.
 7. A corner cell of the frame can be walked to: Task 11 takes the hero there to see the camera stop.
 
-- [ ] **Step 1: Write `Reach`, `MapPicture` and the failing tests**
+- [x] **Step 1: Write `Reach`, `MapPicture` and the failing tests**
 
 ```csharp
 // TownTests
@@ -968,14 +968,24 @@ internal static class MapPicture
     // MapPicture.Save("Maps/Town"): the file is there, 960 by 640 pixels, and no pixel of it is transparent
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Run: `dotnet test sample/Thornwick/Thornwick.Tests --filter FullyQualifiedName~TownTests`. Expected: FAIL (`Maps/Town.sdtilemap` is not found).
-- [ ] **Step 3: Write the tool**, with the model file open beside it, and a first `Town.txt`: the `tileset` line from the id of `Tiles/Town`, a `tile` line for each tile of the table of "The art" the town uses, and three layers of grass and nothing. Run the tool. Expected: `Maps/Town.sdtilemap` is written, and the picture test passes with a field of grass.
-- [ ] **Step 4: Draw the town**, a part at a time: change `Town.txt`, run the tool, run the picture test, look at `pictures/Town.png`. Copy the last picture to `/mnt/project-files/tilemap/step4/town.png`.
-- [ ] **Step 5: Run the tests.** Expected: PASS.
-- [ ] **Step 6: Run the tool again.** Expected: `git status` shows no change after the second run.
-- [ ] **Step 7: The tool's file is Game Studio's (R15; line 9).** Commit the map first. Open the solution in Game Studio and the town in the map editor: the three layers, the tile set and the whole town show, and the water plays. On `Ground`, stamp a path tile on one cell that had grass, and save. Expected: `git diff --stat` has one file, `Town.sdtilemap`, with one line changed. Restore the file after (`git checkout`): the town is the tool's. If more changed, take R15's fallback, and say which lines in the check's line.
-- [ ] **Step 8: The sample's README** says how the town is made: the command, the format of a picture, and that a change made to the town in Game Studio is lost the next time the tool runs.
-- [ ] **Step 9: Write line 9** in `docs/studio-check.md`, then commit and push: `feat(tessera): Thornwick's town, written by a tool from text pictures`
+- [x] **Step 2: Run them to see them fail.** Run: `dotnet test sample/Thornwick/Thornwick.Tests --filter FullyQualifiedName~TownTests`. Expected: FAIL (`Maps/Town.sdtilemap` is not found).
+- [x] **Step 3: Write the tool**, with the model file open beside it, and a first `Town.txt`: the `tileset` line from the id of `Tiles/Town`, a `tile` line for each tile of the table of "The art" the town uses, and three layers of grass and nothing. Run the tool. Expected: `Maps/Town.sdtilemap` is written, and the picture test passes with a field of grass.
+- [x] **Step 4: Draw the town**, a part at a time: change `Town.txt`, run the tool, run the picture test, look at `pictures/Town.png`. Copy the last picture to `/mnt/project-files/tilemap/step4/town.png`.
+- [x] **Step 5: Run the tests.** Expected: PASS.
+- [x] **Step 6: Run the tool again.** Expected: `git status` shows no change after the second run.
+- [x] **Step 7: The tool's file is Game Studio's (R15; line 9).** Commit the map first. Open the solution in Game Studio and the town in the map editor: the three layers, the tile set and the whole town show, and the water plays. On `Ground`, stamp a path tile on one cell that had grass, and save. Expected: `git diff --stat` has one file, `Town.sdtilemap`, with one line changed. Restore the file after (`git checkout`): the town is the tool's. If more changed, take R15's fallback, and say which lines in the check's line.
+- [x] **Step 8: The sample's README** says how the town is made: the command, the format of a picture, and that a change made to the town in Game Studio is lost the next time the tool runs.
+- [x] **Step 9: Write line 9** in `docs/studio-check.md`, then commit and push: `feat(tessera): Thornwick's town, written by a tool from text pictures`
+
+**Done (2026-11-26).** The 8 tests of `TownTests` failed first, each with `Maps/Town.sdtilemap` not found; the picture test passed on a first town of grass, and all 8 once the town was drawn. The sample's 81 tests pass. A second run of the tool writes the same bytes, and the tool refuses each mistake of the list with the file, the line, the reason and the exit code 1, writing nothing. Line 9 is seen, and R15 holds: a stamp and a save in the map editor changed one line of `Town.sdtilemap`. The last picture is `/mnt/project-files/tilemap/step4/town.png`.
+
+The town, in cells of the map (y up, the bottom row 0), for the tasks after this one: the door of the hero's house is (28, 24) and the hero starts under it, at (28, 23); the cobbled square is (24, 16) to (33, 21), 10 by 6 free cells; the three brambles of the lane are (8, 28) to (10, 28), and the garden behind them, in the corner of the forest, is (3, 29) to (14, 36); the corner the hero can walk to is (0, 0), in the meadow; the pond is (7, 13) to (16, 18).
+
+**Done differently.**
+- The tool refuses a few mistakes more than the list: a cell text that is not a cell, a second `map` line, a slot or a character given twice, a layer name or a URL that the map's file would have to quote. It reads every picture before it writes any map, so that a mistake leaves the maps as they were.
+- A remark on a `map`, `tileset`, `tile` or `layer` line starts at a `#` after a space, so that a tile id of the form `1:#17` stays whole; a line that starts with `layer ` always starts a layer.
+- The forest is the tree group `1:6,0` to `1:8,2` laid as a nine-slice (the middle piece inside, the edges and corners where it meets the grass), not the group repeated every three cells: repeated, its pieces leave cut trees between the groups. "The art" names them "tree groups"; the picture's remarks say how they are laid.
+- `MapPicture` blends a tile's pixels over those under it by their alpha, and leaves out the colour key when a tile set has one; the plan said neither.
 
 ### Task 9: The house, painted in the map editor
 

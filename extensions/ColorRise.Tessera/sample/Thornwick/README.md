@@ -33,6 +33,31 @@ dotnet test Thornwick.Tests
 
 The tests read the game's files from the folder beside them.
 
+## The town
+
+The town, `Assets/Maps/Town.sdtilemap`, is 60 by 40 cells on three layers: 7200 cells, too many to paint by hand. A text picture, `tools/maps/Town.txt`, draws it a character for each cell, and a tool writes the map's file from it, from this folder:
+
+```bash
+dotnet run tools/MakeMaps.cs -- Thornwick.Game
+```
+
+The tool is a .NET file-based app, without a package or a project. For each picture of `tools/maps` it writes the map's file whole, as Game Studio writes it, with ids made from names: two runs write the same bytes. A picture has, in order:
+
+```text
+# A line that starts with # is a remark.
+map Maps/Town 60 40                                          # the URL of the map, and its size in cells
+tileset 1 = 2199ea15-ee1f-4a43-8905-05ff37348fbc:Tiles/Town  # a tile set: its id is the line Id: of its file
+tile g = 1/1:0,0                                             # a character, and the cell it stands for
+tile ] = 1/1:8,6h                                            # the flips d, h and v follow the tile id, in that order
+layer Ground                                                 # a layer, the bottom one first
+gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg
+...                                                          # 40 lines of 60 characters, the top row first
+```
+
+A cell is written as the map's file writes it: the slot of its tile set, a `/`, the tile id as the tile set editor shows it, and the flips. A dot or a space is an empty cell. The tool stops, with the file, the line and the reason, on a character without a `tile` line, a layer without its rows or with a row of the wrong width, a layer named twice, a slot without a `tileset` line, or a picture without its `map` line; it then writes nothing. Whether a tile exists is for the tests to say (`TownTests`). They also save the town as a picture, `Thornwick.Tests/bin/Debug/net10.0/pictures/Town.png`, to look at after a change.
+
+A change made to the town in Game Studio is lost the next time the tool runs: change the picture instead. The house is the other way: it is painted in the map editor, and the tool does not write it.
+
 ## The art
 
 The art is by Kenney (www.kenney.nl), under Creative Commons Zero (CC0 1.0): Tiny Town, Tiny Dungeon and the RPG Urban Pack. Each pack's sheet without spacing and its licence are in `Thornwick.Game/Resources/Kenney/<Pack>/`. See [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md).

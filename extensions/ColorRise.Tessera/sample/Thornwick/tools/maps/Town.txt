@@ -1,0 +1,213 @@
+# Thornwick's town, 60 by 40 cells: tools/MakeMaps.cs writes it to Thornwick.Game/Assets/Maps/Town.sdtilemap. The layers
+# go bottom first: Ground under everything, Details (walls, trees, fences, brambles) where the hero walks, Overhead (roofs and
+# the crowns of the trees) over the hero. Every layer stops the hero where it has a solid tile.
+map Maps/Town 60 40
+tileset 1 = 2199ea15-ee1f-4a43-8905-05ff37348fbc:Tiles/Town
+
+# Ground
+tile g = 1/1:0,0        # grass
+tile , = 1/1:1,0        # grass with tufts
+tile * = 1/1:2,0        # grass with flowers
+tile : = 1/1:7,3        # cobbles on grass: the paths and the square
+tile q = 1/1:0,1        # the garden's earth, in nine pieces laid out as the keys q w e, a s d, z x c
+tile w = 1/1:1,1
+tile e = 1/1:2,1
+tile a = 1/1:0,2
+tile s = 1/1:1,2
+tile d = 1/1:2,2
+tile z = 1/1:0,3
+tile x = 1/1:1,3
+tile c = 1/1:2,3
+tile 7 = 1/2:0,0        # the pond, in nine pieces laid out as the keys of a keypad, the water in the middle: solid
+tile 8 = 1/2:1,0
+tile 9 = 1/2:2,0
+tile 4 = 1/2:0,1
+tile ~ = 1/2:1,1        # the water, which plays
+tile 6 = 1/2:2,1
+tile 1 = 1/2:0,2
+tile 2 = 1/2:1,2
+tile 3 = 1/2:2,2
+
+# Details
+tile [ = 1/1:4,6        # stone wall: its left end, the middle, its right end, a window, and the door of the hero's house
+tile = = 1/1:5,6
+tile ] = 1/1:7,6
+tile o = 1/1:4,7
+tile D = 1/1:5,7        # the door to the house: of the kind door, not solid
+tile { = 1/1:0,6        # wooden wall: its left end, the middle, its right end, a window, and a door that stays shut
+tile - = 1/1:1,6
+tile } = 1/1:3,6
+tile O = 1/1:0,7
+tile H = 1/1:1,7
+tile T = 1/1:4,1        # the trunk of a tall green tree, and of a tall yellow one
+tile Y = 1/1:3,1
+tile i = 1/1:4,2        # a small green tree, and a small yellow one
+tile j = 1/1:3,2
+tile B = 1/1:5,0        # a bramble: of the kind bush, solid, cut to a sprout
+tile % = 1/1:5,2        # mushrooms
+tile < = 1/1:8,6        # a level fence: its left end, the middle, its right end
+tile + = 1/1:9,6
+tile > = 1/1:10,6
+tile ^ = 1/1:11,3       # an upright fence: its top, the middle
+tile | = 1/1:11,4
+tile J = 1/1:10,5       # the corner of a fence, up and to the left
+tile W = 1/1:8,7        # the well, its roof over its bucket
+tile U = 1/1:8,8
+tile h = 1/1:10,7       # a beehive
+tile P = 1/1:11,6       # a signpost
+tile Z = 1/1:9,4        # a cart
+tile C = 1/1:6,0        # the forest: nine pieces of a group of trees, repeated every three cells
+tile I = 1/1:7,0
+tile K = 1/1:8,0
+tile M = 1/1:6,1
+tile N = 1/1:7,1
+tile Q = 1/1:8,1
+tile S = 1/1:6,2
+tile V = 1/1:7,2
+tile X = 1/1:8,2
+
+# Overhead
+tile ( = 1/1:4,4        # the red roof of the hero's house, its upper row: the left end, the middle, the right end, a chimney
+tile r = 1/1:5,4
+tile ) = 1/1:6,4
+tile k = 1/1:7,4
+tile / = 1/1:4,5        # its lower row: the left end, the middle, the right end, the gable over the door
+tile R = 1/1:5,5
+tile \ = 1/1:6,5
+tile A = 1/1:7,5
+tile f = 1/1:0,4        # the grey roofs of the wooden houses, the same way
+tile b = 1/1:1,4
+tile l = 1/1:2,4
+tile m = 1/1:3,4
+tile F = 1/1:0,5
+tile G = 1/1:1,5
+tile L = 1/1:2,5
+tile E = 1/1:3,5
+tile t = 1/1:4,0        # the crown of a tall green tree, over the cell above its trunk, and of a tall yellow one
+tile y = 1/1:3,0
+
+layer Ground
+ggg,gg,g,g,,gg*gggggg,ggg*ggggggg,,gggggggggggggggg*gggg,ggg
+gggggggggg,ggggggg,gg*,g*ggg,ggggggggggggggggg,gggggggg,gggg
+gg*g,,ggg,,g*g,gggggg*gggg,*gggg,gggg,ggggggggggggggggggggg,
+,ggggggggggg,*gggggg,ggggggggggggggg*gggggggggg,gggggggggggg
+gggggggggggggggg,ggggggggg*ggggggggggggggggggggggggg*g,g,ggg
+gggggqwwwwwwegggggg,gg,ggg,ggg*g,gg*gggggggg,,gg,ggg,g,ggggg
+g*gggassssssdgg,g,ggggg*gggggggggggggg,*,ggg,ggggggggggggggg
+gg,ggassssssdggggggggggggggg,gggggggggggggggg,gg*gggggg,gggg
+g,gggzxxxxxxcgggg,ggggg,,gggggggg*gggg,gggggggggggggggggggg,
+,ggg**ggggggggggggggggg,*gggggggggggggggg,ggggg,g*gggggggggg
+gggggggggggggggggggggggg,gg*ggggggggggg,,gggg,gggggg*ggggggg
+gg,ggggg*ggg*,ggggg,ggggggggggg,ggggggg,gggggggggggggggggggg
+ggggggg,:::gggggggg,ggggg,ggg*gggggg,ggg:gg,ggg,,,gggggggggg
+gg,gggg,:::gggggggggggggggg,ggg,,gggggg,:gggggggggg*gggggggg
+gggggggg:::*gggg,g*ggggg*gggg*gg*ggggggg:ggggggg,*ggg,gggggg
+gggggggg:::ggggggg,ggg,g**gggg***gg*ggg,:ggggggggggggggg*ggg
+,gg,g*gg:::::::::::::::::::::gg,g,ggg,gg:ggggggggggggg,ggggg
+gggggggg,ggggggg*gggggg**ggg:ggggg*gg,gg:gggg,,gggggggg,,g*g
+gggggggggg,ggggg,ggggggg::::::::::gggggg:ggg,ggg,gggggg*g,gg
+ggggggggggggg,gggggggggg::::::::::gggg,g:,*ggg,:gggg,ggggg,g
+gg*g*,gggggg,,gggg,ggggg::::::::::ggg,gg:ggg,gg:gggggggggg*g
+,gggggg7888888889g::::::::::::::::::::::::::::::gggg*g*ggggg
+gg*gg,g4~~~~~~~~6ggggggg::::::::::gggggggggggggggg,ggggg*ggg
+ggggggg4~~~~~~~~6ggggggg::::::::::ggggggggggg*gggggggg,ggggg
+gggggg,4~~~~~~~~6g*ggggggggg::ggggggggggggggg,gggggg,ggggggg
+g,gg,gg4~~~~~~~~6ggggggggggg::gggggggggggg,ggg,g,ggggggggggg
+ggggg*g1222222223ggggg,g,*gg::,gggggg*ggg,,g*g,g*,gggg,gggg,
+ggggggg,,gg,ggggg,gggggggggg::gggg,ggggggggggggggggg,ggggg,g
+ggggggggg,gggggggggggggg,ggg::ggggggggggggg,gg*gggggg,,ggggg
+ggggggg,gg,,ggggg,gg*ggggggg::ggg,ggggg,gggg,ggggggg*gg*gggg
+g,gg,ggggggg,gggggggggg,gggg::gggggggg*g,ggggggggggg,gg,ggg,
+ggg,gggggggggggg,,ggggggggg,::g,ggggg,gggggggggg,ggg*ggggggg
+,gggggg,ggg*gg,,gg,gggg*gg,*::g*gggggggggggggggggggggggggg,g
+ggggggg,gg,gggggggg,gggggggg::gggg*ggggggg*ggggg,ggggggggggg
+gggggg,gggggggggg,gg,ggg*gggggggggggggggggg*g,gggggggggggggg
+ggggggggggggg,gggggggg,,gggggggggggggggg,gggggggggggggggggg*
+ggggggggggggggggg,gggg,ggggggggggggg*gg**ggggg,,gggggg,ggggg
+,gggggg,ggggggggggggggggggggggggg*ggg,*gggggg,gggg,gg*gggggg
+ggggggggggggggggg*ggggggggg,gggg*gggg,gg*ggggggggg,ggggggggg
+gg*ggg,,gggg,gggggggggg,ggg,gg,g*gggg,ggggg,gggggggg,gggg*g,
+
+layer Details
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVNNN
+NNQ............^.........................................MNN
+NNQ..........%.|......i..................................MNN
+NNQ............|..............j..........................MNN
+NNQ............|..i.........................B............MNN
+NNQ............|....................Y............i.......MNN
+NNQ............|.........................................MNN
+NNQ..........%.|....B....T..........................T....MNN
+NNQ............|......................{---}..............MNN
+NNQ++++>BBB<+++J......................{OHO}...i..........MNN
+NNQ......................................................MNN
+NNQ.............T...T.......................j............MNN
+NNQ..........T............[===]...T..................B...MNN
+NNQ........P..............[oDo]..........................MNN
+NNQ......................................................MNN
+NNQ..........................................{---}.......MNN
+NNQ..........................................{OHO}..Z....MNN
+NNQ.....Y..........................W.....................MNN
+NNQ................................U.....................MNN
+NNQ......................................................MNN
+NNQ......................................................MNN
+NNQ......................................<+++++>.........MNN
+NNQ................................................T.....MNN
+NNQ..B..............B...............B....................MNN
+VVX......................................................MNN
+........................................B.............T..MNN
+...........................i......j......................MNN
+..................B.........................T............MNN
+.....h.h.h.h.............................................MNN
+...<++++++++>.........................................j..MNN
+........................T......T.........................MNN
+..............................P..........................MNN
+.....Y..Y..Y..Y.......................Y.........T........MNN
+.........................................................MNN
+.................................B.......i..........i....MNN
+......Y..Y..Y..Y....i....................................MNN
+.........................................................MNN
+.........................................................MNN
+
+layer Overhead
+............................................................
+............................................................
+............................................................
+............................................................
+............................................................
+............................................................
+....................................y.......................
+............................................................
+.........................t..........................t.......
+......................................fmbbl.................
+......................................FGEGL.................
+............................................................
+................t...t.......................................
+.............t............(krr)...t.........................
+........................../RAR\.............................
+............................................................
+.............................................fbbml..........
+.............................................FGEGL..........
+........y...................................................
+............................................................
+............................................................
+............................................................
+............................................................
+...................................................t........
+............................................................
+............................................................
+......................................................t.....
+............................................................
+............................................t...............
+............................................................
+............................................................
+........................t......t............................
+............................................................
+.....y..y..y..y.......................y.........t...........
+............................................................
+............................................................
+......y..y..y..y............................................
+............................................................
+............................................................
+............................................................
