@@ -696,7 +696,7 @@ public enum DoorResult
 }
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // BramblesTests, over TestMaps
@@ -749,10 +749,17 @@ public void A_property_that_names_no_tile_empties_the_cell(string cut)
     // each time: Wrong, the walker is where it was, and nothing is thrown
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
-- [ ] **Step 3: Write the three files.** `Count` and `Of` go through the chunks of each layer, not through every cell of the frame: a map without a frame has no cells to list. `TryTake` is the whole of a door: the script of Task 10 only gives it the scene's places and `Content.Load`.
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): Thornwick reads brambles and doors from tile data`
+- [x] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
+- [x] **Step 3: Write the three files.** `Count` and `Of` go through the chunks of each layer, not through every cell of the frame: a map without a frame has no cells to list. `TryTake` is the whole of a door: the script of Task 10 only gives it the scene's places and `Content.Load`.
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): Thornwick reads brambles and doors from tile data`
+
+**Done (2026-11-26).** The tests failed first to compile (`Brambles`, `Doors`, `Door` and `DoorResult` did not exist), then the sample's 58 tests passed: 8 of `BramblesTests` (the theory counts three) and 10 of `DoorsTests`.
+
+**Done differently.**
+- `DoorsTests` names the door's tile `TestMaps.Door`: the record `Door` of the game is in the namespace `Thornwick`, which the tests' namespace is inside, so a bare `Door` there is the record and not the tile of `using static TestMaps`.
+- The cells that hold a tile of a kind, which `Count` and `Of` both need, are found by one internal method, `TileKinds.CellsOf`, which goes through the chunks of each layer.
+- The line 1 of the by-hand list, which Task 2 checked, went to `docs/studio-check.md` (part "Step 4") in a commit of its own after Task 5: Task 2's commit had forgotten it.
 
 ---
 
