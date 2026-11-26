@@ -25,7 +25,7 @@ cd Thornwick.Windows
 dotnet run
 ```
 
-The build compiles the assets first (`Bin/Linux/Debug/data`, or `Bin/Windows/Debug/data`). On Linux without a display or a GPU, the game runs under Xvfb with Lavapipe, as Game Studio does.
+The build compiles the assets first, and puts the game in `Bin/Linux/Debug` (the program `Thornwick.Linux`, its assets in `data`), or in `Bin/Windows/Debug`. On Linux without a display or a GPU, the game runs under Xvfb with Lavapipe, as Game Studio does.
 
 ## Play
 
@@ -41,10 +41,10 @@ The hero starts under the door of their house. Stepping onto a door goes through
 
 ## Open it in Game Studio
 
-Build Game Studio from this checkout (`sources/editor/Stride.GameStudio.Avalonia.Desktop`), then give it the solution:
+Build Game Studio from this checkout, as [Tessera's README](../../README.md#try-it) says (point 1), then give it the solution. From the root of the checkout, where the build puts Game Studio:
 
 ```bash
-Stride.GameStudio.Avalonia.Desktop extensions/ColorRise.Tessera/sample/Thornwick/Thornwick.slnx
+sources/editor/Stride.GameStudio.Avalonia.Desktop/bin/Debug/net10.0/Stride.GameStudio.Avalonia.Desktop extensions/ColorRise.Tessera/sample/Thornwick/Thornwick.slnx
 ```
 
 On Linux without a display or a GPU, run it under Xvfb with Lavapipe, as the check game's [README](../../tests/StudioCheck/README.md) says.

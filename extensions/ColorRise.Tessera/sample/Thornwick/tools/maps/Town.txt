@@ -56,13 +56,11 @@ tile U = 1/1:8,8
 tile h = 1/1:10,7       # a beehive
 tile P = 1/1:11,6       # a signpost
 tile Z = 1/1:9,4        # a cart
-tile C = 1/1:6,0        # the forest: nine pieces of a group of trees, repeated every three cells
-tile I = 1/1:7,0
-tile K = 1/1:8,0
+# The forest: a group of trees laid as a nine-slice, its middle repeated. The town's edges cut off its top and its left
+# corners, so these are the pieces it uses: the left side, the middle, the right side, the bottom side and its right corner
 tile M = 1/1:6,1
 tile N = 1/1:7,1
 tile Q = 1/1:8,1
-tile S = 1/1:6,2
 tile V = 1/1:7,2
 tile X = 1/1:8,2
 
