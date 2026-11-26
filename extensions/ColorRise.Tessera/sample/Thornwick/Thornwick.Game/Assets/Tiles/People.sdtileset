@@ -1,0 +1,17 @@
+!TileSetAsset
+Id: 3f71b523-f01b-44b7-8dab-7ed6fa3bbe30
+SerializedVersion: {ColorRise.Tessera: 1.0.0.0}
+Tags: []
+TileSize: {X: 16, Y: 16}
+PixelsPerUnit: 16.0
+ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+Sources:
+    e4ee927eadce79b10f4c7307ba7aa2ce: !GridTileSetSource
+        Id: 1
+        Name: people
+        Image: !file ../../Resources/Kenney/RpgUrbanPack/people.png
+        TileSize: {X: 0, Y: 0}
+        Margin: {X: 0, Y: 0}
+        Spacing: {X: 0, Y: 0}
+Tiles: {}
+LastSourceId: 1

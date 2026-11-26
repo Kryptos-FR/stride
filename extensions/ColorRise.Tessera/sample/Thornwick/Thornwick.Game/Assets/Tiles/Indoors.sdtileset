@@ -1,0 +1,103 @@
+!TileSetAsset
+Id: 1ab9d919-c81c-4db8-b3e3-dd9b83d02189
+SerializedVersion: {ColorRise.Tessera: 1.0.0.0}
+Tags: []
+TileSize: {X: 16, Y: 16}
+PixelsPerUnit: 16.0
+ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+Sources:
+    bd032f8709b6084d1c4a8b6a39062147: !GridTileSetSource
+        Id: 1
+        Name: tilemap_packed
+        Image: !file ../../Resources/Kenney/TinyDungeon/tilemap_packed.png
+        TileSize: {X: 0, Y: 0}
+        Margin: {X: 0, Y: 0}
+        Spacing: {X: 0, Y: 0}
+Tiles:
+    e3b31eda8166693a23aa18a5b9c774ff:
+        Tile: 1:4,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    62114ded42bbb28cdb7d79bd135b9a6a:
+        Tile: 1:5,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    0f833cded9642fc4ee2f90e0c09a34b3:
+        Tile: 1:4,3
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    bbc6e5e66d4c8ff1e3ec1d010163f2ef:
+        Tile: 1:6,3
+        Collision: None
+        Kind: door
+        Properties:
+            cf082be15965c9f9bb84a1b2722926c9~to: !TileStringProperty
+                Value: Town
+        Animation: {}
+    6c3d04adce6b060be1516414d8591895:
+        Tile: 1:6,4
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    9b8ea05e35ef682e848e89e28b700f8c:
+        Tile: 1:9,4
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    61043590f09cc737c516a7cc1597278d:
+        Tile: 1:10,4
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    14d139f251cfae0013885d7789ad0edb:
+        Tile: 1:11,4
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    2ab75607cb731182806bac641ce06f5d:
+        Tile: 1:3,5
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    3b5b9b9b13f033eaa2a441476bf6502b:
+        Tile: 1:0,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    9cbe122557dca42b45c58e5033513649:
+        Tile: 1:1,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    1001f66d4de8abfb26ade8d01a9f8656:
+        Tile: 1:2,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    ae8536882209ed62f93721a40b5aa42a:
+        Tile: 1:3,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    3af242587c81801abe68b8c9402a4e04:
+        Tile: 1:5,7
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+LastSourceId: 1

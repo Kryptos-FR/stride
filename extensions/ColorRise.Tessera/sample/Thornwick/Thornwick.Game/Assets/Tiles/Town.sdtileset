@@ -1,0 +1,441 @@
+!TileSetAsset
+Id: 2199ea15-ee1f-4a43-8905-05ff37348fbc
+SerializedVersion: {ColorRise.Tessera: 1.0.0.0}
+Tags: []
+TileSize: {X: 16, Y: 16}
+PixelsPerUnit: 16.0
+ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+Sources:
+    936eaef7d8e6cc9e0c323dac8e09abae: !GridTileSetSource
+        Id: 1
+        Name: tilemap_packed
+        Image: !file ../../Resources/Kenney/TinyTown/tilemap_packed.png
+        TileSize: {X: 0, Y: 0}
+        Margin: {X: 0, Y: 0}
+        Spacing: {X: 0, Y: 0}
+    56331bdda55502f57d65d9731e874f07: !GridTileSetSource
+        Id: 2
+        Name: water
+        Image: !file ../../Resources/Kenney/TinyTown/water.png
+        TileSize: {X: 0, Y: 0}
+        Margin: {X: 0, Y: 0}
+        Spacing: {X: 0, Y: 0}
+Tiles:
+    b1796b016e02698a2e3c8e80b66e15b6:
+        Tile: 1:5,0
+        Collision: Solid
+        Kind: bush
+        Properties:
+            0d80a826e8d37ff272f810962997af7c~cut: !TileStringProperty
+                Value: 1:5,1
+        Animation: {}
+    3f64e00038849b8b1bdd253d22cf6931:
+        Tile: 1:6,0
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    3136df380b8e549480e67e4d93e4d52c:
+        Tile: 1:7,0
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    3376f17f111457b9232081ee52853c99:
+        Tile: 1:8,0
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    9660c3ddc63303937cab63d76e438c39:
+        Tile: 1:9,0
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    54fc0ef084de92fa252590bba9cf31bd:
+        Tile: 1:10,0
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    ee04b658a41b3159fde8e84b542f3d50:
+        Tile: 1:11,0
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    f05228ca20d631878d40ac86b794598b:
+        Tile: 1:3,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    48c9de3a9ab0ef9a78280bb4f2ffb1c8:
+        Tile: 1:4,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    868d6ead7b172b5245a24160e751b06a:
+        Tile: 1:6,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    abde7a44c2b7f50bb692a81a11e32ad9:
+        Tile: 1:7,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    3fb76a9d51fd49c1b227f13107bd7214:
+        Tile: 1:8,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    fb862ae238b5ce159e0bfcf4bba5ae9a:
+        Tile: 1:9,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    6bb3523068859ef8e3353b66dc1bb29b:
+        Tile: 1:10,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    a1eb67281a13dc5d42b70e33d4210717:
+        Tile: 1:11,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    87bda59d088331f9bf6ff0b9294c6345:
+        Tile: 1:3,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    8cf9d4565a1d1dd38ce49efc5f8f55c1:
+        Tile: 1:4,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    ce3dd2debc1cb813cef7543eba76862a:
+        Tile: 1:6,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    b4097969c7332557cf9ac11b4ea6bbef:
+        Tile: 1:7,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    899a4339f0cb3c0b0aa3221925d92869:
+        Tile: 1:8,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    ba0f8646d20091574f607324e7fde198:
+        Tile: 1:9,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    f89ec6a82eda7a99351d4f228ff3262f:
+        Tile: 1:10,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    1a6f36e532e76e476b414824ea22e53e:
+        Tile: 1:11,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    e945a58acde2406d649f383461ff7961:
+        Tile: 1:8,3
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    5e4aaefd5a7ff65b3d667c7691c3408d:
+        Tile: 1:9,3
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    63aa116ac10142a2f763845ea0ae1639:
+        Tile: 1:10,3
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    d1f8a6a860e17c416e796a17bf8583cf:
+        Tile: 1:11,3
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    b70c545b40a511421ef08efefdb84611:
+        Tile: 1:8,4
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    21e402649667a68630a842baaede9cf8:
+        Tile: 1:9,4
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    89297c4ab69bcbdc73c9e37473ddf4e6:
+        Tile: 1:10,4
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    d91eb393475bd837811067c199e30d24:
+        Tile: 1:11,4
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    473c228155395fb8bacb382ed217cf8b:
+        Tile: 1:8,5
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    ff50214768acda4fe6f01de37e5481a0:
+        Tile: 1:9,5
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    45f68a0e87a6d8f7495e5b84bbb195e2:
+        Tile: 1:10,5
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    e5783c31b1ff7558a8aa15dd75c3bf0c:
+        Tile: 1:11,5
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    e0c74c21e582810f9ca0bb777640dd96:
+        Tile: 1:0,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    9a52f1aad58568c3350f2116b9c39fdd:
+        Tile: 1:1,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    39ef966538d979b53d6a932c06019cd9:
+        Tile: 1:2,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    cdf690546a7454ee8109a8ee9e8b4fc6:
+        Tile: 1:3,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    a5fac18248ac946e5581ad5b25c22885:
+        Tile: 1:4,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    3e263f817e3bcc6f850203059a1f63a5:
+        Tile: 1:5,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    e1fdc57df02140d27e2ec9d673faa9b6:
+        Tile: 1:6,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    d64a0184c91cacf5590be06e58584d14:
+        Tile: 1:7,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    f62344295cf755bf098bc6bbacf0349f:
+        Tile: 1:8,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    162d17a7c3d8e5e4a2c23840e55520e4:
+        Tile: 1:9,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    bacc4c86c19c83e93407f428e7352c41:
+        Tile: 1:10,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    02f2c97085d74f2ee4f9af42c4434d2e:
+        Tile: 1:11,6
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    28edf42136315d9bd5f8153c8b5fa098:
+        Tile: 1:0,7
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    c3589a5655c6645be31f5cdbd5991a8d:
+        Tile: 1:1,7
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    1a6716eb7efd90a6254a9a90fd0f1759:
+        Tile: 1:2,7
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    498f2ca243b32aba05781e61395cdfba:
+        Tile: 1:3,7
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    b17218b2964662ba4a5ee43f89089d43:
+        Tile: 1:4,7
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    68986d771ae413c912e60c348fef35c4:
+        Tile: 1:5,7
+        Collision: None
+        Kind: door
+        Properties:
+            4467eabaa38cd163b2246bbdf025efb1~to: !TileStringProperty
+                Value: House
+            0f2eb24d16366c8966c62fd76eb1c9d2~map: !TileStringProperty
+                Value: Maps/House
+        Animation: {}
+    c9e28878a0cbc7e9aa10f3ab6709759d:
+        Tile: 1:6,7
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    c4cb3734458330365943fdd05227bd10:
+        Tile: 1:7,7
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    11c93c53ce6fb79514f9eb1d42243ad4:
+        Tile: 1:8,7
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    a7977b05a217ac86a9c4ec1c561759de:
+        Tile: 1:10,7
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    0bdfc1adc3a232dbd66bd9d5a5ef5d10:
+        Tile: 1:8,8
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    bcccab87b8b93fd4581eddf0bdfb9489:
+        Tile: 2:0,0
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    49aed855e2ccf0295c09f823271e01e4:
+        Tile: 2:1,0
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    45751a1d8c723d142c3fc3b1fbf05761:
+        Tile: 2:2,0
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    c6a7d1f24c23f7b8cdf2e480333d0ebe:
+        Tile: 2:0,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    8c6e6d16450d7340be0c3ae0e6a03dd9:
+        Tile: 2:1,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation:
+            ff503435340546fabd50cacbb0b73872:
+                Tile: 2:1,1
+                Duration: 0.3
+            0b14650ffaddc7b590679a5e21cf58bc:
+                Tile: 2:0,3
+                Duration: 0.3
+            87ffd06fff254881696722c6a1230a35:
+                Tile: 2:1,3
+                Duration: 0.3
+    c14086e6ceaa6e8e1edcfbcd76cdae1c:
+        Tile: 2:2,1
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    3039ae98d7d1dbc4faef54b29b3a7015:
+        Tile: 2:0,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    0e6939ba83c28bfe9e0c8b035acfbf28:
+        Tile: 2:1,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+    1944dcef87a14362fd8e7887d5ad597a:
+        Tile: 2:2,2
+        Collision: Solid
+        Kind: null
+        Properties: {}
+        Animation: {}
+LastSourceId: 2
