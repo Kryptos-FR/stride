@@ -20,7 +20,7 @@ namespace ColorRise.Tessera;
 [ComponentCategory("2D")]
 [DefaultEntityComponentProcessor(typeof(FlipbookProcessor))]
 [DefaultEntityComponentRenderer(typeof(FlipbookRenderProcessor))]
-public sealed class FlipbookComponent : ActivableEntityComponent
+public sealed class FlipbookComponent : ActivableEntityComponent, IEntityComponentBounds
 {
     // The animations to play after the current one, in order
     private readonly Queue<string> queued = new();
@@ -152,6 +152,16 @@ public sealed class FlipbookComponent : ActivableEntityComponent
     /// </summary>
     [DataMemberIgnore]
     public FlipbookFrame? CurrentFrame => CurrentClip is { } clip && CurrentFrameIndex is var index and >= 0 ? clip.Frames[index] : null;
+
+    /// <summary>
+    /// The volume of the frame shown, in the entity's space, which the scene editor frames when it focuses on the entity;
+    /// <see cref="BoundingBox.Empty"/> when nothing is shown.
+    /// </summary>
+    [DataMemberIgnore]
+    public BoundingBox LocalBounds
+        => Flipbook is { } flipbook && CurrentFrame is { } frame && FlipbookQuads.Bounds(flipbook, frame, Matrix.Identity, FlipX) is { } bounds
+            ? (BoundingBox)bounds
+            : BoundingBox.Empty;
 
     private FlipbookAnimation? CurrentAnimation => Flipbook?.FindAnimation(Animation);
 

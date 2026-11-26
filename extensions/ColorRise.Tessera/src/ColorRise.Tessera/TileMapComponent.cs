@@ -14,7 +14,7 @@ namespace ColorRise.Tessera;
 [Display("Tile map", Expand = ExpandRule.Once)]
 [ComponentCategory("2D")]
 [DefaultEntityComponentRenderer(typeof(TileMapRenderProcessor))]
-public sealed class TileMapComponent : ActivableEntityComponent
+public sealed class TileMapComponent : ActivableEntityComponent, IEntityComponentBounds
 {
     /// <userdoc>The tile map to show.</userdoc>
     [DataMember(10)]
@@ -57,6 +57,58 @@ public sealed class TileMapComponent : ActivableEntityComponent
     [DataMember(60)]
     [Display("Render group")]
     public RenderGroup RenderGroup { get; set; }
+
+    /// <summary>
+    /// The volume of the map in the entity's space, which the scene editor frames when it focuses on the entity: the map's
+    /// frame, or the cells painted on its layers when it has no frame, from the z of the first layer to the z of the last;
+    /// <see cref="BoundingBox.Empty"/> when there is nothing to frame.
+    /// </summary>
+    [DataMemberIgnore]
+    public BoundingBox LocalBounds
+    {
+        get
+        {
+            if (Map is not { } map)
+            {
+                return BoundingBox.Empty;
+            }
+
+            var size = map.CellSize;
+            var (minimum, maximum) = (new Vector2(float.MaxValue), new Vector2(float.MinValue));
+            if (map.Size is { X: > 0, Y: > 0 } frame)
+            {
+                (minimum, maximum) = (Vector2.Zero, new Vector2(frame.X * size.X, frame.Y * size.Y));
+            }
+            else
+            {
+                foreach (var layer in map.Layers)
+                {
+                    foreach (var chunk in layer.Chunks)
+                    {
+                        var cells = chunk.Cells;
+                        for (var index = 0; index < cells.Length; index++)
+                        {
+                            if (cells[index].IsEmpty)
+                            {
+                                continue;
+                            }
+                            var cell = new Vector2(chunk.Position.X * (float)TileChunk.Size + index % TileChunk.Size, chunk.Position.Y * (float)TileChunk.Size + index / TileChunk.Size);
+                            var corner = cell * size + layer.Offset;
+                            minimum = Vector2.Min(minimum, corner);
+                            maximum = Vector2.Max(maximum, corner + size);
+                        }
+                    }
+                }
+                if (minimum.X > maximum.X)
+                {
+                    return BoundingBox.Empty;
+                }
+            }
+
+            var last = Math.Max(map.Layers.Count - 1, 0) * LayerSpacing;
+            return new BoundingBox(new Vector3(minimum, Math.Min(0, last)), new Vector3(maximum, Math.Max(0, last)));
+        }
+    }
 
     private Vector2 CellSize => Map?.CellSize ?? Vector2.One;
 
