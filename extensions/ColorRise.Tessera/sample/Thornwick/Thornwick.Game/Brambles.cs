@@ -11,10 +11,17 @@ public static class Brambles
     /// <summary>
     /// Cuts the bush of a cell. The topmost layer whose tile there has the kind "bush" gets, in that cell, the tile the
     /// string property "cut" names, of the same tile set and with the same flip; the cell is emptied when the property is
-    /// missing, is no tile id, or names a tile the set does not have. False when the cell has no bush.
+    /// missing, or is wrong: no tile id, or a tile the set does not have. False when the cell has no bush.
     /// </summary>
-    public static bool TryCut(TileMap map, Int2 cell)
+    public static bool TryCut(TileMap map, Int2 cell) => TryCut(map, cell, out _);
+
+    /// <summary>
+    /// Cuts the bush of a cell as <see cref="TryCut(TileMap, Int2)"/> does, and says what is wrong with a "cut" that names
+    /// no tile; the problem is null otherwise.
+    /// </summary>
+    public static bool TryCut(TileMap map, Int2 cell, out string? problem)
     {
+        problem = null;
         for (var index = map.Layers.Count - 1; index >= 0; index--)
         {
             var layer = map.Layers[index];
@@ -23,7 +30,19 @@ public static class Brambles
             {
                 continue;
             }
-            var left = TryGetCut(map, value.Slot, bush, out var tile) ? new TileCell(value.Slot, tile, value.Flip) : TileCell.Empty;
+            var left = TileCell.Empty;
+            if (bush.Properties.TryGetValue(TileProperties.Cut, out var cut))
+            {
+                if (cut is string text && TileId.TryParse(text, out var tile) && map.TileSets.TryGetValue(value.Slot, out var tileSet)
+                    && tileSet.Tiles.ContainsKey(tile))
+                {
+                    left = new TileCell(value.Slot, tile, value.Flip);
+                }
+                else
+                {
+                    problem = $"The bush at ({cell.X}, {cell.Y}) has '{TileProperties.Cut}' = '{cut}', which is no tile of its tile set: the cell is emptied.";
+                }
+            }
             layer.SetCell(cell, left);
             return true;
         }
@@ -34,15 +53,4 @@ public static class Brambles
     /// How many cells of the map hold a bush.
     /// </summary>
     public static int Count(TileMap map) => TileKinds.CellsOf(map, TileKinds.Bush).Count;
-
-    // The tile a bush leaves, when its property names one that its tile set has
-    private static bool TryGetCut(TileMap map, ushort slot, Tile bush, out TileId tile)
-    {
-        tile = default;
-        return bush.Properties.TryGetValue(TileProperties.Cut, out var cut)
-            && cut is string text
-            && TileId.TryParse(text, out tile)
-            && map.TileSets.TryGetValue(slot, out var tileSet)
-            && tileSet.Tiles.ContainsKey(tile);
-    }
 }

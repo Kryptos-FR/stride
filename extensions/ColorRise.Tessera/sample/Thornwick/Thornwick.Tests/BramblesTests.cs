@@ -19,8 +19,9 @@ public sealed class BramblesTests
         map.Layers["Details"].Changed += (_, _) => changes++;
         Assert.False(place.IsFree(new Int2(2, 1)));
 
-        Assert.True(Brambles.TryCut(map, new Int2(2, 1)));
+        Assert.True(Brambles.TryCut(map, new Int2(2, 1), out var problem));
 
+        Assert.Null(problem);
         Assert.Equal(new TileCell(1, Stump, TileFlip.Horizontal), map.Layers["Details"].GetCell(new Int2(2, 1)));
         Assert.True(place.IsFree(new Int2(2, 1)));
         Assert.Equal(1, changes);
@@ -32,8 +33,9 @@ public sealed class BramblesTests
         var map = Room(6, 4);
         Put(map, Hedge, new Int2(2, 1));
 
-        Assert.True(Brambles.TryCut(map, new Int2(2, 1)));
+        Assert.True(Brambles.TryCut(map, new Int2(2, 1), out var problem));
 
+        Assert.Null(problem);
         Assert.True(map.Layers["Details"].GetCell(new Int2(2, 1)).IsEmpty);
     }
 
@@ -42,7 +44,7 @@ public sealed class BramblesTests
     [InlineData("stump")]
     [InlineData("")]
     [InlineData("1:9,9")]
-    public void A_property_that_names_no_tile_empties_the_cell(string cut)
+    public void A_property_that_names_no_tile_empties_the_cell_and_says_so(string cut)
     {
         foreach (var value in new object[] { cut, 5 })
         {
@@ -50,9 +52,12 @@ public sealed class BramblesTests
             Tiles(map).Tiles[Bush].Properties["cut"] = value;
             Put(map, Bush, new Int2(2, 1));
 
-            Assert.True(Brambles.TryCut(map, new Int2(2, 1)));
+            Assert.True(Brambles.TryCut(map, new Int2(2, 1), out var problem));
 
             Assert.True(map.Layers["Details"].GetCell(new Int2(2, 1)).IsEmpty, $"cut = {value}");
+            Assert.NotNull(problem);
+            Assert.Contains("(2, 1)", problem);
+            Assert.Contains($"'{value}'", problem);
         }
     }
 

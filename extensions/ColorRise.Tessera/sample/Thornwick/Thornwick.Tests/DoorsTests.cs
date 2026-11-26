@@ -86,6 +86,11 @@ public sealed class DoorsTests
         Assert.False(Doors.IsOpenGround(town, new Int2(0, 5)));
         Assert.False(Doors.IsOpenGround(town, new Int2(6, 1)));
         Assert.False(Doors.IsOpenGround(town, new Int2(-1, 1)));
+
+        // A tile of the kind "door" that says nowhere is not open ground either
+        var broken = TownMap();
+        Tiles(broken).Tiles[TestMaps.Door].Properties.Remove("to");
+        Assert.False(Doors.IsOpenGround(Place(broken), TownDoor));
     }
 
     [Fact]
@@ -181,6 +186,20 @@ public sealed class DoorsTests
         AssertWrong(
             "'House' has no door that leads back to 'Town'.",
             change: (_, house) => Tiles(house).Tiles[Mat].Properties["to"] = "Mill");
+        foreach (var to in new object?[] { null, "", 5 })
+        {
+            AssertWrong(
+                "The door at (3, 5) of 'Town' has no string 'to' that names a place.",
+                change: (town, _) =>
+                {
+                    var properties = Tiles(town).Tiles[TestMaps.Door].Properties;
+                    properties.Remove("to");
+                    if (to is not null)
+                    {
+                        properties["to"] = to;
+                    }
+                });
+        }
     }
 
     // A town of 8 by 8 cells, with a row of walls at y 5 and its door at (3, 5), to the house

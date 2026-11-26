@@ -62,13 +62,18 @@ public sealed class World : SyncScript
     }
 
     /// <summary>
-    /// Cuts the bush in front of a walker, and counts the brambles again when one was cut.
+    /// Cuts the bush in front of a walker, and counts the brambles again when one was cut. A "cut" that names no tile is
+    /// one error line of the log.
     /// </summary>
     public bool Cut(GridWalker walker)
     {
-        if (walker.Place.Component.Map is not { } map || !Brambles.TryCut(map, walker.Ahead))
+        if (walker.Place.Component.Map is not { } map || !Brambles.TryCut(map, walker.Ahead, out var problem))
         {
             return false;
+        }
+        if (problem is not null)
+        {
+            Log.Error(problem);
         }
         Count();
         return true;
@@ -113,15 +118,20 @@ public sealed class World : SyncScript
     private void Count()
         => BramblesLeft = EntitiesOf(Entity.Scene).Select(entity => entity.Get<TileMapComponent>()?.Map).Sum(map => map is null ? 0 : Brambles.Count(map));
 
+    // The map of a URL; null when the game has none there or it is no tile map. No line of its own: the door's problem is
+    // the line, and asking first keeps the content manager from logging a missing asset as well
     private TileMap? LoadMap(string url)
     {
+        if (!Content.Exists(url))
+        {
+            return null;
+        }
         try
         {
             return Content.Load<TileMap>(url);
         }
-        catch (ContentManagerException error)
+        catch (ContentManagerException)
         {
-            Log.Error($"The map '{url}' could not be loaded: {error.Message}");
             return null;
         }
     }

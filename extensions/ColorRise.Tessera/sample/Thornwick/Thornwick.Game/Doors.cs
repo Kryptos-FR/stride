@@ -97,13 +97,15 @@ public static class Doors
     }
 
     /// <summary>
-    /// Whether a villager may step on a cell: the cell is free, and has no door.
+    /// Whether a villager may step on a cell: the cell is free, and has no tile of the kind "door", even one that says
+    /// nowhere.
     /// </summary>
     public static bool IsOpenGround(Place place, Int2 cell)
-        => place.IsFree(cell) && (place.Component.Map is not { } map || At(map, cell) is null);
+        => place.IsFree(cell) && (place.Component.Map is not { } map || !HasDoorTile(map, cell));
 
     /// <summary>
-    /// Takes the door a walker stands on. <paramref name="find"/> gives the place of a name, or null.
+    /// Takes the door a walker stands on; a tile of the kind "door" without a place in "to" is a wrong door.
+    /// <paramref name="find"/> gives the place of a name, or null.
     /// <paramref name="load"/> gives the map of a URL, or null; it is asked only when the place the door leads to has no
     /// map yet, and that map is then given to the place's component. The walker arrives where <see cref="Arrival"/> says.
     /// <paramref name="problem"/> is given with <see cref="DoorResult.Wrong"/> only.
@@ -112,12 +114,17 @@ public static class Doors
     {
         problem = null;
         var here = walker.Place;
-        if (walker.IsMoving || here.Component.Map is not { } map || At(map, walker.Cell) is not { } door)
+        if (walker.IsMoving || here.Component.Map is not { } map || !HasDoorTile(map, walker.Cell))
         {
             return DoorResult.None;
         }
 
-        var where = $"The door at ({door.Cell.X}, {door.Cell.Y}) of '{here.Name}'";
+        var where = $"The door at ({walker.Cell.X}, {walker.Cell.Y}) of '{here.Name}'";
+        if (At(map, walker.Cell) is not { } door)
+        {
+            problem = $"{where} has no string '{TileProperties.To}' that names a place.";
+            return DoorResult.Wrong;
+        }
         if (find(door.To) is not { } there)
         {
             problem = $"{where} leads to '{door.To}', and the scene has no such place.";
@@ -146,5 +153,18 @@ public static class Doors
         return Arrival(there, here.Name) is { } arrival && walker.TryTravel(there, arrival.Cell, arrival.Facing)
             ? DoorResult.Taken
             : DoorResult.Waits;
+    }
+
+    // Whether a layer has a tile of the kind "door" in a cell
+    private static bool HasDoorTile(TileMap map, Int2 cell)
+    {
+        foreach (var layer in map.Layers)
+        {
+            if (map.GetTile(layer.GetCell(cell)) is { Kind: TileKinds.Door })
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }
