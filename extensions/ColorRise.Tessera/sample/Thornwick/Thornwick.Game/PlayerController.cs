@@ -2,7 +2,6 @@ using ColorRise.Tessera;
 using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Engine;
-using Stride.Input;
 
 namespace Thornwick;
 
@@ -11,6 +10,7 @@ namespace Thornwick;
 /// </summary>
 public sealed class PlayerController : SyncScript
 {
+    private readonly HeroCommands commands = new();
     private World? world;
     private FlipbookComponent? flipbook;
 
@@ -76,6 +76,8 @@ public sealed class PlayerController : SyncScript
             return;
         }
         var arrived = walker.Advance(FrameTime.Of(Game.UpdateTime.Elapsed));
+        // Read every frame: a key pressed during a step is kept for the arrival
+        var (cut, side) = commands.Read(Input.Keyboard, walker.IsMoving);
         if (!walker.IsMoving)
         {
             // A door takes the hero when they arrive on it, and again each frame while someone stands where they would arrive
@@ -83,13 +85,13 @@ public sealed class PlayerController : SyncScript
             {
                 waitsAtDoor = world.TakeDoor(walker) == DoorResult.Waits;
             }
-            if (Input.IsKeyPressed(Keys.Space))
+            if (cut)
             {
                 world.Cut(walker);
             }
             else
             {
-                walker.TryStep(HeroKeys.Wanted(Input.Keyboard));
+                walker.TryStep(side);
             }
         }
         Entity.Transform.Position = walker.Place.ToWorld(walker.Position);

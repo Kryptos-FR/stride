@@ -39,6 +39,21 @@ public static class HeroKeys
         return Wanted(Asks(keyboard, Keys.Left, Keys.A), Asks(keyboard, Keys.Right, Keys.D), Asks(keyboard, Keys.Up, Keys.W), Asks(keyboard, Keys.Down, Keys.S));
     }
 
+    /// <summary>
+    /// The side the arrows and W, A, S and D pressed since the last frame ask for, whether they are still down or not;
+    /// None without a keyboard.
+    /// </summary>
+    public static FlipbookDirection Pressed(IKeyboardDevice? keyboard)
+    {
+        if (keyboard is null)
+        {
+            return FlipbookDirection.None;
+        }
+        return Wanted(WasPressed(keyboard, Keys.Left, Keys.A), WasPressed(keyboard, Keys.Right, Keys.D), WasPressed(keyboard, Keys.Up, Keys.W), WasPressed(keyboard, Keys.Down, Keys.S));
+    }
+
     private static bool Asks(IKeyboardDevice keyboard, Keys key, Keys other)
         => keyboard.IsKeyDown(key) || keyboard.IsKeyPressed(key) || keyboard.IsKeyDown(other) || keyboard.IsKeyPressed(other);
+
+    private static bool WasPressed(IKeyboardDevice keyboard, Keys key, Keys other) => keyboard.IsKeyPressed(key) || keyboard.IsKeyPressed(other);
 }
