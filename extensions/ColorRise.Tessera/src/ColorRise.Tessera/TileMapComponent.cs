@@ -83,20 +83,10 @@ public sealed class TileMapComponent : ActivableEntityComponent, IEntityComponen
             {
                 foreach (var layer in map.Layers)
                 {
-                    foreach (var chunk in layer.Chunks)
+                    if (PaintedCells(layer) is { } cells)
                     {
-                        var cells = chunk.Cells;
-                        for (var index = 0; index < cells.Length; index++)
-                        {
-                            if (cells[index].IsEmpty)
-                            {
-                                continue;
-                            }
-                            var cell = new Vector2(chunk.Position.X * (float)TileChunk.Size + index % TileChunk.Size, chunk.Position.Y * (float)TileChunk.Size + index / TileChunk.Size);
-                            var corner = cell * size + layer.Offset;
-                            minimum = Vector2.Min(minimum, corner);
-                            maximum = Vector2.Max(maximum, corner + size);
-                        }
+                        minimum = Vector2.Min(minimum, new Vector2(cells.First.X, cells.First.Y) * size + layer.Offset);
+                        maximum = Vector2.Max(maximum, new Vector2(cells.Last.X + 1f, cells.Last.Y + 1f) * size + layer.Offset);
                     }
                 }
                 if (minimum.X > maximum.X)
@@ -105,8 +95,8 @@ public sealed class TileMapComponent : ActivableEntityComponent, IEntityComponen
                 }
             }
 
-            var last = Math.Max(map.Layers.Count - 1, 0) * LayerSpacing;
-            return new BoundingBox(new Vector3(minimum, Math.Min(0, last)), new Vector3(maximum, Math.Max(0, last)));
+            var top = Math.Max(map.Layers.Count - 1, 0) * LayerSpacing;
+            return new BoundingBox(new Vector3(minimum, Math.Min(0, top)), new Vector3(maximum, Math.Max(0, top)));
         }
     }
 
@@ -238,6 +228,71 @@ public sealed class TileMapComponent : ActivableEntityComponent, IEntityComponen
             }
         }
         return false;
+    }
+
+    // The first and the last painted cell of a layer along each axis; null when it has none. The editor's orthographic view
+    // asks for the bounds every frame, so the chunks give the box and only the chunks on its edges are read, each from its
+    // outer side in
+    private static (Int2 First, Int2 Last)? PaintedCells(TileLayer layer)
+    {
+        var (low, high) = (new Int2(int.MaxValue), new Int2(int.MinValue));
+        foreach (var chunk in layer.Chunks)
+        {
+            if (chunk.Count > 0)
+            {
+                low = new Int2(Math.Min(low.X, chunk.Position.X), Math.Min(low.Y, chunk.Position.Y));
+                high = new Int2(Math.Max(high.X, chunk.Position.X), Math.Max(high.Y, chunk.Position.Y));
+            }
+        }
+        if (low.X > high.X)
+        {
+            return null;
+        }
+
+        var (first, last) = (new Int2(int.MaxValue), new Int2(int.MinValue));
+        foreach (var chunk in layer.Chunks)
+        {
+            if (chunk.Count == 0)
+            {
+                continue;
+            }
+            var (left, bottom) = (chunk.Position.X * TileChunk.Size, chunk.Position.Y * TileChunk.Size);
+            if (chunk.Position.X == low.X)
+            {
+                first.X = Math.Min(first.X, left + OuterLine(chunk.Cells, columns: true, fromEnd: false));
+            }
+            if (chunk.Position.X == high.X)
+            {
+                last.X = Math.Max(last.X, left + OuterLine(chunk.Cells, columns: true, fromEnd: true));
+            }
+            if (chunk.Position.Y == low.Y)
+            {
+                first.Y = Math.Min(first.Y, bottom + OuterLine(chunk.Cells, columns: false, fromEnd: false));
+            }
+            if (chunk.Position.Y == high.Y)
+            {
+                last.Y = Math.Max(last.Y, bottom + OuterLine(chunk.Cells, columns: false, fromEnd: true));
+            }
+        }
+        return (first, last);
+    }
+
+    // The first column (or row) of a chunk, from its start or its end, that has a painted cell
+    private static int OuterLine(ReadOnlySpan<TileCell> cells, bool columns, bool fromEnd)
+    {
+        for (var step = 0; step < TileChunk.Size; step++)
+        {
+            var line = fromEnd ? TileChunk.Size - 1 - step : step;
+            for (var along = 0; along < TileChunk.Size; along++)
+            {
+                var (x, y) = columns ? (line, along) : (along, line);
+                if (!cells[y * TileChunk.Size + x].IsEmpty)
+                {
+                    return line;
+                }
+            }
+        }
+        return fromEnd ? TileChunk.Size - 1 : 0;
     }
 
     // Whether the cells of a chunk inside a range of cells have a solid tile

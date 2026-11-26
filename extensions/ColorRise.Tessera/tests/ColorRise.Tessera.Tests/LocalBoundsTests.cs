@@ -58,6 +58,35 @@ public sealed class LocalBoundsTests
     }
 
     [Fact]
+    public void The_bounds_of_a_large_map_without_a_frame_read_about_its_outline()
+    {
+        // The editor's orthographic view asks every frame. Read cell by cell, 1024 by 1024 cells take tens of milliseconds;
+        // through the chunks and the cells of the chunks on the edges, well under one
+        var set = new TileSet();
+        set.Tiles[Grass] = new Tile { Id = Grass };
+        var tileMap = new TileMap();
+        tileMap.AddTileSet(set);
+        var ground = tileMap.Layers.Add("Ground");
+        for (var y = 0; y < 1024; y++)
+        {
+            for (var x = 0; x < 1024; x++)
+            {
+                ground.SetCell(new Int2(x, y), set, Grass);
+            }
+        }
+        var map = new TileMapComponent { Map = tileMap };
+
+        var fastest = TimeSpan.MaxValue;
+        for (var run = 0; run < 5; run++)
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            AssertBox(Bounds(map), Vector3.Zero, new Vector3(1024, 1024, 0));
+            fastest = TimeSpan.FromTicks(Math.Min(fastest.Ticks, watch.Elapsed.Ticks));
+        }
+        Assert.True(fastest < TimeSpan.FromMilliseconds(10), $"The bounds took {fastest.TotalMilliseconds} ms.");
+    }
+
+    [Fact]
     public void A_map_with_nothing_to_frame_gives_the_empty_box()
     {
         Assert.Equal(BoundingBox.Empty, Bounds(new TileMapComponent()));
