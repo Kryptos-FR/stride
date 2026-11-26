@@ -38,10 +38,15 @@ public sealed partial class FlipbookEditorView : UserControl, IAssetEditorView
     public FlipbookEditorView()
     {
         InitializeComponent();
-        // A click on a button gives the focus back to the preview; the menu of directions keeps it while it is open
+        // A click on a button of the strip gives the focus to the strip, where Delete removes the selected frames; a click on
+        // another button gives it back to the preview; the menu of directions keeps it while it is open
         AddHandler(Button.ClickEvent, (_, e) =>
         {
-            if (e.Source != AddClipButton)
+            if (e.Source is Visual source && StripBar.IsVisualAncestorOf(source))
+            {
+                FrameStrip.Focus();
+            }
+            else if (e.Source != AddClipButton)
             {
                 Canvas.Focus();
             }

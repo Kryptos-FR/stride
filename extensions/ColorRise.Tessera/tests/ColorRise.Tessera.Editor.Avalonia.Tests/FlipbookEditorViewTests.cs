@@ -170,7 +170,7 @@ public sealed class FlipbookEditorViewTests
 
             Assert.Equal(["1:1,0", "1:0,0", "1:2,0"], Tiles(editor));
             Assert.Equal([editor.Frames[1]], view.FindControl<ListBox>("FrameStrip")!.SelectedItems!.Cast<object>());
-            Assert.True(view.FindControl<TileCanvas>("Canvas")!.IsFocused);
+            Assert.True(view.FindControl<ListBox>("FrameStrip")!.IsKeyboardFocusWithin);
 
             Click(window, view.FindControl<Button>("RemoveFramesButton")!);
             Assert.Equal(["1:1,0", "1:2,0"], Tiles(editor));
@@ -180,6 +180,68 @@ public sealed class FlipbookEditorViewTests
             PressKey(window, Key.Delete, PhysicalKey.Delete, "");
             Assert.Equal(["1:2,0"], Tiles(editor));
             Assert.Equal(["Move frames", "Remove frames", "Remove frames"], session.Steps);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    // Step 3's minor m4
+    [AvaloniaFact]
+    public async Task Delete_removes_a_frame_after_a_click_on_a_button_of_the_strip()
+    {
+        await using var session = await OpenAsync();
+        var editor = await session.EditFlipbookAsync(Location);
+        var (view, window) = Show(editor);
+        try
+        {
+            Click(window, StripItem(view, 1));
+            Click(window, view.FindControl<Button>("MoveFramesRightButton")!);
+            Assert.Equal(["1:0,0", "1:2,0", "1:1,0"], Tiles(editor));
+
+            PressKey(window, Key.Delete, PhysicalKey.Delete, "");
+
+            Assert.Equal(["1:0,0", "1:2,0"], Tiles(editor));
+            Assert.Equal(["Move frames", "Remove frames"], session.Steps);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    // Step 3's minor m3
+    [AvaloniaFact]
+    public async Task The_replace_button_follows_the_view_model()
+    {
+        await using var session = await OpenAsync();
+        var editor = await session.EditFlipbookAsync(Location);
+        var (view, window) = Show(editor);
+        try
+        {
+            var replace = view.FindControl<ToggleButton>("ReplaceButton")!;
+            Assert.False(replace.IsEffectivelyEnabled);
+            Click(window, StripItem(view, 1));
+            Assert.True(replace.IsEffectivelyEnabled);
+            Assert.False(replace.IsChecked);
+
+            editor.ReplacesTile = true;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(replace.IsChecked);
+            editor.ReplacesTile = false;
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(replace.IsChecked);
+
+            Click(window, replace);
+            Assert.True(editor.ReplacesTile);
+            Click(window, InPalette(view, window, 3, 0));
+
+            Assert.Equal(["1:0,0", "1:3,0", "1:2,0"], Tiles(editor));
+            Assert.False(editor.ReplacesTile);
+            Assert.False(replace.IsChecked);
+            Assert.Equal([editor.Frames[1]], view.FindControl<ListBox>("FrameStrip")!.SelectedItems!.Cast<object>());
+            Assert.Equal(["Change frame tile"], session.Steps);
         }
         finally
         {

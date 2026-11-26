@@ -94,6 +94,22 @@ public sealed class FlipbookAssetChecksTests
             FlipbookAssetChecks.Of(asset));
     }
 
+    // Step 3's minor m6
+    [Fact]
+    public void A_clip_whose_frames_all_last_nothing_is_told()
+    {
+        var asset = Walker();
+        var left = asset.Animations[0].Clips[1];
+        left.Frames.Clear();
+        left.Frames.Add(Frame(0, Cell("1:0,1")));
+        left.Frames.Add(Frame(-1, Cell("1:1,1")));
+
+        Assert.Equal(["No frame of the clip Left of 'walk' lasts above 0 s: it shows nothing that moves."], FlipbookAssetChecks.Of(asset));
+
+        left.Frames.Add(Frame(0.1f, Cell("1:2,1")));
+        Assert.Empty(FlipbookAssetChecks.Of(asset));
+    }
+
     [Fact]
     public void Empty_items_are_not_lines()
     {

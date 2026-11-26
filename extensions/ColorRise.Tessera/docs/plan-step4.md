@@ -224,15 +224,19 @@ Paths in the tasks are from `extensions/ColorRise.Tessera/` unless they start wi
 **Interfaces:**
 - Produces: `dotnet` 10 on the `PATH`; the worktree `/home/user/stride-master` on the branch `feature/colorrise-tessera-sample`; Stride's packages at `4.5.4-dev` in `/home/user/stride-master/bin/packages`; step 3's tests green; the Avalonia Game Studio built; `Xvfb`, `xdotool` and ImageMagick installed; the three zips of the art in `/mnt/project-files/tilemap/art/`.
 
-- [ ] **Step 1: Set up the container as Task 0 of [plan-step2.md](plan-step2.md) says** (its steps 1 to 4, with the notes of what was done): the .NET 10 SDK in `~/.dotnet`; the worktree, this time `git worktree add -b feature/colorrise-tessera-sample /home/user/stride-master origin/feature/colorrise-tessera-flipbooks`; the author's two `git config` lines; `git lfs pull` and the restore of the one file it stages outside LFS; the three builds in the background with logs (the engine and the editor, the asset compiler, Game Studio). Build in this worktree before any other checkout of the container: the first checkout that builds gets the version `4.5.4-dev`, and a later one `4.5.4-dev2`. If `bin/packages` has `-dev2`, set `TesseraStrideVersion` in `Directory.Build.local.props`, which git ignores, and never in a committed file.
-- [ ] **Step 2: See step 3's tests pass** before anything changes.
+- [x] **Step 1: Set up the container as Task 0 of [plan-step2.md](plan-step2.md) says** (its steps 1 to 4, with the notes of what was done): the .NET 10 SDK in `~/.dotnet`; the worktree, this time `git worktree add -b feature/colorrise-tessera-sample /home/user/stride-master origin/feature/colorrise-tessera-flipbooks`; the author's two `git config` lines; `git lfs pull` and the restore of the one file it stages outside LFS; the three builds in the background with logs (the engine and the editor, the asset compiler, Game Studio). Build in this worktree before any other checkout of the container: the first checkout that builds gets the version `4.5.4-dev`, and a later one `4.5.4-dev2`. If `bin/packages` has `-dev2`, set `TesseraStrideVersion` in `Directory.Build.local.props`, which git ignores, and never in a committed file.
+- [x] **Step 2: See step 3's tests pass** before anything changes.
 
 Run: `dotnet test extensions/ColorRise.Tessera/ColorRise.Tessera.slnx`, then `extensions/ColorRise.Tessera/tests/PackagesCheck/run.sh`
 Expected: PASS, 843 tests (410, 364 and 69), none skipped, then `TESSERA-PACKAGES-CHECK OK`.
 
-- [ ] **Step 3: See the art.** `ls /mnt/project-files/tilemap/art/` lists the three zips this plan's section "The art" names, and `check/` with the planner's pictures and scripts. If one is missing, stop and ask Nicolas for it: kenney.nl cannot be reached from the container.
-- [ ] **Step 4: Copy this plan** to `extensions/ColorRise.Tessera/docs/plan-step4.md`, start the ledger with Nicolas's answers to decisions 1 to 3, commit (`docs(tessera): the plan of step 4`) and push with `git push -u origin feature/colorrise-tessera-sample`.
-- [ ] **Step 5: Gate.** If the engine or Game Studio cannot be built in the container, stop and tell Nicolas what failed, with the end of the log.
+- [x] **Step 3: See the art.** `ls /mnt/project-files/tilemap/art/` lists the three zips this plan's section "The art" names, and `check/` with the planner's pictures and scripts. If one is missing, stop and ask Nicolas for it: kenney.nl cannot be reached from the container.
+- [x] **Step 4: Copy this plan** to `extensions/ColorRise.Tessera/docs/plan-step4.md`, start the ledger with Nicolas's answers to decisions 1 to 3, commit (`docs(tessera): the plan of step 4`) and push with `git push -u origin feature/colorrise-tessera-sample`.
+- [x] **Step 5: Gate.** If the engine or Game Studio cannot be built in the container, stop and tell Nicolas what failed, with the end of the log.
+
+**Done (2026-11-26).** .NET SDK 10.0.404. The engine and editor built in 4 min 18 s, the asset compiler in 1 min 19 s, Game Studio in 42 s, all without an error; `bin/packages` has `4.5.4-dev`. The baseline: 410, 364 and 69 tests pass, none skipped, and `TESSERA-PACKAGES-CHECK OK`. The three zips are in `art/`, their sha256 as the table of "The art" says. xdotool was installed with apt; Xvfb and ImageMagick 6.9.12-98 were there.
+
+**Done differently.** As in step 2, `git lfs pull` staged `TestBrokenImage.txt`, which was restored. The plan was committed and pushed before the builds, which showed early that the push works.
 
 ### Task 1: Four deferred fixes of the flipbook editor (decision 3)
 
@@ -260,7 +264,7 @@ public static void SetCellTile(FlipbookViewModel flipbook, FlipbookCell cell, Ti
 "Tessera.Flipbook.ReplaceTile"   // "Replace the tile of the selected frames"
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // m2, FlipbookEditorTests
@@ -296,10 +300,19 @@ public static void SetCellTile(FlipbookViewModel flipbook, FlipbookCell cell, Ti
     // one frame of 0.1 s among them: no such line
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Run each test project with a filter on the seven names. Expected: FAIL, each for its reason (`ReplacesTile` does not compile, the message is the old one, Delete removes nothing, the line is missing).
-- [ ] **Step 3: Write the fixes.** m2: the message depends on whether an animation is selected. m3: `AddFrames` goes to `SetFramesTile` when `ReplacesTile` is on and the stamp has one tile; the comment of `ShowsMember` stays true. m4: the three buttons of the strip give the focus back to the strip, as the tool bar of the map editor gives it back to its canvas. m6: the line is added after "has no frame", for a clip that has frames.
-- [ ] **Step 4: Run the tests of the three files.** Expected: PASS, with step 3's.
-- [ ] **Step 5: Commit and push**: `fix(tessera): four deferred minors of the flipbook editor`
+- [x] **Step 2: Run them to see them fail.** Run each test project with a filter on the seven names. Expected: FAIL, each for its reason (`ReplacesTile` does not compile, the message is the old one, Delete removes nothing, the line is missing).
+- [x] **Step 3: Write the fixes.** m2: the message depends on whether an animation is selected. m3: `AddFrames` goes to `SetFramesTile` when `ReplacesTile` is on and the stamp has one tile; the comment of `ShowsMember` stays true. m4: the three buttons of the strip give the focus back to the strip, as the tool bar of the map editor gives it back to its canvas. m6: the line is added after "has no frame", for a clip that has frames.
+- [x] **Step 4: Run the tests of the three files.** Expected: PASS, with step 3's.
+- [x] **Step 5: Commit and push**: `fix(tessera): four deferred minors of the flipbook editor`
+
+**Done (2026-11-26).** The seven tests failed first, each for its reason: with `ReplacesTile` and `ReplaceTileCommand` as bare stubs (so that the project compiled and each test could fail on its own), the message was the old one, `ReplaceTileCommand` was null, no tile changed, Delete removed nothing, the button was not found, and the line of m6 was missing. Then they passed, with the whole solution: 411, 368 and 71 tests.
+
+**Done differently.**
+- The test of m3 replaces with the tile `1:3,1`, not `1:2,3`: the tile set of the editor's tests has 4 by 2 tiles, and a tile it does not have would add a line to `Problems`. The frames are given an offset, a flip and a duration of their own before, so that the test sees each kept; the stamp's flip is not taken, only its tile.
+- `Tessera.Flipbook.ReplaceTile` makes 24 commands: `TesseraCommandsTests` checks its id, title, the toggle and that it can run only with a frame selected.
+- The toggle `Replace` is on the row of the tile set's name, left of `Change`, above the palette. It is a `ToggleButton` whose `Command` is `ReplaceTileCommand` and whose `IsChecked` follows `ReplacesTile` one way, so the command decides when it is enabled. The view test reads `IsEffectivelyEnabled`, since a command does not change a button's own `IsEnabled`.
+- m4: the strip (`ListBox`) is made focusable, and the buttons of its bar give it the focus; the other buttons still give it to the preview. The test of step 3 that saw the preview take the focus after `>` now sees the strip have it.
+- `SetFramesTile` leaves a frame without a cell as it is, and is no step when no tile changes.
 
 ### Task 2: The sample's scaffold, and the art
 

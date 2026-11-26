@@ -61,6 +61,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         PlayPauseCommand = new AnonymousCommand(ServiceProvider, () => IsPlaying = !IsPlaying);
         SheetCommand = new AnonymousCommand(ServiceProvider, OpenSheet);
         MirrorCommand = new AnonymousTaskCommand(ServiceProvider, MirrorAsync);
+        ReplaceTileCommand = new AnonymousCommand(ServiceProvider, () => ReplacesTile = !ReplacesTile);
         Preview.PictureOf = PictureOf;
         Preview.IsPlaying = true;
         Preview.IsRunningChanged += PreviewRunningChanged;
@@ -138,6 +139,10 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
             if (!frames.SequenceEqual(field))
             {
                 SetValue(ref field, frames);
+                if (frames.Count == 0)
+                {
+                    ReplacesTile = false;
+                }
                 UpdateCommands();
                 ShowProperties();
                 // One frame selected: the preview pauses on it
@@ -311,6 +316,21 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
     /// </summary>
     public ICommandBase MirrorCommand { get; }
 
+    /// <summary>
+    /// While on, a tile picked in the palette becomes the tile of the selected frames instead of a new frame. It turns on only
+    /// while a frame is selected, and off when the selection empties.
+    /// </summary>
+    public bool ReplacesTile
+    {
+        get;
+        set => SetValue(ref field, value && SelectedFrames.Count > 0);
+    }
+
+    /// <summary>
+    /// Turns <see cref="ReplacesTile"/> on or off; on while a frame is selected.
+    /// </summary>
+    public ICommandBase ReplaceTileCommand { get; }
+
     private IEditorDialogService Dialogs => ServiceProvider.Get<IEditorDialogService>();
 
     /// <summary>
@@ -391,14 +411,28 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
     /// <summary>
     /// Adds a frame for each cell of a stamp that has a tile, the stamp's top row first, each row from the left: one cell of
     /// that tile, without offset, with the cell's flip. They go after the last selected frame, or at the end, in one step, and
-    /// become the selection; each lasts as the frame before the place they go to, or 0.1 s.
+    /// become the selection; each lasts as the frame before the place they go to, or 0.1 s. While <see cref="ReplacesTile"/>
+    /// is on, a stamp of one tile goes to <see cref="SetFramesTile"/> instead, and a stamp of several is refused.
     /// </summary>
     public void AddFrames(TileStamp stamp)
     {
         ArgumentNullException.ThrowIfNull(stamp);
         if (SelectedClip is not { } clipItem || !IsInAsset(clipItem))
         {
-            Message = "Select or add an animation first.";
+            Message = SelectedAnimation is null ? "Select or add an animation first." : "Add a clip to the animation first, with + Direction.";
+            return;
+        }
+        if (ReplacesTile)
+        {
+            var tiles = Enumerable.Range(0, stamp.Size.X * stamp.Size.Y).Select(index => stamp[index % stamp.Size.X, index / stamp.Size.X]).Where(cell => !cell.IsEmpty).ToList();
+            if (tiles.Count > 1)
+            {
+                Message = "Pick one tile to replace with.";
+            }
+            else if (tiles is [var only])
+            {
+                SetFramesTile(only.Tile);
+            }
             return;
         }
         var clip = clipItem.Clip;
@@ -429,6 +463,38 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         }
         Message = null;
         SelectedFrames = [.. FrameItems.Where(item => frames.Contains(item.Frame))];
+    }
+
+    /// <summary>
+    /// Sets the tile of the first cell of each selected frame, in one step named "Change frame tile"; the cells keep their
+    /// offset and their flip, the frames their duration, and a frame without a cell is left as it is. Turns
+    /// <see cref="ReplacesTile"/> off.
+    /// </summary>
+    public void SetFramesTile(TileId tile)
+    {
+        ReplacesTile = false;
+        if (SelectedClip is not { } clipItem || !IsInAsset(clipItem))
+        {
+            return;
+        }
+        var cells = SelectedFrames
+            .Select(item => item.Frame.Cells.FirstOrDefault(cell => cell is not null))
+            .Where(cell => cell is not null && cell.Tile != tile)
+            .Select(cell => cell!)
+            .ToList();
+        Message = null;
+        if (cells.Count == 0)
+        {
+            return;
+        }
+        using (var transaction = UndoRedoService.CreateTransaction())
+        {
+            foreach (var cell in cells)
+            {
+                FlipbookGraph.SetCellTile(Asset, cell, tile);
+            }
+            UndoRedoService.SetName(transaction, "Change frame tile");
+        }
     }
 
     /// <summary>
@@ -742,6 +808,7 @@ public sealed class FlipbookEditorViewModel : AssetEditorViewModel<FlipbookViewM
         RemoveSelectedCommand.IsEnabled = SelectedItem is not null;
         SheetCommand.IsEnabled = Palette is not null;
         MirrorCommand.IsEnabled = SelectedClip is { } clip && clip.Direction.Mirrored() != clip.Direction;
+        ReplaceTileCommand.IsEnabled = sorted.Count > 0;
     }
 
     // The grid shows the selected frames; without them the selected clip or animation; else nothing, as the flipbook's own

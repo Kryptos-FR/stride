@@ -29,7 +29,7 @@ public sealed class TesseraCommandsTests
 
     private static readonly string[] TileSetIds = ["Tessera.TileSet.Mode.Select", "Tessera.TileSet.Mode.Solid", "Tessera.TileSet.Mode.Animation", "Tessera.TileSet.AddImage", "Tessera.TileSet.AddSpriteSheet"];
 
-    private static readonly string[] FlipbookIds = ["Tessera.Flipbook.PlayPause", "Tessera.Flipbook.AddAnimation", "Tessera.Flipbook.Sheet", "Tessera.Flipbook.Mirror"];
+    private static readonly string[] FlipbookIds = ["Tessera.Flipbook.PlayPause", "Tessera.Flipbook.AddAnimation", "Tessera.Flipbook.Sheet", "Tessera.Flipbook.Mirror", "Tessera.Flipbook.ReplaceTile"];
 
     [Fact]
     public void Every_command_has_its_id_a_scope_and_no_default_gesture()
@@ -50,10 +50,10 @@ public sealed class TesseraCommandsTests
         Assert.Contains("B", Command("Tessera.Map.Tool.Stamp").Keywords);
         Assert.Contains("Shift+Z", Command("Tessera.Map.RotateStampCounterClockwise").Keywords);
         Assert.All(MapIds.Take(6), id => Assert.NotNull(Command(id).IsChecked));
-        Assert.Equal(23, commands.Count);
+        Assert.Equal(24, commands.Count);
         Assert.Equal("Animation mode", Command("Tessera.TileSet.Mode.Animation").Title());
         Assert.Equal(
-            ["Play or pause the preview", "Add an animation", "Make clips from a sheet", "Mirror the clip"],
+            ["Play or pause the preview", "Add an animation", "Make clips from a sheet", "Mirror the clip", "Replace the tile of the selected frames"],
             FlipbookIds.Select(id => Command(id).Title()));
     }
 
@@ -208,6 +208,17 @@ public sealed class TesseraCommandsTests
         await mirror.ExecuteAsync(context);
         Assert.Equal(["Down", "Left", "Right"], editor.Animations[0].Clips.Select(clip => clip.Label));
         Assert.Equal(["Add animation", "Mirror clip"], session.Steps);
+
+        // Replace is a toggle, on while a frame is selected
+        var replace = Command("Tessera.Flipbook.ReplaceTile");
+        Assert.False(replace.CanExecute!(context));
+        editor.SelectedFrames = [editor.Frames[0]];
+        Assert.True(replace.CanExecute!(context));
+        await replace.ExecuteAsync(context);
+        Assert.True(editor.ReplacesTile);
+        Assert.True(replace.IsChecked!(context));
+        await replace.ExecuteAsync(context);
+        Assert.False(editor.ReplacesTile);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using ColorRise.Tessera.Assets;
 using ColorRise.Tessera.Editor.Canvas;
 using ColorRise.Tessera.Editor.FlipbookEditor;
+using ColorRise.Tessera.Editor.Palette;
 using Stride.Core.Assets;
 using Stride.Core.Assets.Editor.Testing;
 using Stride.Core.Mathematics;
@@ -297,6 +298,100 @@ public sealed class FlipbookEditorTests
         Assert.Empty(book.Session.Steps);
     }
 
+    // Step 3's minor m2
+    [Fact]
+    public async Task A_pick_in_the_palette_on_an_animation_without_a_clip_says_to_add_a_clip()
+    {
+        await using var book = await OpenAsync();
+        var editor = book.Editor;
+        editor.AddAnimationCommand.Execute();
+        var added = editor.Animations[2];
+        editor.SelectedItem = added.Clips[0];
+        editor.RemoveSelectedCommand.Execute();
+        Assert.Same(added, editor.SelectedItem);
+        Assert.Empty(added.Clips);
+
+        editor.AddFrames(Stamp("1:0,0"));
+
+        Assert.Equal("Add a clip to the animation first, with + Direction.", editor.Message);
+        Assert.Equal(["Add animation", "Remove clip"], book.Session.Steps);
+
+        // Without any animation, the message is the one of a flipbook without animations
+        editor.SelectedItem = null;
+        editor.AddFrames(Stamp("1:0,0"));
+        Assert.Equal("Select or add an animation first.", editor.Message);
+        Assert.Equal(2, book.Session.Steps.Count);
+    }
+
+    // Step 3's minor m3
+    [Fact]
+    public async Task A_pick_while_replacing_changes_the_tile_of_the_selected_frames()
+    {
+        await using var book = await OpenAsync(asset =>
+        {
+            var cell = asset.Animations[0].Clips[0].Frames[0].Cells[0];
+            cell.Offset = new Int2(2, 3);
+            cell.Flip = TileFlip.Horizontal;
+            asset.Animations[0].Clips[0].Frames[2].Duration = 0.3f;
+        });
+        var editor = book.Editor;
+        var (first, second, third) = (editor.Frames[0], editor.Frames[1], editor.Frames[2]);
+        editor.SelectedFrames = [first, third];
+        editor.ReplacesTile = true;
+
+        editor.AddFrames(Stamp("1:3,1", TileFlip.Vertical));
+
+        Assert.Equal(Tiles("1:3,1", "1:1,0", "1:3,1"), editor.Frames.Select(frame => frame.Tile));
+        var frames = Clip(book, 0, 0).Frames;
+        Assert.Equal(3, frames.Count);
+        var cell = Assert.Single(frames[0].Cells);
+        Assert.Equal((TileId.Parse("1:3,1"), new Int2(2, 3), TileFlip.Horizontal, 0.1f), (cell.Tile, cell.Offset, cell.Flip, frames[0].Duration));
+        Assert.Equal((TileId.Parse("1:3,1"), TileFlip.None, 0.3f), (frames[2].Cells[0].Tile, frames[2].Cells[0].Flip, frames[2].Duration));
+        Assert.Equal([first, second, third], editor.Frames);
+        Assert.Equal([first, third], editor.SelectedFrames);
+        Assert.False(editor.ReplacesTile);
+        Assert.Null(editor.Message);
+        Assert.Equal(["Change frame tile"], book.Session.Steps);
+
+        book.Session.UndoRedo.Undo();
+        Assert.Equal(Tiles("1:0,0", "1:1,0", "1:2,0"), editor.Frames.Select(frame => frame.Tile));
+    }
+
+    [Fact]
+    public async Task A_pick_of_several_tiles_while_replacing_is_refused()
+    {
+        await using var book = await OpenAsync();
+        var editor = book.Editor;
+        editor.SelectedFrames = [editor.Frames[1]];
+        editor.ReplacesTile = true;
+
+        editor.AddFrames(new TileStamp(new Int2(2, 1), [new TileCell(1, TileId.Parse("1:0,1")), new TileCell(1, TileId.Parse("1:1,1"))]));
+
+        Assert.Equal(Tiles("1:0,0", "1:1,0", "1:2,0"), editor.Frames.Select(frame => frame.Tile));
+        Assert.Equal("Pick one tile to replace with.", editor.Message);
+        Assert.True(editor.ReplacesTile);
+        Assert.Empty(book.Session.Steps);
+    }
+
+    [Fact]
+    public async Task Replacing_needs_a_selected_frame()
+    {
+        await using var book = await OpenAsync();
+        var editor = book.Editor;
+        Assert.False(editor.ReplaceTileCommand.IsEnabled);
+        editor.ReplacesTile = true;
+        Assert.False(editor.ReplacesTile);
+
+        editor.SelectedFrames = [editor.Frames[0]];
+        Assert.True(editor.ReplaceTileCommand.IsEnabled);
+        editor.ReplaceTileCommand.Execute();
+        Assert.True(editor.ReplacesTile);
+
+        editor.SelectedFrames = [];
+        Assert.False(editor.ReplacesTile);
+        Assert.False(editor.ReplaceTileCommand.IsEnabled);
+    }
+
     [Fact]
     public async Task Frames_are_removed_and_moved_as_a_block_in_one_step()
     {
@@ -468,6 +563,9 @@ public sealed class FlipbookEditorTests
     private static FlipbookClip Clip(OpenEditor book, int animation, int clip) => book.Session.FlipbookAt(Location).Asset.Animations[animation].Clips[clip];
 
     private static List<TileId?> Tiles(params string[] tiles) => [.. tiles.Select(tile => (TileId?)TileId.Parse(tile))];
+
+    // The pick of one tile of the palette
+    private static TileStamp Stamp(string tile, TileFlip flip = TileFlip.None) => TileStamp.Single(new TileCell(1, TileId.Parse(tile), flip));
 
     private static List<int> Columns(FlipbookEditorViewModel editor) => [.. editor.Frames.Select(frame => frame.Tile!.Value.Column)];
 

@@ -67,6 +67,10 @@ public static class FlipbookAssetChecks
                     lines.Add($"The frame {Count(i + 1)} of the clip {FlipbookDirections.NameOf(clip.Direction)} of '{animation.Name}' has no cell.");
                 }
             }
+            if (!frames.Any(frame => frame.Duration > 0))
+            {
+                lines.Add($"No frame of the clip {FlipbookDirections.NameOf(clip.Direction)} of '{animation.Name}' lasts above 0 s: it shows nothing that moves.");
+            }
         }
     }
 

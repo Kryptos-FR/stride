@@ -41,6 +41,8 @@ internal static class TesseraCommands
         Flipbook("Tessera.Flipbook.AddAnimation", "Add an animation", ["animation", "new"], editor => Run(() => editor.AddAnimationCommand.Execute())),
         Flipbook("Tessera.Flipbook.Sheet", "Make clips from a sheet", ["sheet", "rows", "clips"], editor => Run(() => editor.SheetCommand.Execute()), editor => editor.SheetCommand.IsEnabled),
         Flipbook("Tessera.Flipbook.Mirror", "Mirror the clip", ["mirror", "flip", "left", "right"], editor => editor.MirrorAsync(), editor => editor.MirrorCommand.IsEnabled),
+        Flipbook("Tessera.Flipbook.ReplaceTile", "Replace the tile of the selected frames", ["replace", "tile", "frame"],
+            editor => Run(() => editor.ReplaceTileCommand.Execute()), editor => editor.ReplaceTileCommand.IsEnabled, editor => editor.ReplacesTile),
     ];
 
     private static CommandDescriptor Tool(TileToolKind tool, string title, string key)

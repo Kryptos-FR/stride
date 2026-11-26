@@ -120,6 +120,16 @@ internal static class FlipbookGraph
         AddFrames(flipbook, clip, 0, frames);
     }
 
+    /// <summary>
+    /// Gives a cell of a frame another tile.
+    /// </summary>
+    public static void SetCellTile(FlipbookViewModel flipbook, FlipbookCell cell, TileId tile)
+    {
+        var node = flipbook.Session.AssetNodeContainer.GetNode(cell)
+            ?? throw new ArgumentException("The cell is not one of the flipbook.", nameof(cell));
+        node[nameof(FlipbookCell.Tile)].Update(tile);
+    }
+
     private static List<int> Sorted(FlipbookClip clip, IReadOnlyCollection<int> indices)
     {
         var sorted = indices.Distinct().Order().ToList();
