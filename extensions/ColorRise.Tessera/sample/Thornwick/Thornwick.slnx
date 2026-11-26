@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Tessera/">
+    <Project Path="../../src/ColorRise.Tessera.Assets/ColorRise.Tessera.Assets.csproj" />
+    <Project Path="../../src/ColorRise.Tessera.Editor.Avalonia/ColorRise.Tessera.Editor.Avalonia.csproj" />
+    <Project Path="../../src/ColorRise.Tessera.Editor/ColorRise.Tessera.Editor.csproj" />
+    <Project Path="../../src/ColorRise.Tessera/ColorRise.Tessera.csproj" />
+  </Folder>
+  <Project Path="Thornwick.Game/Thornwick.Game.csproj" />
+  <Project Path="Thornwick.Linux/Thornwick.Linux.csproj" DefaultStartup="true" />
+  <Project Path="Thornwick.Tests/Thornwick.Tests.csproj" />
+  <Project Path="Thornwick.Windows/Thornwick.Windows.csproj" />
+</Solution>

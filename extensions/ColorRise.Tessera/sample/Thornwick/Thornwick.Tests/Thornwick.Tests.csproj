@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Thornwick.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- Stride.Core.Assets brings an older MSBuild with its Roslyn workspace; the SDK's must be the one loaded
+         (docs/plugin-findings.md) -->
+    <PackageReference Include="Microsoft.Build.Framework" Version="17.11.48" ExcludeAssets="runtime" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The game, for its rules, which need no running game; Tessera's asset classes, to read the game's asset files -->
+    <ProjectReference Include="..\Thornwick.Game\Thornwick.Game.csproj" />
+    <ProjectReference Include="..\..\..\src\ColorRise.Tessera.Assets\ColorRise.Tessera.Assets.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

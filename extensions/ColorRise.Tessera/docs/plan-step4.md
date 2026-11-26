@@ -347,8 +347,8 @@ internal static class SampleFiles
 - `Thornwick.Tests.csproj`: xunit 2.9.3 as Brinemoor's, `ProjectReference` to the game and to `src/ColorRise.Tessera.Assets`. `TestAssemblies` registers Tessera's two assemblies with `AssemblyRegistry`, as `tests/ColorRise.Tessera.Tests/TestAssemblies.cs` does.
 - The three assets are copies of the check game's with new ids (`uuidgen`), and the references between them changed to the new ids. The scene keeps only the camera. The compositor is the check game's **without** Tessera's two features and with Stride's `BackToFrontSortMode` on the transparent stage: Task 10 adds the features and the sort mode in Game Studio, as a user does. The settings: 1280 by 720, the scene and the compositor above.
 
-- [ ] **Step 1: Read the licence of each pack** in its zip (`unzip -p <zip> License.txt`, or the name the zip gives it). Expected: Creative Commons Zero (CC0), for each. Anything else: stop and ask Nicolas (R20). Copy the text of each to the ledger.
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 1: Read the licence of each pack** in its zip (`unzip -p <zip> License.txt`, or the name the zip gives it). Expected: Creative Commons Zero (CC0), for each. Anything else: stop and ask Nicolas (R20). Copy the text of each to the ledger.
+- [x] **Step 2: Write the failing test**
 
 ```csharp
 // ScaffoldTests
@@ -359,15 +359,22 @@ internal static class SampleFiles
     // and at least one .png, and THIRD-PARTY-NOTICES.md (two folders above the sample) names the folder's pack
 ```
 
-- [ ] **Step 3: Run it to see it fail.** Run: `dotnet test sample/Thornwick/Thornwick.Tests`. Expected: FAIL (the project does not exist, then the files).
-- [ ] **Step 4: Write the scaffold and bring the art in.** From each zip, only the sheet without spacing (`Tilemap/tilemap_packed.png`) and the licence, to the folders of "The art"; the two pictures the scripts make come in Task 7. `THIRD-PARTY-NOTICES.md` loses "will use" and gains, for each pack: its name, "by Kenney (www.kenney.nl)", "Creative Commons Zero (CC0 1.0)", the files taken and where they are.
-- [ ] **Step 5: Build, test and run.**
+- [x] **Step 3: Run it to see it fail.** Run: `dotnet test sample/Thornwick/Thornwick.Tests`. Expected: FAIL (the project does not exist, then the files).
+- [x] **Step 4: Write the scaffold and bring the art in.** From each zip, only the sheet without spacing (`Tilemap/tilemap_packed.png`) and the licence, to the folders of "The art"; the two pictures the scripts make come in Task 7. `THIRD-PARTY-NOTICES.md` loses "will use" and gains, for each pack: its name, "by Kenney (www.kenney.nl)", "Creative Commons Zero (CC0 1.0)", the files taken and where they are.
+- [x] **Step 5: Build, test and run.**
 
 Run: `dotnet test sample/Thornwick/Thornwick.Tests`, then `dotnet build sample/Thornwick/Thornwick.Linux`, then the game under Xvfb as the check game's README says (`dotnet run` in `Thornwick.Linux`), for 5 seconds.
 Expected: PASS (2 tests); the build compiles the assets; the game opens a window of the clear colour and its log has no error.
 
-- [ ] **Step 6: Open it in Game Studio (R14).** `Stride.GameStudio.Avalonia.Desktop sample/Thornwick/Thornwick.slnx` under Xvfb: the solution loads, *View > Plugins* lists Tessera's two editor plugins, the asset view shows the three assets, and the log has no error about the Windows head. Picture: `studio-01-opens.png`. If the Windows head stops the load, take R14's fallback.
-- [ ] **Step 7: Commit and push**: `feat(tessera): the scaffold of the sample game, Thornwick, and its art`
+- [x] **Step 6: Open it in Game Studio (R14).** `Stride.GameStudio.Avalonia.Desktop sample/Thornwick/Thornwick.slnx` under Xvfb: the solution loads, *View > Plugins* lists Tessera's two editor plugins, the asset view shows the three assets, and the log has no error about the Windows head. Picture: `studio-01-opens.png`. If the Windows head stops the load, take R14's fallback.
+- [x] **Step 7: Commit and push**: `feat(tessera): the scaffold of the sample game, Thornwick, and its art`
+
+**Done (2026-11-26).** Each zip's `License.txt` says Creative Commons Zero (CC0); its text is in the ledger, and the two files taken from each zip are its bytes (`cmp`). The two tests failed first (no `Resources/Kenney`, no `.sdpkg`), then passed. The Linux head builds and compiles the assets (`Bin/Linux/Debug/data/db`); its only warnings are the NU1902 and NU1903 of Stride's own packages, as in the check game. The game ran 12 seconds under Xvfb with Lavapipe: a window of 1280 by 720 in the clear colour, and a log of four `Info` lines. Game Studio opened `Thornwick.slnx`: the asset view shows the three assets, *Asset errors* is at 0, the Output is empty, the solution explorer lists `Thornwick.Windows` with the other projects, and *View > Plugins* lists `ColorRise.Tessera.Editor` and `ColorRise.Tessera.Editor.Avalonia`, both on. R14 holds: no fallback. Pictures: `studio-01-opens.png` (the asset view) and `studio-01-opens-plugins.png` (the plugins). Closing Game Studio changed no file.
+
+**Done differently.**
+- The scene's camera is Stride's default, perspective, and not the check game's orthographic camera: Task 10 (line 15) sets it in Game Studio, as a user does.
+- The compositor is the check game's without Tessera's two features, with `BackToFrontSortMode` on the transparent stage. The ids inside it (its stages, the camera slot, its renderers) are kept, because they come from Stride's archetype `DefaultGraphicsCompositorLevel10`, which the file overrides: only the asset's own id is new. Its post effects are still there; Task 10 takes them out in Game Studio.
+- The art is in Git LFS, as every `.png` of the repository is (`.gitattributes`).
 
 ### Task 3: Places, and walking on a grid
 
