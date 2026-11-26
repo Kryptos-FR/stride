@@ -15,7 +15,7 @@ It lives on this branch of a Stride fork only to build against the engine's deve
 
 The runtime declares the last three as its companions: whoever loads a game that references `ColorRise.Tessera` (the asset compiler, Game Studio) loads them too. A game never references them itself.
 
-The design is in [docs/design.md](docs/design.md), the plan of the work in [docs/plan.md](docs/plan.md), and what Tessera found in Stride's plugin model in [docs/plugin-findings.md](docs/plugin-findings.md).
+The design is in [docs/design.md](docs/design.md), the plan of the work in [docs/plan.md](docs/plan.md), and what Tessera found in Stride's plugin model in [docs/plugin-findings.md](docs/plugin-findings.md). [docs/guide.md](docs/guide.md) makes a small game with Tessera, the sample Thornwick.
 
 ## Try it
 
@@ -41,9 +41,18 @@ To build against another Stride version, copy `Directory.Build.local.props.examp
 
 **3. Use it in a game of your own.** `dotnet pack extensions/ColorRise.Tessera/ColorRise.Tessera.slnx` puts the packages in `extensions/ColorRise.Tessera/bin/packages`.
 
+**4. Play the sample.** Thornwick, in [`sample/Thornwick`](sample/Thornwick/README.md), is a small top-down game made with Tessera's editors: a hero cuts the brambles of a town and goes into a house and out again. It builds its assets and runs:
+
+```sh
+dotnet build extensions/ColorRise.Tessera/sample/Thornwick/Thornwick.Linux
+(cd extensions/ColorRise.Tessera/sample/Thornwick/Thornwick.Linux && dotnet run)
+```
+
+The arrows or W, A, S and D walk, Space cuts, Escape closes it. [docs/guide.md](docs/guide.md) makes the same game step by step, in Game Studio.
+
 ### What works today
 
-This section follows the work: it says what can be tried at the current commit. Steps 1 to 3 of the design are done: the runtime, the assets and their compilers, the editors of tile sets and tile maps in the cross-platform Game Studio, then animated tiles and flipbooks. The game of the packages check, `tests/PackagesCheck/Game`, has a tile set, a map, a flipbook and the code that draws them. The check game `tests/StudioCheck` opens in Game Studio (see its README), and [docs/studio-check.md](docs/studio-check.md) says what was seen in it.
+This section follows the work: it says what can be tried at the current commit. The four steps of the design are done: the runtime, the assets and their compilers, the editors of tile sets and tile maps in the cross-platform Game Studio, animated tiles and flipbooks, and the sample game Thornwick with [the guide](docs/guide.md) that makes it. The game of the packages check, `tests/PackagesCheck/Game`, has a tile set, a map, a flipbook and the code that draws them. The check game `tests/StudioCheck` opens in Game Studio (see its README), and [docs/studio-check.md](docs/studio-check.md) says what was seen in it.
 
 In Game Studio:
 
@@ -108,11 +117,12 @@ In the runtime and the build:
 
 ### Not yet
 
-- The sample game with Kenney's art.
 - A list of the flipbook's animations in the component's property grid: the animation is a name typed by hand.
 - Renaming: a renamed animation is not renamed in the scenes and scripts that name it.
 - Frames of several cells are drawn, but made by hand in the file: the editor adds frames of one cell.
 - A drop from the palette onto the strip: the palette adds frames by a click or a drag inside it.
+- `Sheet` for a sheet with a column for each side: it makes a clip of each row, so such a sheet is laid out again first (the sample's `tools/draw-people.sh` does it).
+- A line drawn with a block that repeats the block: Shift and a click stamp the block on every cell of the line, each over the last.
 - Painting in the scene view: a map is painted in its own editor.
 - Thumbnails that show the tiles: the asset view shows an icon for tile sets, maps and flipbooks.
 - Rebinding the map editor's keys: the commands can get shortcuts, but the single keys stay as they are (finding 13).
@@ -179,3 +189,5 @@ What still depends on the checkout Tessera sits in, and what removes it:
 ## Credits and licenses
 
 Tessera is under the MIT license: see [LICENSE](LICENSE). The licenses of what it ships from others are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+The sample's art is by Kenney (www.kenney.nl), from the packs Tiny Town, Tiny Dungeon and RPG Urban Pack, under Creative Commons Zero (CC0 1.0): the notice lists the files taken and the two pictures drawn from them. It is in the repository only, and in no package.

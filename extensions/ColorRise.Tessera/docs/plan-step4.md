@@ -1246,7 +1246,7 @@ A key pressed and let go within one step's time moves the hero one cell: a way t
 - Create: `docs/guide.md`, `docs/guide/*.png` (14 pictures at most, 150 KB each at most)
 - Modify: `README.md`, `T/README.md`, `THIRD-PARTY-NOTICES.md`, `docs/design.md`, `docs/plugin-findings.md`
 
-- [ ] **Step 1: The guide**, "Make a small game with Tessera". It is written for someone who knows Stride and has never seen Tessera, in the order Thornwick was made, and it names a command only as a line of the by-hand list saw it. Eight parts, each with what to do, one or two pictures, and the file of the sample that has the result:
+- [x] **Step 1: The guide**, "Make a small game with Tessera". It is written for someone who knows Stride and has never seen Tessera, in the order Thornwick was made, and it names a command only as a line of the by-hand list saw it. Eight parts, each with what to do, one or two pictures, and the file of the sample that has the result:
   1. A tile set from an image (lines 2 and 3).
   2. Tile data: what is solid, kinds and properties, an animated tile (lines 4 and 5).
   3. A map: layers, the tools, the frame (lines 10 and 11); one paragraph on writing a large map with a tool, with a link to the sample's README.
@@ -1257,12 +1257,20 @@ A key pressed and let go within one step's time moves the hero one cell: a way t
   8. Build and play (lines 17 to 28): the commands, the keys, and what to try next (a second door, a new kind of tile).
 
   The pictures are cropped copies of the pictures of the by-hand list, made with ImageMagick. Check the links: every picture the guide names is in `docs/guide/`, and every file of `docs/guide/` is named by the guide.
-- [ ] **Step 2: The sample's README**: the story in two lines; how to play (Task 11); how to open it in Game Studio; a table of what is where (the rules, the scripts, the assets, the tool, the tests); how the town is made (Task 8); how the pictures of the people and of the pond are made (Task 7); the credits of the art.
-- [ ] **Step 3: Tessera's README.** "Try it" gains a fourth point, the sample: the two commands that build and run it. "What works today" says the four steps are done, names the sample and links the guide. "Not yet" loses the sample. The credits name Kenney's packs, with the link to the notice.
-- [ ] **Step 4: The notice.** `THIRD-PARTY-NOTICES.md` names each pack, its author, its licence, the files taken and where they are, and the two pictures Task 7 derived from them, each with its script. Read it against the files of `Resources/Kenney/`.
-- [ ] **Step 5: The design.** A short dated note where this plan settled or changed it: section 13 (the sample as built: a door is tile data, both places are in one scene and the game loads the second map the first time, the hero moves by cells, the title of the window counts), section 14 (the sample's tests as built, and the by-hand run), section 16 (the name and the story). The decisions D and C of this plan are copied to the design's lists.
-- [ ] **Step 6: The findings.** Every gap of the plugin model this step met, from row 21 on, in the format of the file.
-- [ ] **Step 7: Commit and push**: `docs(tessera): the guide, the sample's README and the notes of step 4`
+- [x] **Step 2: The sample's README**: the story in two lines; how to play (Task 11); how to open it in Game Studio; a table of what is where (the rules, the scripts, the assets, the tool, the tests); how the town is made (Task 8); how the pictures of the people and of the pond are made (Task 7); the credits of the art.
+- [x] **Step 3: Tessera's README.** "Try it" gains a fourth point, the sample: the two commands that build and run it. "What works today" says the four steps are done, names the sample and links the guide. "Not yet" loses the sample. The credits name Kenney's packs, with the link to the notice.
+- [x] **Step 4: The notice.** `THIRD-PARTY-NOTICES.md` names each pack, its author, its licence, the files taken and where they are, and the two pictures Task 7 derived from them, each with its script. Read it against the files of `Resources/Kenney/`.
+- [x] **Step 5: The design.** A short dated note where this plan settled or changed it: section 13 (the sample as built: a door is tile data, both places are in one scene and the game loads the second map the first time, the hero moves by cells, the title of the window counts), section 14 (the sample's tests as built, and the by-hand run), section 16 (the name and the story). The decisions D and C of this plan are copied to the design's lists.
+- [x] **Step 6: The findings.** Every gap of the plugin model this step met, from row 21 on, in the format of the file.
+- [x] **Step 7: Commit and push**: `docs(tessera): the guide, the sample's README and the notes of step 4`
+
+**Done (2026-11-26).** The guide has its eight parts and 13 pictures, cropped from the pictures of the by-hand list (the largest 74 KB); every picture it names is in `docs/guide/`, and every file there is named. The sample's README, Tessera's README, the notice (read against `Resources/Kenney/` and the packs' zips), the design's notes and lists, and the findings are written.
+
+**Done differently.**
+- One fix came first, in its own commit (`fix(tessera): the scene editor's focus frames a map and a flipbook`): the remark of Task 10 that the focus button of a map centres its origin was a gap of Tessera, not of Game Studio. Stride.Engine has `IEntityComponentBounds`, which the scene editor reads when it focuses on an entity, and Tessera's two components did not give it. They do now: a map gives its frame, or its painted cells when it has no frame, through the z of its layers; a flipbook gives the frame it shows. Seven tests failed first; Game Studio was seen centring the whole town and the hero (`fix-focus-town.png`, `fix-focus-hero.png`), and line 13 of `docs/studio-check.md` says so.
+- The comment of `Thornwick.Game.csproj` on `GenerateDocumentationFile` now says what Game Studio reads: `Thornwick.Game.xml`, beside the output of the startup head.
+- The findings have two rows of this step: 21, the dark list that picks a tile property's type, written in Task 7 when the tile data was set; and 22, written here: the help text of a plugin's types does not show when the plugin is a project reference of the game library, as Game Studio reads the documentation of the startup project's direct dependencies only. The row of Skein's finding 20 (the compositor of pixel art) now says how Thornwick avoids it.
+- The other remarks on Game Studio (the grid's title after a rename, the tooltips of an entity field, the cut menu item) are not gaps of the plugin model: they wait for the report and the review of the engine and Game Studio findings with Nicolas.
 
 ### Task 13: The gates, the review and the report
 

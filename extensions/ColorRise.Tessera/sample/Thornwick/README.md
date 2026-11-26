@@ -1,20 +1,13 @@
 # Thornwick
 
-A small top-down game made with Tessera's editors: a hero walks a town of three layers, cuts brambles, goes into a house and out again, among villagers who wander.
+Brambles grew over the village of Thornwick in the night.
+Step out of your house and cut them all.
+
+A small top-down game made with Tessera's editors: a hero walks a town of three layers, cuts brambles, goes into a house and out again, among villagers who wander. [The guide](../../docs/guide.md) makes it step by step.
 
 The solution `Thornwick.slnx` holds Tessera's projects (in the folder `Tessera`), the game library `Thornwick.Game`, its two heads `Thornwick.Linux` and `Thornwick.Windows`, and the tests `Thornwick.Tests`. Game Studio builds Tessera's projects with the game and loads the editor's plugins from them.
 
 The projects use the Stride packages of `TesseraStrideVersion` (see `Directory.Build.props` of Tessera).
-
-## Open it in Game Studio
-
-Build Game Studio from this checkout (`sources/editor/Stride.GameStudio.Avalonia.Desktop`), then give it the solution:
-
-```bash
-Stride.GameStudio.Avalonia.Desktop extensions/ColorRise.Tessera/sample/Thornwick/Thornwick.slnx
-```
-
-On Linux without a display or a GPU, run it under Xvfb with Lavapipe, as the check game's [README](../../tests/StudioCheck/README.md) says.
 
 ## Run the game
 
@@ -45,6 +38,29 @@ The window's title counts the brambles left, twelve at the start.
 | Escape | Close the game. |
 
 The hero starts under the door of their house. Stepping onto a door goes through it: the house's door, in the town, leads into the house, and the mat inside leads back out. The three brambles across the lane, in the north-west, keep the garden behind them until they are cut.
+
+## Open it in Game Studio
+
+Build Game Studio from this checkout (`sources/editor/Stride.GameStudio.Avalonia.Desktop`), then give it the solution:
+
+```bash
+Stride.GameStudio.Avalonia.Desktop extensions/ColorRise.Tessera/sample/Thornwick/Thornwick.slnx
+```
+
+On Linux without a display or a GPU, run it under Xvfb with Lavapipe, as the check game's [README](../../tests/StudioCheck/README.md) says.
+
+Build `Thornwick.Linux` once before: Game Studio lists the game's scripts once the game library is built, and shows the help text of their properties from `Thornwick.Game.xml`, which the build puts beside the startup head's output (`Thornwick.Game.csproj` sets `GenerateDocumentationFile` for it).
+
+## What is where
+
+| What | Where |
+|---|---|
+| The rules, plain classes tested without a running game | `Thornwick.Game`: `Place` (a map of the scene, its frame, who stands where), `GridWalker` (a walker on the cells), `WanderPlan` (a villager's next step), `CameraFraming` (the zoom and the view), `Brambles`, `Doors` and `TileKinds` (what the game reads from tile data), `HeroKeys` and `FrameTime` |
+| The scripts | `Thornwick.Game`: `World` (the places, the doors, the count of the brambles in the title), `PlayerController` (the hero), `Wanderer` (a villager), `FollowCamera` |
+| The assets, made in Game Studio | `Thornwick.Game/Assets`: the tile sets `Tiles/Town`, `Tiles/Indoors` and `Tiles/People`; the flipbooks `Flipbooks/Hero` and `Villager1` to `3`; the map `Maps/House`; `MainScene` and `GraphicsCompositor` |
+| The town, written by a tool | `Thornwick.Game/Assets/Maps/Town.sdtilemap`, from `tools/maps/Town.txt` by `tools/MakeMaps.cs` (see [The town](#the-town)) |
+| The art | `Thornwick.Game/Resources/Kenney`, and the two scripts that draw from it, `tools/draw-people.sh` and `tools/draw-water.sh` (see [The art](#the-art)) |
+| The tests | `Thornwick.Tests`: the rules, and the asset files read with Tessera's asset classes (every cell's tile exists, the door leads to the house and back, the hero is not walled in, the flipbooks have their clips) |
 
 ## Test it
 

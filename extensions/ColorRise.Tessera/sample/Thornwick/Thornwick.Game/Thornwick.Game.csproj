@@ -2,8 +2,8 @@
   <PropertyGroup>
     <RootNamespace>Thornwick</RootNamespace>
     <IsPackable>false</IsPackable>
-    <!-- Stride.Core's targets write the <userdoc> tags to a .usrdoc file beside the assembly: Game Studio shows them under the
-         property grid -->
+    <!-- Game Studio shows the <userdoc> text of the scripts' properties from the documentation file that the build copies
+         beside the startup head's output (Thornwick.Game.xml) -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
