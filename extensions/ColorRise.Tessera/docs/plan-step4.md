@@ -1002,7 +1002,7 @@ The second map, small enough to paint by hand: the map editor's part of the by-h
 
 **The house**: a room of 12 by 9 cells. `Ground` has the floor on every cell of the frame. `Details` has the walls around it (the back wall two cells high, as seen from the front) and the furniture (a table, a stool, shelves, a chest, a stove, all solid: the table of "The art"). The door back to the town is a mat of flagstones, on `Ground` in the bottom row, near the middle, with a free cell above it: the hero arrives there, facing up. 20 cells or more can be walked.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // HouseTests
@@ -1026,13 +1026,20 @@ The second map, small enough to paint by hand: the map editor's part of the by-h
     // and the walker never stood outside the frame
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: FAIL (`Maps/House.sdtilemap` is not found; the playthrough fails at the door).
-- [ ] **Step 3: Paint the house** (lines 10 and 11).
+- [x] **Step 2: Run them to see them fail.** Expected: FAIL (`Maps/House.sdtilemap` is not found; the playthrough fails at the door).
+- [x] **Step 3: Paint the house** (lines 10 and 11).
   10. **A new map.** *Add asset > Sprite > Tile map*, named `House`, in a folder `Maps` beside `Town`. In its property grid, `Size` is set to (12, 9). In the map editor, `+` beside the tile sets takes the tile set of the indoors. A second layer is added above `Ground` and renamed `Details` with a double click. The canvas shows the frame as an outline, and a stamp outside it paints nothing (`TileMapDocument.CanWrite`): set the size before painting.
   11. **Painting.** The floor with the Rectangle tool (P). The walls with a block picked by a drag in the palette and stamped (B), and a line of them with Shift and a click. The furniture on `Details`, a piece flipped with X before it is stamped. A wrong stamp taken back with Ctrl+Z, a cell emptied with the Erase tool (E), a piece moved with the Select tool (R). `Dim other layers` while painting `Details`. Save. A picture of the editor with the finished room.
-- [ ] **Step 4: Close Game Studio and run the tests.** Run: `dotnet test sample/Thornwick/Thornwick.Tests`. Expected: PASS, the whole of the sample's tests. Copy `pictures/House.png` to `/mnt/project-files/tilemap/step4/house.png`.
-- [ ] **Step 5: Fix what the lines found**, as "The by-hand list" says.
-- [ ] **Step 6: Write the lines** 10 and 11 in `docs/studio-check.md`, then commit and push: `feat(tessera): Thornwick's house, painted in the map editor`
+- [x] **Step 4: Close Game Studio and run the tests.** Run: `dotnet test sample/Thornwick/Thornwick.Tests`. Expected: PASS, the whole of the sample's tests. Copy `pictures/House.png` to `/mnt/project-files/tilemap/step4/house.png`.
+- [x] **Step 5: Fix what the lines found**, as "The by-hand list" says.
+- [x] **Step 6: Write the lines** 10 and 11 in `docs/studio-check.md`, then commit and push: `feat(tessera): Thornwick's house, painted in the map editor`
+
+**Done (2026-11-26).** The house's 3 tests and the door's playthrough failed first, with `Maps/House.sdtilemap` not found; the playthrough of the brambles passed already, as it plays on the town only. Game Studio made and painted the house (lines 10 and 11, seen); the sample's 86 tests pass. The room is 12 by 9: the mat is the cell (6, 0), the hero arrives on (6, 1) facing up, and the table, the stools, the shelves, the stove and the chest stand inside.
+
+**Done differently.**
+- The cell helpers of `TownTests` moved to `MapCells`, which `HouseTests` and `PlaythroughTests` use too.
+- The anvil of "The art" is not in the room: the house's list (a table, a stool, shelves, a chest, a stove) does not name it.
+- Step 5 fixed nothing. Two remarks of line 11 are left as they are: a block is stamped centred on the pointer, as Tiled does; and a line drawn with a block stamps it on every cell of the line, each over the last, where a repeat every block's width was expected. That second one is a wish for later, in the report.
 
 ### Task 10: The scripts, the scene and the compositor
 

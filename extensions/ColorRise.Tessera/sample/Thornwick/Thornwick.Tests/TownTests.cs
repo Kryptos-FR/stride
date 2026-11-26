@@ -21,7 +21,7 @@ public sealed class TownTests
         Assert.Empty(TileAssetChecks.Of(SampleAssets.MapAsset(Url)));
         foreach (var layer in map.Layers)
         {
-            foreach (var (cell, value) in Cells(layer))
+            foreach (var (cell, value) in MapCells.Of(layer))
             {
                 Assert.True(map.GetTile(value) is not null, $"the cell {cell} of {layer.Name} names {value.Slot}/{value.Tile}, which is no tile");
             }
@@ -46,7 +46,7 @@ public sealed class TownTests
         }
         foreach (var layer in map.Layers)
         {
-            var outside = Cells(layer).Select(pair => pair.Cell).Where(cell => cell.X < 0 || cell.Y < 0 || cell.X >= 60 || cell.Y >= 40);
+            var outside = MapCells.Of(layer).Select(pair => pair.Cell).Where(cell => cell.X < 0 || cell.Y < 0 || cell.X >= 60 || cell.Y >= 40);
             Assert.Empty(outside);
         }
     }
@@ -56,7 +56,7 @@ public sealed class TownTests
     {
         var map = SampleAssets.Map(Url);
 
-        var playing = Cells(map.Layers["Ground"]).Count(pair => map.GetTile(pair.Value) is { Animation.Count: > 0 });
+        var playing = MapCells.Of(map.Layers["Ground"]).Count(pair => map.GetTile(pair.Value) is { Animation.Count: > 0 });
 
         Assert.True(playing >= 12, $"{playing} cells of Ground play");
         Assert.Equal(12, Brambles.Count(map));
@@ -95,7 +95,7 @@ public sealed class TownTests
     {
         var (place, start) = Town();
         var map = place.Component.Map!;
-        var bushes = TileCells(map, tile => tile.Kind == TileKinds.Bush);
+        var bushes = MapCells.Where(map, tile => tile.Kind == TileKinds.Bush);
 
         var opened = Reach.From(place, start, throughBrambles: true);
         opened.ExceptWith(Reach.From(place, start));
@@ -134,24 +134,4 @@ public sealed class TownTests
         var door = Doors.Of(map).Single(door => door.To == "House");
         return (place, door.Cell + GridWalker.Offset(FlipbookDirection.Down));
     }
-
-    // The cells of a layer that are not empty, with their values
-    private static IEnumerable<(Int2 Cell, TileCell Value)> Cells(TileLayer layer)
-    {
-        foreach (var chunk in layer.Chunks)
-        {
-            var values = chunk.Cells.ToArray();
-            for (var index = 0; index < values.Length; index++)
-            {
-                if (!values[index].IsEmpty)
-                {
-                    yield return (chunk.Position * TileChunk.Size + new Int2(index % TileChunk.Size, index / TileChunk.Size), values[index]);
-                }
-            }
-        }
-    }
-
-    // The cells of a map that hold, on some layer, a tile that matches
-    private static HashSet<Int2> TileCells(TileMap map, Func<Tile, bool> match)
-        => [.. map.Layers.SelectMany(Cells).Where(pair => map.GetTile(pair.Value) is { } tile && match(tile)).Select(pair => pair.Cell)];
 }
