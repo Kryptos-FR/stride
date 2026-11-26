@@ -466,7 +466,7 @@ internal static class TestMaps
 }
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 // PlaceTests
@@ -515,10 +515,18 @@ public void A_walker_that_keeps_walking_loses_no_time_between_cells(float frame)
     // TryStep(None) and TryStep(UpLeft): false, Facing unchanged
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Run: `dotnet test sample/Thornwick/Thornwick.Tests --filter "FullyQualifiedName~PlaceTests|FullyQualifiedName~GridWalkerTests"`. Expected: FAIL to compile (`Place` and `GridWalker` do not exist).
-- [ ] **Step 3: Write `Place` and `GridWalker`.** A place keeps who holds each cell in a dictionary. A walker holds its cell, and from the start of a step to its end the target too.
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): Thornwick's places and its walk on the grid`
+- [x] **Step 2: Run them to see them fail.** Run: `dotnet test sample/Thornwick/Thornwick.Tests --filter "FullyQualifiedName~PlaceTests|FullyQualifiedName~GridWalkerTests"`. Expected: FAIL to compile (`Place` and `GridWalker` do not exist).
+- [x] **Step 3: Write `Place` and `GridWalker`.** A place keeps who holds each cell in a dictionary. A walker holds its cell, and from the start of a step to its end the target too.
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): Thornwick's places and its walk on the grid`
+
+**Done (2026-11-26).** The tests failed first to compile (`Place` did not exist), then the sample's 21 tests passed: the 2 of Task 2, 6 of `PlaceTests` and 13 of `GridWalkerTests` (the theory counts three).
+
+**Done differently.**
+- A walker that is already walking does not turn: `TryStep` returns false and leaves `Facing` as it is. The interface left it open; the hero's key is read again when it arrives, so nothing is lost.
+- A step time that is infinite counts as 0, as one that is not a number does: a walker never stays between two cells.
+- `Frame` takes its far corner from `CellToWorld(Size)` instead of multiplying the size, so that a scaled entity has the right frame too.
+- `A_walker_that_keeps_walking_loses_no_time_between_cells` starts its first step before the loop, so that ten cells are walked in the 2.05 seconds.
 
 ### Task 4: Wandering
 
