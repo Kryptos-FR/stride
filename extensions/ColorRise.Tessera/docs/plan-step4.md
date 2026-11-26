@@ -556,7 +556,7 @@ public sealed class WanderPlan
 }
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 [Fact] public void It_steps_to_a_free_neighbour_within_its_radius()
@@ -571,10 +571,14 @@ public sealed class WanderPlan
     // Advance(0.4f); it was never further than 4 cells from home, and it moved at least 500 times
 ```
 
-- [ ] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
-- [ ] **Step 3: Write `WanderPlan`.** The sides are tried in the order Down, Left, Right, Up, so that a seed gives one walk.
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Commit and push**: `feat(tessera): Thornwick's villagers choose their steps`
+- [x] **Step 2: Run them to see them fail.** Expected: FAIL to compile.
+- [x] **Step 3: Write `WanderPlan`.** The sides are tried in the order Down, Left, Right, Up, so that a seed gives one walk.
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Commit and push**: `feat(tessera): Thornwick's villagers choose their steps`
+
+**Done (2026-11-26).** The tests failed first to compile (`WanderPlan` did not exist), then the sample's 26 tests passed.
+
+**Done differently.** Nothing.
 
 ### Task 5: The camera's frame
 
