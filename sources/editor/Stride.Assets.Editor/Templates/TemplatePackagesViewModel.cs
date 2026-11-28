@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+using System.Text.RegularExpressions;
 using Stride.Assets.Templates;
 using Stride.Core.Presentation.Collections;
 using Stride.Core.Presentation.Commands;
@@ -143,10 +144,10 @@ public sealed class TemplatePackagesViewModel : DispatcherViewModel
         var removal = installer.PlanRemoval(row.Id);
         if (removal.Kind != TemplatePackageRemovalKind.Uninstall)
         {
-            await Dialogs.MessageBoxAsync(removal.Message, MessageBoxButton.OK, MessageBoxImage.Information);
+            await Dialogs.MessageBoxAsync(AsMarkdown(removal.Message), MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        if (await Dialogs.MessageBoxAsync(removal.Message, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+        if (await Dialogs.MessageBoxAsync(AsMarkdown(removal.Message), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
         await RunAsync(() => installer.RemoveAsync(removal));
     }
@@ -172,10 +173,10 @@ public sealed class TemplatePackagesViewModel : DispatcherViewModel
 
         if (installer.Refusal(package) is { } refusal)
         {
-            await Dialogs.MessageBoxAsync(refusal, MessageBoxButton.OK, MessageBoxImage.Warning);
+            await Dialogs.MessageBoxAsync(AsMarkdown(refusal), MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        if (await Dialogs.MessageBoxAsync(installer.Confirmation(package), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+        if (await Dialogs.MessageBoxAsync(AsMarkdown(installer.Confirmation(package)), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
         await RunAsync(() => installer.AddAsync(package));
     }
@@ -206,6 +207,16 @@ public sealed class TemplatePackagesViewModel : DispatcherViewModel
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// The installer's plain text (shared with <c>stride template</c>) as the Markdown the message box shows: the
+    /// characters of Markdown's markup escaped (an id or a path may hold them), and each line kept with a hard line break.
+    /// </summary>
+    private static string AsMarkdown(string text)
+    {
+        var escaped = Regex.Replace(text.ReplaceLineEndings("\n"), @"[\\`*_\[\]<>]", @"\$0");
+        return Regex.Replace(escaped, @"(?<!\n)\n(?!\n)", "  \n");
     }
 
     private void ShowPackages(IReadOnlyList<ThirdPartyTemplatePackage> packages)

@@ -88,6 +88,22 @@ public sealed class TemplatePackagesViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task TheQuestionKeepsALinePerDetailAsMarkdown()
+    {
+        // The message box shows Markdown: a single line break would join the lines, and a path could hold markup
+        dialogs.PickFile = _ => new UFile(WriteNupkg("Foo_Templates", "1.0.0"));
+        dialogs.Answer = MessageBoxResult.No;
+        var viewModel = Create();
+
+        await viewModel.AddFromFileAsync();
+
+        var message = Assert.Single(dialogs.Messages);
+        Assert.Contains("Install the template package Foo\\_Templates 1.0.0?\n\n", message);
+        Assert.Contains("Authors: Color-Rise  \nLicence: MIT  \nFrom: ", message);
+        Assert.DoesNotContain("\r", message);
+    }
+
+    [Fact]
     public async Task AddingAFileDoesNothingOnNo()
     {
         dialogs.PickFile = _ => new UFile(WriteNupkg("Foo.Templates", "1.0.0"));
