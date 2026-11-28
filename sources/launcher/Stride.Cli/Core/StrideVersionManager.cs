@@ -418,6 +418,14 @@ public sealed class StrideVersionManager
     private static readonly string[] EngineTemplatePackageIds = ["Stride.Templates.Games"];
 
     /// <summary>
+    ///   Adds and removes the third-party template packages for <paramref name="version"/> (`stride template`), with the
+    ///   checks and texts of Game Studio's Template packages window. Stride's own template packages are never touched.
+    /// </summary>
+    public TemplatePackageInstaller CreateTemplatePackageInstaller(PackageVersion version)
+        => new(NugetTemplatePackageStore.For(store), version,
+            new HashSet<string>([.. EngineTemplatePackageIds, .. ContentTemplateResolver.PackageIds], StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>
     ///   Opens a template registry over the installed template packages compatible with the given version,
     ///   plus any explicitly requested <paramref name="extraPackages"/> (a package id or a local .nupkg path).
     ///   Content packages (Samples, Starters, AssetPacks) resolve at the content version the engine names, and

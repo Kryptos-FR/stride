@@ -1,11 +1,11 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
-using System.IO.Compression;
-using System.Security;
 using Stride.Assets.Templates;
 using Stride.Core;
+using Stride.Launcher.Tests.Helpers;
 using Xunit;
+using static Stride.Launcher.Tests.Helpers.TemplatePackageFixtures;
 
 namespace Stride.Launcher.Tests;
 
@@ -15,7 +15,7 @@ public sealed class TemplatePackageInstallerTests : IDisposable
     private static readonly IReadOnlySet<string> BuiltIn = new HashSet<string>(["Stride.Templates.Games", "Stride.Templates.AssetPacks"], StringComparer.OrdinalIgnoreCase);
 
     private readonly string folder = Directory.CreateTempSubdirectory("stride-installer-tests").FullName;
-    private readonly FakeStore store = new();
+    private readonly FakeTemplatePackageStore store = new();
     private readonly TemplatePackageInstaller installer;
 
     public TemplatePackageInstallerTests()
@@ -28,7 +28,7 @@ public sealed class TemplatePackageInstallerTests : IDisposable
     [Fact]
     public void InspectFileReadsTheNuspecAndCountsTheTemplates()
     {
-        var path = WriteNupkg("Foo.Templates", "1.2.0-dev3", templates: [("foo-game", "project"), ("foo-pack-a", "item"), ("foo-pack-b", "item")]);
+        var path = WriteNupkg(folder, "Foo.Templates", "1.2.0-dev3", templates: [("foo-game", "project"), ("foo-pack-a", "item"), ("foo-pack-b", "item")]);
 
         var info = installer.InspectFile(path);
 
@@ -49,31 +49,31 @@ public sealed class TemplatePackageInstallerTests : IDisposable
     [Fact]
     public void APackageOfAnotherTypeIsRefused()
         => Assert.Equal("Foo.Templates 1.0.0 is not a template package: it does not declare the NuGet package type Template.",
-            installer.Refusal(installer.InspectFile(WriteNupkg("Foo.Templates", "1.0.0", packageType: "Dependency"))));
+            installer.Refusal(installer.InspectFile(WriteNupkg(folder, "Foo.Templates", "1.0.0", packageType: "Dependency"))));
 
     [Fact]
     public void APackageWithoutTheTagIsRefused()
         => Assert.Equal("Foo.Templates 1.0.0 is not a Stride template package: it does not have the tag stride-template.",
-            installer.Refusal(installer.InspectFile(WriteNupkg("Foo.Templates", "1.0.0", tags: "game templates"))));
+            installer.Refusal(installer.InspectFile(WriteNupkg(folder, "Foo.Templates", "1.0.0", tags: "game templates"))));
 
     [Fact]
     public void ABuiltInPackageIsRefused()
         => Assert.Equal("Stride.Templates.Games is one of Stride's own template packages: it comes with Stride.",
-            installer.Refusal(installer.InspectFile(WriteNupkg("Stride.Templates.Games", "4.5.6"))));
+            installer.Refusal(installer.InspectFile(WriteNupkg(folder, "Stride.Templates.Games", "4.5.6"))));
 
     [Fact]
     public void APackageForANewerEngineIsRefusedWithBothVersions()
         => Assert.Equal("Foo.Templates 0.2.0 is made for Stride 4.6.0; this is Stride 4.5.6.",
-            installer.Refusal(installer.InspectFile(WriteNupkg("Foo.Templates", "0.2.0", marker: "4.6.0"))));
+            installer.Refusal(installer.InspectFile(WriteNupkg(folder, "Foo.Templates", "0.2.0", marker: "4.6.0"))));
 
     [Fact]
     public void AnUnmarkedPackageIsAccepted()
-        => Assert.Null(installer.Refusal(installer.InspectFile(WriteNupkg("Foo.Templates", "1.0.0", marker: null))));
+        => Assert.Null(installer.Refusal(installer.InspectFile(WriteNupkg(folder, "Foo.Templates", "1.0.0", marker: null))));
 
     [Fact]
     public void TheConfirmationNamesThePackageAndWarnsAboutCode()
     {
-        var path = WriteNupkg("Foo.Templates", "1.0.0");
+        var path = WriteNupkg(folder, "Foo.Templates", "1.0.0");
 
         var text = installer.Confirmation(installer.InspectFile(path));
 
@@ -128,7 +128,7 @@ public sealed class TemplatePackageInstallerTests : IDisposable
     [Fact]
     public async Task AddingAFileInstallsFromItsFolder()
     {
-        var path = WriteNupkg("Foo.Templates", "1.0.0");
+        var path = WriteNupkg(folder, "Foo.Templates", "1.0.0");
 
         await installer.AddAsync(installer.InspectFile(path));
 
@@ -217,73 +217,7 @@ public sealed class TemplatePackageInstallerTests : IDisposable
         Assert.Equal(["Foo.Templates 1.1.0"], installer.Listed().Select(candidate => $"{candidate.Id} {candidate.Version}"));
     }
 
-    private static TemplatePackageCandidate Candidate(string id, string version, bool isTemplate = true, string? localFolder = null)
-        => new(id, new PackageVersion(version), isTemplate, HasTemplateTag: true, new PackageVersion("4.5.0"), $"/store/{id}/{version}", localFolder, "Someone", "MIT", "Templates");
-
     private static TemplatePackageInfo Info(string id, string version, string? marker)
         => new(id, new PackageVersion(version), "Someone", "MIT", "Templates", IsTemplatePackage: null, HasTemplateTag: true,
             marker is null ? null : new PackageVersion(marker), GameTemplates: null, AssetPacks: null, Origin: "https://feed.example/v3/index.json", FilePath: null);
-
-    private string WriteNupkg(string id, string version, string packageType = "Template", string tags = "stride-template games", string? marker = "4.5.0",
-        (string ShortName, string Type)[]? templates = null)
-    {
-        var path = Path.Combine(folder, $"{id}.{version}.nupkg");
-        using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        var dependencies = marker is null ? "" : $"""<dependencies><group targetFramework="net10.0"><dependency id="Stride.Core" version="{marker}" /></group></dependencies>""";
-        var nuspec = $"""
-            <?xml version="1.0" encoding="utf-8"?>
-            <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-              <metadata>
-                <id>{SecurityElement.Escape(id)}</id>
-                <version>{version}</version>
-                <authors>Color-Rise</authors>
-                <license type="expression">MIT</license>
-                <description>Templates for the tests</description>
-                <tags>{tags}</tags>
-                <packageTypes><packageType name="{packageType}" /></packageTypes>
-                {dependencies}
-              </metadata>
-            </package>
-            """;
-        using (var writer = new StreamWriter(zip.CreateEntry($"{id}.nuspec").Open()))
-            writer.Write(nuspec);
-        foreach (var (shortName, type) in templates ?? [("game", "project")])
-        {
-            using var writer = new StreamWriter(zip.CreateEntry($"content/{shortName}/.template.config/template.json").Open());
-            writer.Write($$"""{ "identity": "{{id}}.{{shortName}}", "shortName": "{{shortName}}", "tags": { "language": "C#", "type": "{{type}}" } }""");
-        }
-        return path;
-    }
-
-    private sealed class FakeStore : ITemplatePackageStore
-    {
-        public List<TemplatePackageCandidate> Installed { get; } = [];
-
-        public Dictionary<string, IReadOnlyList<TemplatePackageInfo>> Sources { get; } = new(StringComparer.OrdinalIgnoreCase);
-
-        public List<(string Id, PackageVersion Version, string? ExtraSource)> Installs { get; } = [];
-
-        public List<string> Uninstalls { get; } = [];
-
-        public Func<string, PackageVersion, TemplatePackageCandidate> InstalledAs { get; set; } = (id, version) => Candidate(id, version.ToString());
-
-        public IReadOnlyList<TemplatePackageCandidate> GetInstalled() => Installed;
-
-        public Task<IReadOnlyList<TemplatePackageInfo>> FindInSourcesAsync(string id, CancellationToken cancellationToken)
-            => Task.FromResult(Sources.TryGetValue(id, out var found) ? found : (IReadOnlyList<TemplatePackageInfo>)[]);
-
-        public Task InstallAsync(string id, PackageVersion version, string? extraSourceFolder, CancellationToken cancellationToken)
-        {
-            Installs.Add((id, version, extraSourceFolder));
-            Installed.Add(InstalledAs(id, version));
-            return Task.CompletedTask;
-        }
-
-        public Task UninstallAsync(IReadOnlyList<TemplatePackageCandidate> installed, CancellationToken cancellationToken)
-        {
-            Uninstalls.AddRange(installed.Select(candidate => $"{candidate.Id} {candidate.Version}"));
-            Installed.RemoveAll(installed.Contains);
-            return Task.CompletedTask;
-        }
-    }
 }

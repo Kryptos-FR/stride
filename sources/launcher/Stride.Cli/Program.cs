@@ -47,6 +47,7 @@ versionCommand.SetAction(_ =>
 var root = new RootCommand("Stride command-line tool.");
 root.Subcommands.Add(SdkCommand.Create(manager));
 root.Subcommands.Add(NewCommand.Create(manager));
+root.Subcommands.Add(TemplateCommand.Create(manager));
 root.Subcommands.Add(UpgradeCommand.Create(manager));
 root.Subcommands.Add(ToolCommands.CreateStudio(manager));
 root.Subcommands.Add(ToolCommands.CreateAsset(manager));

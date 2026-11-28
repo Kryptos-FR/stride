@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Stride.Launcher\Stride.Launcher.csproj" />
+    <!-- Built for the end-to-end test of the template commands, which runs it in a child process -->
+    <ProjectReference Include="..\Stride.Cli\Stride.Cli.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +26,7 @@
     <Compile Include="..\Stride.Cli\Core\NewTemplateRules.cs" Link="Cli\NewTemplateRules.cs" />
     <Compile Include="..\Stride.Cli\Core\VersionRules.cs" Link="Cli\VersionRules.cs" />
     <Compile Include="..\Stride.Cli\Core\VersionFilter.cs" Link="Cli\VersionFilter.cs" />
+    <Compile Include="..\Stride.Cli\Core\TemplateCommandFlow.cs" Link="Cli\TemplateCommandFlow.cs" />
     <Compile Include="..\..\engine\Stride.Assets\Templates\AssetPackPlacement.cs" Link="Cli\AssetPackPlacement.cs" />
     <Compile Include="..\..\engine\Stride.Assets\Templates\TemplatePackageRule.cs" Link="Cli\TemplatePackageRule.cs" />
     <Compile Include="..\..\engine\Stride.Assets\Templates\TemplatePackageInstaller.cs" Link="Cli\TemplatePackageInstaller.cs" />
