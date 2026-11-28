@@ -270,7 +270,9 @@ public sealed class ProjectTemplateWindowTests
 
         public Task<IReadOnlyList<TemplatePackageInfo>> FindInSourcesAsync(string id, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<TemplatePackageInfo>>([]);
 
-        public Task InstallAsync(string id, PackageVersion version, string? extraSourceFolder, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task DownloadAsync(string id, PackageVersion version, string source, string destinationFile, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task AddFileAsync(string id, PackageVersion version, string nupkgPath, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task UninstallAsync(IReadOnlyList<TemplatePackageCandidate> installed, CancellationToken cancellationToken) => Task.CompletedTask;
     }
