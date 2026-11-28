@@ -91,7 +91,7 @@ The template's content is small but complete: a component and a content type (ru
 
 ### Templates in a package of their own
 
-A plugin can also bring game templates and asset packs to the people who use it: a template package (NuGet type `Template`, tag `stride-template`, a dependency on `Stride.Core` at the engine version it is made for) that they add from Game Studio's *Template packages* window or with `stride template add`. Its game templates then show on the start screen (in *Other* unless they name a group) and in `stride new list`, and its asset packs in the New Game window under the package's id. See [Third-party template packages](../../sources/templates/README.md#third-party-template-packages).
+A plugin can also bring game templates and asset packs to the people who use it: a template package (NuGet type `Template`, tag `stride-template`, a dependency on `Stride.Core` at the engine version it is made for) that they add from the *Template packages* window of the cross-platform Game Studio or with `stride template add`. Its game templates then show on the start screen (in *Other* unless they name a group) and in `stride new list`, and its asset packs in the New Game window under the package's id. See [Third-party template packages](../../sources/templates/README.md#third-party-template-packages).
 
 ## Building and packing
 

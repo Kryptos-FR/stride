@@ -98,10 +98,12 @@ found when it is in NuGet's global packages folder or in a local-folder package 
   of one package, the newest whose marker is not above the engine is taken, else the newest without a marker.
   A package whose versions are all made for a newer engine is left out.
 
-Stride's own packages (the four above) are never found this way: the engine names their versions. The
-packages are taken in id order, and a package with a template whose identity an earlier one already serves is
-left out: Game Studio's *Template packages* window says which package holds it, and `stride new` prints a
-line on stderr.
+Stride's own packages (the four above) are never found this way: the engine names their versions. Stride's
+packages take their template identities first, then the other packages in id order, and a package with a
+template whose identity an earlier one already serves is left out, whatever was installed before (Stride's
+content downloaded later takes its identities back): Game Studio's *Template packages* window says which
+package holds it, and `stride new` prints a line on stderr. `stride template list` lists every package the
+rule finds, without this check.
 
 A game template shows on the start screen in the group its `.sdtpl` or its `template.json` names, else in
 *Other*, with a last line in its description: "From &lt;id&gt; &lt;version&gt; by &lt;authors&gt;.". An asset
@@ -110,10 +112,14 @@ pack (an item template) shows in the New Game window under the id of its package
 
 To add or remove a package:
 
-- **Game Studio**: *Template packages* on the start screen lists the packages found, with their version,
-  authors, licence and contents. *Add from a file...* takes a `.nupkg`, *Add by package id* takes an id (and a version) of
-  the configured sources. The package is checked (type, tag, marker, not one of Stride's), Game Studio asks
-  with what it is and where it comes from, installs it and shows its templates without a restart. *Remove*
+- **Game Studio** (the cross-platform one; the WPF Game Studio shows the packages' templates but has no
+  window to manage them): *Template packages* on the start screen lists the packages found, with their
+  version, authors, licence, the engine version they are made for ("Engine version unknown" without a
+  marker) and contents. *Add from a file...* takes a `.nupkg`, under any file name; *Add by package id*
+  takes an id (and a version) of the configured sources, whose `.nupkg` is downloaded to a temporary folder
+  first. The file is checked (type, tag, marker, not one of Stride's), Game Studio asks with what it is and
+  where it comes from, and only then puts that file, as it is, in the global packages folder (nothing of
+  it runs, and its dependencies are not restored), and shows its templates without a restart. *Remove*
   takes every version of it out of the global packages folder.
 - **CLI**: `stride template add <file or id> [--package-version <v>] [--yes]`, `stride template list`,
   `stride template remove <id> [--yes]`, with the same checks and texts (see the
