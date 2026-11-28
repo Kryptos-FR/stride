@@ -26,6 +26,11 @@
       <Button x:Name="BrowseButton" DockPanel.Dock="Left" Padding="20,6"
               Content="{sd:LocalizeString Browse for existing project, Context=Button}"
               Command="{Binding BrowseForExistingProjectCommand}"/>
+      <Button x:Name="TemplatePackagesButton" DockPanel.Dock="Left" Padding="20,6" Margin="10,0,0,0"
+              Content="{sd:LocalizeString Template packages..., Context=Button}"
+              ToolTip.Tip="{sd:LocalizeString Add or remove the template packages of other authors, Context=ToolTip}"
+              IsVisible="{Binding CanManageTemplatePackages}"
+              Command="{Binding ManageTemplatePackagesCommand}"/>
       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10">
         <Button x:Name="SelectButton" Padding="20,6" MinWidth="90"
                 Content="{sd:LocalizeString Select, Context=Button}"

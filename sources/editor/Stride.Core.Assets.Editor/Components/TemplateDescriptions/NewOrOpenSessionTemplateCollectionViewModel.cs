@@ -2,6 +2,7 @@
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 #nullable disable
 
+using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.Settings;
 using Stride.Core.Assets.Presentation.ViewModels;
 using Stride.Core.Assets.Templates;
@@ -107,6 +108,7 @@ public sealed class NewOrOpenSessionTemplateCollectionViewModel : ProjectTemplat
         Location = InitialLocation;
 
         BrowseForExistingProjectCommand = new AnonymousTaskCommand(serviceProvider, BrowseForExistingProjectAsync);
+        ManageTemplatePackagesCommand = new AnonymousTaskCommand(serviceProvider, ManageTemplatePackagesAsync);
         SelectedGroup = recentGroup.Templates.Count == 0 ? rootGroup : recentGroup;
     }
 
@@ -176,6 +178,17 @@ public sealed class NewOrOpenSessionTemplateCollectionViewModel : ProjectTemplat
     /// Picks a solution or package file and requests to open it.
     /// </summary>
     public ICommandBase BrowseForExistingProjectCommand { get; }
+
+    /// <summary>
+    /// Whether the editor has the <em>Template packages</em> window (an <see cref="ITemplatePackagesService"/> is registered).
+    /// </summary>
+    public bool CanManageTemplatePackages => ServiceProvider.TryGet<ITemplatePackagesService>() is not null;
+
+    /// <summary>
+    /// Shows the <em>Template packages</em> window; the templates of the packages added or removed there come and go in the
+    /// list when the packages are scanned again.
+    /// </summary>
+    public ICommandBase ManageTemplatePackagesCommand { get; }
 
     /// <summary>
     /// The template download in progress (or failed), <c>null</c> when there is none.
@@ -401,6 +414,9 @@ public sealed class NewOrOpenSessionTemplateCollectionViewModel : ProjectTemplat
         recentGroup.Templates.Remove(item);
         UpdateTemplateList();
     }
+
+    private Task ManageTemplatePackagesAsync()
+        => ServiceProvider.TryGet<ITemplatePackagesService>()?.ShowAsync() ?? Task.CompletedTask;
 
     private async Task BrowseForExistingProjectAsync()
     {

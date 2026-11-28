@@ -56,6 +56,8 @@ public sealed class TestThirdPartyTemplatePackages : IDisposable
         Assert.True(package.Installed);
         Assert.Equal(foo, package.Package);
         Assert.Equal(["Foo.Game", "Foo.Pack"], package.TemplateIdentities.Order());
+        Assert.Equal(1, package.GameTemplates);
+        Assert.Equal(1, package.AssetPacks);
         Assert.Equal(["Foo.Game", "Foo.Pack"], await Identities());
         Assert.Same(result, packages.Packages);
     }

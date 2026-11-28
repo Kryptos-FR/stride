@@ -435,6 +435,8 @@ public partial class App : Application
         // The notification bar of the main view: the dialog service shows the background operations there
         serviceProvider.RegisterService(new NotificationsViewModel(serviceProvider));
         serviceProvider.RegisterService(new EditorDialogService(serviceProvider));
+        // The Template packages window of the start screen
+        serviceProvider.RegisterService(new Stride.Assets.Editor.Avalonia.Templates.AvaloniaTemplatePackagesService(serviceProvider));
         return serviceProvider;
     }
 }

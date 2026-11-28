@@ -22,9 +22,11 @@ namespace Stride.Assets.Templates;
 /// <param name="ConflictPackage">The id of the package that serves that identity already, or null.</param>
 /// <param name="TemplateIdentities">The identities of the package's templates, when it is installed.</param>
 /// <param name="Diagnostics">The errors of a failed install.</param>
+/// <param name="GameTemplates">The number of its game templates, when it is installed.</param>
+/// <param name="AssetPacks">The number of its asset packs (item templates), when it is installed.</param>
 public sealed record ThirdPartyTemplatePackage(
     TemplatePackageCandidate Package, bool Installed, string? ConflictIdentity, string? ConflictPackage,
-    IReadOnlyList<string> TemplateIdentities, IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> TemplateIdentities, IReadOnlyList<string> Diagnostics, int GameTemplates = 0, int AssetPacks = 0);
 
 /// <summary>
 /// Keeps the third-party template packages of a template registry equal to what <see cref="TemplatePackageRule"/>
@@ -61,11 +63,14 @@ public sealed class ThirdPartyTemplatePackages(
         {
             cancellationToken.ThrowIfCancellationRequested();
             var install = await registry.InstallThirdPartyPackageAsync(candidate.InstallSource, cancellationToken).ConfigureAwait(false);
-            var identities = install.Installed
-                ? (await registry.GetTemplatesOfAsync(candidate.InstallSource, cancellationToken).ConfigureAwait(false)).Select(template => template.Identity).ToList()
+            var templates = install.Installed
+                ? await registry.GetTemplatesOfAsync(candidate.InstallSource, cancellationToken).ConfigureAwait(false)
                 : [];
+            var assetPacks = templates.Count(template => template.TagsCollection.TryGetValue("type", out var type) && string.Equals(type, "item", StringComparison.OrdinalIgnoreCase));
             var conflictPackage = install.ConflictSource is { } source ? PackageIdOf(source, selected) : null;
-            result.Add(new ThirdPartyTemplatePackage(candidate, install.Installed, install.ConflictIdentity, conflictPackage, identities, install.Diagnostics));
+            result.Add(new ThirdPartyTemplatePackage(
+                candidate, install.Installed, install.ConflictIdentity, conflictPackage, templates.Select(template => template.Identity).ToList(), install.Diagnostics,
+                templates.Count - assetPacks, assetPacks));
         }
 
         Packages = result;

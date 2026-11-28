@@ -3,6 +3,12 @@
 
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.VisualTree;
+using Stride.Assets.Editor.Avalonia.Templates;
+using Stride.Assets.Editor.Templates;
+using Stride.Assets.Templates;
+using Stride.Core;
+using Stride.Core.Assets.Editor.Services;
 using Stride.Core.Assets.Editor.Avalonia.Views;
 using Stride.Core.Assets.Editor.Components.TemplateDescriptions;
 using Stride.Core.Assets.Editor.Tests.Helpers;
@@ -175,6 +181,98 @@ public sealed class ProjectTemplateWindowTests
         Assert.Equal(main.NewSessionCommand.IsEnabled, main.SelectProjectCommand.IsEnabled);
         Assert.Equal(main.NewSessionCommand.IsEnabled, main.SelectInitialProjectCommand.IsEnabled);
         Assert.Null(main.Session);
+    }
+
+    [AvaloniaFact]
+    public async Task TheTemplatePackagesButtonShowsOnlyWhenTheWindowIsThereAndOpensIt()
+    {
+        var packagesService = new RecordingTemplatePackagesService();
+        var withService = new NewOrOpenSessionTemplateCollectionViewModel(CreateServices(new RecordingDialogService(), packagesService), [], _ => { });
+        var withoutService = new NewOrOpenSessionTemplateCollectionViewModel(CreateServices(new RecordingDialogService()), [], _ => { });
+        var window = new ProjectSelectionWindow { DataContext = withService };
+        var otherWindow = new ProjectSelectionWindow { DataContext = withoutService };
+        await window.ShowAsync();
+        await otherWindow.ShowAsync();
+        try
+        {
+            await WindowTestHelper.PumpAsync();
+            Assert.False(otherWindow.FindControl<Button>("TemplatePackagesButton")!.IsVisible);
+            var button = window.FindControl<Button>("TemplatePackagesButton")!;
+            Assert.True(button.IsVisible);
+
+            await window.ClickAsync(button);
+            await WindowTestHelper.WaitUntilAsync(() => packagesService.Shown == 1, "the Template packages window to open");
+        }
+        finally
+        {
+            withService.Destroy();
+            withoutService.Destroy();
+            await window.CloseAsync();
+            await otherWindow.CloseAsync();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task TheTemplatePackagesWindowListsAPackagePerRowAndNoRemoveForALocalFolder()
+    {
+        TemplatePackageCandidate Candidate(string id, string? localFolder)
+            => new(id, new PackageVersion("0.1.0"), true, true, new PackageVersion("4.5.0"), $"/store/{id}", localFolder, "Color-Rise", "MIT", "Templates");
+        IReadOnlyList<ThirdPartyTemplatePackage> found =
+        [
+            new(Candidate("ColorRise.Tessera.Templates", null), true, null, null, ["a", "b", "c"], [], 1, 2),
+            new(Candidate("Mine.Templates", "/feeds/mine"), true, null, null, ["d"], [], 1, 0),
+        ];
+        var installer = new TemplatePackageInstaller(new EmptyTemplatePackageStore(), new PackageVersion("4.5.6"), new HashSet<string>());
+        var viewModel = new TemplatePackagesViewModel(new ViewModelServiceProvider([DispatcherService.Create(), new RecordingDialogService()]),
+            installer, () => found, () => Task.FromResult(found));
+        var window = new TemplatePackagesWindow { DataContext = viewModel };
+        await window.ShowAsync();
+        try
+        {
+            await WindowTestHelper.PumpAsync();
+            var list = window.FindControl<ItemsControl>("PackagesList")!;
+            Assert.Equal(2, list.ItemCount);
+            Assert.False(window.FindControl<TextBlock>("NoPackages")!.IsVisible);
+            var visuals = list.GetVisualDescendants().ToList();
+            Assert.Contains(visuals.OfType<TextBlock>(), x => x.Text == "1 game template, 2 asset packs");
+            var removes = visuals.OfType<Button>().Where(x => x.DataContext is TemplatePackageRowViewModel).ToList();
+            Assert.Equal([true, false], removes.Select(x => x.IsVisible));
+            Assert.Equal("Mine.Templates", ((TemplatePackageRowViewModel)removes[1].DataContext!).Id);
+            Assert.Contains(visuals.OfType<TextBlock>(), x => x.IsVisible && x.Text is { } text && text.Contains("/feeds/mine"));
+        }
+        finally
+        {
+            viewModel.Destroy();
+            await window.CloseAsync();
+        }
+    }
+
+    private static IViewModelServiceProvider CreateServices(RecordingDialogService dialogs, ITemplatePackagesService packages)
+    {
+        _ = TestTemplatePackage.Package;
+        return new ViewModelServiceProvider([DispatcherService.Create(), dialogs, packages]);
+    }
+
+    private sealed class RecordingTemplatePackagesService : ITemplatePackagesService
+    {
+        public int Shown { get; private set; }
+
+        public Task ShowAsync()
+        {
+            Shown++;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class EmptyTemplatePackageStore : ITemplatePackageStore
+    {
+        public IReadOnlyList<TemplatePackageCandidate> GetInstalled() => [];
+
+        public Task<IReadOnlyList<TemplatePackageInfo>> FindInSourcesAsync(string id, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<TemplatePackageInfo>>([]);
+
+        public Task InstallAsync(string id, PackageVersion version, string? extraSourceFolder, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task UninstallAsync(IReadOnlyList<TemplatePackageCandidate> installed, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private static IViewModelServiceProvider CreateServices(RecordingDialogService dialogs)

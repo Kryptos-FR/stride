@@ -1,0 +1,69 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sd="http://schemas.stride3d.net/xaml/presentation"
+        xmlns:tpl="using:Stride.Assets.Editor.Templates"
+        mc:Ignorable="d" d:DesignWidth="720" d:DesignHeight="480"
+        x:Class="Stride.Assets.Editor.Avalonia.Templates.TemplatePackagesWindow"
+        x:DataType="tpl:TemplatePackagesViewModel"
+        Title="{sd:LocalizeString Template packages, Context=Title}"
+        Width="720" Height="480"
+        MinWidth="560" MinHeight="360"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="16">
+    <!-- Add and close -->
+    <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0" LastChildFill="False">
+      <Button x:Name="CloseButton" DockPanel.Dock="Right" Padding="20,6" MinWidth="90" IsCancel="True"
+              Content="{sd:LocalizeString Close, Context=Button}" Click="OnCloseClick"/>
+      <Button x:Name="AddFromFileButton" DockPanel.Dock="Left" Padding="14,6"
+              Content="{sd:LocalizeString Add from a file..., Context=Button}"
+              IsEnabled="{Binding IsIdle}" Command="{Binding AddFromFileCommand}"/>
+    </DockPanel>
+    <!-- Add by package id -->
+    <Grid DockPanel.Dock="Bottom" Margin="0,10,0,0" ColumnDefinitions="Auto,*,Auto,120,Auto">
+      <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,6,0" Text="{sd:LocalizeString Package id:}"/>
+      <TextBox x:Name="PackageIdBox" Grid.Column="1" Text="{Binding PackageId}" Watermark="ColorRise.Tessera.Templates"/>
+      <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="10,0,6,0" Text="{sd:LocalizeString Version:}"/>
+      <TextBox x:Name="PackageVersionBox" Grid.Column="3" Text="{Binding PackageVersion}" Watermark="{sd:LocalizeString newest}"/>
+      <Button x:Name="AddByIdButton" Grid.Column="4" Margin="10,0,0,0" Padding="14,6"
+              Content="{sd:LocalizeString Add by package id, Context=Button}"
+              IsEnabled="{Binding IsIdle}" Command="{Binding AddByIdCommand}"/>
+    </Grid>
+    <!-- The state of the last add or remove -->
+    <ProgressBar DockPanel.Dock="Bottom" Height="4" Margin="0,8,0,0" IsIndeterminate="True" IsVisible="{Binding IsBusy}"/>
+    <TextBlock x:Name="ErrorLine" DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="Tomato" TextWrapping="Wrap"
+               Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
+               Text="{sd:LocalizeString Template packages of other authors add game templates and asset packs to the New project window. The templates that come with Stride are not listed here.}"/>
+    <TextBlock x:Name="NoPackages" DockPanel.Dock="Top" Margin="0,8" FontStyle="Italic" IsVisible="{Binding !HasPackages}"
+               Text="{sd:LocalizeString No template packages besides the ones that come with Stride.}"/>
+    <!-- One row per package -->
+    <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1" CornerRadius="3">
+      <ScrollViewer>
+        <ItemsControl x:Name="PackagesList" ItemsSource="{Binding Packages}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="tpl:TemplatePackageRowViewModel">
+              <DockPanel Margin="10,6">
+                <Button DockPanel.Dock="Right" VerticalAlignment="Top" Padding="12,4"
+                        Content="{sd:LocalizeString Remove, Context=Button}"
+                        IsVisible="{Binding CanRemove}" Command="{Binding RemoveCommand}"/>
+                <StackPanel Spacing="2">
+                  <StackPanel Orientation="Horizontal" Spacing="16">
+                    <TextBlock FontWeight="SemiBold" Text="{Binding Id}"/>
+                    <TextBlock Text="{Binding Version}"/>
+                    <TextBlock Text="{Binding Authors}"/>
+                    <TextBlock Text="{Binding License}"/>
+                  </StackPanel>
+                  <TextBlock Text="{Binding Contents}" IsVisible="{Binding Contents, Converter={x:Static ObjectConverters.IsNotNull}}" Opacity="0.8"/>
+                  <TextBlock Text="{Binding Note}" IsVisible="{Binding HasNote}" TextWrapping="Wrap" Opacity="0.8"/>
+                </StackPanel>
+              </DockPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+  </DockPanel>
+</Window>
