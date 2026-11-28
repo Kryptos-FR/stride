@@ -421,11 +421,12 @@ public sealed class StrideVersionManager
     ///   Opens a template registry over the installed template packages compatible with the given version,
     ///   plus any explicitly requested <paramref name="extraPackages"/> (a package id or a local .nupkg path).
     ///   Content packages (Samples, Starters, AssetPacks) resolve at the content version the engine names, and
-    ///   are fetched when the store has no copy. Returns null if none could be installed. The caller owns the
-    ///   returned registry and must dispose it.
+    ///   are fetched when the store has no copy. A discovered third-party package with a template whose identity an
+    ///   earlier package already serves is left out, with a line in <paramref name="warnings"/>. Returns null if none
+    ///   could be installed. The caller owns the returned registry and must dispose it.
     /// </summary>
     public async Task<DotNetNewTemplateRegistry?> OpenTemplateRegistry(
-        PackageVersion version, IEnumerable<string>? extraPackages = null, CancellationToken cancellationToken = default)
+        PackageVersion version, IEnumerable<string>? extraPackages = null, CancellationToken cancellationToken = default, ICollection<string>? warnings = null)
     {
         // Keep template-engine state under a CLI-owned, per-version directory so it stays isolated
         // from the user's global `dotnet new` installation and is deterministic regardless of whether
@@ -435,15 +436,23 @@ public sealed class StrideVersionManager
             "stride", "cli", "templates", version.ToString());
 
         var registry = new DotNetNewTemplateRegistry(version.ToString(), profileDir);
-        var packageDirs = await ResolveTemplatePackages(version, extraPackages, cancellationToken);
+        var (packageDirs, discovered) = await ResolveTemplatePackages(version, extraPackages, cancellationToken);
         // The profile holds exactly this run's packages: a version resolved by an earlier run would offer the same
         // templates with other content.
-        await registry.RemovePackagesExceptAsync(packageDirs, cancellationToken);
+        await registry.RemovePackagesExceptAsync([.. packageDirs, .. discovered.Select(candidate => candidate.InstallSource)], cancellationToken);
         var installedAny = false;
+        // Stride's packages and the explicit ones first, so a third-party package never shadows one of their templates.
         foreach (var packageDir in packageDirs)
         {
             var (success, _) = await registry.InstallPackageAsync(packageDir);
             installedAny |= success;
+        }
+        foreach (var candidate in discovered)
+        {
+            var result = await registry.InstallThirdPartyPackageAsync(candidate.InstallSource, cancellationToken);
+            installedAny |= result.Installed;
+            if (result.ConflictIdentity is not null)
+                warnings?.Add($"Skipped {candidate.Id} {candidate.Version}: its template {result.ConflictIdentity} is also in {result.ConflictSource}.");
         }
 
         if (!installedAny)
@@ -548,9 +557,11 @@ public sealed class StrideVersionManager
         }
     }
 
-    // The directories to install into the registry: the content packages at the engine's content version, one per
-    // discovered engine-versioned template package, plus any explicit extra packages.
-    private async Task<List<string>> ResolveTemplatePackages(PackageVersion version, IEnumerable<string>? extraPackages, CancellationToken cancellationToken)
+    // What to install into the registry: the directories of the packages the engine pins (content packages at the
+    // engine's content version, engine-versioned ones at Game Studio's) and of any explicit extra packages, then the
+    // discovered third-party template packages, in id order.
+    private async Task<(List<string> Paths, IReadOnlyList<TemplatePackageCandidate> Discovered)> ResolveTemplatePackages(
+        PackageVersion version, IEnumerable<string>? extraPackages, CancellationToken cancellationToken)
     {
         var paths = new List<string>();
 
@@ -585,7 +596,6 @@ public sealed class StrideVersionManager
             if (!string.IsNullOrEmpty(path))
                 paths.Add(path);
         }
-        paths.AddRange(discovered.Select(candidate => candidate.InstallSource).Where(path => !string.IsNullOrEmpty(path)));
 
         foreach (var extra in extraPackages ?? [])
         {
@@ -603,7 +613,13 @@ public sealed class StrideVersionManager
                 paths.Add(resolved);
         }
 
-        return paths;
+        // An explicit package is installed as asked, not a second time as a discovered one.
+        var extras = (extraPackages ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var thirdParty = discovered
+            .Where(candidate => !string.IsNullOrEmpty(candidate.InstallSource))
+            .Where(candidate => !extras.Contains(candidate.Id) && !paths.Contains(candidate.InstallSource, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+        return (paths, thirdParty);
     }
 
     /// <summary>

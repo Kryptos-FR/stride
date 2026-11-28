@@ -249,15 +249,23 @@ internal static class NewCommand
         }
 
         DotNetNewTemplateRegistry? registry;
+        var warnings = new List<string>();
         try
         {
-            registry = await manager.OpenTemplateRegistry(version, packages, cancellationToken);
+            registry = await manager.OpenTemplateRegistry(version, packages, cancellationToken, warnings);
         }
         catch (Exception exception)
         {
             ClearStatus();
             Console.Error.WriteLine(exception.Message);
             return null;
+        }
+        if (warnings.Count > 0)
+        {
+            ClearStatus();
+            foreach (var warning in warnings)
+                Console.Error.WriteLine(warning);
+            Console.Error.Write(showStatus ? status : string.Empty);
         }
 
         if (registry is null)

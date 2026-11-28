@@ -139,6 +139,92 @@ public sealed class DotNetNewTemplateRegistry : IDisposable
             await bootstrapper.UninstallTemplatePackagesAsync(stale, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Installs the third-party template package at <paramref name="source"/> (kept as it is when
+    /// <see cref="IsUnchangedAsync"/>), unless one of its templates has the identity of a template another installed
+    /// package serves: the package is then uninstalled again and the result names the clash. The registry cannot
+    /// hold two templates of one identity safely (instantiation finds a template by identity), and a package cannot
+    /// be installed with some of its templates left out, so the package installed first wins: Stride's, then the
+    /// third-party ones in the order the caller installs them.
+    /// </summary>
+    public async Task<ThirdPartyInstallResult> InstallThirdPartyPackageAsync(string source, CancellationToken cancellationToken = default)
+    {
+        // What the other packages serve, read before the install: the template cache may keep one template per identity.
+        var others = (await GetTemplatesAsync(cancellationToken).ConfigureAwait(false))
+            .Where(template => !MountPointMatches(template.MountPointUri, source))
+            .GroupBy(template => template.Identity, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().MountPointUri, StringComparer.Ordinal);
+
+        if (!await IsUnchangedAsync(source, cancellationToken).ConfigureAwait(false))
+        {
+            var (success, diagnostics) = await InstallPackageAsync(source, cancellationToken).ConfigureAwait(false);
+            if (!success)
+                return new ThirdPartyInstallResult(false, null, null, diagnostics);
+        }
+
+        var own = (await GetTemplatesAsync(cancellationToken).ConfigureAwait(false))
+            .Where(template => MountPointMatches(template.MountPointUri, source))
+            .Select(template => template.Identity);
+        foreach (var identity in own)
+        {
+            if (!others.TryGetValue(identity, out var otherSource))
+                continue;
+            await UninstallAsync(source, cancellationToken).ConfigureAwait(false);
+            return new ThirdPartyInstallResult(false, identity, otherSource, []);
+        }
+        return new ThirdPartyInstallResult(true, null, null, []);
+    }
+
+    /// <summary>
+    /// Whether the package at <paramref name="source"/> is installed and its .nupkg (the file itself, or the one at the
+    /// top of the extracted folder) has not changed since. A folder without a .nupkg counts as unchanged once installed.
+    /// </summary>
+    public async Task<bool> IsUnchangedAsync(string source, CancellationToken cancellationToken = default)
+    {
+        var installed = (await bootstrapper.GetTemplatePackagesAsync(cancellationToken).ConfigureAwait(false))
+            .FirstOrDefault(package => MountPointMatches(package.MountPointUri, source));
+        if (installed is null)
+            return false;
+
+        var nupkgFile = File.Exists(source)
+            ? source
+            : Directory.Exists(source) ? Directory.EnumerateFiles(source, "*.nupkg", SearchOption.TopDirectoryOnly).FirstOrDefault() : null;
+        var nupkgTime = nupkgFile != null ? File.GetLastWriteTimeUtc(nupkgFile) : DateTime.MinValue;
+        return installed.LastChangeTime >= nupkgTime;
+    }
+
+    private async Task UninstallAsync(string source, CancellationToken cancellationToken)
+    {
+        var packages = (await bootstrapper.GetManagedTemplatePackagesAsync(cancellationToken).ConfigureAwait(false))
+            .Where(package => MountPointMatches(package.MountPointUri, source))
+            .ToList();
+        if (packages.Count > 0)
+            await bootstrapper.UninstallTemplatePackagesAsync(packages, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Whether the registry's <paramref name="mountPointUri"/> is the package installed from <paramref name="source"/>: the
+    /// same folder, or, for a .nupkg (the registry mounts its own copy), the same file name.
+    /// </summary>
+    private static bool MountPointMatches(string mountPointUri, string source)
+    {
+        if (File.Exists(source))
+            return string.Equals(Path.GetFileName(mountPointUri), Path.GetFileName(source), StringComparison.OrdinalIgnoreCase);
+        return string.Equals(NormalizeFolder(mountPointUri), NormalizeFolder(source), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeFolder(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path).TrimEnd('\\', '/');
+        }
+        catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return path.TrimEnd('\\', '/');
+        }
+    }
+
     /// <summary>Enumerates all available templates (across all installed packages).</summary>
     public async Task<IReadOnlyList<ITemplateInfo>> GetTemplatesAsync(CancellationToken cancellationToken = default)
     {
@@ -190,3 +276,14 @@ public sealed class DotNetNewTemplateRegistry : IDisposable
         bootstrapper.Dispose();
     }
 }
+
+#nullable enable
+/// <summary>
+/// The outcome of <see cref="DotNetNewTemplateRegistry.InstallThirdPartyPackageAsync"/>.
+/// </summary>
+/// <param name="Installed">Whether the package is installed in the registry.</param>
+/// <param name="ConflictIdentity">The identity of the template that kept it out, or null.</param>
+/// <param name="ConflictSource">The mount point of the installed package that serves that identity, or null.</param>
+/// <param name="Diagnostics">The errors of a failed install.</param>
+public sealed record ThirdPartyInstallResult(bool Installed, string? ConflictIdentity, string? ConflictSource, IReadOnlyList<string> Diagnostics);
+#nullable restore

@@ -542,14 +542,11 @@ public static class DotNetNewTemplateBridge
         // Skip the install when the bootstrapper's recorded LastChangeTime is at or after the
         // .nupkg's on-disk mtime — same content as last session, no need to spend a few hundred
         // ms re-indexing. Dev rebuilds bump the .nupkg mtime and re-trigger.
-        var nupkgFile = Directory.EnumerateFiles(installSource, "*.nupkg", SearchOption.TopDirectoryOnly).FirstOrDefault();
-        var nupkgMtime = nupkgFile != null ? File.GetLastWriteTimeUtc(nupkgFile) : DateTime.MinValue;
-        var lastChangeTask = registry!.GetLastChangeTimeAsync(installSource);
-        lastChangeTask.Wait();
-        var lastInstalled = lastChangeTask.Result;
-        if (lastInstalled.HasValue && lastInstalled.Value >= nupkgMtime)
+        var unchangedTask = registry!.IsUnchangedAsync(installSource);
+        unchangedTask.Wait();
+        if (unchangedTask.Result)
         {
-            logger.Info($"{packageId} unchanged since {lastInstalled.Value:O}; skipping reinstall.");
+            logger.Info($"{packageId} unchanged since its last install; skipping reinstall.");
         }
         else
         {

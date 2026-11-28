@@ -51,6 +51,8 @@
     <Compile Include="TestAssetCompilerExecutableTargets.cs" />
     <Compile Include="TestCodeUpgrade.cs" />
     <Compile Include="TestContentTemplateResolver.cs" />
+    <Compile Include="TemplatePackageFolder.cs" />
+    <Compile Include="TestDotNetNewTemplateRegistry.cs" />
     <Compile Include="TestDotNetNewTemplateGenerator.cs" />
     <Compile Include="TestStrideCorePlatformTargets.cs" />
     <Compile Include="TestRenderFeatureProviders.cs" />
