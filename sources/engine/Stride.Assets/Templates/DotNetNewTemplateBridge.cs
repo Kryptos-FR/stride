@@ -492,11 +492,11 @@ public static class DotNetNewTemplateBridge
 
     /// <summary>
     /// The asset-pack item templates available for the New Game flow, in registry order. When
-    /// none are installed and <paramref name="allowDownload"/> is true, resolves the
+    /// none of Stride's are installed (third-party packs do not count) and <paramref name="allowDownload"/> is true, resolves the
     /// <see cref="AssetPacksPackageId"/> package at this engine's content version — downloading
     /// it from the configured NuGet sources if this machine doesn't have it — and installs it into
-    /// the registry. Returns an empty list when the package can't be obtained (e.g. offline);
-    /// callers degrade by not offering packs.
+    /// the registry. Returns the other packs only when the package can't be obtained (e.g. offline);
+    /// callers degrade by not offering Stride's.
     /// </summary>
     public static async Task<IReadOnlyList<ITemplateInfo>> GetAssetPackTemplatesAsync(bool allowDownload = true)
     {
@@ -505,7 +505,13 @@ public static class DotNetNewTemplateBridge
             return [];
 
         var packs = FilterAssetPacks(await registry.GetTemplatesAsync().ConfigureAwait(false));
-        if (packs.Count > 0 || !allowDownload)
+        string? builtInPacks;
+        lock (InitLock)
+        {
+            builtInPacks = assetPacksSource;
+        }
+        // Third-party packs alone do not stop the download of Stride's
+        if (HasBuiltInAssetPacks(packs, builtInPacks) || !allowDownload)
             return packs;
 
         // Download first, then the same path as startup probing: install the now-local package into the registry
@@ -521,11 +527,21 @@ public static class DotNetNewTemplateBridge
             }).ConfigureAwait(false);
         if (!installed)
         {
-            logger.Warning($"{AssetPacksPackageId} is unavailable; asset packs will not be offered.");
-            return [];
+            logger.Warning($"{AssetPacksPackageId} is unavailable; its asset packs will not be offered.");
+            return packs;
         }
         return FilterAssetPacks(await registry.GetTemplatesAsync().ConfigureAwait(false));
     }
+
+    /// <summary>
+    /// Whether <paramref name="packs"/> hold packs of Stride's own <see cref="AssetPacksPackageId"/> package, installed from
+    /// <paramref name="assetPacksSource"/>: packs of a third-party package do not stand for them.
+    /// </summary>
+    public static bool HasBuiltInAssetPacks(IEnumerable<ITemplateInfo> packs, string? assetPacksSource)
+        => assetPacksSource is not null && packs.Any(pack => DotNetNewTemplateRegistry.MountPointMatches(pack.MountPointUri, assetPacksSource));
+
+    /// <summary>The install source of the <see cref="AssetPacksPackageId"/> package in the registry, or null (guarded by <see cref="InitLock"/>).</summary>
+    private static string? assetPacksSource;
 
     /// <summary>Asset packs = item templates classified <c>AssetPacks</c> (see the preprocessor's item-template emission).</summary>
     private static IReadOnlyList<ITemplateInfo> FilterAssetPacks(IReadOnlyList<ITemplateInfo> templates)
@@ -753,6 +769,8 @@ public static class DotNetNewTemplateBridge
         }
 
         BuiltInSources.Add(installSource);
+        if (packageId == AssetPacksPackageId)
+            assetPacksSource = installSource;
 
         // Merge this package's aggregated metadata into the shared dict. Each entry remembers
         // the installSource it came from so Icon/Screenshot relative paths can be resolved later.

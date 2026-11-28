@@ -127,4 +127,24 @@ public sealed class TestThirdPartyTemplatePackages : IDisposable
         Assert.Empty(await packages.ScanAsync([games]));
         Assert.Empty(await Identities());
     }
+
+    [Fact]
+    public async Task OnlyAThirdPartyPackIsNotStridesAssetPacks()
+    {
+        var bar = Candidate("Bar.Templates", "1.0.0", new Template("bar-pack", "Bar.Pack", Item: true));
+        await packages.ScanAsync([bar]);
+        var assetPacks = Path.Combine(Store, "stride.templates.assetpacks", "4.5.6");
+
+        Assert.False(DotNetNewTemplateBridge.HasBuiltInAssetPacks(await registry.GetTemplatesAsync(), assetPacks));
+        Assert.False(DotNetNewTemplateBridge.HasBuiltInAssetPacks(await registry.GetTemplatesAsync(), null));
+    }
+
+    [Fact]
+    public async Task APackFromTheAssetPacksFolderIsStridesAssetPacks()
+    {
+        var assetPacks = await InstallBuiltIn("Stride.Templates.AssetPacks", new Template("stride-pack", "Stride.Pack", Item: true));
+        await packages.ScanAsync([Candidate("Bar.Templates", "1.0.0", new Template("bar-pack", "Bar.Pack", Item: true))]);
+
+        Assert.True(DotNetNewTemplateBridge.HasBuiltInAssetPacks(await registry.GetTemplatesAsync(), assetPacks));
+    }
 }
