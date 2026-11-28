@@ -89,6 +89,10 @@ The name can be dotted, as NuGet package ids usually are: `Acme.Fog` gives the p
 
 The template's content is small but complete: a component and a content type (runtime), an asset with its compiler, its asset template and the component's icon (Assets), the plugin class with a gizmo (Editor). The template source is [samples/Plugin/Plugin](../../samples/Plugin/Plugin).
 
+### Templates in a package of their own
+
+A plugin can also bring game templates and asset packs to the people who use it: a template package (NuGet type `Template`, tag `stride-template`, a dependency on `Stride.Core` at the engine version it is made for) that they add from Game Studio's *Template packages* window or with `stride template add`. Its game templates then show on the start screen (in *Other* unless they name a group) and in `stride new list`, and its asset packs in the New Game window under the package's id. See [Third-party template packages](../../sources/templates/README.md#third-party-template-packages).
+
 ## Building and packing
 
 - Platform: a plugin's projects target `net10.0` without a runtime identifier. Stride's targets give such a project the platform of the machine that builds it: Windows on Windows, Linux on Linux, macOS on macOS. A library or test project built on Linux or macOS then gets the Vulkan `Stride.Graphics`, as the game's Linux and macOS heads do. A `win-*` runtime identifier or a Windows target framework (`net10.0-windows`) still gives Windows.

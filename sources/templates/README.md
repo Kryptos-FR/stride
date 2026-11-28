@@ -88,6 +88,46 @@ Common parameters (template-dependent):
 
 `dotnet new <template> --help` lists the parameters each template accepts.
 
+## Third-party template packages
+
+Game Studio and the `stride` CLI also offer the templates of packages that are not Stride's. A package is
+found when it is in NuGet's global packages folder or in a local-folder package source, and:
+
+- declares the NuGet package type `Template` and has the tag `stride-template`;
+- names the engine version it is made for with a dependency on `Stride.Core` (the marker). Of the versions
+  of one package, the newest whose marker is not above the engine is taken, else the newest without a marker.
+  A package whose versions are all made for a newer engine is left out.
+
+Stride's own packages (the four above) are never found this way: the engine names their versions. The
+packages are taken in id order, and a package with a template whose identity an earlier one already serves is
+left out: Game Studio's *Template packages* window says which package holds it, and `stride new` prints a
+line on stderr.
+
+A game template shows on the start screen in the group its `.sdtpl` or its `template.json` names, else in
+*Other*, with a last line in its description: "From &lt;id&gt; &lt;version&gt; by &lt;authors&gt;.". An asset
+pack (an item template) shows in the New Game window under the id of its package, after Stride's packs.
+`stride new list` lists the templates of each package under its id.
+
+To add or remove a package:
+
+- **Game Studio**: *Template packages* on the start screen lists the packages found, with their version,
+  authors, licence and contents. *Add from a file...* takes a `.nupkg`, *Add by package id* takes an id (and a version) of
+  the configured sources. The package is checked (type, tag, marker, not one of Stride's), Game Studio asks
+  with what it is and where it comes from, installs it and shows its templates without a restart. *Remove*
+  takes every version of it out of the global packages folder.
+- **CLI**: `stride template add <file or id> [--package-version <v>] [--yes]`, `stride template list`,
+  `stride template remove <id> [--yes]`, with the same checks and texts (see the
+  [launcher README](../launcher/README.md#cli-stride)).
+
+A package found in a local-folder source is not removed by either: its file is in a folder Stride does not
+change, so the window and the CLI say to take it out of that folder.
+
+Templates contain project files and code that run when a project made from them is built: add only packages
+you trust.
+
+Authoring such a package outside this repository (a build package that packs and checks it) is a later step;
+until then a package is packed like the ones here, with the type, the tag and the marker above.
+
 ## Developing locally
 
 Building `Stride.Templates.Games` produces its `.nupkg` in `bin/packages/` and auto-deploys it to `%LocalAppData%\stride\nugetdev` so the GameStudio bridge picks it up on next editor launch:
@@ -233,6 +273,7 @@ copied into the user's project, where a `LICENSE.md` would collide with theirs.
 - **[`sources/templates/Stride.Templates.Common.targets`](Stride.Templates.Common.targets)** — shared MSBuild logic across the three packages (version derivation, content-versioning via `StrideSamplesVersion`, preprocess+aggregate Exec, auto-pack-deploy, CI safeguards, `StrideInstallTemplate` opt-in target).
 - **[`../../build/samples.proj`](../../build/samples.proj)** — standalone sample version management: `SamplesToDevEngine` / `SamplesToReleaseEngine` (flip in-repo samples between local-dev and clean) and `UpgradeSamples` (full release bump: dev → asset migration → clean). Uses [`StrideSamplesVersion.props`](StrideSamplesVersion.props) (the content-version authority) and [`../targets/Stride.GitVersion.targets`](../sdk/Stride.Build.Sdk/Sdk/Stride.GitVersion.targets) (the `StrideGitVersion` task, shared with `package.proj`).
 - **[`sources/engine/Stride.Assets/Templates/DotNetNewTemplateBridge.cs`](../engine/Stride.Assets/Templates/DotNetNewTemplateBridge.cs)** — GameStudio side: resolves the four packages (Games at the engine version, the content packages through [`ContentTemplateResolver`](../engine/Stride.Assets/Templates/ContentTemplateResolver.cs), shared by source with the CLI), installs into the editor's isolated TemplateEngine profile, registers each template as a `TemplateDotNetNewDescription` with `TemplateManager`.
+- **[`sources/engine/Stride.Assets/Templates/TemplatePackageRule.cs`](../engine/Stride.Assets/Templates/TemplatePackageRule.cs)** — which third-party template packages are found, shared by source with the CLI; [`ThirdPartyTemplatePackages.cs`](../engine/Stride.Assets/Templates/ThirdPartyTemplatePackages.cs) keeps a registry in line with it, [`TemplatePackageInstaller.cs`](../engine/Stride.Assets/Templates/TemplatePackageInstaller.cs) adds and removes a package for the *Template packages* window and `stride template`.
 - **[`sources/editor/Stride.Assets.Editor.Wpf/Templates/DotNetNewTemplateGenerator.cs`](../editor/Stride.Assets.Editor.Wpf/Templates/DotNetNewTemplateGenerator.cs)** — GameStudio session integration: dispatches instantiation through the registry, registers per-platform exec projects with the session post-load.
 
 ## Future work
