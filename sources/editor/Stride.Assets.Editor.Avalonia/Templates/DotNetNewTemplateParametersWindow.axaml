@@ -92,10 +92,20 @@
           </StackPanel>
           <TextBlock x:Name="NoAssetPacks" TextWrapping="Wrap" Margin="0,2" IsVisible="{Binding NoAssetPacksAvailable}"
                      Text="{sd:LocalizeString No asset packs are available. The AssetPacks package could not be downloaded.}"/>
-          <ItemsControl x:Name="AssetPacksList" ItemsSource="{Binding AssetPacks}">
+          <!-- One group per package: Stride's first with no header, then each third-party package under its id -->
+          <ItemsControl x:Name="AssetPacksList" ItemsSource="{Binding AssetPackGroups}">
             <ItemsControl.ItemTemplate>
-              <DataTemplate DataType="tpl:AssetPackViewModel">
-                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" Margin="0,2"/>
+              <DataTemplate DataType="tpl:AssetPackGroupViewModel">
+                <StackPanel>
+                  <TextBlock Text="{Binding Header}" IsVisible="{Binding HasHeader}" FontWeight="SemiBold" Margin="0,6,0,2"/>
+                  <ItemsControl ItemsSource="{Binding Packs}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="tpl:AssetPackViewModel">
+                        <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" Margin="0,2"/>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

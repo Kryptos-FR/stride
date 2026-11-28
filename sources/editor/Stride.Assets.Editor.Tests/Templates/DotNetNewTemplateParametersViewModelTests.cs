@@ -172,6 +172,41 @@ public sealed class DotNetNewTemplateParametersViewModelTests
     }
 
     [Fact]
+    public void ThePacksOfAThirdPartyPackageComeAfterStridesUnderTheNameOfTheirPackage()
+    {
+        ITemplateInfo[] packs =
+        [
+            new FakeTemplateInfo("Zeta.Pack", "Zeta pack"),
+            new FakeTemplateInfo("Stride.AssetPack.Particles", "Particles pack"),
+            new FakeTemplateInfo("Alpha.Pack.B", "B pack"),
+            new FakeTemplateInfo("Alpha.Pack.A", "A pack"),
+            new FakeTemplateInfo("Stride.AssetPack.Materials", "Materials pack"),
+        ];
+        string? PackageOf(ITemplateInfo pack)
+            => pack.Identity.StartsWith("Zeta", StringComparison.Ordinal) ? "Zeta.Templates"
+                : pack.Identity.StartsWith("Alpha", StringComparison.Ordinal) ? "alpha.Templates"
+                : null;
+
+        var viewModel = new DotNetNewTemplateParametersViewModel(Services, NewGameTemplate(), Task.FromResult<IReadOnlyList<ITemplateInfo>>(packs), PackageOf);
+
+        // Stride's group first, with no header; then one group per package, by id
+        Assert.Equal(["", "alpha.Templates", "Zeta.Templates"], viewModel.AssetPackGroups.Select(group => group.Header));
+        Assert.Equal([false, true, true], viewModel.AssetPackGroups.Select(group => group.HasHeader));
+        Assert.Equal(["Materials pack", "Particles pack"], viewModel.AssetPackGroups[0].Packs.Select(pack => pack.Name));
+        Assert.Equal(["A pack", "B pack"], viewModel.AssetPackGroups[1].Packs.Select(pack => pack.Name));
+        Assert.Equal(["Zeta pack"], viewModel.AssetPackGroups[2].Packs.Select(pack => pack.Name));
+        // The flat list, which WPF shows, has the same order
+        Assert.Equal(["Materials pack", "Particles pack", "A pack", "B pack", "Zeta pack"], viewModel.AssetPacks.Select(pack => pack.Name));
+        Assert.Equal("Zeta.Templates", viewModel.AssetPacks[4].PackageId);
+        Assert.Null(viewModel.AssetPacks[0].PackageId);
+
+        // One view model per pack: ticking it in a group ticks it in the flat list
+        viewModel.AssetPackGroups[2].Packs[0].IsChecked = true;
+        Assert.True(viewModel.AssetPacks[4].IsChecked);
+        Assert.Equal(["Zeta.Pack"], viewModel.SelectedAssetPackIdentities);
+    }
+
+    [Fact]
     public void NoAssetPackIsOfferedWhenNoneIsAvailable()
     {
         var viewModel = new DotNetNewTemplateParametersViewModel(Services, NewGameTemplate(), Task.FromResult<IReadOnlyList<ITemplateInfo>>([]));

@@ -88,6 +88,35 @@ public sealed class TemplateWindowTests
     }
 
     [AvaloniaFact]
+    public async Task TheParametersWindowShowsTheAssetPacksOfAThirdPartyPackageUnderItsId()
+    {
+        var packs = Task.FromResult<IReadOnlyList<ITemplateInfo>>(
+        [
+            new FakeTemplateInfo("Stride.AssetPack.Particles", "Particles pack"),
+            new FakeTemplateInfo("Bar.Pack", "Bar pack"),
+        ]);
+        var viewModel = new DotNetNewTemplateParametersViewModel(new ViewModelServiceProvider([DispatcherService.Create()]),
+            new FakeTemplateInfo("Stride.Templates.Game", "Test game"), packs, pack => pack.Identity == "Bar.Pack" ? "Bar.Templates" : null);
+        var window = new DotNetNewTemplateParametersWindow { DataContext = viewModel };
+        window.Show();
+        try
+        {
+            await PumpAsync();
+            Assert.Equal(2, window.AssetPacksList.ItemCount);
+            var visuals = window.AssetPacksList.GetVisualDescendants().ToList();
+            Assert.Equal(2, visuals.OfType<CheckBox>().Count());
+            // Stride's group shows no header, the other one its package id
+            var headers = visuals.OfType<TextBlock>().Where(x => x.DataContext is AssetPackGroupViewModel && x.Parent is StackPanel).ToList();
+            Assert.Equal(["Bar.Templates"], headers.Where(x => x.IsVisible).Select(x => x.Text));
+        }
+        finally
+        {
+            viewModel.Destroy();
+            await CloseAsync(window);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task TheParametersWindowShowsTheAssetPackDownload()
     {
         var packs = new TaskCompletionSource<IReadOnlyList<ITemplateInfo>>();

@@ -36,6 +36,7 @@ public sealed class DotNetNewTemplateParametersViewModel : DispatcherViewModel
     private double assetPacksDownloadProgress;
     private bool isAssetPacksDownloadSizeUnknown = true;
     private bool noAssetPacksAvailable;
+    private readonly Func<ITemplateInfo, string?> packageOf;
 
     /// <param name="serviceProvider">The services (the dispatcher updates the download status).</param>
     /// <param name="template">The template whose parameters are asked.</param>
@@ -43,7 +44,11 @@ public sealed class DotNetNewTemplateParametersViewModel : DispatcherViewModel
     /// The asset packs to offer, null for none. While the task runs (the AssetPacks package is downloading), the dialog shows the
     /// download progress; the packs are listed once it completes.
     /// </param>
-    public DotNetNewTemplateParametersViewModel(IViewModelServiceProvider serviceProvider, ITemplateInfo template, Task<IReadOnlyList<ITemplateInfo>>? assetPacks = null)
+    /// <param name="packageOf">
+    /// The id of the third-party package an asset pack comes from, null for Stride's; <see cref="DotNetNewTemplateBridge.PackageIdOf"/>
+    /// by default.
+    /// </param>
+    public DotNetNewTemplateParametersViewModel(IViewModelServiceProvider serviceProvider, ITemplateInfo template, Task<IReadOnlyList<ITemplateInfo>>? assetPacks = null, Func<ITemplateInfo, string?>? packageOf = null)
         : base(serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(template);
@@ -72,6 +77,7 @@ public sealed class DotNetNewTemplateParametersViewModel : DispatcherViewModel
             SyncHdrEnabled();
         }
 
+        this.packageOf = packageOf ?? DotNetNewTemplateBridge.PackageIdOf;
         OffersAssetPacks = assetPacks is not null;
         if (assetPacks is not null)
             LoadAssetPacks(assetPacks).Forget();
@@ -101,9 +107,16 @@ public sealed class DotNetNewTemplateParametersViewModel : DispatcherViewModel
     public bool OffersAssetPacks { get; }
 
     /// <summary>
-    /// The asset packs offered, once loaded.
+    /// The asset packs offered, once loaded: Stride's first, then the ones of third-party packages by package id; by name
+    /// within a package.
     /// </summary>
     public ObservableList<AssetPackViewModel> AssetPacks { get; } = [];
+
+    /// <summary>
+    /// The same packs as <see cref="AssetPacks"/> (the same view models), in one group per package: Stride's first, with no
+    /// header, then one headed by each third-party package id.
+    /// </summary>
+    public ObservableList<AssetPackGroupViewModel> AssetPackGroups { get; } = [];
 
     /// <summary>
     /// Whether the asset packs are still being loaded (the AssetPacks package is downloading).
@@ -289,8 +302,17 @@ public sealed class DotNetNewTemplateParametersViewModel : DispatcherViewModel
                 NoAssetPacksAvailable = true;
                 return;
             }
-            // By name, as WPF shows them on Windows (the order of the template registry follows the file system)
-            AssetPacks.AddRange(packs.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).Select(x => new AssetPackViewModel(x)));
+            // Stride's first, then by package; by name within a package, as WPF shows them on Windows (the order of the template
+            // registry follows the file system)
+            var groups = packs
+                .Select(pack => new AssetPackViewModel(pack, packageOf(pack)))
+                .GroupBy(pack => pack.PackageId ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(group => group.Key.Length == 0 ? 0 : 1)
+                .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new AssetPackGroupViewModel(group.Key, group.OrderBy(pack => pack.Name, StringComparer.OrdinalIgnoreCase).ToList()))
+                .ToList();
+            AssetPackGroups.AddRange(groups);
+            AssetPacks.AddRange(groups.SelectMany(group => group.Packs));
         });
     }
 

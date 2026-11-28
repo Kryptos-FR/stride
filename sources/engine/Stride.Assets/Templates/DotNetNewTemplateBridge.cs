@@ -322,6 +322,15 @@ public static class DotNetNewTemplateBridge
         }
     }
 
+    /// <summary>
+    /// The id of the third-party package <paramref name="template"/> comes from (by its mount point), or null for
+    /// Stride's own templates.
+    /// </summary>
+    public static string? PackageIdOf(ITemplateInfo template)
+        => ThirdPartyPackages
+            .FirstOrDefault(package => package.Installed && DotNetNewTemplateRegistry.MountPointMatches(template.MountPointUri, package.Package.InstallSource))
+            ?.Package.Id;
+
     /// <summary>The group of a third-party template that names none.</summary>
     public const string DefaultThirdPartyGroup = "Other";
 
