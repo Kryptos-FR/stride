@@ -97,11 +97,14 @@ public static class DotNetNewTemplateBridge
     /// <summary>Keeps the registry's third-party packages equal to what the rule finds; null until <see cref="RegisterProjectTemplates"/>.</summary>
     private static ThirdPartyTemplatePackages? thirdParty;
 
-    /// <summary>The scan of the third-party packages last started (guarded by <see cref="InitLock"/>).</summary>
-    private static Task<IReadOnlyList<ThirdPartyTemplatePackage>> thirdPartyScan = Task.FromResult<IReadOnlyList<ThirdPartyTemplatePackage>>([]);
+    /// <summary>
+    /// The scan of the third-party packages last started (written under <see cref="InitLock"/>; volatile, so that
+    /// <see cref="ThirdPartyScan"/> reads it without waiting for a scan that holds the lock).
+    /// </summary>
+    private static volatile Task<IReadOnlyList<ThirdPartyTemplatePackage>> thirdPartyScan = Task.FromResult<IReadOnlyList<ThirdPartyTemplatePackage>>([]);
 
-    /// <summary>Cancels the third-party scans (guarded by <see cref="InitLock"/>).</summary>
-    private static readonly CancellationTokenSource ThirdPartyCancellation = new();
+    /// <summary>Cancels the third-party scans; replaced by <see cref="RegisterProjectTemplates"/> once cancelled (guarded by <see cref="InitLock"/>).</summary>
+    private static CancellationTokenSource thirdPartyCancellation = new();
 
     /// <summary>
     /// The descriptions of the registered third-party templates by identity, with the install source of their package
@@ -115,16 +118,7 @@ public static class DotNetNewTemplateBridge
     /// registered with <see cref="TemplateManager"/> and the ones of packages that left are unregistered. A completed
     /// task when none ran. It never faults: a failure is logged.
     /// </summary>
-    public static Task ThirdPartyScan
-    {
-        get
-        {
-            lock (InitLock)
-            {
-                return thirdPartyScan;
-            }
-        }
-    }
+    public static Task ThirdPartyScan => thirdPartyScan;
 
     /// <summary>The third-party template packages the last scan found (see <see cref="ThirdPartyTemplatePackages.Packages"/>).</summary>
     public static IReadOnlyList<ThirdPartyTemplatePackage> ThirdPartyPackages => thirdParty?.Packages ?? [];
@@ -200,6 +194,8 @@ public static class DotNetNewTemplateBridge
 
             // Third-party packages: the store listing reads one nuspec per installed package, so it runs on the thread
             // pool after the built-in templates are shown; their templates arrive late, as downloaded content does.
+            if (thirdPartyCancellation.IsCancellationRequested)
+                thirdPartyCancellation = new CancellationTokenSource();
             thirdParty ??= new ThirdPartyTemplatePackages(
                 registry, HostVersion, new HashSet<string>(BundledTemplatePackageIds, StringComparer.OrdinalIgnoreCase),
                 () => BuiltInSources.ToList());
@@ -224,7 +220,7 @@ public static class DotNetNewTemplateBridge
     private static Task<IReadOnlyList<ThirdPartyTemplatePackage>> StartThirdPartyScan(Logger logger)
     {
         var previous = thirdPartyScan;
-        var cancellationToken = ThirdPartyCancellation.Token;
+        var cancellationToken = thirdPartyCancellation.Token;
         thirdPartyScan = Task.Run(() => ScanThirdPartyAsync(previous, logger, cancellationToken));
         return thirdPartyScan;
     }
@@ -248,7 +244,9 @@ public static class DotNetNewTemplateBridge
             lock (InitLock)
             {
                 var scanTask = thirdParty!.ScanAsync(installed, cancellationToken);
-                scanTask.Wait(cancellationToken);
+                // Not Wait(token): the scan checks the token between registry calls, and a call still running must end
+                // before the lock is released
+                scanTask.Wait();
                 var packages = scanTask.Result;
                 foreach (var package in packages)
                 {
@@ -371,7 +369,7 @@ public static class DotNetNewTemplateBridge
         {
             contentDownloadCancellation?.Cancel();
             // Shutdown does not wait on a slow store listing either
-            ThirdPartyCancellation.Cancel();
+            thirdPartyCancellation.Cancel();
             return Task.WhenAll(contentDownload, thirdPartyScan);
         }
     }
@@ -402,6 +400,9 @@ public static class DotNetNewTemplateBridge
                 foreach (var packageId in fetched)
                     InstallBundledPackage(packageId, sdtplsByIdentity, logger);
                 RegisterNewTemplates(sdtplsByIdentity, logger);
+                // A third-party package that took one of the new identities leaves
+                if (thirdParty is not null)
+                    StartThirdPartyScan(logger);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -448,9 +449,15 @@ public static class DotNetNewTemplateBridge
             if (!BuiltInSources.Any(source => DotNetNewTemplateRegistry.MountPointMatches(template.MountPointUri, source)))
                 continue;
 
-            // Registered by an earlier pass (startup, then the background download).
+            // Registered by an earlier pass (startup, then the background download), unless a third-party template took
+            // the identity before this built-in package arrived: Stride's template replaces it (the scan this pass
+            // starts then leaves that package out)
             if (!RegisteredTemplateIdentities.Add(template.Identity))
-                continue;
+            {
+                if (!ThirdPartyDescriptions.Remove(template.Identity, out var thirdPartyEntry))
+                    continue;
+                SyntheticPackage.Templates.Remove(thirdPartyEntry.Description);
+            }
 
             // Cross-ref by template.json identity → matches the sdtpl Id (we set
             // `identity = sdtpl.Id` in the preprocessor) so the dict lookup hits.
@@ -548,7 +555,12 @@ public static class DotNetNewTemplateBridge
             {
                 lock (InitLock)
                 {
-                    return InstallBundledPackage(AssetPacksPackageId, new Dictionary<string, TemplateMetadataSource>(), logger);
+                    if (!InstallBundledPackage(AssetPacksPackageId, new Dictionary<string, TemplateMetadataSource>(), logger))
+                        return false;
+                    // A third-party package that took one of the packs' identities leaves
+                    if (thirdParty is not null)
+                        StartThirdPartyScan(logger);
+                    return true;
                 }
             }).ConfigureAwait(false);
         if (!installed)
@@ -720,13 +732,17 @@ public static class DotNetNewTemplateBridge
     }
 
     /// <summary>
-    /// True when <paramref name="mountPointUri"/> exists AND — for packages we manage — its version is one this
+    /// True when <paramref name="mountPointUri"/> is a file, or a folder that exists AND — for packages we manage — its version is one this
     /// build may use (see <see cref="ResolvePackageDirectory"/>). Mount points use NuGet's global-folder layout
     /// (<c>&lt;root&gt;\&lt;id&gt;\&lt;version&gt;</c>), so id/version are the trailing two segments;
     /// unrecognized entries are left untouched.
     /// </summary>
     private static bool IsValidCurrentEntry(string mountPointUri)
     {
+        // A file is the registry's copy of a loose third-party .nupkg (the packages managed here are folders): the
+        // third-party scan removes it when its package leaves
+        if (File.Exists(mountPointUri))
+            return true;
         if (!Directory.Exists(mountPointUri))
             return false;
 

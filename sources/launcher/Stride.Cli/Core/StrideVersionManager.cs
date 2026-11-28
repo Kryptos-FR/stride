@@ -455,9 +455,10 @@ public sealed class StrideVersionManager
             var (success, _) = await registry.InstallPackageAsync(packageDir);
             installedAny |= success;
         }
+        var taken = DotNetNewTemplateRegistry.TakenBy(packageDirs);
         foreach (var candidate in discovered)
         {
-            var result = await registry.InstallThirdPartyPackageAsync(candidate.InstallSource, cancellationToken);
+            var result = await registry.InstallThirdPartyPackageAsync(candidate.InstallSource, taken, cancellationToken);
             installedAny |= result.Installed;
             if (result.ConflictIdentity is not null)
                 warnings?.Add($"Skipped {candidate.Id} {candidate.Version}: its template {result.ConflictIdentity} is also in {result.ConflictSource}.");

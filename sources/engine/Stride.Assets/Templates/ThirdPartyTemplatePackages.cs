@@ -31,7 +31,7 @@ public sealed record ThirdPartyTemplatePackage(
 /// <summary>
 /// Keeps the third-party template packages of a template registry equal to what <see cref="TemplatePackageRule"/>
 /// selects among the installed packages: installs the selected ones, removes the ones that are no longer selected,
-/// and leaves out a package whose template identity another package serves (see
+/// and leaves out a package whose template identity Stride's packages, or a package earlier by id, serve (see
 /// <see cref="DotNetNewTemplateRegistry.InstallThirdPartyPackageAsync"/>). The packages of the host itself (Stride's)
 /// are never removed.
 /// </summary>
@@ -58,11 +58,14 @@ public sealed class ThirdPartyTemplatePackages(
         var builtIn = builtInSources();
         await registry.RemovePackagesExceptAsync([.. builtIn, .. selected.Select(candidate => candidate.InstallSource)], cancellationToken).ConfigureAwait(false);
 
+        // Stride's packages take their identities first, then each package in id order: the result does not depend on
+        // what earlier scans installed, nor on when Stride's content arrived
+        var taken = DotNetNewTemplateRegistry.TakenBy(builtIn);
         var result = new List<ThirdPartyTemplatePackage>();
         foreach (var candidate in selected)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var install = await registry.InstallThirdPartyPackageAsync(candidate.InstallSource, cancellationToken).ConfigureAwait(false);
+            var install = await registry.InstallThirdPartyPackageAsync(candidate.InstallSource, taken, cancellationToken).ConfigureAwait(false);
             var templates = install.Installed
                 ? await registry.GetTemplatesOfAsync(candidate.InstallSource, cancellationToken).ConfigureAwait(false)
                 : [];

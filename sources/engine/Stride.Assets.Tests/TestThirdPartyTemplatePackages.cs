@@ -122,6 +122,40 @@ public sealed class TestThirdPartyTemplatePackages : IDisposable
     }
 
     [Fact]
+    public async Task APackageAddedLaterButFirstByIdTakesTheIdentityFromOneOfAnEarlierScan()
+    {
+        var zeta = Candidate("Zeta.Templates", "1.0.0", new Template("zeta-game", "Shared.Game"));
+        Assert.True(Assert.Single(await packages.ScanAsync([zeta])).Installed);
+        var alpha = Candidate("Alpha.Templates", "1.0.0", new Template("alpha-game", "Shared.Game"));
+
+        var result = await packages.ScanAsync([zeta, alpha]);
+
+        Assert.Equal(["Alpha.Templates", "Zeta.Templates"], result.Select(package => package.Package.Id));
+        Assert.True(result[0].Installed);
+        Assert.False(result[1].Installed);
+        Assert.Equal("Shared.Game", result[1].ConflictIdentity);
+        Assert.Equal("Alpha.Templates", result[1].ConflictPackage);
+        var template = Assert.Single(await registry.GetTemplatesAsync());
+        Assert.Equal(Path.GetFullPath(alpha.InstallSource), Path.GetFullPath(template.MountPointUri).TrimEnd('/', '\\'));
+    }
+
+    [Fact]
+    public async Task ABuiltInPackageInstalledAfterAScanTakesTheIdentityBack()
+    {
+        // Stride's content arrives late (downloaded after start): its templates win over a third-party package's
+        var bar = Candidate("Bar.Templates", "1.0.0", new Template("bar-game", "Bar.Game"), new Template("copy", "Stride.Starter"));
+        Assert.True(Assert.Single(await packages.ScanAsync([bar])).Installed);
+        await InstallBuiltIn("Stride.Templates.Games.Starters", new Template("starter", "Stride.Starter"));
+
+        var package = Assert.Single(await packages.ScanAsync([bar]));
+
+        Assert.False(package.Installed);
+        Assert.Equal("Stride.Starter", package.ConflictIdentity);
+        Assert.Equal("stride.templates.games.starters", package.ConflictPackage);
+        Assert.Equal(["Stride.Starter"], await Identities());
+    }
+
+    [Fact]
     public async Task APinnedIdIsNeverScanned()
     {
         var games = Candidate("Stride.Templates.Games", "9.0.0", new Template("game", "Other.Game"));

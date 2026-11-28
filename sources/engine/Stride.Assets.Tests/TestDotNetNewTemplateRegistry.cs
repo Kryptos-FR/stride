@@ -30,7 +30,7 @@ public sealed class TestDotNetNewTemplateRegistry : IDisposable
     {
         var folder = Write(Packages, "Foo.Templates", "1.0.0", new Template("foo-game", "Foo.Game"), new Template("foo-pack", "Foo.Pack", Item: true));
 
-        var result = await registry.InstallThirdPartyPackageAsync(folder);
+        var result = await registry.InstallThirdPartyPackageAsync(folder, new Dictionary<string, string>());
 
         Assert.True(result.Installed);
         Assert.Null(result.ConflictIdentity);
@@ -44,7 +44,7 @@ public sealed class TestDotNetNewTemplateRegistry : IDisposable
         var second = Write(Packages, "Bar.Templates", "1.0.0", new Template("bar-game", "Bar.Game"), new Template("bar-copy", "Shared.Identity"));
         Assert.True((await registry.InstallPackageAsync(first)).Success);
 
-        var result = await registry.InstallThirdPartyPackageAsync(second);
+        var result = await registry.InstallThirdPartyPackageAsync(second, DotNetNewTemplateRegistry.TakenBy([first]));
 
         Assert.False(result.Installed);
         Assert.Equal("Shared.Identity", result.ConflictIdentity);
@@ -61,11 +61,11 @@ public sealed class TestDotNetNewTemplateRegistry : IDisposable
         var folder = Write(Packages, "Foo.Templates", "1.0.0", new Template("foo-game", "Foo.Game"));
         File.WriteAllText(Path.Combine(folder, "foo.templates.1.0.0.nupkg"), "not read");
         File.SetLastWriteTimeUtc(Path.Combine(folder, "foo.templates.1.0.0.nupkg"), DateTime.UtcNow.AddMinutes(-5));
-        Assert.True((await registry.InstallThirdPartyPackageAsync(folder)).Installed);
+        Assert.True((await registry.InstallThirdPartyPackageAsync(folder, new Dictionary<string, string>())).Installed);
         var installedAt = await registry.GetLastChangeTimeAsync(folder);
 
         Assert.True(await registry.IsUnchangedAsync(folder));
-        var again = await registry.InstallThirdPartyPackageAsync(folder);
+        var again = await registry.InstallThirdPartyPackageAsync(folder, new Dictionary<string, string>());
 
         Assert.True(again.Installed);
         Assert.Equal(installedAt, await registry.GetLastChangeTimeAsync(folder));
@@ -78,11 +78,22 @@ public sealed class TestDotNetNewTemplateRegistry : IDisposable
         var nupkg = Path.Combine(folder, "foo.templates.1.0.0.nupkg");
         File.WriteAllText(nupkg, "not read");
         File.SetLastWriteTimeUtc(nupkg, DateTime.UtcNow.AddMinutes(-5));
-        Assert.True((await registry.InstallThirdPartyPackageAsync(folder)).Installed);
+        Assert.True((await registry.InstallThirdPartyPackageAsync(folder, new Dictionary<string, string>())).Installed);
 
         File.SetLastWriteTimeUtc(nupkg, DateTime.UtcNow.AddMinutes(5));
 
         Assert.False(await registry.IsUnchangedAsync(folder));
+    }
+
+    [Fact]
+    public void TheIdentitiesAreReadFromAFolderAndFromANupkg()
+    {
+        var folder = Write(Packages, "Foo.Templates", "1.0.0", new Template("foo-game", "Foo.Game"), new Template("foo-pack", "Foo.Pack", Item: true));
+        var nupkg = Path.Combine(root, "foo.templates.1.0.0.nupkg");
+        System.IO.Compression.ZipFile.CreateFromDirectory(folder, nupkg);
+
+        Assert.Equal(["Foo.Game", "Foo.Pack"], DotNetNewTemplateRegistry.ReadTemplateIdentities(folder).Order());
+        Assert.Equal(["Foo.Game", "Foo.Pack"], DotNetNewTemplateRegistry.ReadTemplateIdentities(nupkg).Order());
     }
 
     [Fact]

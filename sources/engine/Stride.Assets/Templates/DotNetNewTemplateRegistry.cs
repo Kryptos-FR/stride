@@ -141,19 +141,27 @@ public sealed class DotNetNewTemplateRegistry : IDisposable
 
     /// <summary>
     /// Installs the third-party template package at <paramref name="source"/> (kept as it is when
-    /// <see cref="IsUnchangedAsync"/>), unless one of its templates has the identity of a template another installed
-    /// package serves: the package is then uninstalled again and the result names the clash. The registry cannot
-    /// hold two templates of one identity safely (instantiation finds a template by identity), and a package cannot
-    /// be installed with some of its templates left out, so the package installed first wins: Stride's, then the
-    /// third-party ones in the order the caller installs them.
+    /// <see cref="IsUnchangedAsync"/>), unless one of its templates has an identity of <paramref name="taken"/>: the
+    /// package is then uninstalled (an earlier run may have installed it) and the result names the clash. The registry
+    /// cannot hold two templates of one identity safely (instantiation finds a template by identity), and a package
+    /// cannot be installed with some of its templates left out, so whoever took the identity first wins: the caller
+    /// fills <paramref name="taken"/> with Stride's packages, then passes the third-party ones in id order. The
+    /// identities are read from the package's files (see <see cref="ReadTemplateIdentities"/>), since the template cache
+    /// keeps one template per identity.
     /// </summary>
-    public async Task<ThirdPartyInstallResult> InstallThirdPartyPackageAsync(string source, CancellationToken cancellationToken = default)
+    /// <param name="source">The package folder, or a .nupkg file.</param>
+    /// <param name="taken">The identities served already, with the source that serves each; the package's own are added when it is installed.</param>
+    /// <param name="cancellationToken">Stops the install.</param>
+    public async Task<ThirdPartyInstallResult> InstallThirdPartyPackageAsync(string source, IDictionary<string, string> taken, CancellationToken cancellationToken = default)
     {
-        // What the other packages serve, read before the install: the template cache may keep one template per identity.
-        var others = (await GetTemplatesAsync(cancellationToken).ConfigureAwait(false))
-            .Where(template => !MountPointMatches(template.MountPointUri, source))
-            .GroupBy(template => template.Identity, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First().MountPointUri, StringComparer.Ordinal);
+        var own = ReadTemplateIdentities(source);
+        foreach (var identity in own)
+        {
+            if (!taken.TryGetValue(identity, out var otherSource))
+                continue;
+            await UninstallAsync(source, cancellationToken).ConfigureAwait(false);
+            return new ThirdPartyInstallResult(false, identity, otherSource, []);
+        }
 
         if (!await IsUnchangedAsync(source, cancellationToken).ConfigureAwait(false))
         {
@@ -161,18 +169,80 @@ public sealed class DotNetNewTemplateRegistry : IDisposable
             if (!success)
                 return new ThirdPartyInstallResult(false, null, null, diagnostics);
         }
-
-        var own = (await GetTemplatesAsync(cancellationToken).ConfigureAwait(false))
-            .Where(template => MountPointMatches(template.MountPointUri, source))
-            .Select(template => template.Identity);
         foreach (var identity in own)
-        {
-            if (!others.TryGetValue(identity, out var otherSource))
-                continue;
-            await UninstallAsync(source, cancellationToken).ConfigureAwait(false);
-            return new ThirdPartyInstallResult(false, identity, otherSource, []);
-        }
+            taken.TryAdd(identity, source);
         return new ThirdPartyInstallResult(true, null, null, []);
+    }
+
+    /// <summary>
+    /// The template identities <paramref name="sources"/> serve, with the source of each, for
+    /// <see cref="InstallThirdPartyPackageAsync"/>.
+    /// </summary>
+    public static Dictionary<string, string> TakenBy(IEnumerable<string> sources)
+    {
+        var taken = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var source in sources)
+        {
+            foreach (var identity in ReadTemplateIdentities(source))
+                taken.TryAdd(identity, source);
+        }
+        return taken;
+    }
+
+    /// <summary>
+    /// The identities of the templates of the package at <paramref name="source"/> (a folder, or a .nupkg file): the
+    /// <c>identity</c> of each <c>content/.template.config/template.json</c> and <c>content/&lt;template&gt;/.template.config/template.json</c>.
+    /// A file that cannot be read is skipped: the install reports it.
+    /// </summary>
+    public static IReadOnlyList<string> ReadTemplateIdentities(string source)
+    {
+        var identities = new List<string>();
+        try
+        {
+            if (Directory.Exists(source))
+            {
+                var content = Path.Combine(source, "content");
+                if (!Directory.Exists(content))
+                    return identities;
+                foreach (var folder in Directory.EnumerateDirectories(content).Prepend(content))
+                {
+                    var file = Path.Combine(folder, ".template.config", "template.json");
+                    if (File.Exists(file) && IdentityOf(File.ReadAllText(file)) is { } identity)
+                        identities.Add(identity);
+                }
+            }
+            else if (File.Exists(source))
+            {
+                using var zip = System.IO.Compression.ZipFile.OpenRead(source);
+                foreach (var entry in zip.Entries)
+                {
+                    var parts = entry.FullName.Split('/', '\\');
+                    if (parts.Length is < 3 or > 4 || !parts[0].Equals("content", StringComparison.OrdinalIgnoreCase)
+                        || parts[^2] != ".template.config" || !parts[^1].Equals("template.json", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    using var reader = new StreamReader(entry.Open());
+                    if (IdentityOf(reader.ReadToEnd()) is { } identity)
+                        identities.Add(identity);
+                }
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            // Unreadable: the install reports it
+        }
+        return identities;
+
+        static string? IdentityOf(string json)
+        {
+            try
+            {
+                return JsonNode.Parse(json, documentOptions: new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip, AllowTrailingCommas = true })?["identity"]?.GetValue<string>();
+            }
+            catch (Exception e) when (e is System.Text.Json.JsonException or InvalidOperationException or FormatException)
+            {
+                return null;
+            }
+        }
     }
 
     /// <summary>
