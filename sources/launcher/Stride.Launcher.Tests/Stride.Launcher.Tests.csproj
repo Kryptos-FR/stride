@@ -25,5 +25,6 @@
     <Compile Include="..\Stride.Cli\Core\VersionRules.cs" Link="Cli\VersionRules.cs" />
     <Compile Include="..\Stride.Cli\Core\VersionFilter.cs" Link="Cli\VersionFilter.cs" />
     <Compile Include="..\..\engine\Stride.Assets\Templates\AssetPackPlacement.cs" Link="Cli\AssetPackPlacement.cs" />
+    <Compile Include="..\..\engine\Stride.Assets\Templates\TemplatePackageRule.cs" Link="Cli\TemplatePackageRule.cs" />
   </ItemGroup>
 </Project>

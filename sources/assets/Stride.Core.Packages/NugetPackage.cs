@@ -128,6 +128,11 @@ public abstract class NugetPackage : IEquatable<NugetPackage>
     public Uri LicenseUrl => packageMetadata.LicenseUrl;
 
     /// <summary>
+    /// The license expression of this package (e.g. <c>MIT</c>), or null when it gives a license URL or file instead.
+    /// </summary>
+    public string? LicenseExpression => packageMetadata.LicenseMetadata?.License;
+
+    /// <summary>
     /// The URL of this package's project.
     /// </summary>
     public Uri ProjectUrl => packageMetadata.ProjectUrl;
