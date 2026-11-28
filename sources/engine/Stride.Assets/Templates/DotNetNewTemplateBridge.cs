@@ -331,6 +331,31 @@ public static class DotNetNewTemplateBridge
             .FirstOrDefault(package => package.Installed && DotNetNewTemplateRegistry.MountPointMatches(template.MountPointUri, package.Package.InstallSource))
             ?.Package.Id;
 
+    /// <summary>
+    /// The shared code that adds and removes third-party template packages (the <em>Template packages</em> window), over
+    /// Game Studio's package store, for this engine. Call <see cref="RescanThirdPartyAsync"/> after an add or a remove.
+    /// </summary>
+    public static TemplatePackageInstaller CreateTemplatePackageInstaller()
+    {
+        var packages = PackageStore.Instance;
+        var store = new NugetTemplatePackageStore(
+            packages.GetAllPackagesInstalled,
+            () => packages.LocalFolderSources,
+            packages.FindSourcePackagesById,
+            (id, version, cancellationToken) => packages.InstallPackage(id, version, cancellationToken: cancellationToken),
+            (id, version, folder) => NugetTemplatePackageStore.RestoreWithFolderAsync(
+                (outputPath, sources) => RestoreWithSources(packages, id, version, outputPath, sources), id, version, folder),
+            packages.UninstallPackages);
+        return new TemplatePackageInstaller(store, HostVersion, new HashSet<string>(BundledTemplatePackageIds, StringComparer.OrdinalIgnoreCase));
+    }
+
+    // RestorePackage with extra sources is the one way to install from a folder that is not a configured source; it is
+    // marked experimental (STREXP002) because its signature may still change.
+#pragma warning disable STREXP002
+    private static Task RestoreWithSources(PackageStore packages, string id, PackageVersion version, string outputPath, IReadOnlyList<string> sources)
+        => packages.RestorePackage(id, version, "net10.0", settingsRoot: null, outputPath, sources);
+#pragma warning restore STREXP002
+
     /// <summary>The group of a third-party template that names none.</summary>
     public const string DefaultThirdPartyGroup = "Other";
 

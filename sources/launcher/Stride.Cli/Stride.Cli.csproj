@@ -66,5 +66,7 @@
     <Compile Include="..\..\engine\Stride.Assets\Templates\DotNetNewTemplateRegistry.cs" Link="Core\Templates\DotNetNewTemplateRegistry.cs" />
     <Compile Include="..\..\engine\Stride.Assets\Templates\StrideTemplateEngineEnvironment.cs" Link="Core\Templates\StrideTemplateEngineEnvironment.cs" />
     <Compile Include="..\..\engine\Stride.Assets\Templates\TemplatePackageRule.cs" Link="Core\Templates\TemplatePackageRule.cs" />
+    <Compile Include="..\..\engine\Stride.Assets\Templates\TemplatePackageInstaller.cs" Link="Core\Templates\TemplatePackageInstaller.cs" />
+    <Compile Include="..\..\engine\Stride.Assets\Templates\NugetTemplatePackageStore.cs" Link="Core\Templates\NugetTemplatePackageStore.cs" />
   </ItemGroup>
 </Project>

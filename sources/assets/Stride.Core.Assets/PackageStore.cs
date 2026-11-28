@@ -165,6 +165,17 @@ public class PackageStore
     public IReadOnlyList<string> LocalFolderSources => store.LocalFolderSources;
 
     /// <summary>
+    /// Every listed version of <paramref name="packageId"/> in the configured sources (see <see cref="NugetStore.FindSourcePackagesById"/>).
+    /// </summary>
+    public Task<IEnumerable<NugetServerPackage>> FindSourcePackagesById(string packageId, CancellationToken cancellationToken)
+        => store.FindSourcePackagesById(packageId, cancellationToken);
+
+    /// <summary>
+    /// Uninstalls <paramref name="packages"/> from the global packages folder (see <see cref="NugetStore.UninstallPackages"/>).
+    /// </summary>
+    public Task UninstallPackages(IReadOnlyList<NugetPackage> packages) => store.UninstallPackages(packages, null);
+
+    /// <summary>
     /// Restores a package and its dependencies from the NuGet sources configured for <paramref name="settingsRoot"/>.
     /// </summary>
     public Task<LockFile> RestorePackage(string packageName, PackageVersion version, string targetFramework, string? settingsRoot, string outputPath)
