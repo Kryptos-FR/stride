@@ -54,6 +54,12 @@ public sealed class TemplateDescriptionGroupViewModel : DispatcherViewModel, ICo
         return Templates.Concat(allGroups.SelectMany(x => x.Templates));
     }
 
+    /// <summary>
+    /// Removes <paramref name="subGroup"/> from the sub-groups of this group.
+    /// </summary>
+    /// <returns>Whether it was a sub-group of this group.</returns>
+    public bool RemoveSubGroup(TemplateDescriptionGroupViewModel subGroup) => subGroups.Remove(subGroup);
+
     public void Clear()
     {
         subGroups.Clear();

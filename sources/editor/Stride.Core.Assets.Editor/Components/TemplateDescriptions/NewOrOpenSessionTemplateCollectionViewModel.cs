@@ -89,7 +89,7 @@ public sealed class NewOrOpenSessionTemplateCollectionViewModel : ProjectTemplat
 
         // Add a default General group
         defaultGroup = new TemplateDescriptionGroupViewModel(rootGroup, "General");
-        AddNewTemplates();
+        SyncTemplates();
 
         // Template packages still downloading at startup: show their progress, list their templates once ready.
         TemplateManager.PackagesChanged += OnTemplatePackagesChanged;
@@ -299,30 +299,82 @@ public sealed class NewOrOpenSessionTemplateCollectionViewModel : ProjectTemplat
         return GenerateUniqueNameAtLocation();
     }
 
-    private void AddNewTemplates()
+    /// <summary>
+    /// Brings the listed templates in line with <see cref="TemplateManager"/>: lists the templates that arrived (a late
+    /// download, a third-party package added) and drops the ones that left (a third-party package removed), with the
+    /// groups they leave empty ("General" stays). The selection is kept, unless the selected template left.
+    /// </summary>
+    private void SyncTemplates()
     {
         if (IsDestroyed)
             return;
-        var added = false;
-        foreach (var template in TemplateManager.FindTemplates(TemplateScope.Session))
+        var found = TemplateManager.FindTemplates(TemplateScope.Session)
+            .Where(template => template.Id != StrideLibraryTemplateId)
+            .ToHashSet<TemplateDescription>(ReferenceEqualityComparer.Instance);
+        var changed = false;
+
+        foreach (var viewModel in rootGroup.GetTemplatesRecursively().OfType<TemplateDescriptionViewModel>().ToList())
         {
-            if (template.Id == StrideLibraryTemplateId || !listedTemplates.Add(template))
+            var template = viewModel.GetTemplate();
+            if (found.Contains(template))
+                continue;
+            RemoveFromGroups(rootGroup, viewModel);
+            listedTemplates.Remove(template);
+            changed = true;
+        }
+
+        foreach (var template in found)
+        {
+            if (!listedTemplates.Add(template))
                 continue;
             var viewModel = new TemplateDescriptionViewModel(ServiceProvider, template);
             var group = ProcessGroup(rootGroup, template.Group) ?? defaultGroup;
             group.Templates.Add(viewModel);
-            added = true;
+            changed = true;
         }
-        if (added && SelectedGroup is not null)
+
+        if (changed && SelectedGroup is not null)
         {
-            // Refreshing the list clears the selection in the view: keep the user's choice.
+            // Refreshing the list clears the selection in the view: keep the user's choice, if it is still listed.
             var selected = SelectedTemplate;
+            // A group the sync removed is no longer in the tree
+            if (!IsInTree(SelectedGroup))
+                SelectedGroup = rootGroup;
             UpdateTemplateList();
-            SelectedTemplate = selected;
+            SelectedTemplate = selected is not null && Templates.Contains(selected) ? selected : null;
         }
     }
 
-    private void OnTemplatePackagesChanged() => Dispatcher.InvokeAsync(AddNewTemplates);
+    /// <summary>
+    /// Removes <paramref name="viewModel"/> from the group that holds it, and the groups that it leaves empty, up to
+    /// <paramref name="group"/> (kept, as is <see cref="defaultGroup"/>).
+    /// </summary>
+    private bool RemoveFromGroups(TemplateDescriptionGroupViewModel group, TemplateDescriptionViewModel viewModel)
+    {
+        if (group.Templates.Remove(viewModel))
+            return true;
+        foreach (var subGroup in group.SubGroups.ToList())
+        {
+            if (!RemoveFromGroups(subGroup, viewModel))
+                continue;
+            if (subGroup != defaultGroup && subGroup.Templates.Count == 0 && subGroup.SubGroups.Count == 0)
+                group.RemoveSubGroup(subGroup);
+            return true;
+        }
+        return false;
+    }
+
+    private bool IsInTree(TemplateDescriptionGroupViewModel group)
+    {
+        for (; group.Parent is not null; group = group.Parent)
+        {
+            if (!group.Parent.SubGroups.Contains(group))
+                return false;
+        }
+        return group == rootGroup || group == recentGroup;
+    }
+
+    private void OnTemplatePackagesChanged() => Dispatcher.InvokeAsync(SyncTemplates);
 
     private void OnTemplateDownloadsChanged() => Dispatcher.InvokeAsync(UpdateDownloadStatus);
 

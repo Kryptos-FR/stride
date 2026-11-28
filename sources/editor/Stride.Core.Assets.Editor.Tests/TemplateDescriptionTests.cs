@@ -4,6 +4,7 @@
 using Stride.Core.Assets.Editor.Components.TemplateDescriptions;
 using Stride.Core.Assets.Editor.Settings;
 using Stride.Core.Assets.Editor.Tests.Helpers;
+using Stride.Core.Assets.Templates;
 using Stride.Core.IO;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Presentation.ViewModels;
@@ -258,6 +259,54 @@ public sealed class TemplateDescriptionTests
         finally
         {
             templates.Destroy();
+        }
+    }
+
+    [Fact]
+    public void TheProjectSelectionDropsATemplateWhosePackageWasRemoved()
+    {
+        // A package of its own, so the templates of the other tests stay as they are
+        var directory = Path.Combine(Path.GetTempPath(), "Stride.Core.Assets.Editor.Tests", "Templates", Guid.NewGuid().ToString("N"));
+        var package = new Package { FullPath = new UFile(Path.Combine(directory, "Removable" + Package.PackageFileExtension)) };
+        var leaving = new TemplateDescription
+        {
+            Id = Guid.NewGuid(),
+            Name = "Leaving game",
+            Scope = TemplateScope.Session,
+            Group = "Removable " + Guid.NewGuid().ToString("N"),
+            FullPath = new UFile(Path.Combine(directory, "Leaving.sdtpl")),
+        };
+        package.Templates.Add(leaving);
+        TemplateManager.RegisterPackage(package);
+        var templates = new NewOrOpenSessionTemplateCollectionViewModel(CreateServices(), [], _ => { });
+        try
+        {
+            var group = Assert.Single(templates.NewProjectGroup.SubGroups, x => x.Name == leaving.Group);
+            var listed = Assert.Single(group.Templates);
+            templates.SelectedTemplate = listed;
+            Assert.Contains(listed, templates.Templates);
+
+            package.Templates.Remove(leaving);
+            TemplateManager.RegisterPackage(package);
+
+            Assert.DoesNotContain(templates.NewProjectGroup.GetTemplatesRecursively(), x => x.Id == leaving.Id);
+            Assert.DoesNotContain(templates.NewProjectGroup.SubGroups, x => x.Name == leaving.Group);
+            Assert.DoesNotContain(templates.Templates, x => x.Id == leaving.Id);
+            Assert.Null(templates.SelectedTemplate);
+            // The other templates stay, and so does the General group
+            Assert.Contains(templates.NewProjectGroup.GetTemplatesRecursively(), x => x.Id == TestTemplatePackage.GameId);
+            Assert.Single(templates.NewProjectGroup.SubGroups, x => x.Name == "General");
+
+            // A template that comes back is listed again
+            package.Templates.Add(leaving);
+            TemplateManager.RegisterPackage(package);
+            Assert.Contains(templates.NewProjectGroup.GetTemplatesRecursively(), x => x.Id == leaving.Id);
+        }
+        finally
+        {
+            templates.Destroy();
+            package.Templates.Clear();
+            TemplateManager.RegisterPackage(package);
         }
     }
 
