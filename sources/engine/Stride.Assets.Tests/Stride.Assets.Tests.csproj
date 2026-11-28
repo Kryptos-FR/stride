@@ -53,6 +53,7 @@
     <Compile Include="TestContentTemplateResolver.cs" />
     <Compile Include="TemplatePackageFolder.cs" />
     <Compile Include="TestDotNetNewTemplateRegistry.cs" />
+    <Compile Include="TestThirdPartyTemplatePackages.cs" />
     <Compile Include="TestDotNetNewTemplateGenerator.cs" />
     <Compile Include="TestStrideCorePlatformTargets.cs" />
     <Compile Include="TestRenderFeatureProviders.cs" />

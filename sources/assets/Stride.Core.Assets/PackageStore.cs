@@ -154,6 +154,17 @@ public class PackageStore
     public long StartedDownloadBytes => store.NugetStartedDownloadBytes;
 
     /// <summary>
+    /// Every package installed in the store, regardless of id, and the loose .nupkg files of the local-folder sources
+    /// (see <see cref="NugetStore.GetAllPackagesInstalled"/>).
+    /// </summary>
+    public IEnumerable<NugetLocalPackage> GetAllPackagesInstalled() => store.GetAllPackagesInstalled();
+
+    /// <summary>
+    /// The paths of the enabled local-folder sources (see <see cref="NugetStore.LocalFolderSources"/>).
+    /// </summary>
+    public IReadOnlyList<string> LocalFolderSources => store.LocalFolderSources;
+
+    /// <summary>
     /// Restores a package and its dependencies from the NuGet sources configured for <paramref name="settingsRoot"/>.
     /// </summary>
     public Task<LockFile> RestorePackage(string packageName, PackageVersion version, string targetFramework, string? settingsRoot, string outputPath)

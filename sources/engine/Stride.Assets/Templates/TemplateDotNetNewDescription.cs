@@ -1,6 +1,8 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net) and Silicon Studio Corp. (https://www.siliconstudio.co.jp)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
+#nullable enable
+
 using Stride.Core.Assets.Templates;
 
 namespace Stride.Assets.Templates;
@@ -34,4 +36,9 @@ public class TemplateDotNetNewDescription : TemplateDescription
     /// pack is instantiated into the generated game library after the main template.
     /// </summary>
     public bool OffersAssetPacks { get; set; }
+
+    /// <summary>
+    /// The id of the third-party template package the template comes from, or null for Stride's own templates.
+    /// </summary>
+    public string? SourcePackageId { get; set; }
 }

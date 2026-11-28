@@ -91,6 +91,44 @@ public static class DotNetNewTemplateBridge
         }
     }
 
+    /// <summary>The install sources of the built-in packages in the registry (guarded by <see cref="InitLock"/>).</summary>
+    private static readonly HashSet<string> BuiltInSources = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Keeps the registry's third-party packages equal to what the rule finds; null until <see cref="RegisterProjectTemplates"/>.</summary>
+    private static ThirdPartyTemplatePackages? thirdParty;
+
+    /// <summary>The scan of the third-party packages last started (guarded by <see cref="InitLock"/>).</summary>
+    private static Task<IReadOnlyList<ThirdPartyTemplatePackage>> thirdPartyScan = Task.FromResult<IReadOnlyList<ThirdPartyTemplatePackage>>([]);
+
+    /// <summary>Cancels the third-party scans (guarded by <see cref="InitLock"/>).</summary>
+    private static readonly CancellationTokenSource ThirdPartyCancellation = new();
+
+    /// <summary>
+    /// The descriptions of the registered third-party templates by identity, with the install source of their package
+    /// (guarded by <see cref="InitLock"/>).
+    /// </summary>
+    private static readonly Dictionary<string, (TemplateDotNetNewDescription Description, string Source)> ThirdPartyDescriptions = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The scan of the third-party template packages last started: after <see cref="RegisterProjectTemplates"/>, and
+    /// again by <see cref="RescanThirdPartyAsync"/>. When it ends, the templates of the packages it installed are
+    /// registered with <see cref="TemplateManager"/> and the ones of packages that left are unregistered. A completed
+    /// task when none ran. It never faults: a failure is logged.
+    /// </summary>
+    public static Task ThirdPartyScan
+    {
+        get
+        {
+            lock (InitLock)
+            {
+                return thirdPartyScan;
+            }
+        }
+    }
+
+    /// <summary>The third-party template packages the last scan found (see <see cref="ThirdPartyTemplatePackages.Packages"/>).</summary>
+    public static IReadOnlyList<ThirdPartyTemplatePackage> ThirdPartyPackages => thirdParty?.Packages ?? [];
+
     /// <summary>Identities of the templates already registered with <see cref="TemplateManager"/> (guarded by <see cref="InitLock"/>).</summary>
     private static readonly HashSet<string> RegisteredTemplateIdentities = new(StringComparer.Ordinal);
 
@@ -159,11 +197,146 @@ public static class DotNetNewTemplateBridge
                 contentDownloadCancellation = cancellation;
                 contentDownload = Task.Run(() => DownloadMissingContentAsync(missingContent, logger, cancellation));
             }
+
+            // Third-party packages: the store listing reads one nuspec per installed package, so it runs on the thread
+            // pool after the built-in templates are shown; their templates arrive late, as downloaded content does.
+            thirdParty ??= new ThirdPartyTemplatePackages(
+                registry, HostVersion, new HashSet<string>(BundledTemplatePackageIds, StringComparer.OrdinalIgnoreCase),
+                () => BuiltInSources.ToList());
+            StartThirdPartyScan(logger);
         }
     }
 
     /// <summary>
-    /// Cancels <see cref="ContentDownload"/>, the package being downloaded included, and waits for it to end.
+    /// Scans the third-party template packages again (after one was added or removed) and returns what it found, once
+    /// their templates are registered. Empty before <see cref="RegisterProjectTemplates"/>.
+    /// </summary>
+    public static Task<IReadOnlyList<ThirdPartyTemplatePackage>> RescanThirdPartyAsync()
+    {
+        var logger = GlobalLogger.GetLogger("DotNetNewTemplateBridge");
+        lock (InitLock)
+        {
+            return thirdParty is null ? Task.FromResult<IReadOnlyList<ThirdPartyTemplatePackage>>([]) : StartThirdPartyScan(logger);
+        }
+    }
+
+    /// <summary>Starts a scan after the one running, if any. Caller holds <see cref="InitLock"/>.</summary>
+    private static Task<IReadOnlyList<ThirdPartyTemplatePackage>> StartThirdPartyScan(Logger logger)
+    {
+        var previous = thirdPartyScan;
+        var cancellationToken = ThirdPartyCancellation.Token;
+        thirdPartyScan = Task.Run(() => ScanThirdPartyAsync(previous, logger, cancellationToken));
+        return thirdPartyScan;
+    }
+
+    /// <summary>
+    /// Lists the installed packages, brings the registry's third-party packages in line with the rule, and registers or
+    /// unregisters their templates. Never faults.
+    /// </summary>
+    private static async Task<IReadOnlyList<ThirdPartyTemplatePackage>> ScanThirdPartyAsync(Task previous, Logger logger, CancellationToken cancellationToken)
+    {
+        await previous.ConfigureAwait(false);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var localFolderSources = PackageStore.Instance.LocalFolderSources;
+            var installed = PackageStore.Instance.GetAllPackagesInstalled()
+                .Select(package => TemplatePackageRule.FromLocalPackage(package, localFolderSources))
+                .ToList();
+            cancellationToken.ThrowIfCancellationRequested();
+
+            lock (InitLock)
+            {
+                var scanTask = thirdParty!.ScanAsync(installed, cancellationToken);
+                scanTask.Wait(cancellationToken);
+                var packages = scanTask.Result;
+                foreach (var package in packages)
+                {
+                    if (package.ConflictIdentity is not null)
+                        logger.Warning($"{package.Package.Id} {package.Package.Version} is not shown: its template {package.ConflictIdentity} has the identity of one of {package.ConflictPackage}.");
+                    foreach (var diagnostic in package.Diagnostics)
+                        logger.Error($"Template install ({package.Package.Id}): {diagnostic}");
+                }
+                SyncThirdPartyTemplates(packages, logger);
+                return packages;
+            }
+        }
+        catch (Exception e) when (cancellationToken.IsCancellationRequested && e is OperationCanceledException or AggregateException)
+        {
+            logger.Info("The scan of the third-party template packages was cancelled.");
+        }
+        catch (Exception e)
+        {
+            logger.Warning($"Could not scan the third-party template packages: {e.Message}");
+        }
+        return ThirdPartyPackages;
+    }
+
+    /// <summary>
+    /// Registers the templates of the installed third-party packages and unregisters the ones whose package left or
+    /// changed. Caller holds <see cref="InitLock"/>.
+    /// </summary>
+    private static void SyncThirdPartyTemplates(IReadOnlyList<ThirdPartyTemplatePackage> packages, Logger logger)
+    {
+        var wanted = new Dictionary<string, (ITemplateInfo Template, ThirdPartyTemplatePackage Package, Dictionary<string, SdtplMetadata> Sdtpls)>(StringComparer.Ordinal);
+        foreach (var package in packages.Where(package => package.Installed))
+        {
+            var source = package.Package.InstallSource;
+            // A loose .nupkg has no folder to read metadata, icons or screenshots from: the template.json is used.
+            var sdtpls = Directory.Exists(source) ? LoadAggregatedSdtpls(source, logger) : new Dictionary<string, SdtplMetadata>();
+            var templatesTask = registry!.GetTemplatesOfAsync(source);
+            templatesTask.Wait();
+            foreach (var template in templatesTask.Result.Where(template => !IsItemTemplate(template)))
+                wanted.TryAdd(template.Identity, (template, package, sdtpls));
+        }
+
+        var changed = false;
+        foreach (var (identity, registered) in ThirdPartyDescriptions.ToList())
+        {
+            if (wanted.TryGetValue(identity, out var entry) && string.Equals(entry.Package.Package.InstallSource, registered.Source, StringComparison.OrdinalIgnoreCase))
+                continue;
+            SyntheticPackage.Templates.Remove(registered.Description);
+            RegisteredTemplateIdentities.Remove(identity);
+            ThirdPartyDescriptions.Remove(identity);
+            changed = true;
+        }
+
+        foreach (var (identity, (template, package, sdtpls)) in wanted)
+        {
+            if (ThirdPartyDescriptions.ContainsKey(identity) || !RegisteredTemplateIdentities.Add(identity))
+                continue;
+            var source = package.Package.InstallSource;
+            sdtpls.TryGetValue(identity, out var sdtpl);
+            var description = CreateDescription(template, sdtpl is null ? null : new TemplateMetadataSource(sdtpl, source), DefaultThirdPartyGroup);
+            description.SourcePackageId = package.Package.Id;
+            description.FullDescription = AppendOrigin(description.FullDescription ?? description.Description, package.Package);
+            SyntheticPackage.Templates.Add(description);
+            ThirdPartyDescriptions[identity] = (description, source);
+            changed = true;
+        }
+
+        if (changed)
+        {
+            logger.Info($"Third-party templates: {ThirdPartyDescriptions.Count} registered.");
+            TemplateManager.RegisterPackage(SyntheticPackage);
+        }
+    }
+
+    /// <summary>The group of a third-party template that names none.</summary>
+    public const string DefaultThirdPartyGroup = "Other";
+
+    /// <summary>Appends the line that says which package a third-party template comes from.</summary>
+    public static string AppendOrigin(string? description, TemplatePackageCandidate package)
+    {
+        var origin = string.IsNullOrWhiteSpace(package.Authors)
+            ? $"From {package.Id} {package.Version}."
+            : $"From {package.Id} {package.Version} by {package.Authors}.";
+        return string.IsNullOrWhiteSpace(description) ? origin : description.TrimEnd() + Environment.NewLine + Environment.NewLine + origin;
+    }
+
+    /// <summary>
+    /// Cancels <see cref="ContentDownload"/>, the package being downloaded included, and <see cref="ThirdPartyScan"/>, and
+    /// waits for them to end. Later scans are cancelled too.
     /// </summary>
     /// <returns>The download, completed once it has stopped.</returns>
     public static Task CancelContentDownloadAsync()
@@ -171,7 +344,9 @@ public static class DotNetNewTemplateBridge
         lock (InitLock)
         {
             contentDownloadCancellation?.Cancel();
-            return contentDownload;
+            // Shutdown does not wait on a slow store listing either
+            ThirdPartyCancellation.Cancel();
+            return Task.WhenAll(contentDownload, thirdPartyScan);
         }
     }
 
@@ -242,6 +417,11 @@ public static class DotNetNewTemplateBridge
             if (IsItemTemplate(template))
                 continue;
 
+            // Third-party templates are registered by the third-party scan, once the rule has run: an entry left in the
+            // registry by an earlier session may be a package that is no longer installed or no longer compatible.
+            if (!BuiltInSources.Any(source => DotNetNewTemplateRegistry.MountPointMatches(template.MountPointUri, source)))
+                continue;
+
             // Registered by an earlier pass (startup, then the background download).
             if (!RegisteredTemplateIdentities.Add(template.Identity))
                 continue;
@@ -249,55 +429,65 @@ public static class DotNetNewTemplateBridge
             // Cross-ref by template.json identity → matches the sdtpl Id (we set
             // `identity = sdtpl.Id` in the preprocessor) so the dict lookup hits.
             sdtplsByIdentity.TryGetValue(template.Identity, out var source);
-            var sdtpl = source?.Metadata;
-            var shortName = template.ShortNameList.FirstOrDefault();
-            // Per-template content dir inside the package, e.g. <packageDir>/content/stride-fps/.
-            // Icon/Screenshot relative paths in .sdtpl resolve against this dir at runtime.
-            var templateContentDir = source != null && shortName != null
-                ? Path.Combine(source.InstallSource, "content", shortName)
-                : null;
-            var description = new TemplateDotNetNewDescription
-            {
-                Id = sdtpl?.Id ?? TryParseGuid(template.Identity),
-                Name = sdtpl?.Name ?? template.Name ?? shortName ?? template.Identity,
-                Description = sdtpl?.Description ?? template.Description,
-                FullDescription = sdtpl?.FullDescription,
-                DefaultOutputName = sdtpl?.DefaultOutputName ?? template.DefaultName ?? "MyGame",
-                Group = sdtpl?.Group ?? template.GroupIdentity ?? "Stride",
-                Scope = (sdtpl?.Scope != null && Enum.TryParse<TemplateScope>(sdtpl.Scope, ignoreCase: true, out var parsedScope))
-                    ? parsedScope
-                    : TemplateScope.Session,
-                TemplateIdentity = template.Identity,
-                TemplateShortName = shortName ?? string.Empty,
-                OffersAssetPacks = sdtpl?.HasParameter("assetPacks") == true,
-                // FullPath must be non-null: TemplateDescriptionViewModel calls
-                // Template.FullPath.GetFullDirectory() unconditionally when constructing
-                // image paths. We point it at a synthetic file inside the per-template
-                // content dir so the directory part is the natural relative-resolution root
-                // (matches what TemplateDescription.FullPath means for real .sdpkg-backed
-                // templates). Falls back to a per-identity sentinel if we couldn't resolve
-                // a content dir (e.g. template not in the aggregated metadata).
-                FullPath = templateContentDir != null
-                    ? new UFile(Path.Combine(templateContentDir, ".synthetic.sdtpl"))
-                    : new UFile($"{template.Identity}.synthetic"),
-                Icon = templateContentDir != null ? ResolveTemplateAsset(sdtpl?.Icon, templateContentDir) : null,
-            };
-            if (templateContentDir != null && sdtpl != null)
-            {
-                foreach (var s in sdtpl.Screenshots)
-                {
-                    var resolved = ResolveTemplateAsset(s, templateContentDir);
-                    if (resolved != null)
-                        description.Screenshots.Add(resolved);
-                }
-            }
-            SyntheticPackage.Templates.Add(description);
+            SyntheticPackage.Templates.Add(CreateDescription(template, source, "Stride"));
             added++;
         }
 
         // Registering the same package again signals the new descriptions to an open template list.
         if (added > 0)
             TemplateManager.RegisterPackage(SyntheticPackage);
+    }
+
+    /// <summary>
+    /// Wraps <paramref name="template"/> as a <see cref="TemplateDotNetNewDescription"/>, from its <c>.sdtpl</c> metadata
+    /// when <paramref name="source"/> has it, else from the template.json.
+    /// </summary>
+    /// <param name="defaultGroup">The group when neither the <c>.sdtpl</c> nor the template.json name one.</param>
+    private static TemplateDotNetNewDescription CreateDescription(ITemplateInfo template, TemplateMetadataSource? source, string defaultGroup)
+    {
+        var sdtpl = source?.Metadata;
+        var shortName = template.ShortNameList.FirstOrDefault();
+        // Per-template content dir inside the package, e.g. <packageDir>/content/stride-fps/.
+        // Icon/Screenshot relative paths in .sdtpl resolve against this dir at runtime.
+        var templateContentDir = source != null && shortName != null
+            ? Path.Combine(source.InstallSource, "content", shortName)
+            : null;
+        var description = new TemplateDotNetNewDescription
+        {
+            Id = sdtpl?.Id ?? TryParseGuid(template.Identity),
+            Name = sdtpl?.Name ?? template.Name ?? shortName ?? template.Identity,
+            Description = sdtpl?.Description ?? template.Description,
+            FullDescription = sdtpl?.FullDescription,
+            DefaultOutputName = sdtpl?.DefaultOutputName ?? template.DefaultName ?? "MyGame",
+            Group = sdtpl?.Group ?? template.GroupIdentity ?? defaultGroup,
+            Scope = (sdtpl?.Scope != null && Enum.TryParse<TemplateScope>(sdtpl.Scope, ignoreCase: true, out var parsedScope))
+                ? parsedScope
+                : TemplateScope.Session,
+            TemplateIdentity = template.Identity,
+            TemplateShortName = shortName ?? string.Empty,
+            OffersAssetPacks = sdtpl?.HasParameter("assetPacks") == true,
+            // FullPath must be non-null: TemplateDescriptionViewModel calls
+            // Template.FullPath.GetFullDirectory() unconditionally when constructing
+            // image paths. We point it at a synthetic file inside the per-template
+            // content dir so the directory part is the natural relative-resolution root
+            // (matches what TemplateDescription.FullPath means for real .sdpkg-backed
+            // templates). Falls back to a per-identity sentinel if we couldn't resolve
+            // a content dir (e.g. template not in the aggregated metadata).
+            FullPath = templateContentDir != null
+                ? new UFile(Path.Combine(templateContentDir, ".synthetic.sdtpl"))
+                : new UFile($"{template.Identity}.synthetic"),
+            Icon = templateContentDir != null ? ResolveTemplateAsset(sdtpl?.Icon, templateContentDir) : null,
+        };
+        if (templateContentDir != null && sdtpl != null)
+        {
+            foreach (var s in sdtpl.Screenshots)
+            {
+                var resolved = ResolveTemplateAsset(s, templateContentDir);
+                if (resolved != null)
+                    description.Screenshots.Add(resolved);
+            }
+        }
+        return description;
     }
 
     /// <summary>
@@ -561,6 +751,8 @@ public static class DotNetNewTemplateBridge
                 return false;
             }
         }
+
+        BuiltInSources.Add(installSource);
 
         // Merge this package's aggregated metadata into the shared dict. Each entry remembers
         // the installSource it came from so Icon/Screenshot relative paths can be resolved later.

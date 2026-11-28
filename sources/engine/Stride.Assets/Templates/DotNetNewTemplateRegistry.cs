@@ -206,7 +206,7 @@ public sealed class DotNetNewTemplateRegistry : IDisposable
     /// Whether the registry's <paramref name="mountPointUri"/> is the package installed from <paramref name="source"/>: the
     /// same folder, or, for a .nupkg (the registry mounts its own copy), the same file name.
     /// </summary>
-    private static bool MountPointMatches(string mountPointUri, string source)
+    public static bool MountPointMatches(string mountPointUri, string source)
     {
         if (File.Exists(source))
             return string.Equals(Path.GetFileName(mountPointUri), Path.GetFileName(source), StringComparison.OrdinalIgnoreCase);
@@ -231,6 +231,12 @@ public sealed class DotNetNewTemplateRegistry : IDisposable
         var templates = await bootstrapper.GetTemplatesAsync(cancellationToken).ConfigureAwait(false);
         return templates.ToList();
     }
+
+    /// <summary>The templates of the package installed from <paramref name="source"/> (see <see cref="MountPointMatches"/>).</summary>
+    public async Task<IReadOnlyList<ITemplateInfo>> GetTemplatesOfAsync(string source, CancellationToken cancellationToken = default)
+        => (await GetTemplatesAsync(cancellationToken).ConfigureAwait(false))
+            .Where(template => MountPointMatches(template.MountPointUri, source))
+            .ToList();
 
     /// <summary>
     /// Returns the bootstrapper's last-deployment timestamp for the package whose identifier
