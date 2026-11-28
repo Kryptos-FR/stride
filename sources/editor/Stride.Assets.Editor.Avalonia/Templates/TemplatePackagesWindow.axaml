@@ -48,13 +48,15 @@
               <DockPanel Margin="10,6">
                 <Button DockPanel.Dock="Right" VerticalAlignment="Top" Padding="12,4"
                         Content="{sd:LocalizeString Remove, Context=Button}"
-                        IsVisible="{Binding CanRemove}" Command="{Binding RemoveCommand}"/>
+                        IsVisible="{Binding CanRemove}" Command="{Binding RemoveCommand}"
+                        IsEnabled="{Binding $parent[ItemsControl].((tpl:TemplatePackagesViewModel)DataContext).IsIdle, FallbackValue=False}"/>
                 <StackPanel Spacing="2">
                   <StackPanel Orientation="Horizontal" Spacing="16">
                     <TextBlock FontWeight="SemiBold" Text="{Binding Id}"/>
                     <TextBlock Text="{Binding Version}"/>
                     <TextBlock Text="{Binding Authors}"/>
                     <TextBlock Text="{Binding License}"/>
+                    <TextBlock Text="{Binding Engine}" Opacity="0.8"/>
                   </StackPanel>
                   <TextBlock Text="{Binding Contents}" IsVisible="{Binding Contents, Converter={x:Static ObjectConverters.IsNotNull}}" Opacity="0.8"/>
                   <TextBlock Text="{Binding Note}" IsVisible="{Binding HasNote}" TextWrapping="Wrap" Opacity="0.8"/>

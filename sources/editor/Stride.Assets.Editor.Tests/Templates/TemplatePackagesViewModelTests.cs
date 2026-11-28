@@ -50,15 +50,17 @@ public sealed class TemplatePackagesViewModelTests : IDisposable
         scanned.Add(new ThirdPartyTemplatePackage(Candidate("Foo.Templates", "0.1.0"), true, null, null, ["a", "b", "c"], [], 1, 2));
         scanned.Add(new ThirdPartyTemplatePackage(Candidate("Mine.Templates", "1.0.0", localFolder: "/feeds/mine"), true, null, null, ["d"], [], 1, 0));
         scanned.Add(new ThirdPartyTemplatePackage(Candidate("Bar.Templates", "1.0.0"), false, "Shared.Game", "Foo.Templates", [], []));
+        scanned.Add(new ThirdPartyTemplatePackage(Candidate("Old.Templates", "1.0.0") with { MarkerFloor = null }, true, null, null, ["e"], [], 1, 0));
 
         var viewModel = Create();
 
-        Assert.Equal(["Foo.Templates", "Mine.Templates", "Bar.Templates"], viewModel.Packages.Select(row => row.Id));
+        Assert.Equal(["Foo.Templates", "Mine.Templates", "Bar.Templates", "Old.Templates"], viewModel.Packages.Select(row => row.Id));
         var foo = viewModel.Packages[0];
         Assert.Equal("0.1.0", foo.Version);
         Assert.Equal("Color-Rise", foo.Authors);
         Assert.Equal("MIT", foo.License);
         Assert.Equal("1 game template, 2 asset packs", foo.Contents);
+        Assert.Equal("Made for Stride 4.5.0", foo.Engine);
         Assert.True(foo.CanRemove);
         Assert.Null(foo.Note);
         // A package of a local-folder source: no remove, the line says what to do
@@ -67,6 +69,8 @@ public sealed class TemplatePackagesViewModelTests : IDisposable
         Assert.Contains("/feeds/mine", mine.Note);
         // A package left out by a clash says why
         Assert.Equal("Not shown: a template has the same identity as one of Foo.Templates.", viewModel.Packages[2].Note);
+        // A package that names no engine (D6)
+        Assert.Equal("Engine version unknown", viewModel.Packages[3].Engine);
         Assert.True(viewModel.HasPackages);
     }
 
@@ -191,6 +195,33 @@ public sealed class TemplatePackagesViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task TheRemovalIsPlannedWhileBusyAndASecondOneThenDoesNothing()
+    {
+        store.Installed.Add(Candidate("Foo.Templates", "1.0.0"));
+        scanned.Add(new ThirdPartyTemplatePackage(store.Installed[0], true, null, null, ["a"], [], 1, 0));
+        dialogs.Answer = MessageBoxResult.No;
+        var viewModel = Create();
+        bool? busyWhenListed = null;
+        Task? second = null;
+        // Planning lists the installed packages, which reads every nuspec: it marks the window busy, and a click on another
+        // Remove meanwhile is ignored
+        store.Listing = () =>
+        {
+            if (busyWhenListed is not null)
+                return;
+            busyWhenListed = viewModel.IsBusy;
+            second = viewModel.Packages[0].RemoveAsync();
+        };
+
+        await viewModel.Packages[0].RemoveAsync();
+        await second!;
+
+        Assert.True(busyWhenListed);
+        Assert.Single(dialogs.Messages);
+        Assert.False(viewModel.IsBusy);
+    }
+
+    [Fact]
     public async Task RemovingDoesNothingOnNo()
     {
         store.Installed.Add(Candidate("Foo.Templates", "1.0.0"));
@@ -244,7 +275,14 @@ public sealed class TemplatePackagesViewModelTests : IDisposable
 
         public List<string> Uninstalls { get; } = [];
 
-        public IReadOnlyList<TemplatePackageCandidate> GetInstalled() => Installed;
+        /// <summary>Called by <see cref="GetInstalled"/>.</summary>
+        public Action? Listing { get; set; }
+
+        public IReadOnlyList<TemplatePackageCandidate> GetInstalled()
+        {
+            Listing?.Invoke();
+            return Installed.ToList();
+        }
 
         /// <summary>When set, <see cref="FindInSourcesAsync"/> throws it (an unreachable source).</summary>
         public Exception? FindFailure { get; set; }

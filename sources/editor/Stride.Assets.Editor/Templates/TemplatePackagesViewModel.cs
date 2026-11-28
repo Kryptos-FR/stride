@@ -141,7 +141,26 @@ public sealed class TemplatePackagesViewModel : DispatcherViewModel
 
     internal async Task RemoveAsync(TemplatePackageRowViewModel row)
     {
-        var removal = installer.PlanRemoval(row.Id);
+        // A Remove clicked while an add or a remove runs
+        if (IsBusy)
+            return;
+        TemplatePackageRemoval removal;
+        Error = null;
+        IsBusy = true;
+        try
+        {
+            // Lists the installed packages, which reads every nuspec of the global packages folder
+            removal = await Task.Run(() => installer.PlanRemoval(row.Id));
+        }
+        catch (Exception e)
+        {
+            Error = e.Message;
+            return;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
         if (removal.Kind != TemplatePackageRemovalKind.Uninstall)
         {
             await Dialogs.MessageBoxAsync(AsMarkdown(removal.Message), MessageBoxButton.OK, MessageBoxImage.Information);
@@ -253,6 +272,7 @@ public sealed class TemplatePackageRowViewModel : DispatcherViewModel
         Authors = candidate.Authors;
         License = candidate.License;
         Contents = package.Installed ? TemplatePackageInstaller.DescribeContents(package.GameTemplates, package.AssetPacks) : null;
+        Engine = candidate.MarkerFloor is { } marker ? $"Made for Stride {marker}" : "Engine version unknown";
         CanRemove = candidate.LocalFolderSource is null;
         Note = package.ConflictPackage is not null
             ? $"Not shown: a template has the same identity as one of {package.ConflictPackage}."
@@ -270,6 +290,11 @@ public sealed class TemplatePackageRowViewModel : DispatcherViewModel
     /// The licence expression or URL, null when the package gives none.
     /// </summary>
     public string? License { get; }
+
+    /// <summary>
+    /// The engine version the package was made for, or "Engine version unknown" when it names none.
+    /// </summary>
+    public string Engine { get; }
 
     /// <summary>
     /// "1 game template, 2 asset packs"; null when the package is not shown.
