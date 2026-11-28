@@ -409,14 +409,6 @@ public sealed class StrideVersionManager
             ? Directory.EnumerateFiles(workingDirectory, "*.csproj").FirstOrDefault()
             : null;
 
-    // Template packages carry a Stride.Core dependency stamping the engine version they were built against
-    // (see Stride.Templates.Common.targets).
-    private const string TemplateMarkerDependencyId = "Stride.Core";
-
-    // Discovery is scoped to packages carrying this tag (set by Stride.Templates.Common.targets), so a
-    // template package from an unrelated local source (e.g. the VS offline packages folder) is not picked up.
-    private const string TemplateTag = "stride-template";
-
     // The asset packs are the one template package nothing depends on: Stride.GameStudio deliberately declares no
     // dependency on it, since the packs are optional content nobody should pay for at install time. Installing a
     // Stride version therefore never puts it in the store, which is why discovery alone never finds it.
@@ -536,13 +528,13 @@ public sealed class StrideVersionManager
             // Check the installed store first, with the same compatibility rule discovery applies, so an
             // installed copy discovery would accept is never downloaded again.
             if (store.GetLocalPackages(AssetPacksPackageId)
-                .Any(package => IsCompatible(package.GetDependencyFloor(TemplateMarkerDependencyId), version)))
+                .Any(package => TemplatePackageRule.IsCompatible(package.GetDependencyFloor(TemplatePackageRule.MarkerDependencyId), version)))
                 return;
 
             // Filter by the rule discovery applies, so a download is never spent on a package that would then be
             // skipped for targeting a newer engine.
             var candidate = (await store.FindSourcePackagesById(AssetPacksPackageId, cancellationToken))
-                .Where(package => IsCompatible(MarkerFloor(package), version))
+                .Where(package => TemplatePackageRule.IsCompatible(TemplatePackageRule.MarkerFloor(package.Dependencies), version))
                 .OrderByDescending(package => package.Version)
                 .FirstOrDefault();
             if (candidate is not null)
@@ -555,18 +547,6 @@ public sealed class StrideVersionManager
             // the same failures for the same reason. Nothing is printed because the caller owns the status line.
         }
     }
-
-    // A template package suits the requested engine when its marker names an engine no newer. An unmarked package
-    // has unknown compatibility, so it never qualifies here; discovery keeps its own last-resort fallback.
-    private static bool IsCompatible(PackageVersion? markerFloor, PackageVersion version)
-        => markerFloor is { } floor && floor.CompareTo(version) <= 0;
-
-    // The engine version a package from a source was built against. The installed counterpart is
-    // NugetLocalPackage.GetDependencyFloor, which reads the same marker from the extracted nuspec.
-    private static PackageVersion? MarkerFloor(NugetServerPackage package)
-        => package.Dependencies
-            .FirstOrDefault(dependency => string.Equals(dependency.Item1, TemplateMarkerDependencyId, StringComparison.OrdinalIgnoreCase))
-            ?.Item2.MinVersion;
 
     // The directories to install into the registry: the content packages at the engine's content version, one per
     // discovered engine-versioned template package, plus any explicit extra packages.
@@ -590,32 +570,22 @@ public sealed class StrideVersionManager
         if (contentVersion is not null)
             pinnedIds.UnionWith(ContentTemplateResolver.PackageIds);
 
-        // Discover the other template packages by package type + tag, then per id pick the newest version whose
-        // Stride.Core marker floor is <= the requested version. Unmarked (legacy) packages have unknown
-        // engine compatibility, so they are a last resort: any marked match wins over a newer unmarked one
-        // (otherwise a co-installed newer dev package without the marker silently hijacks the request).
-        var discovered = store.GetAllPackagesInstalled()
-            .Where(package => package.IsTemplatePackage && package.HasTag(TemplateTag))
-            .Where(package => !pinnedIds.Contains(package.Id))
-            .GroupBy(package => package.Id, StringComparer.OrdinalIgnoreCase)
-            .Select(group =>
-                group.Where(package => IsCompatible(package.GetDependencyFloor(TemplateMarkerDependencyId), version))
-                    .OrderByDescending(package => package.Version)
-                    .FirstOrDefault()
-                ?? group.Where(package => package.GetDependencyFloor(TemplateMarkerDependencyId) is null)
-                    .OrderByDescending(package => package.Version)
-                    .FirstOrDefault())
-            .OfType<NugetLocalPackage>();
+        // Discover the other template packages by the rule Game Studio applies too (see TemplatePackageRule).
+        var localFolderSources = store.LocalFolderSources;
+        var discovered = TemplatePackageRule.Select(
+            store.GetAllPackagesInstalled().Select(package => TemplatePackageRule.FromLocalPackage(package, localFolderSources)),
+            version, pinnedIds);
 
-        foreach (var package in pinned.Concat(discovered))
+        // Prefer the extracted directory (the registry replaces its entry on reinstall); fall back to the loose .nupkg
+        // of a not-yet-mirrored local source. An extracted package reports the .nupkg inside its folder too, so tell
+        // them apart by NuGet's extraction marker.
+        foreach (var package in pinned)
         {
-            // Prefer the extracted directory (the registry replaces its entry on reinstall); fall back to the loose
-            // .nupkg of a not-yet-mirrored local source. An extracted package reports the .nupkg inside its folder
-            // too, so tell them apart by NuGet's extraction marker.
             var path = File.Exists(Path.Combine(package.Path, ".nupkg.metadata")) ? package.Path : package.NupkgPath ?? package.Path;
             if (!string.IsNullOrEmpty(path))
                 paths.Add(path);
         }
+        paths.AddRange(discovered.Select(candidate => candidate.InstallSource).Where(path => !string.IsNullOrEmpty(path)));
 
         foreach (var extra in extraPackages ?? [])
         {

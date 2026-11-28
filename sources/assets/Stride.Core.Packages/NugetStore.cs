@@ -283,6 +283,12 @@ public partial class NugetStore : INugetDownloadProgress
     private IEnumerable<PackageSource> PackageSources { get; set; }
 
     /// <summary>
+    /// The paths of the enabled local-folder sources (e.g. a dev worktree's <c>bin/packages</c>), whose loose .nupkg
+    /// files <see cref="GetAllPackagesInstalled"/> lists next to the global packages folder.
+    /// </summary>
+    public IReadOnlyList<string> LocalFolderSources => PackageSources.Where(source => source.IsLocal).Select(source => source.Source).ToList();
+
+    /// <summary>
     /// Helper to locate packages.
     /// </summary>
     private FallbackPackagePathResolver InstalledPathResolver { get; }
