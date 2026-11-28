@@ -71,7 +71,7 @@ public sealed class TemplateCommandFlowTests : IDisposable
         Assert.Contains("Install only packages you trust.", text);
         Assert.Contains("Install? [y/N] ", text);
         Assert.Contains("Installed Foo.Templates 1.0.0.", text);
-        Assert.Equal([("Foo.Templates", new PackageVersion("1.0.0"), (string?)folder)], store.Installs);
+        Assert.Equal([("Foo.Templates", new PackageVersion("1.0.0"), Path.GetFullPath(path))], store.Installs);
         Assert.Empty(error.ToString());
     }
 
@@ -134,11 +134,16 @@ public sealed class TemplateCommandFlowTests : IDisposable
     public async Task AddingByIdTakesTheGivenVersion()
     {
         store.Sources["Foo.Templates"] = [Source("1.0.0"), Source("1.1.0")];
+        store.SourceFiles["Foo.Templates 1.0.0"] = WriteNupkg(folder, "Foo.Templates", "1.0.0");
 
         var exit = await Create().AddAsync("Foo.Templates", "1.0.0", yes: true, CancellationToken.None);
 
         Assert.Equal(0, exit);
-        Assert.Equal([("Foo.Templates", new PackageVersion("1.0.0"), (string?)null)], store.Installs);
+        Assert.Equal(["Foo.Templates 1.0.0"], store.Downloads);
+        var install = Assert.Single(store.Installs);
+        Assert.Equal(("Foo.Templates", new PackageVersion("1.0.0")), (install.Id, install.Version));
+        // The download is deleted once installed
+        Assert.False(File.Exists(install.File));
     }
 
     [Fact]

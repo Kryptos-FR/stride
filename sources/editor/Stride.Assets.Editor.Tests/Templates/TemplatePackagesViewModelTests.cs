@@ -137,6 +137,8 @@ public sealed class TemplatePackagesViewModelTests : IDisposable
             new TemplatePackageInfo("Foo.Templates", new PackageVersion("1.0.0"), "Color-Rise", "MIT", "", null, true, new PackageVersion("4.5.0"), null, null, "https://feed.example", null),
             new TemplatePackageInfo("Foo.Templates", new PackageVersion("1.1.0"), "Color-Rise", "MIT", "", null, true, new PackageVersion("4.5.0"), null, null, "https://feed.example", null),
         ];
+        var feed = Directory.CreateDirectory(Path.Combine(folder, "feed")).FullName;
+        store.SourceFiles["Foo.Templates 1.0.0"] = WriteNupkg("Foo.Templates", "1.0.0", into: feed);
         dialogs.Answer = MessageBoxResult.Yes;
         var viewModel = Create();
         viewModel.PackageId = "Foo.Templates";
@@ -157,6 +159,19 @@ public sealed class TemplatePackagesViewModelTests : IDisposable
 
         Assert.Equal("No package Nope.Templates was found in the package sources.", viewModel.Error);
         Assert.Empty(store.Installs);
+    }
+
+    [Fact]
+    public async Task AnyFailureOfTheSourcesShowsOnTheErrorLine()
+    {
+        store.FindFailure = new HttpRequestException("The feed is unreachable.");
+        var viewModel = Create();
+        viewModel.PackageId = "Foo.Templates";
+
+        await viewModel.AddByIdAsync();
+
+        Assert.Equal("The feed is unreachable.", viewModel.Error);
+        Assert.False(viewModel.IsBusy);
     }
 
     [Fact]
@@ -192,9 +207,9 @@ public sealed class TemplatePackagesViewModelTests : IDisposable
     private static TemplatePackageCandidate Candidate(string id, string version, string? localFolder = null)
         => new(id, new PackageVersion(version), true, true, new PackageVersion("4.5.0"), $"/store/{id}/{version}", localFolder, "Color-Rise", "MIT", "Templates");
 
-    private string WriteNupkg(string id, string version, string marker = "4.5.0")
+    private string WriteNupkg(string id, string version, string marker = "4.5.0", string? into = null)
     {
-        var path = Path.Combine(folder, $"{id}.{version}.nupkg");
+        var path = Path.Combine(into ?? folder, $"{id}.{version}.nupkg");
         using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
         using (var writer = new StreamWriter(zip.CreateEntry($"{id}.nuspec").Open()))
         {
@@ -231,10 +246,22 @@ public sealed class TemplatePackagesViewModelTests : IDisposable
 
         public IReadOnlyList<TemplatePackageCandidate> GetInstalled() => Installed;
 
-        public Task<IReadOnlyList<TemplatePackageInfo>> FindInSourcesAsync(string id, CancellationToken cancellationToken)
-            => Task.FromResult(Sources.TryGetValue(id, out var found) ? found : (IReadOnlyList<TemplatePackageInfo>)[]);
+        /// <summary>When set, <see cref="FindInSourcesAsync"/> throws it (an unreachable source).</summary>
+        public Exception? FindFailure { get; set; }
 
-        public Task InstallAsync(string id, PackageVersion version, string? extraSourceFolder, CancellationToken cancellationToken)
+        public Task<IReadOnlyList<TemplatePackageInfo>> FindInSourcesAsync(string id, CancellationToken cancellationToken)
+            => FindFailure is { } failure ? Task.FromException<IReadOnlyList<TemplatePackageInfo>>(failure) : Task.FromResult(Sources.TryGetValue(id, out var found) ? found : (IReadOnlyList<TemplatePackageInfo>)[]);
+
+        /// <summary>The .nupkg files of the sources, by "id version".</summary>
+        public Dictionary<string, string> SourceFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public Task DownloadAsync(string id, PackageVersion version, string source, string destinationFile, CancellationToken cancellationToken)
+        {
+            File.Copy(SourceFiles[$"{id} {version}"], destinationFile);
+            return Task.CompletedTask;
+        }
+
+        public Task AddFileAsync(string id, PackageVersion version, string nupkgPath, CancellationToken cancellationToken)
         {
             Installs.Add($"{id} {version}");
             Installed.Add(Candidate(id, version.ToString()));

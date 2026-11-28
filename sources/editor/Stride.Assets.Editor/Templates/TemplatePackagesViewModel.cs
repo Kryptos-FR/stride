@@ -161,8 +161,10 @@ public sealed class TemplatePackagesViewModel : DispatcherViewModel
         {
             package = await find();
         }
-        catch (InvalidOperationException e)
+        catch (Exception e)
         {
+            // The installer's own errors, and the sources' (NuGet reports an unreachable source with its own types): the
+            // command would leave any other one unhandled
             Error = e.Message;
             return;
         }
@@ -171,14 +173,21 @@ public sealed class TemplatePackagesViewModel : DispatcherViewModel
             IsBusy = false;
         }
 
-        if (installer.Refusal(package) is { } refusal)
+        try
         {
-            await Dialogs.MessageBoxAsync(AsMarkdown(refusal), MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
+            if (installer.Refusal(package) is { } refusal)
+            {
+                await Dialogs.MessageBoxAsync(AsMarkdown(refusal), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (await Dialogs.MessageBoxAsync(AsMarkdown(installer.Confirmation(package)), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+            await RunAsync(() => installer.AddAsync(package));
         }
-        if (await Dialogs.MessageBoxAsync(AsMarkdown(installer.Confirmation(package)), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-            return;
-        await RunAsync(() => installer.AddAsync(package));
+        finally
+        {
+            TemplatePackageInstaller.Discard(package);
+        }
     }
 
     /// <summary>

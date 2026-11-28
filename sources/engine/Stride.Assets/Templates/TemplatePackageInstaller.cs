@@ -30,12 +30,21 @@ public interface ITemplatePackageStore
     Task<IReadOnlyList<TemplatePackageInfo>> FindInSourcesAsync(string id, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Installs exactly <paramref name="version"/> of <paramref name="id"/> into the global packages folder, from the
-    /// configured sources and, when not null, from <paramref name="extraSourceFolder"/> (the folder of a .nupkg file).
+    /// Downloads exactly <paramref name="version"/> of <paramref name="id"/> from the package source <paramref name="source"/>
+    /// into <paramref name="destinationFile"/>, without installing it.
     /// </summary>
-    Task InstallAsync(string id, PackageVersion version, string? extraSourceFolder, CancellationToken cancellationToken);
+    /// <exception cref="InvalidOperationException">The source does not have that version.</exception>
+    Task DownloadAsync(string id, PackageVersion version, string source, string destinationFile, CancellationToken cancellationToken);
 
-    /// <summary>Uninstalls <paramref name="installed"/> from the global packages folder.</summary>
+    /// <summary>
+    /// Adds the package file <paramref name="nupkgPath"/> (<paramref name="id"/> <paramref name="version"/>) to the global
+    /// packages folder as it is: no dependency is restored and nothing in the package runs. Nothing changes when that
+    /// version is installed already from the same file.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">That version is installed already, with other content.</exception>
+    Task AddFileAsync(string id, PackageVersion version, string nupkgPath, CancellationToken cancellationToken);
+
+    /// <summary>Uninstalls <paramref name="installed"/> from the global packages folder; nothing in the packages runs.</summary>
     Task UninstallAsync(IReadOnlyList<TemplatePackageCandidate> installed, CancellationToken cancellationToken);
 }
 
@@ -53,7 +62,10 @@ public interface ITemplatePackageStore
 /// <param name="GameTemplates">The number of its game templates; null when not known before the download.</param>
 /// <param name="AssetPacks">The number of its asset packs; null when not known before the download.</param>
 /// <param name="Origin">Where it comes from: the file path, or the source.</param>
-/// <param name="FilePath">The .nupkg file it was read from, or null for a package of the sources.</param>
+/// <param name="FilePath">
+/// The .nupkg file it was read from: the user's file, or the download of a package of the sources; null for a package of
+/// the sources not downloaded (refused before the download).
+/// </param>
 public sealed record TemplatePackageInfo(
     string Id, PackageVersion Version, string Authors, string? License, string Description, bool? IsTemplatePackage, bool HasTemplateTag,
     PackageVersion? MarkerFloor, int? GameTemplates, int? AssetPacks, string Origin, string? FilePath);
@@ -145,22 +157,73 @@ public sealed class TemplatePackageInstaller(ITemplatePackageStore store, Packag
     /// <summary>
     /// Finds <paramref name="id"/> in the configured sources: exactly <paramref name="version"/> when given, else the
     /// newest version whose marker is not above the engine, prereleases included (else the newest unmarked one, else the
-    /// newest, which <see cref="Refusal"/> then refuses with both versions).
+    /// newest, which <see cref="Refusal"/> then refuses with both versions). Unless what the source lists is refused
+    /// already, the package file is downloaded (not installed) and read as <see cref="InspectFile"/> reads a file, so the
+    /// question names its contents and <see cref="Refusal"/> checks its type; <see cref="Discard"/> deletes the download.
     /// </summary>
-    /// <exception cref="InvalidOperationException">No such id, or no such version, in the sources.</exception>
+    /// <exception cref="InvalidOperationException">No such id, or no such version, in the sources; or the download failed.</exception>
     public async Task<TemplatePackageInfo> FindByIdAsync(string id, PackageVersion? version, CancellationToken cancellationToken = default)
     {
         var found = await store.FindInSourcesAsync(id, cancellationToken).ConfigureAwait(false);
         if (found.Count == 0)
             throw new InvalidOperationException($"No package {id} was found in the package sources.");
+        TemplatePackageInfo chosen;
         if (version is not null)
-            return found.FirstOrDefault(package => package.Version.Equals(version))
+        {
+            chosen = found.FirstOrDefault(package => package.Version.Equals(version))
                 ?? throw new InvalidOperationException($"{id} {version} was not found in the package sources.");
+        }
+        else
+        {
+            var newest = found.OrderByDescending(package => package.Version).ToList();
+            chosen = newest.FirstOrDefault(package => TemplatePackageRule.IsCompatible(package.MarkerFloor, engine))
+                ?? newest.FirstOrDefault(package => package.MarkerFloor is null)
+                ?? newest[0];
+        }
+        if (Refusal(chosen) is not null)
+            return chosen;
 
-        var newest = found.OrderByDescending(package => package.Version).ToList();
-        return newest.FirstOrDefault(package => TemplatePackageRule.IsCompatible(package.MarkerFloor, engine))
-            ?? newest.FirstOrDefault(package => package.MarkerFloor is null)
-            ?? newest[0];
+        var folder = Path.Combine(StagingRoot, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        var file = Path.Combine(folder, $"{chosen.Id}.{chosen.Version}.nupkg");
+        try
+        {
+            await store.DownloadAsync(chosen.Id, chosen.Version, chosen.Origin, file, cancellationToken).ConfigureAwait(false);
+            return InspectFile(file) with { Origin = chosen.Origin };
+        }
+        catch
+        {
+            DeleteStaging(file);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Deletes the download of a package of the sources (see <see cref="FindByIdAsync"/>); nothing for a user's file. Call
+    /// it once the package is added, refused or declined.
+    /// </summary>
+    public static void Discard(TemplatePackageInfo package)
+    {
+        if (package.FilePath is { } file)
+            DeleteStaging(file);
+    }
+
+    /// <summary>Where <see cref="FindByIdAsync"/> downloads, one folder per download.</summary>
+    private static string StagingRoot => Path.Combine(Path.GetTempPath(), "stride-template-packages");
+
+    private static void DeleteStaging(string file)
+    {
+        var folder = Path.GetDirectoryName(Path.GetFullPath(file));
+        if (folder is null || !string.Equals(Path.GetDirectoryName(folder), Path.GetFullPath(StagingRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.Ordinal))
+            return;
+        try
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // A temporary folder: best effort
+        }
     }
 
     /// <summary>
@@ -202,28 +265,20 @@ public sealed class TemplatePackageInstaller(ITemplatePackageStore store, Packag
         => $"{gameTemplates} game template{(gameTemplates == 1 ? "" : "s")}, {assetPacks} asset pack{(assetPacks == 1 ? "" : "s")}";
 
     /// <summary>
-    /// Installs <paramref name="package"/>: from the folder of its file, or from the sources. A package of the sources
-    /// whose type was not known is checked once installed, and uninstalled again when it is not a template package.
+    /// Installs <paramref name="package"/> from its file (the user's, or the download of <see cref="FindByIdAsync"/>) into
+    /// the global packages folder, as it is: its dependencies are not restored (the marker only names an engine version)
+    /// and nothing in it runs.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The package is refused (see <see cref="Refusal"/>).</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The package is refused (see <see cref="Refusal"/>), has no file, or that version is installed with other content.
+    /// </exception>
     public async Task AddAsync(TemplatePackageInfo package, CancellationToken cancellationToken = default)
     {
         if (Refusal(package) is { } refusal)
             throw new InvalidOperationException(refusal);
-
-        var extraSource = package.FilePath is { } file ? Path.GetDirectoryName(Path.GetFullPath(file)) : null;
-        await store.InstallAsync(package.Id, package.Version, extraSource, cancellationToken).ConfigureAwait(false);
-        if (package.IsTemplatePackage is not null)
-            return;
-
-        var installed = store.GetInstalled()
-            .Where(candidate => candidate.Id.Equals(package.Id, StringComparison.OrdinalIgnoreCase) && candidate.Version.Equals(package.Version) && candidate.LocalFolderSource is null)
-            .ToList();
-        if (installed.Count > 0 && installed.All(candidate => !candidate.IsTemplatePackage))
-        {
-            await store.UninstallAsync(installed, cancellationToken).ConfigureAwait(false);
-            throw new InvalidOperationException(NotTemplateType(package.Id, package.Version));
-        }
+        if (package.FilePath is not { } file)
+            throw new InvalidOperationException($"{package.Id} {package.Version} was not downloaded.");
+        await store.AddFileAsync(package.Id, package.Version, file, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>What removing <paramref name="id"/> would do.</summary>

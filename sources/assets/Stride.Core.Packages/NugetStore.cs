@@ -873,13 +873,17 @@ public partial class NugetStore : INugetDownloadProgress
     /// </summary>
     /// <param name="packages">Packages to uninstall.</param>
     /// <param name="progress">Called before each package is uninstalled, with the count uninstalled so far and the total.</param>
-    public async Task UninstallPackages(IReadOnlyList<NugetPackage> packages, Action<int, int>? progress)
+    /// <param name="runPackageTools">
+    /// Whether to run a package's <c>tools\packageinstall.exe /uninstall</c>, as the launcher does for Stride's own
+    /// packages. Template packages are content and never run one.
+    /// </param>
+    public async Task UninstallPackages(IReadOnlyList<NugetPackage> packages, Action<int, int>? progress, bool runPackageTools = true)
     {
         await GuardUninstall(packages);
         for (var i = 0; i < packages.Count; i++)
         {
             progress?.Invoke(i, packages.Count);
-            await UninstallPackageUnguarded(packages[i], null);
+            await UninstallPackageUnguarded(packages[i], null, runPackageTools);
         }
     }
 
@@ -898,7 +902,7 @@ public partial class NugetStore : INugetDownloadProgress
             throw new OperationCanceledException(packages.Count == 1 ? $"Uninstalling {packages[0].Id} {packages[0].Version} was cancelled." : $"Uninstalling {packages.Count} packages was cancelled.");
     }
 
-    private async Task UninstallPackageUnguarded(NugetPackage package, ProgressReport? progress)
+    private async Task UninstallPackageUnguarded(NugetPackage package, ProgressReport? progress, bool runPackageTools = true)
     {
         using (GetLocalRepositoryLock())
         {
@@ -918,7 +922,10 @@ public partial class NugetStore : INugetDownloadProgress
                     return;
 
                 // Notify that uninstallation started.
-                OnPackageUninstalling(this, new PackageOperationEventArgs(new PackageName(package.Id, package.Version), installPath));
+                if (runPackageTools)
+                    OnPackageUninstalling(this, new PackageOperationEventArgs(new PackageName(package.Id, package.Version), installPath));
+                else
+                    NugetPackageUninstalling?.Invoke(this, new PackageOperationEventArgs(new PackageName(package.Id, package.Version), installPath));
 
                 var projectContext = new EmptyNuGetProjectContext()
                 {
@@ -1073,6 +1080,68 @@ public partial class NugetStore : INugetDownloadProgress
         var res = new List<NugetServerPackage>();
         await FindSourcePackagesByIdHelper(packageId, res, repositories, cancellationToken);
         return res;
+    }
+
+    /// <summary>
+    /// Downloads exactly <paramref name="version"/> of <paramref name="packageId"/> from the package source
+    /// <paramref name="source"/> into <paramref name="destinationFile"/>, without installing it.
+    /// </summary>
+    /// <returns>Whether the source has that version; when it has not, no file is left.</returns>
+    public async Task<bool> DownloadPackageFile(string packageId, PackageVersion version, string source, string destinationFile, CancellationToken cancellationToken)
+    {
+        var packageSource = PackageSources.FirstOrDefault(candidate => string.Equals(candidate.Source, source, StringComparison.OrdinalIgnoreCase)) ?? new PackageSource(source);
+        var repository = sourceRepositoryProvider.CreateRepository(packageSource);
+        var resource = await repository.GetResourceAsync<FindPackageByIdResource>(cancellationToken);
+        using var sourceCacheContext = new SourceCacheContext();
+        bool found;
+        await using (var stream = File.Create(destinationFile))
+        {
+            found = await resource.CopyNupkgToStreamAsync(packageId, version.ToNuGetVersion(), stream, sourceCacheContext, NativeLogger, cancellationToken);
+        }
+        if (!found)
+            File.Delete(destinationFile);
+        return found;
+    }
+
+    /// <summary>
+    /// Adds the package file <paramref name="nupkgPath"/> to the global packages folder as it is: no dependency is
+    /// restored and no <c>tools\packageinstall.exe</c> runs.
+    /// </summary>
+    /// <returns>
+    /// What happened: added; already installed with the same content (nothing changes); or installed with other content
+    /// (nothing changes either, the installed copy stays).
+    /// </returns>
+    public async Task<PackageFileAddition> AddPackageFile(string packageId, PackageVersion version, string nupkgPath, CancellationToken cancellationToken)
+    {
+        var identity = new PackageIdentity(packageId, version.ToNuGetVersion());
+        var resolver = new VersionFolderPathResolver(InstallPath);
+        using (GetLocalRepositoryLock())
+        {
+            var installedNupkg = resolver.GetPackageFilePath(identity.Id, identity.Version);
+            if (File.Exists(resolver.GetHashPath(identity.Id, identity.Version)) && File.Exists(installedNupkg))
+                return SameContent(installedNupkg, nupkgPath) ? PackageFileAddition.AlreadyInstalled : PackageFileAddition.InstalledWithOtherContent;
+
+            await using var stream = File.OpenRead(nupkgPath);
+            // The result holds the installed nupkg open
+            using var result = await GlobalPackagesFolderUtility.AddPackageAsync(
+                source: Path.GetDirectoryName(Path.GetFullPath(nupkgPath)),
+                packageIdentity: identity,
+                packageStream: stream,
+                globalPackagesFolder: InstallPath,
+                parentId: Guid.Empty,
+                clientPolicyContext: ClientPolicyContext.GetClientPolicy(settings, NativeLogger),
+                logger: NativeLogger,
+                token: cancellationToken);
+            return PackageFileAddition.Added;
+        }
+
+        static bool SameContent(string first, string second)
+        {
+            using var firstStream = File.OpenRead(first);
+            using var secondStream = File.OpenRead(second);
+            return firstStream.Length == secondStream.Length
+                && System.Security.Cryptography.SHA256.HashData(firstStream).AsSpan().SequenceEqual(System.Security.Cryptography.SHA256.HashData(secondStream));
+        }
     }
 
     private async Task FindSourcePackagesByIdHelper(string packageId, List<NugetServerPackage> resultList, SourceRepository[] repositories, CancellationToken cancellationToken)

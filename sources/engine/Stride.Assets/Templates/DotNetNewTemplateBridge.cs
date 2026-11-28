@@ -342,19 +342,11 @@ public static class DotNetNewTemplateBridge
             packages.GetAllPackagesInstalled,
             () => packages.LocalFolderSources,
             packages.FindSourcePackagesById,
-            (id, version, cancellationToken) => packages.InstallPackage(id, version, cancellationToken: cancellationToken),
-            (id, version, folder) => NugetTemplatePackageStore.RestoreWithFolderAsync(
-                (outputPath, sources) => RestoreWithSources(packages, id, version, outputPath, sources), id, version, folder),
-            packages.UninstallPackages);
+            packages.DownloadPackageFile,
+            packages.AddPackageFile,
+            installed => packages.UninstallPackages(installed, runPackageTools: false));
         return new TemplatePackageInstaller(store, HostVersion, new HashSet<string>(BundledTemplatePackageIds, StringComparer.OrdinalIgnoreCase));
     }
-
-    // RestorePackage with extra sources is the one way to install from a folder that is not a configured source; it is
-    // marked experimental (STREXP002) because its signature may still change.
-#pragma warning disable STREXP002
-    private static Task RestoreWithSources(PackageStore packages, string id, PackageVersion version, string outputPath, IReadOnlyList<string> sources)
-        => packages.RestorePackage(id, version, "net10.0", settingsRoot: null, outputPath, sources);
-#pragma warning restore STREXP002
 
     /// <summary>The group of a third-party template that names none.</summary>
     public const string DefaultThirdPartyGroup = "Other";

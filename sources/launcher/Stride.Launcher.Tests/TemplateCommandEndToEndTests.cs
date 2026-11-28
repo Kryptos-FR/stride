@@ -16,8 +16,8 @@ namespace Stride.Launcher.Tests;
 /// <summary>
 /// <c>stride template add</c>, <c>list</c> and <c>remove</c> run by the built CLI, in a child process whose NuGet folders,
 /// configuration and profile are temporary: one local-folder source holds a fake Stride 4.5.6 (installed in the global
-/// packages folder, so that a Stride version is installed) and the fake Stride.Core the template package depends on; the
-/// template package file is kept outside that source.
+/// packages folder, so that a Stride version is installed) and a template package added by id; another template package
+/// file, under a name NuGet would not find it by, is kept outside that source.
 /// </summary>
 public sealed class TemplateCommandEndToEndTests : IDisposable
 {
@@ -65,9 +65,12 @@ public sealed class TemplateCommandEndToEndTests : IDisposable
         }
 
         var gameStudio = WriteNupkg(feed, "Stride.GameStudio", "4.5.6", packageType: "Dependency", tags: "stride", marker: null, templates: []);
-        WriteNupkg(feed, "Stride.Core", "4.5.0", packageType: "Dependency", tags: "stride", marker: null, templates: []);
         await ExtractAsync(gameStudio, "Stride.GameStudio", "4.5.6", packages);
-        var package = WriteNupkg(drop, "E2e.Templates", "1.0.0", templates: [("e2e-game", "project")]);
+        // A file named as a browser saves it: NuGet would not find it by id in its folder
+        var package = Path.Combine(drop, "my downloaded templates (1).nupkg");
+        File.Move(WriteNupkg(drop, "E2e.Templates", "1.0.0", templates: [("e2e-game", "project")]), package);
+        // A package of the feed, added by id. Its marker (Stride.Core 4.5.0) is in no source: nothing restores it.
+        WriteNupkg(feed, "E2e.More.Templates", "2.0.0", templates: [("e2e-more", "project")]);
 
         var environment = new Dictionary<string, string?>
         {
@@ -89,22 +92,36 @@ public sealed class TemplateCommandEndToEndTests : IDisposable
         Assert.True(add.ExitCode == 0, add.ToString());
         Assert.Contains("Installed E2e.Templates 1.0.0.", add.Output);
 
+        var again = await RunAsync(work, environment, "template", "add", package, "--yes");
+        Assert.True(again.ExitCode == 0, again.ToString());
+
+        var byId = await RunAsync(work, environment, "template", "add", "E2e.More.Templates", "--yes");
+        Assert.True(byId.ExitCode == 0, byId.ToString());
+        Assert.Contains("Installed E2e.More.Templates 2.0.0.", byId.Output);
+        Assert.False(Directory.Exists(Path.Combine(packages, "stride.core")), "The marker dependency was restored.");
+
         var list = await RunAsync(work, environment, "template", "list");
         Assert.True(list.ExitCode == 0, list.ToString());
-        Assert.Equal("E2e.Templates  1.0.0  Color-Rise", list.Output.Trim());
+        Assert.Equal(["E2e.More.Templates  2.0.0  Color-Rise", "E2e.Templates       1.0.0  Color-Rise"], list.Output.Trim().Split(Environment.NewLine));
 
         var templates = await RunAsync(work, environment, "new", "list");
         Assert.True(templates.ExitCode == 0, templates.ToString());
         Assert.Contains("e2e.templates:", templates.Output);
         Assert.Contains("e2e-game", templates.Output);
+        Assert.Contains("e2e-more", templates.Output);
 
-        var remove = await RunAsync(work, environment, "template", "remove", "E2e.Templates", "--yes");
-        Assert.True(remove.ExitCode == 0, remove.ToString());
-        Assert.Contains("Removed E2e.Templates (1.0.0).", remove.Output);
+        foreach (var (id, version) in new[] { ("E2e.Templates", "1.0.0"), ("E2e.More.Templates", "2.0.0") })
+        {
+            var remove = await RunAsync(work, environment, "template", "remove", id, "--yes");
+            Assert.True(remove.ExitCode == 0, remove.ToString());
+            Assert.Contains($"Removed {id} ({version}).", remove.Output);
+            Assert.False(Directory.Exists(Path.Combine(packages, id.ToLowerInvariant())), $"{id} is left in the global packages folder.");
+        }
 
-        var empty = await RunAsync(work, environment, "template", "list");
-        Assert.True(empty.ExitCode == 0, empty.ToString());
-        Assert.Equal("No template packages besides Stride's.", empty.Output.Trim());
+        var left = await RunAsync(work, environment, "template", "list");
+        Assert.True(left.ExitCode == 0, left.ToString());
+        // The feed is a local-folder source: its file is still found there, and the line says where
+        Assert.Equal(["E2e.More.Templates  2.0.0  Color-Rise", $"  from {feed}"], left.Output.Trim().Split(Environment.NewLine));
     }
 
     /// <summary>Extracts a package into a global packages folder, the way a restore does.</summary>

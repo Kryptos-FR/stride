@@ -85,32 +85,41 @@ public sealed class TemplatePackageInstallerTests : IDisposable
     }
 
     [Fact]
-    public async Task FindByIdWithoutAVersionTakesTheNewestCompatibleOnePrereleasesIncluded()
+    public async Task FindByIdWithoutAVersionTakesTheNewestCompatibleOnePrereleasesIncludedAndReadsItsDownload()
     {
-        store.Sources["Foo.Templates"] =
-        [
-            Info("Foo.Templates", "1.0.0", "4.5.0"),
-            Info("Foo.Templates", "1.1.0-dev2", "4.5.6"),
-            Info("Foo.Templates", "2.0.0", "4.6.0"),
-        ];
+        Offer("1.0.0", "4.5.0");
+        Offer("1.1.0-dev2", "4.5.6", templates: [("foo-game", "project"), ("foo-pack", "item")]);
+        Offer("2.0.0", "4.6.0");
 
         var info = await installer.FindByIdAsync("Foo.Templates", null);
 
         Assert.Equal(new PackageVersion("1.1.0-dev2"), info.Version);
-        Assert.Null(info.GameTemplates);
-        Assert.Null(info.FilePath);
+        // Read from the download, not from the listing: the type and the contents are known before the question
+        Assert.Equal(["Foo.Templates 1.1.0-dev2"], store.Downloads);
+        Assert.True(info.IsTemplatePackage);
+        Assert.Equal(1, info.GameTemplates);
+        Assert.Equal(1, info.AssetPacks);
+        Assert.Equal("https://feed.example/v3/index.json", info.Origin);
+        Assert.True(File.Exists(info.FilePath));
+        Assert.Empty(store.Installs);
+
+        TemplatePackageInstaller.Discard(info);
+
+        Assert.False(File.Exists(info.FilePath));
     }
 
     [Fact]
-    public async Task FindByIdWithAVersionTakesThatOne()
+    public async Task APackageRefusedByWhatTheSourceListsIsNotDownloaded()
     {
-        store.Sources["Foo.Templates"] = [Info("Foo.Templates", "1.0.0", "4.5.0"), Info("Foo.Templates", "2.0.0", "4.6.0")];
+        Offer("1.0.0", "4.5.0");
+        Offer("2.0.0", "4.6.0");
 
         var info = await installer.FindByIdAsync("Foo.Templates", new PackageVersion("2.0.0"));
 
         Assert.Equal(new PackageVersion("2.0.0"), info.Version);
-        // Checked like a file: made for a newer engine
-        Assert.NotNull(installer.Refusal(info));
+        Assert.Equal("Foo.Templates 2.0.0 is made for Stride 4.6.0; this is Stride 4.5.6.", installer.Refusal(info));
+        Assert.Empty(store.Downloads);
+        Assert.Null(info.FilePath);
     }
 
     [Fact]
@@ -126,36 +135,50 @@ public sealed class TemplatePackageInstallerTests : IDisposable
     }
 
     [Fact]
-    public async Task AddingAFileInstallsFromItsFolder()
+    public async Task AddingAFileAddsThatFile()
     {
         var path = WriteNupkg(folder, "Foo.Templates", "1.0.0");
 
         await installer.AddAsync(installer.InspectFile(path));
 
-        Assert.Equal([("Foo.Templates", new PackageVersion("1.0.0"), (string?)Path.GetDirectoryName(Path.GetFullPath(path)))], store.Installs);
+        Assert.Equal([("Foo.Templates", new PackageVersion("1.0.0"), Path.GetFullPath(path))], store.Installs);
     }
 
     [Fact]
-    public async Task AddingByIdInstallsFromTheSources()
+    public async Task AddingByIdAddsTheFileThatWasRead()
     {
-        store.Sources["Foo.Templates"] = [Info("Foo.Templates", "1.0.0", "4.5.0")];
+        Offer("1.0.0", "4.5.0");
+        var info = await installer.FindByIdAsync("Foo.Templates", null);
 
-        await installer.AddAsync(await installer.FindByIdAsync("Foo.Templates", null));
+        await installer.AddAsync(info);
 
-        Assert.Equal([("Foo.Templates", new PackageVersion("1.0.0"), (string?)null)], store.Installs);
+        Assert.Equal([("Foo.Templates", new PackageVersion("1.0.0"), info.FilePath!)], store.Installs);
+        TemplatePackageInstaller.Discard(info);
     }
 
     [Fact]
-    public async Task APackageFromTheSourcesThatIsNotOfTheTemplateTypeIsUninstalledAgain()
+    public async Task APackageOfTheSourcesThatIsNotOfTheTemplateTypeIsRefusedBeforeAnyInstall()
     {
-        // A source does not say the package type: it is checked once the package is installed
-        store.Sources["Foo.Templates"] = [Info("Foo.Templates", "1.0.0", "4.5.0")];
-        store.InstalledAs = (id, version) => Candidate(id, version.ToString(), isTemplate: false);
+        // The source lists the tag, but not the package type: the download says it
+        Offer("1.0.0", "4.5.0", packageType: "Dependency");
 
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await installer.AddAsync(await installer.FindByIdAsync("Foo.Templates", null)));
+        var info = await installer.FindByIdAsync("Foo.Templates", null);
 
+        Assert.Equal("Foo.Templates 1.0.0 is not a template package: it does not declare the NuGet package type Template.", installer.Refusal(info));
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => installer.AddAsync(info));
         Assert.Contains("package type Template", error.Message);
-        Assert.Equal(["Foo.Templates 1.0.0"], store.Uninstalls);
+        Assert.Empty(store.Installs);
+        TemplatePackageInstaller.Discard(info);
+    }
+
+    [Fact]
+    public void DiscardLeavesAUsersFileAlone()
+    {
+        var path = WriteNupkg(folder, "Foo.Templates", "1.0.0");
+
+        TemplatePackageInstaller.Discard(installer.InspectFile(path));
+
+        Assert.True(File.Exists(path));
     }
 
     [Fact]
@@ -215,6 +238,14 @@ public sealed class TemplatePackageInstallerTests : IDisposable
         store.Installed.Add(Candidate("Other.Package", "1.0.0", isTemplate: false));
 
         Assert.Equal(["Foo.Templates 1.1.0"], installer.Listed().Select(candidate => $"{candidate.Id} {candidate.Version}"));
+    }
+
+    /// <summary>Lists a version of Foo.Templates in the sources, with its file for the download.</summary>
+    private void Offer(string version, string marker, string packageType = "Template", (string ShortName, string Type)[]? templates = null)
+    {
+        var feed = Directory.CreateDirectory(Path.Combine(folder, "feed", version)).FullName;
+        store.SourceFiles[$"Foo.Templates {version}"] = WriteNupkg(feed, "Foo.Templates", version, packageType: packageType, marker: marker, templates: templates);
+        store.Sources["Foo.Templates"] = [.. store.Sources.GetValueOrDefault("Foo.Templates") ?? [], Info("Foo.Templates", version, marker)];
     }
 
     private static TemplatePackageInfo Info(string id, string version, string? marker)

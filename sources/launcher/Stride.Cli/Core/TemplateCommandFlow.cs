@@ -50,12 +50,25 @@ internal sealed class TemplateCommandFlow(TemplatePackageInstaller installer, Te
                 package = await installer.FindByIdAsync(target.Trim(), version, cancellationToken);
             }
         }
-        catch (InvalidOperationException exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            error.WriteLine(exception.Message);
+            // The installer's own errors, and the sources' (an unreachable source, a broken download)
+            error.WriteLine(exception is InvalidOperationException ? exception.Message : $"Could not find {target}: {exception.Message}");
             return 1;
         }
 
+        try
+        {
+            return await AddAsync(package, yes, cancellationToken);
+        }
+        finally
+        {
+            TemplatePackageInstaller.Discard(package);
+        }
+    }
+
+    private async Task<int> AddAsync(TemplatePackageInfo package, bool yes, CancellationToken cancellationToken)
+    {
         if (installer.Refusal(package) is { } refusal)
         {
             error.WriteLine(refusal);

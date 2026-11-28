@@ -173,7 +173,19 @@ public class PackageStore
     /// <summary>
     /// Uninstalls <paramref name="packages"/> from the global packages folder (see <see cref="NugetStore.UninstallPackages"/>).
     /// </summary>
-    public Task UninstallPackages(IReadOnlyList<NugetPackage> packages) => store.UninstallPackages(packages, null);
+    public Task UninstallPackages(IReadOnlyList<NugetPackage> packages, bool runPackageTools = true) => store.UninstallPackages(packages, null, runPackageTools);
+
+    /// <summary>
+    /// Downloads exactly a version of a package from one package source, without installing it (see <see cref="NugetStore.DownloadPackageFile"/>).
+    /// </summary>
+    public Task<bool> DownloadPackageFile(string packageId, PackageVersion version, string source, string destinationFile, CancellationToken cancellationToken)
+        => store.DownloadPackageFile(packageId, version, source, destinationFile, cancellationToken);
+
+    /// <summary>
+    /// Adds a package file to the global packages folder as it is (see <see cref="NugetStore.AddPackageFile"/>).
+    /// </summary>
+    public Task<PackageFileAddition> AddPackageFile(string packageId, PackageVersion version, string nupkgPath, CancellationToken cancellationToken)
+        => store.AddPackageFile(packageId, version, nupkgPath, cancellationToken);
 
     /// <summary>
     /// Restores a package and its dependencies from the NuGet sources configured for <paramref name="settingsRoot"/>.

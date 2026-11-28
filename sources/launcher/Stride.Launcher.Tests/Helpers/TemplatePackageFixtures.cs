@@ -60,13 +60,20 @@ internal sealed class FakeTemplatePackageStore : ITemplatePackageStore
 
     public Dictionary<string, IReadOnlyList<TemplatePackageInfo>> Sources { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public List<(string Id, PackageVersion Version, string? ExtraSource)> Installs { get; } = [];
+    /// <summary>The .nupkg files of the sources, by "id version": what <see cref="DownloadAsync"/> copies.</summary>
+    public Dictionary<string, string> SourceFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The downloads asked of the store, as "id version".</summary>
+    public List<string> Downloads { get; } = [];
+
+    /// <summary>The package files added, with the file each came from.</summary>
+    public List<(string Id, PackageVersion Version, string File)> Installs { get; } = [];
 
     public List<string> Uninstalls { get; } = [];
 
     public Func<string, PackageVersion, TemplatePackageCandidate> InstalledAs { get; set; } = (id, version) => TemplatePackageFixtures.Candidate(id, version.ToString());
 
-    /// <summary>When set, <see cref="InstallAsync"/> throws it (a failed restore).</summary>
+    /// <summary>When set, <see cref="AddFileAsync"/> throws it (a failed install).</summary>
     public Exception? InstallFailure { get; set; }
 
     public IReadOnlyList<TemplatePackageCandidate> GetInstalled() => Installed;
@@ -74,11 +81,20 @@ internal sealed class FakeTemplatePackageStore : ITemplatePackageStore
     public Task<IReadOnlyList<TemplatePackageInfo>> FindInSourcesAsync(string id, CancellationToken cancellationToken)
         => Task.FromResult(Sources.TryGetValue(id, out var found) ? found : (IReadOnlyList<TemplatePackageInfo>)[]);
 
-    public Task InstallAsync(string id, PackageVersion version, string? extraSourceFolder, CancellationToken cancellationToken)
+    public Task DownloadAsync(string id, PackageVersion version, string source, string destinationFile, CancellationToken cancellationToken)
+    {
+        Downloads.Add($"{id} {version}");
+        if (!SourceFiles.TryGetValue($"{id} {version}", out var file))
+            throw new InvalidOperationException($"{id} {version} could not be downloaded from {source}.");
+        File.Copy(file, destinationFile);
+        return Task.CompletedTask;
+    }
+
+    public Task AddFileAsync(string id, PackageVersion version, string nupkgPath, CancellationToken cancellationToken)
     {
         if (InstallFailure is { } failure)
             throw failure;
-        Installs.Add((id, version, extraSourceFolder));
+        Installs.Add((id, version, nupkgPath));
         Installed.Add(InstalledAs(id, version));
         return Task.CompletedTask;
     }
